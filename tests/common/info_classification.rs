@@ -231,6 +231,10 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
         "advice: a 112-bit symmetric key; Info only under --pqc-mode deadline before NIST IR 8547 §4.1.3 disallows the 112-bit level after 2030",
     ),
     (
+        "SBOM-PQC-HASH-001",
+        "advice: a hash function at 112 bits of collision strength (SHA-224, SHA-512/224, SHA3-224); Info only under --pqc-mode deadline before NIST IR 8547 §4.1.3 disallows the 112-bit level after 2030",
+    ),
+    (
         "SBOM-CNSA2-ALG-006",
         "advice: a CNSA 1.0 algorithm to migrate; Info only under --pqc-mode deadline before its CNSA 2.0 category is to support and prefer CNSA 2.0",
     ),

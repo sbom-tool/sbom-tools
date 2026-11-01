@@ -13,7 +13,12 @@
 //!   Error after. Its symmetric rows apply where the checks judge them:
 //!   SHA-1 is deprecated now and disallowed after 2030 (Table 8, note 4:
 //!   Warning, then Error), and the 112-bit security level is disallowed
-//!   after 2030 (§4.1.3: Info, then Error).
+//!   after 2030 (§4.1.3: Info, then Error), for symmetric keys and for the
+//!   hash functions Table 8 rates at 112 bits of collision strength
+//!   (SHA-224, SHA-512/224, SHA3-224). A signature computed over such a
+//!   digest takes that earlier deadline, since it relies on the digest's
+//!   collision resistance, and a SHA-2 hash of a size the SBOM does not
+//!   state carries it as a Warning, since it could be SHA-224.
 //! - [`PqcProfile::Federal`] adds the deadlines of federal high value
 //!   assets and high impact systems: post-quantum key establishment by
 //!   2030-12-31 and post-quantum signatures by 2031-12-31 (EO 14412
@@ -190,6 +195,10 @@ const FEDERAL_SIGNATURES_BY: NaiveDate = end_of(2031);
 /// not later than January 2, 2030".
 const FEDERAL_TLS13_BY: NaiveDate = date(2030, 1, 2);
 
+/// Where IR 8547 rates the 112-bit hash functions (Table 8) and dates
+/// their security level (§4.1.3).
+const HASH_112_SOURCE: &str = "NIST IR 8547 §4.1.3 and Table 8";
+
 const FEDERAL_PQC_SOURCE_KEY_ESTABLISHMENT: &str = "EO 14412 §4(b)(ii), OMB M-26-15";
 const FEDERAL_PQC_SOURCE_SIGNATURES: &str = "EO 14412 §4(b)(iii), OMB M-26-15";
 const FEDERAL_TLS13_SOURCE: &str = "EO 14306, OMB M-26-15";
@@ -339,22 +348,60 @@ impl Calendar {
     /// §4.1.3, "NIST has a few symmetric cryptography standards at the
     /// 112-bit security level, which will be disallowed in 2030".
     pub(crate) fn symmetric_112(on: NaiveDate) -> Dated {
-        let source = "NIST IR 8547 §4.1.3";
-        if on <= end_of(NIST_DEPRECATED_AFTER) {
-            Dated::new(
-                ViolationSeverity::Info,
-                end_of(NIST_DEPRECATED_AFTER),
-                source,
-                "the 112-bit security level is disallowed after 2030",
-            )
-        } else {
-            Dated::new(
-                ViolationSeverity::Error,
-                end_of(NIST_DEPRECATED_AFTER),
-                source,
-                "the 112-bit security level is disallowed since 2031",
-            )
+        security_level_112(on, "NIST IR 8547 §4.1.3")
+    }
+
+    /// A hash function at 112 bits of collision strength, judged on `on`:
+    /// NIST IR 8547 Table 8 gives SHA-224, SHA-512/224 and SHA3-224 a
+    /// collision security strength of "112 bits", the level §4.1.3 says
+    /// "will be disallowed in 2030", as for [`Self::symmetric_112`].
+    pub(crate) fn hash_112(on: NaiveDate) -> Dated {
+        security_level_112(on, HASH_112_SOURCE)
+    }
+
+    /// A quantum-vulnerable signature `scheme` dates, computed over the
+    /// digest `digest` at 112 bits of collision strength, judged on `on`.
+    /// A signature relies on its digest's collision resistance, so the
+    /// earlier of the two deadlines applies, the 112-bit level's on a tie,
+    /// at the more severe of the two severities, and the finding names the
+    /// digest.
+    pub(crate) fn over_112_bit_digest(scheme: Dated, digest: &str, on: NaiveDate) -> Dated {
+        let level = Self::hash_112(on);
+        let rank = |severity| match severity {
+            ViolationSeverity::Error => 2,
+            ViolationSeverity::Warning => 1,
+            _ => 0,
+        };
+        Dated {
+            severity: if rank(level.severity) > rank(scheme.severity) {
+                level.severity
+            } else {
+                scheme.severity
+            },
+            deadline: if level.deadline.date <= scheme.deadline.date {
+                level.deadline
+            } else {
+                scheme.deadline
+            },
+            status: format!(
+                "{}; its {digest} digest has 112 bits of collision strength, which a signature \
+                 relies on: {}",
+                scheme.status, level.status
+            ),
         }
+    }
+
+    /// A SHA-2 hash function of a digest size the SBOM does not state. It
+    /// could be SHA-224, so it carries the deadline of the 112-bit level,
+    /// the earliest any SHA-2 member has, but as a Warning whatever the
+    /// date: that it is SHA-224 is not shown.
+    pub(crate) fn sha2_unsized() -> Dated {
+        Dated::new(
+            ViolationSeverity::Warning,
+            end_of(NIST_DEPRECATED_AFTER),
+            HASH_112_SOURCE,
+            "the earliest deadline of a SHA-2 member applies",
+        )
     }
 
     /// TLS below 1.3 under [`PqcProfile::Federal`], judged on the
@@ -434,6 +481,26 @@ impl Calendar {
                 ),
             ),
         }
+    }
+}
+
+/// The 112-bit security level, judged on `on`: Info through 2030, Error
+/// after, by the IR 8547 rows `source` names.
+fn security_level_112(on: NaiveDate, source: &str) -> Dated {
+    if on <= end_of(NIST_DEPRECATED_AFTER) {
+        Dated::new(
+            ViolationSeverity::Info,
+            end_of(NIST_DEPRECATED_AFTER),
+            source,
+            "the 112-bit security level is disallowed after 2030",
+        )
+    } else {
+        Dated::new(
+            ViolationSeverity::Error,
+            end_of(NIST_DEPRECATED_AFTER),
+            source,
+            "the 112-bit security level is disallowed since 2031",
+        )
     }
 }
 
@@ -616,6 +683,96 @@ mod tests {
         assert_eq!(after.severity, ViolationSeverity::Error);
         assert_eq!(after.deadline.date, day("2030-12-31"));
         assert_eq!(after.deadline.source, "NIST IR 8547 §4.1.3");
+    }
+
+    /// The 112-bit hash functions of Table 8 follow the 112-bit level of
+    /// §4.1.3: Info through 2030-12-31, Error from 2031-01-01, and the
+    /// deadline is 2030-12-31 throughout.
+    #[test]
+    fn the_112_bit_hash_functions_are_disallowed_after_2030() {
+        let source = "NIST IR 8547 §4.1.3 and Table 8";
+        let cases = [
+            ("2026-10-12", ViolationSeverity::Info, "after 2030"),
+            ("2030-12-31", ViolationSeverity::Info, "after 2030"),
+            ("2031-01-01", ViolationSeverity::Error, "since 2031"),
+        ];
+        for (on, severity, when) in cases {
+            let dated = Calendar::hash_112(day(on));
+            assert_eq!(dated.severity, severity, "{on}");
+            assert_eq!(dated.deadline.date, day("2030-12-31"), "{on}");
+            assert_eq!(dated.deadline.source, source, "{on}");
+            assert_eq!(
+                dated.status,
+                format!("the 112-bit security level is disallowed {when} ({source})"),
+                "{on}"
+            );
+        }
+        // The same ladder as a 112-bit key, under its own source.
+        for on in ["2026-10-12", "2030-12-31", "2031-01-01"] {
+            let hash = Calendar::hash_112(day(on));
+            let key = Calendar::symmetric_112(day(on));
+            assert_eq!(
+                (hash.severity, hash.deadline.date),
+                (key.severity, key.deadline.date),
+                "{on}"
+            );
+        }
+    }
+
+    /// A signature over a 112-bit digest takes the digest's earlier
+    /// deadline: under IR 8547 an Error from 2031-01-01 instead of a
+    /// Warning until 2035, and under the federal profile an Error from
+    /// 2031-01-01 instead of a Warning until 2031-12-31.
+    #[test]
+    fn a_signature_over_a_112_bit_digest_takes_the_earlier_deadline() {
+        let at = |profile, on: &str| {
+            let scheme =
+                Calendar::new(profile, None, day(on)).public_key(PkUse::Signature, day(on));
+            Calendar::over_112_bit_digest(scheme, "SHA-224", day(on))
+        };
+        let cases = [
+            (PqcProfile::Nist, "2030-12-31", ViolationSeverity::Info),
+            (PqcProfile::Nist, "2031-01-01", ViolationSeverity::Error),
+            (PqcProfile::Nist, "2036-01-01", ViolationSeverity::Error),
+            (
+                PqcProfile::Federal,
+                "2030-12-31",
+                ViolationSeverity::Warning,
+            ),
+            (PqcProfile::Federal, "2031-01-01", ViolationSeverity::Error),
+        ];
+        for (profile, on, severity) in cases {
+            let dated = at(profile, on);
+            let label = format!("{profile:?} {on}");
+            assert_eq!(dated.severity, severity, "{label}");
+            assert_eq!(dated.deadline.date, day("2030-12-31"), "{label}");
+            assert_eq!(dated.deadline.source, HASH_112_SOURCE, "{label}");
+            assert!(
+                dated
+                    .status
+                    .contains("; its SHA-224 digest has 112 bits of collision strength"),
+                "{label}: {}",
+                dated.status
+            );
+        }
+        // The scheme's own schedule stays in the message.
+        let status = at(PqcProfile::Nist, "2031-01-01").status;
+        assert!(
+            status.starts_with(
+                "deprecated since 2031 and disallowed after 2035 (NIST IR 8547 Table 2)"
+            ),
+            "{status}"
+        );
+    }
+
+    /// A SHA-2 hash of no stated size could be SHA-224: a Warning dated by
+    /// the 112-bit level, the earliest deadline of a SHA-2 member.
+    #[test]
+    fn an_unsized_sha2_hash_warns_with_the_earliest_sha2_deadline() {
+        let dated = Calendar::sha2_unsized();
+        assert_eq!(dated.severity, ViolationSeverity::Warning);
+        assert_eq!(dated.deadline.date, day("2030-12-31"));
+        assert_eq!(dated.deadline.source, HASH_112_SOURCE);
     }
 
     /// Each category's two milestones, and the strictest when none is set.

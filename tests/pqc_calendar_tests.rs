@@ -8,7 +8,9 @@
 //! default, is pinned by the verdict snapshots and deadline mode by the
 //! deadline snapshots (tests/compliance_snapshots.rs) and the PQC and
 //! CNSA 2.0 rule matrices; this file holds the properties those pin case by
-//! case.
+//! case. The 112-bit hash functions of Table 8 are pinned on inline CBOMs:
+//! as hashes ([`HASHES_112`]) and as the digests of signatures
+//! ([`SIGNED_OVER_112_BITS`]).
 
 #[path = "common/json_schema.rs"]
 mod json_schema;
@@ -271,6 +273,392 @@ fn ir_8547_ladder_names_the_next_milestone() {
     assert_eq!(
         owned(D2031, "SBOM-PQC-KEY-001", "crypto/key/hmac-key-112"),
         (Sev::Error, Some(date("2030-12-31")), section)
+    );
+}
+
+// ============================================================================
+// 112-bit hash functions
+// ============================================================================
+
+/// The three hash functions NIST IR 8547 Table 8 gives 112 bits of
+/// collision strength, each identified another way and each declaring
+/// quantum level 0, beside a 256-bit digest and HMAC over SHA-224, which are
+/// not at that level.
+const HASHES_112: &str = r#"{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:0c6f3a52-8e1d-4b7a-9f2e-3d5c7a1b9e40",
+  "version": 1,
+  "metadata": { "timestamp": "2026-10-01T00:00:00Z" },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-224",
+      "name": "SHA-224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "algorithmFamily": "SHA-2",
+          "parameterSetIdentifier": "224",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-512-224",
+      "name": "SHA-512/224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": { "primitive": "hash", "nistQuantumSecurityLevel": 0 },
+        "oid": "2.16.840.1.101.3.4.2.5"
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha3-224",
+      "name": "sha3_224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": { "primitive": "hash", "nistQuantumSecurityLevel": 0 }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-256",
+      "name": "SHA-256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "algorithmFamily": "SHA-2",
+          "parameterSetIdentifier": "256",
+          "nistQuantumSecurityLevel": 2
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/hmac-sha-224",
+      "name": "HMAC-SHA-224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac",
+          "algorithmFamily": "HMAC",
+          "nistQuantumSecurityLevel": 3
+        }
+      }
+    }
+  ]
+}"#;
+
+const HASHES_AT_112_BITS: [&str; 3] = [
+    "crypto/algorithm/sha-224",
+    "crypto/algorithm/sha-512-224",
+    "crypto/algorithm/sha3-224",
+];
+
+/// Where a CycloneDX CBOM states the digest size SBOM-PQC-HASH-001 reads.
+const DIGEST_SIZE_FIELD: &str =
+    "components[].cryptoProperties.algorithmProperties.parameterSetIdentifier";
+
+/// `pqc` used to judge none of SHA-224, SHA-512/224 and SHA3-224. Readiness
+/// mode now reports each as an Error, as it does a 112-bit key, and
+/// deadline mode dates each by §4.1.3: Info through 2030-12-31, Error from
+/// 2031-01-01. A declared level 0 is not reported a second time as a
+/// quantum-vulnerable algorithm, and CNSA 2.0 still rejects all three.
+#[test]
+fn the_112_bit_hash_functions_are_disallowed_after_2030() {
+    let sbom = parse_sbom_str(HASHES_112).expect("inline CBOM parses");
+    let strict = readiness(ComplianceLevel::NistPqc, D2026, &sbom);
+    for id in HASHES_AT_112_BITS {
+        assert_eq!(
+            dated(finding(&strict, "SBOM-PQC-HASH-001", id)),
+            (Sev::Error, None, None),
+            "{id}"
+        );
+    }
+    let judged: Vec<&str> = strict
+        .violations
+        .iter()
+        .filter(|v| v.rule_id != "SBOM-PQC-HASH-001")
+        .map(|v| v.rule_id)
+        .collect();
+    assert!(judged.is_empty(), "nothing else is reported: {judged:?}");
+    // Each finding names the field that states the digest size, and the
+    // algorithm it read (SHA-512/224 reads as a 224-bit SHA-2).
+    for (id, algorithm) in HASHES_AT_112_BITS
+        .into_iter()
+        .zip(["SHA-224", "SHA-224", "SHA3-224"])
+    {
+        let v = finding(&strict, "SBOM-PQC-HASH-001", id);
+        assert_eq!(v.field.as_deref(), Some(DIGEST_SIZE_FIELD), "{id}");
+        assert_eq!(v.observed.as_deref(), Some(algorithm), "{id}");
+    }
+
+    let source = "NIST IR 8547 §4.1.3 and Table 8";
+    for (as_of, severity, status) in [
+        (D2026, Sev::Info, "disallowed after 2030"),
+        ("2030-12-31T23:59:59Z", Sev::Info, "disallowed after 2030"),
+        ("2031-01-01T00:00:00Z", Sev::Error, "disallowed since 2031"),
+    ] {
+        let result = nist(ComplianceLevel::NistPqc, as_of, &sbom);
+        for id in HASHES_AT_112_BITS {
+            let v = finding(&result, "SBOM-PQC-HASH-001", id);
+            assert_eq!(
+                dated(v),
+                (severity, Some(date("2030-12-31")), Some(source)),
+                "{id} @ {as_of}"
+            );
+            assert!(
+                v.message.ends_with(&format!(
+                    "; the 112-bit security level is {status} ({source})"
+                )),
+                "{id} @ {as_of}: {}",
+                v.message
+            );
+        }
+        assert_eq!(
+            result.violations.len(),
+            HASHES_AT_112_BITS.len(),
+            "@ {as_of}"
+        );
+    }
+
+    // CNSA 2.0 approves SHA-384 and SHA-512 only: an Error in either mode,
+    // undated, since none of the three is CNSA 1.0 either.
+    for result in [
+        readiness(ComplianceLevel::Cnsa2, D2026, &sbom),
+        nist(ComplianceLevel::Cnsa2, D2026, &sbom),
+    ] {
+        for id in HASHES_AT_112_BITS {
+            let rejected: Vec<&Violation> = result
+                .violations
+                .iter()
+                .filter(|v| subject(v) == id)
+                .collect();
+            assert!(
+                matches!(
+                    rejected.as_slice(),
+                    [v] if v.severity == Sev::Error
+                        && v.deadline.is_none()
+                        && matches!(v.rule_id, "SBOM-CNSA2-ALG-002" | "SBOM-CNSA2-ALG-008")
+                ),
+                "{id}: {rejected:#?}"
+            );
+        }
+    }
+}
+
+/// Signatures computed over a SHA-224 digest, by JCA name, by signature
+/// OID and as a certificate's raw reference, beside a SHA-256 signature,
+/// key agreement with a SHA-224 KDF, and a SHA-2 hash of no stated size.
+const SIGNED_OVER_112_BITS: &str = r#"{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:7a1e5c93-2b4d-4f86-8e0a-6c3b9d2f1e57",
+  "version": 1,
+  "metadata": { "timestamp": "2026-10-01T00:00:00Z" },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha224-rsa",
+      "name": "SHA224withRSA",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "algorithmFamily": "RSA",
+          "parameterSetIdentifier": "3072",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ecdsa-sha224",
+      "name": "ECDSA-P256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "algorithmFamily": "ECDSA",
+          "ellipticCurve": "secg/secp256r1",
+          "nistQuantumSecurityLevel": 0
+        },
+        "oid": "1.2.840.10045.4.3.1"
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha256-rsa",
+      "name": "SHA256withRSA",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "signature",
+          "algorithmFamily": "RSA",
+          "parameterSetIdentifier": "3072",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/ecdh-kdf-sha224",
+      "name": "ECDH-P256-SHA224-KDF",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "key-agree",
+          "algorithmFamily": "ECDH",
+          "ellipticCurve": "secg/secp256r1",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/certificate/leaf",
+      "name": "leaf.example",
+      "cryptoProperties": {
+        "assetType": "certificate",
+        "certificateProperties": { "signatureAlgorithmRef": "sha224WithRSAEncryption" }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-2",
+      "name": "SHA-2",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "algorithmFamily": "SHA-2",
+          "nistQuantumSecurityLevel": 1
+        }
+      }
+    }
+  ]
+}"#;
+
+/// In deadline mode a signature over a 112-bit digest takes the digest's
+/// deadline, 2030-12-31 (§4.1.3, Table 8), instead of its scheme's 2035,
+/// under the rule of the scheme, and the finding names the digest. Key
+/// agreement keeps its scheme's schedule. Readiness mode reports the
+/// signatures as Errors, as before. A SHA-2 hash of no stated size warns in
+/// both modes, dated 2030-12-31 in deadline mode.
+#[test]
+fn a_signature_over_a_112_bit_digest_takes_the_digest_deadline() {
+    let sbom = parse_sbom_str(SIGNED_OVER_112_BITS).expect("inline CBOM parses");
+    let over_224 = [
+        ("SBOM-PQC-001", "crypto/algorithm/sha224-rsa"),
+        ("SBOM-PQC-001", "crypto/algorithm/ecdsa-sha224"),
+        ("SBOM-PQC-CERT-001", "crypto/certificate/leaf"),
+    ];
+    let unsized_sha2 = "crypto/algorithm/sha-2";
+    let digest_source = "NIST IR 8547 §4.1.3 and Table 8";
+
+    let strict = readiness(ComplianceLevel::NistPqc, D2026, &sbom);
+    for (rule, id) in over_224 {
+        assert_eq!(
+            dated(finding(&strict, rule, id)),
+            (Sev::Error, None, None),
+            "{id}"
+        );
+    }
+    let warning = finding(&strict, "SBOM-PQC-HASH-001", unsized_sha2);
+    assert_eq!(dated(warning), (Sev::Warning, None, None));
+    assert!(
+        warning
+            .message
+            .contains("digest size not stated; SHA-224 would be disallowed after 2030"),
+        "{}",
+        warning.message
+    );
+    assert_eq!(
+        (warning.field.as_deref(), warning.observed.as_deref()),
+        (Some(DIGEST_SIZE_FIELD), Some("SHA-2"))
+    );
+    // No signature becomes a hash finding of its own.
+    let hash_findings: Vec<&str> = strict
+        .violations
+        .iter()
+        .filter(|v| v.rule_id == "SBOM-PQC-HASH-001")
+        .map(subject)
+        .collect();
+    assert_eq!(hash_findings, [unsized_sha2]);
+
+    let end_of_2030 = "2030-12-31T23:59:59Z";
+    let start_of_2031 = "2031-01-01T00:00:00Z";
+    for (as_of, severity) in [(end_of_2030, Sev::Info), (start_of_2031, Sev::Error)] {
+        let result = nist(ComplianceLevel::NistPqc, as_of, &sbom);
+        for (rule, id) in over_224 {
+            let v = finding(&result, rule, id);
+            assert_eq!(
+                dated(v),
+                (severity, Some(date("2030-12-31")), Some(digest_source)),
+                "{id} @ {as_of}"
+            );
+            assert!(
+                v.message
+                    .contains("its SHA-224 digest has 112 bits of collision strength"),
+                "{id} @ {as_of}: {}",
+                v.message
+            );
+        }
+        assert_eq!(
+            dated(finding(&result, "SBOM-PQC-HASH-001", unsized_sha2)),
+            (Sev::Warning, Some(date("2030-12-31")), Some(digest_source)),
+            "@ {as_of}"
+        );
+    }
+    // Without a 112-bit digest, or establishing keys, the scheme's
+    // schedule stands: deprecated, not disallowed, in 2031.
+    let r2031 = nist(ComplianceLevel::NistPqc, start_of_2031, &sbom);
+    assert_eq!(
+        dated(finding(
+            &r2031,
+            "SBOM-PQC-001",
+            "crypto/algorithm/sha256-rsa"
+        )),
+        (
+            Sev::Warning,
+            Some(date("2035-12-31")),
+            Some("NIST IR 8547 Table 2")
+        )
+    );
+    assert_eq!(
+        dated(finding(
+            &r2031,
+            "SBOM-PQC-001",
+            "crypto/algorithm/ecdh-kdf-sha224"
+        )),
+        (
+            Sev::Warning,
+            Some(date("2035-12-31")),
+            Some("NIST IR 8547 Table 4")
+        )
+    );
+
+    // The federal signature deadline, 2031-12-31, is later than the
+    // digest's: a Warning by the federal deadline, due by the digest's.
+    let federal = deadline(
+        ComplianceLevel::NistPqc,
+        end_of_2030,
+        PqcProfile::Federal,
+        None,
+        &sbom,
+    );
+    assert_eq!(
+        dated(finding(
+            &federal,
+            "SBOM-PQC-001",
+            "crypto/algorithm/sha224-rsa"
+        )),
+        (Sev::Warning, Some(date("2030-12-31")), Some(digest_source))
     );
 }
 

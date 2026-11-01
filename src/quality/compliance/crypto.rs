@@ -363,6 +363,20 @@ fn resolve_component<'a>(
         .and_then(|id| sbom.components.get(id))
 }
 
+/// The digest size of a SHA-2 or SHA-3 hash in bits, which CNSA 2.0 and
+/// NIST PQC both read: its parameter, or for SHA-2 the truncated output
+/// of a SHA-512/t parameter set ("512/224", "512/256"), as the family
+/// "SHA-512/224" classifies.
+fn digest_bits(cls: &AlgorithmClassification) -> Option<u32> {
+    cls.parameter_bits().or_else(|| {
+        let (base, t) = cls.parameter.as_deref()?.split_once(['/', '-', '_'])?;
+        match (cls.class, base.trim(), t.trim()) {
+            (AlgorithmClass::Sha2, "512", t @ ("224" | "256")) => t.parse().ok(),
+            _ => None,
+        }
+    })
+}
+
 /// Judge a classified algorithm against the CNSA 2.0 exclusive allowlist:
 /// AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, and the SP 800-208
 /// stateful hash-based signatures (LMS/XMSS/HSS). `classical_bits` is the
@@ -423,7 +437,7 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
                 }
             }
         }
-        C::Sha2 => match cls.parameter_bits() {
+        C::Sha2 => match digest_bits(cls) {
             Some(384 | 512) => CnsaVerdict::Approved,
             Some(_) => {
                 // Name the digest itself, also when a construction wraps it:
@@ -692,24 +706,33 @@ struct Declared {
     /// The declared `ellipticCurve`, which a declared family hides from the
     /// classification.
     curve: Option<String>,
+    /// A hash function at 112 bits of collision strength the identity
+    /// names beside the algorithm ([`digest_112_named`]), which the
+    /// classification hides: for a signature, the digest it is computed
+    /// over.
+    digest_112: Option<String>,
 }
 
 impl Declared {
     fn of(comp: &Component) -> Self {
-        let algo = comp
-            .crypto_properties
-            .as_ref()
-            .and_then(|c| c.algorithm_properties.as_ref());
+        let cp = comp.crypto_properties.as_ref();
+        let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
+        let family = algo.and_then(|a| a.algorithm_family.as_deref());
         Self {
             primitive: algo.map(|a| a.primitive.clone()),
             classical_bits: algo.and_then(|a| a.classical_security_level),
             curve: algo.and_then(|a| a.elliptic_curve.clone()),
+            digest_112: digest_112_named(
+                std::iter::once(comp.name.as_str()).chain(family),
+                cp.and_then(|c| c.oid.as_deref()),
+            ),
         }
     }
 
     /// What the component a bom-ref resolves to declares. A ref that
-    /// resolves nowhere declares the curve it names, if any: "ecdsa-p384"
-    /// is classified as ECDSA, its first mention, beside the curve P-384.
+    /// resolves nowhere declares the curve and the 112-bit digest it names,
+    /// if any: "ecdsa-p384" is classified as ECDSA, its first mention,
+    /// beside the curve P-384.
     fn of_ref(bom_ref: &str, sbom: &NormalizedSbom, index: &NormalizedSbomIndex) -> Self {
         resolve_component(bom_ref, sbom, index).map_or_else(
             || Self {
@@ -717,6 +740,7 @@ impl Declared {
                     .into_iter()
                     .find(|m| m.family.as_deref() == Some("EC"))
                     .and_then(|m| m.parameter),
+                digest_112: digest_112_named([bom_ref], None),
                 ..Self::default()
             },
             Self::of,
@@ -730,6 +754,7 @@ impl Declared {
             primitive: Some(primitive),
             classical_bits: None,
             curve: None,
+            digest_112: None,
         }
     }
 
@@ -817,8 +842,9 @@ fn below_112_bits(cls: &AlgorithmClassification, declared: &Declared) -> bool {
 
 /// How deadline mode judges, on `on`, an algorithm NIST PQC reports as
 /// quantum-vulnerable: a scheme IR 8547 lists, at 112 bits or more (or of
-/// unknown strength), by its transition (or the federal deadline); anything
-/// else is due now.
+/// unknown strength), by its transition (or the federal deadline), and by
+/// the earlier deadline of a 112-bit digest it names unless it establishes
+/// keys; anything else is due now.
 fn nist_quantum_vulnerable(
     calendar: &Calendar,
     cls: &AlgorithmClassification,
@@ -850,7 +876,18 @@ fn nist_quantum_vulnerable(
                         .to_string(),
                 )
             } else {
-                CalendarVerdict::Dated(calendar.public_key(pk_use(cls, declared), on))
+                // A signature relies on the collision resistance of its
+                // digest; key establishment does not rest on that of a
+                // hash it names (a KDF's, OAEP's). An unstated use takes
+                // the earlier deadline, as for the federal ones.
+                let purpose = pk_use(cls, declared);
+                let scheme = calendar.public_key(purpose, on);
+                CalendarVerdict::Dated(match &declared.digest_112 {
+                    Some(digest) if purpose != PkUse::KeyEstablishment => {
+                        Calendar::over_112_bit_digest(scheme, digest, on)
+                    }
+                    _ => scheme,
+                })
             }
         }
         _ => CalendarVerdict::Undated(format!(
@@ -875,6 +912,69 @@ fn nist_broken(cls: &AlgorithmClassification, signs: bool, on: NaiveDate) -> Cal
             "no transition applies: no NIST standard allows {}",
             cls.label()
         )),
+    }
+}
+
+/// Whether an algorithm is used as a hash function: no keyed construction
+/// (HMAC, HKDF, PBKDF2) is built on it, and it is not declared a MAC, KDF
+/// or DRBG. Only that use rests on the hash's collision resistance, which
+/// NIST IR 8547 Table 8 rates apart from its preimage strength.
+fn used_as_hash(cls: &AlgorithmClassification, declared: &Declared) -> bool {
+    cls.construction.is_none()
+        && !matches!(
+            declared.primitive,
+            Some(CryptoPrimitive::Mac | CryptoPrimitive::Kdf | CryptoPrimitive::Drbg)
+        )
+}
+
+/// Whether an algorithm is a hash function NIST IR 8547 Table 8 gives 112
+/// bits of collision strength, SHA-224, SHA-512/224 or SHA3-224, used as a
+/// hash ([`used_as_hash`]): a keyed use does not rest on collision
+/// resistance, so it is not judged at the 112-bit level.
+fn is_112_bit_hash(cls: &AlgorithmClassification, declared: &Declared) -> bool {
+    let hash = cls.class == AlgorithmClass::Sha2
+        || (cls.class == AlgorithmClass::Sha3 && cls.family.as_deref() == Some("SHA-3"));
+    hash && used_as_hash(cls, declared) && digest_bits(cls) == Some(224)
+}
+
+/// Whether an algorithm is a SHA-2 hash function used as a hash whose
+/// digest size the SBOM does not state: it could be SHA-224. (A SHA-3 one
+/// is not judged: SHAKE128 and SHAKE256 classify so.)
+fn is_unsized_sha2(cls: &AlgorithmClassification, declared: &Declared) -> bool {
+    cls.class == AlgorithmClass::Sha2 && used_as_hash(cls, declared) && digest_bits(cls).is_none()
+}
+
+/// The hash function at 112 bits of collision strength that an algorithm's
+/// identity names beside it, as the digest of a signature: one its signature
+/// OID ([`signature_oid_digest_112`]) or one of `texts` (its name, its family
+/// string, an unresolved reference) names, as in "SHA224withRSA",
+/// "ecdsa-with-SHA224" or "RSASSA-PSS-SHA3-224". Its label, or `None`.
+fn digest_112_named<'a>(
+    texts: impl IntoIterator<Item = &'a str>,
+    oid: Option<&str>,
+) -> Option<String> {
+    if let Some(digest) = oid.and_then(signature_oid_digest_112) {
+        return Some(digest.to_string());
+    }
+    texts
+        .into_iter()
+        .flat_map(classify_algorithm_names_guarded)
+        .find(|m| is_112_bit_hash(m, &Declared::default()))
+        .map(|m| m.label())
+}
+
+/// The digest of a signature OID at 112 bits of collision strength, which
+/// the classification reads as the scheme alone: sha224WithRSAEncryption
+/// and sha512-224WithRSAEncryption (RFC 8017 Appendix C), ecdsa-with-SHA224
+/// (RFC 5758), and ECDSA and RSA PKCS #1 v1.5 with SHA3-224 (NIST CSOR
+/// 2.16.840.1.101.3.4.3.9 and .13). The DSA ones are not listed: no
+/// transition dates DSA.
+fn signature_oid_digest_112(oid: &str) -> Option<&'static str> {
+    match oid.trim() {
+        "1.2.840.113549.1.1.14" | "1.2.840.10045.4.3.1" => Some("SHA-224"),
+        "1.2.840.113549.1.1.15" => Some("SHA-512/224"),
+        "2.16.840.1.101.3.4.3.9" | "2.16.840.1.101.3.4.3.13" => Some("SHA3-224"),
+        _ => None,
     }
 }
 
@@ -2026,7 +2126,7 @@ impl ComplianceChecker {
     /// `passed`. Returns whether the asset was judged — classified, or
     /// declared quantum-vulnerable — which is what the PQC-000 inventory gate
     /// counts. Deadline mode (`calendar`) dates the quantum-vulnerable
-    /// algorithms IR 8547 lists and SHA-1.
+    /// algorithms IR 8547 lists, SHA-1 and the 112-bit hash functions.
     fn check_pqc_algorithm(
         comp: &Component,
         cp: &crate::model::CryptoProperties,
@@ -2039,6 +2139,8 @@ impl ComplianceChecker {
         let ql = algo.and_then(|a| a.nist_quantum_security_level);
         // A PQ/T hybrid is judged by its post-quantum part.
         let subject = pqc_subject(&cls);
+        let declared = Declared::of(comp);
+        let hash_112 = is_112_bit_hash(&cls, &declared);
 
         // PQC-ALG-UNKNOWN: an algorithm the classifier cannot name used to
         // pass silently whenever it declared a quantum level. It cannot be
@@ -2084,9 +2186,11 @@ impl ComplianceChecker {
         // algorithm regardless of key size, so the classification alone is
         // authoritative — including via OID, elliptic-curve field, or name
         // when algorithmFamily is absent (CycloneDX 1.6). A declared level 0
-        // also fires, unless the asset is already reported as Broken.
+        // also fires, unless the asset is already reported as Broken or as a
+        // 112-bit hash (PQC-HASH-001): such a hash's level 0 is the
+        // collision security category IR 8547 Table 8 gives it, "< 1".
         let classical = cls.class == AlgorithmClass::ClassicalQuantumVulnerable;
-        if classical || (ql == Some(0) && cls.class != AlgorithmClass::Broken) {
+        if classical || (ql == Some(0) && cls.class != AlgorithmClass::Broken && !hash_112) {
             let shown = if cls.family.is_some() {
                 cls.label()
             } else {
@@ -2095,8 +2199,7 @@ impl ComplianceChecker {
             // Deadline mode: IR 8547 Tables 2 and 4 (or the federal
             // deadlines) date the schemes they list.
             let calendared = Calendared::of(
-                calendar
-                    .map(|cal| nist_quantum_vulnerable(cal, &cls, &Declared::of(comp), cal.today)),
+                calendar.map(|cal| nist_quantum_vulnerable(cal, &cls, &declared, cal.today)),
                 None,
             );
             violations.push(Violation {
@@ -2152,7 +2255,7 @@ impl ComplianceChecker {
         if cls.class == AlgorithmClass::Broken {
             // Deadline mode: IR 8547 Table 8 dates SHA-1 outside a
             // signature; everything else here is disallowed already.
-            let signs = Declared::of(comp).signs();
+            let signs = declared.signs();
             let calendared = Calendared::of(
                 calendar.map(|cal| nist_broken(&cls, signs, cal.today)),
                 None,
@@ -2169,6 +2272,56 @@ impl ComplianceChecker {
                 element: Some(comp.name.clone()),
                 requirement: "SP 800-131A: disallowed".to_string(),
                 rule_id: "SBOM-PQC-005",
+                component_id: Some(comp.canonical_id.value().to_string()),
+                counts: None,
+                standard_refs: Vec::new(),
+                remediation: None,
+                finding_detail: None,
+                severity_override: None,
+                deadline: calendared.deadline,
+                field: None,
+                observed: observed(&cls.label()),
+            });
+        }
+
+        // PQC-HASH-001: a hash function at the 112-bit security level. IR
+        // 8547 Table 8 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of
+        // collision strength, and §4.1.3 disallows that level after 2030;
+        // deadline mode dates it so, as it does a 112-bit key (KEY-001). A
+        // SHA-2 hash that states no digest size could be SHA-224: it fails
+        // closed, but as a Warning in either mode, with SHA-224's deadline.
+        let unsized_sha2 = is_unsized_sha2(&cls, &declared);
+        if hash_112 || unsized_sha2 {
+            let (verdict, finding) = if hash_112 {
+                (
+                    calendar.map(|cal| CalendarVerdict::Dated(Calendar::hash_112(cal.today))),
+                    " has 112 bits of collision strength, below post-quantum security category 1 \
+                     (IR 8547 Table 8)",
+                )
+            } else {
+                (
+                    calendar.map(|_| CalendarVerdict::Dated(Calendar::sha2_unsized())),
+                    ": digest size not stated; SHA-224 would be disallowed after 2030 (IR 8547 \
+                     Table 8, §4.1.3)",
+                )
+            };
+            let calendared = Calendared::of(verdict, None);
+            violations.push(Violation {
+                severity: if unsized_sha2 {
+                    ViolationSeverity::Warning
+                } else {
+                    calendared.severity
+                },
+                category: ViolationCategory::CryptographyInfo,
+                message: format!(
+                    "'{}' ({}){finding}{}",
+                    comp.name,
+                    cls.label(),
+                    calendared.note
+                ),
+                element: Some(comp.name.clone()),
+                requirement: "IR 8547: 112-bit hash function".to_string(),
+                rule_id: "SBOM-PQC-HASH-001",
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),

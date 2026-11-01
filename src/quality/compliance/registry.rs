@@ -256,6 +256,10 @@ const REMEDIATION_CNSA2: &str = "Migrate to the CNSA 2.0 suite: AES-256, SHA-384
 /// NIST PQC protocol remediation.
 const REMEDIATION_PQC_PROTO: &str = "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.";
 
+/// Remediation for a hash function at the 112-bit security level
+/// (SBOM-PQC-HASH-001).
+const REMEDIATION_PQC_HASH: &str = "NIST IR 8547 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of collision strength (Table 8), a security level it disallows after 2030 (§4.1.3): replace them with a hash function of at least 128 bits, such as SHA-256, SHA-384, SHA-512 or SHA3-256. State the digest size of every SHA-2 asset, so that it can be judged. The rule reads the algorithm assets of a CBOM, not the hash values that identify components.";
+
 /// NIST PQC certificate remediation.
 const REMEDIATION_PQC_CERT: &str = "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).";
 
@@ -1395,6 +1399,23 @@ const ADVICE_DUPLICATE_COMPONENT: FormatAdvice = FormatAdvice {
     spdx3: FieldAdvice {
         text: "describe each package in one software_Package element, under an spdxId of its own.",
         field: Some("software_Package"),
+    },
+};
+
+/// The digest size of a hash algorithm asset (SBOM-PQC-HASH-001), which
+/// the check reads. Only CycloneDX describes cryptographic assets.
+const ADVICE_DIGEST_SIZE: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "set components[].cryptoProperties.algorithmProperties.parameterSetIdentifier to the digest size of the hash, 256 or more.",
+        field: Some("components[].cryptoProperties.algorithmProperties.parameterSetIdentifier"),
+    },
+    spdx2: FieldAdvice {
+        text: "SPDX 2.x has no cryptographic-asset model, so the check does not run on SPDX 2.x input.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "SPDX 3.0 has no cryptographic-asset model, so the check does not run on SPDX 3.0 input.",
+        field: None,
     },
 };
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
@@ -3575,6 +3596,24 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // A hash function asset at the 112-bit security level: IR 8547
+        // Table 8 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of
+        // collision strength, and §4.1.3 disallows that level "in 2030".
+        // An Error in readiness mode, as a 112-bit key is (SBOM-PQC-KEY-001);
+        // `--pqc-mode deadline` makes it Info through 2030 and an Error
+        // after. A SHA-2 asset that states no digest size could be SHA-224:
+        // a Warning in either mode. Keyed uses (HMAC, HKDF, a MAC, KDF or
+        // DRBG) are not judged. A signature over a 112-bit digest keeps its
+        // scheme's rule, with the digest's earlier deadline.
+        "SBOM-PQC-HASH-001" => RuleMeta {
+            sarif_id: "SBOM-PQC-HASH-001",
+            name: "PqcHashCollisionStrength",
+            short_description: "NIST IR 8547: hash function at the 112-bit security level (SHA-224, SHA-512/224, SHA3-224), disallowed after 2030",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NistPqc, "IR 8547 §4.1.3, Table 8")],
+            remediation: REMEDIATION_PQC_HASH,
+            advice: Some(&ADVICE_DIGEST_SIZE),
+        },
         // Certificate signed with a broken or quantum-vulnerable algorithm.
         "SBOM-PQC-CERT-001" => RuleMeta {
             sarif_id: "SBOM-PQC-CERT-001",
@@ -4442,6 +4481,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-PQC-008",
     "SBOM-PQC-009",
     "SBOM-PQC-KEY-001",
+    "SBOM-PQC-HASH-001",
     "SBOM-PQC-CERT-001",
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",
@@ -5020,6 +5060,7 @@ pub const PQC_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-PQC-012",
     "SBOM-PQC-ALG-UNKNOWN",
     "SBOM-PQC-KEY-001",
+    "SBOM-PQC-HASH-001",
     "SBOM-PQC-CERT-001",
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",
