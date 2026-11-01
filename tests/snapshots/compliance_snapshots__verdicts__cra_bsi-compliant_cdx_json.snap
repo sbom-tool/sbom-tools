@@ -16,8 +16,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
-[CraPhase1] compliant · E0 W6 I5
+[CraPhase1] compliant · E0 W6 I6
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
@@ -28,9 +29,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] compliant · E0 W8 I7
+[CraPhase2] compliant · E0 W8 I8
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
@@ -93,19 +95,21 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/tokio@1.40.0
 
 with auto-discovered CRA sidecar:
-[CraPhase1 + sidecar] compliant · E0 W1 I6
+[CraPhase1 + sidecar] compliant · E0 W1 I7
   I SBOM-CRA-ART-13-17-CONTACT  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2 + sidecar] compliant · E0 W1 I9
+[CraPhase2 + sidecar] compliant · E0 W1 I10
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-17-CONTACT  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-CVD-POLICY  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/demo-app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/serde@1.0.197
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/tokio@1.40.0

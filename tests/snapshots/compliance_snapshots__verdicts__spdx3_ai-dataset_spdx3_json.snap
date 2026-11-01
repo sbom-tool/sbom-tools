@@ -13,11 +13,12 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
-[CraPhase1] NON-COMPLIANT · E1 W8 I4
+[CraPhase1] NON-COMPLIANT · E1 W8 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/libtokenizer@2.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:training-dataset-v1
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-5  - (3/3)
@@ -27,13 +28,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E2 W8 I6
+[CraPhase2] NON-COMPLIANT · E2 W8 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  urn:spdx:pkg:training-dataset-v1
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/libtokenizer@2.1.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:training-dataset-v1
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-2  -
@@ -128,7 +130,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E1 W6 I0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/libtokenizer@2.1.0
   W SBOM-QUALITY-HASH  pkg:cargo/libtokenizer@2.1.0
   W SBOM-QUALITY-HASH  urn:spdx:pkg:training-dataset-v1
   W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:training-dataset-v1

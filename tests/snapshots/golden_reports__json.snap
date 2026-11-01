@@ -111,7 +111,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
+          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. A contact must reach someone: placeholders such as NOASSERTION, unknown, n/a or TBD, and addresses at example.com, example.net or example.org, do not count. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -194,7 +194,7 @@ expression: "render(&JsonReporter::new())"
               "id": "RLS-2-RQ-03-RE"
             }
           ],
-          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
+          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. A placeholder URL or an address at example.com, example.net or example.org does not count. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1050,7 +1050,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "Info",
           "category": "IntegrityInfo",
-          "message": "[CRA Annex I Part I (2)(f)] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash)",
+          "message": "[CRA Annex I Part I (2)(f)] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
           "element": null,
           "requirement": "CRA Annex I Part I (2)(f): Document signature/integrity",
           "rule_id": "SBOM-CRA-DOC-INTEGRITY",
@@ -1067,7 +1067,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
-          "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",
+          "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1103,7 +1103,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1126,7 +1126,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1149,7 +1149,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1264,7 +1264,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
+          "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. A contact must reach someone: placeholders such as NOASSERTION, unknown, n/a or TBD, and addresses at example.com, example.net or example.org, do not count. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1347,7 +1347,7 @@ expression: "render(&JsonReporter::new())"
               "id": "RLS-2-RQ-03-RE"
             }
           ],
-          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
+          "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. A placeholder URL or an address at example.com, example.net or example.org does not count. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -2203,7 +2203,7 @@ expression: "render(&JsonReporter::new())"
         {
           "severity": "Info",
           "category": "IntegrityInfo",
-          "message": "[CRA Annex I Part I (2)(f)] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash)",
+          "message": "[CRA Annex I Part I (2)(f)] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
           "element": null,
           "requirement": "CRA Annex I Part I (2)(f): Document signature/integrity",
           "rule_id": "SBOM-CRA-DOC-INTEGRITY",
@@ -2220,7 +2220,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
-          "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",
+          "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -2256,7 +2256,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -2279,7 +2279,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -2302,7 +2302,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+          "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {

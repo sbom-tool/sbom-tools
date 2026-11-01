@@ -89,11 +89,34 @@ source: tests/compliance_snapshots.rs
         ],
         "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+      },
+      {
+        "severity": "Info",
+        "category": "IntegrityInfo",
+        "message": "[CRA Annex I Part I (2)(f)] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+        "element": null,
+        "requirement": "CRA Annex I Part I (2)(f): Document signature/integrity",
+        "rule_id": "SBOM-CRA-DOC-INTEGRITY",
+        "sarif_rule_id": "SBOM-CRA-DOC-INTEGRITY",
+        "standard_refs": [
+          {
+            "standard": "CraAnnex",
+            "id": "Annex I Part I (2)(f)",
+            "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+          },
+          {
+            "standard": "EnisaSbomAdvisory",
+            "id": "§2.2.1",
+            "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+          }
+        ],
+        "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
     "error_count": 0,
     "warning_count": 1,
-    "info_count": 3,
+    "info_count": 4,
     "conformity_summary": {
       "product_class": "important-class-1",
       "route": "module-a",
@@ -206,11 +229,34 @@ source: tests/compliance_snapshots.rs
         ],
         "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+      },
+      {
+        "severity": "Info",
+        "category": "IntegrityInfo",
+        "message": "[CRA Annex I Part I (2)(f)] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+        "element": null,
+        "requirement": "CRA Annex I Part I (2)(f): Document signature/integrity",
+        "rule_id": "SBOM-CRA-DOC-INTEGRITY",
+        "sarif_rule_id": "SBOM-CRA-DOC-INTEGRITY",
+        "standard_refs": [
+          {
+            "standard": "CraAnnex",
+            "id": "Annex I Part I (2)(f)",
+            "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+          },
+          {
+            "standard": "EnisaSbomAdvisory",
+            "id": "§2.2.1",
+            "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+          }
+        ],
+        "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+        "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
     "error_count": 0,
     "warning_count": 1,
-    "info_count": 3,
+    "info_count": 4,
     "conformity_summary": {
       "product_class": "important-class-1",
       "route": "module-a",

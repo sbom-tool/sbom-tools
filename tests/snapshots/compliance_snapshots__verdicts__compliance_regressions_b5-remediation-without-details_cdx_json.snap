@@ -14,10 +14,11 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] compliant · E0 W0 I2
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-NTIA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
-[CraPhase1] compliant · E0 W5 I5
+[CraPhase1] compliant · E0 W5 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -25,11 +26,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
-[CraPhase2] compliant · E0 W8 I8
+[CraPhase2] compliant · E0 W8 I9
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-LIFECYCLE  -

@@ -259,7 +259,7 @@ source: tests/compliance_snapshots.rs
             "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
           }
         ],
-        "remediation": "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence fails. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+        "remediation": "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence and a placeholder such as TBD fail. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom"
       },
       {

@@ -9,8 +9,8 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/liba
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libb
 [Standard] NON-COMPLIANT · E2 W1 I3
-  E SBOM-NTIA-VERSION  pkg:npm/liba
-  E SBOM-NTIA-VERSION  pkg:npm/libb
+  E SBOM-QUALITY-VERSION  pkg:npm/liba
+  E SBOM-QUALITY-VERSION  pkg:npm/libb
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/liba
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libb
@@ -21,12 +21,13 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-NTIA-ELEMENT-ID  pkg:npm/liba
   I SBOM-NTIA-ELEMENT-ID  pkg:npm/libb
-[CraPhase1] NON-COMPLIANT · E2 W5 I7
+[CraPhase1] NON-COMPLIANT · E2 W5 I8
   E SBOM-CRA-COMPONENT-VERSION  pkg:npm/liba
   E SBOM-CRA-COMPONENT-VERSION  pkg:npm/libb
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/liba
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libb
@@ -36,13 +37,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
-[CraPhase2] NON-COMPLIANT · E2 W8 I9
+[CraPhase2] NON-COMPLIANT · E2 W8 I10
   E SBOM-CRA-COMPONENT-VERSION  pkg:npm/liba
   E SBOM-CRA-COMPONENT-VERSION  pkg:npm/libb
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/app@1.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/liba
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libb
@@ -127,8 +129,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:generic/app@1.0.0
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
 [Comprehensive] NON-COMPLIANT · E2 W2 I3
-  E SBOM-NTIA-VERSION  pkg:npm/liba
-  E SBOM-NTIA-VERSION  pkg:npm/libb
+  E SBOM-QUALITY-VERSION  pkg:npm/liba
+  E SBOM-QUALITY-VERSION  pkg:npm/libb
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/app@1.0.0
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/liba
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libb

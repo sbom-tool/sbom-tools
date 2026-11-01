@@ -13,8 +13,9 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] compliant · E0 W0 I2
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-NTIA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
-[CraPhase1] compliant · E0 W5 I3
+[CraPhase1] compliant · E0 W5 I4
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -22,8 +23,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
-[CraPhase2] compliant · E0 W6 I4
+[CraPhase2] compliant · E0 W6 I5
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-LIFECYCLE  -
@@ -78,20 +80,22 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/libfoo@2.1.0
 
 with auto-discovered CRA sidecar:
-[CraPhase1 + sidecar] NON-COMPLIANT · E3 W2 I3
+[CraPhase1 + sidecar] NON-COMPLIANT · E3 W2 I4
   E SBOM-CRA-ART-14-EARLY-WARNING  -
   E SBOM-CRA-ART-14-NOTIFICATION  -
   E SBOM-CRA-ART-14-PSIRT  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-14-ENISA  -
-[CraPhase2 + sidecar] NON-COMPLIANT · E3 W3 I4
+[CraPhase2 + sidecar] NON-COMPLIANT · E3 W3 I5
   E SBOM-CRA-ART-14-EARLY-WARNING  -
   E SBOM-CRA-ART-14-NOTIFICATION  -
   E SBOM-CRA-ART-14-PSIRT  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:npm/libfoo@2.1.0
   I SBOM-CRA-LIFECYCLE  -

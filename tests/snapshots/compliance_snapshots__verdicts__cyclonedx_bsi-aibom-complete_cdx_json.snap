@@ -6,7 +6,7 @@ as_of: 2026-10-12T00:00:00Z
 
 [Minimum] compliant · E0 W0 I0
 [Standard] NON-COMPLIANT · E1 W3 I0
-  E SBOM-NTIA-VERSION  pkg:generic/product-reviews-1m@2026.01
+  E SBOM-QUALITY-VERSION  pkg:generic/product-reviews-1m@2026.01
   W SBOM-QUALITY-IDENTIFIER  root
   W SBOM-QUALITY-LICENSE  root
   W SBOM-QUALITY-SERIAL  -
@@ -147,9 +147,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  root
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
 [Comprehensive] NON-COMPLIANT · E2 W5 I0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/product-reviews-1m@2026.01
-  E SBOM-NTIA-VERSION  pkg:generic/product-reviews-1m@2026.01
-  W SBOM-NTIA-DEPENDENCY  root
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/product-reviews-1m@2026.01
+  E SBOM-QUALITY-VERSION  pkg:generic/product-reviews-1m@2026.01
+  W SBOM-QUALITY-DEPENDENCY  root
   W SBOM-QUALITY-HASH  root
   W SBOM-QUALITY-IDENTIFIER  root
   W SBOM-QUALITY-LICENSE  root

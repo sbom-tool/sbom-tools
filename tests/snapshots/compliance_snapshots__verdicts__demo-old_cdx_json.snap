@@ -176,9 +176,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FDA-CONTACT  -
   W SBOM-FDA-DEPENDENCY  - (4/9)
   W SBOM-FDA-DEPENDENCY  acme-webapp
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SECURITY  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W4 I1
   E SBOM-SSDF-PS1  -
@@ -298,16 +298,16 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (9/9)
   W SBOM-FSCT-RELATIONSHIP-ALL  - (5/9)
 [Comprehensive] NON-COMPLIANT · E10 W13 I9
-  E SBOM-NTIA-SUPPLIER  acme-webapp
-  E SBOM-NTIA-SUPPLIER  pkg:npm/axios@0.21.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/express@4.17.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/jquery@3.5.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/lodash@4.17.20
-  E SBOM-NTIA-SUPPLIER  pkg:npm/moment@2.29.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/react@17.0.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/request@2.88.2
-  E SBOM-NTIA-SUPPLIER  pkg:npm/underscore@1.12.0
   E SBOM-QUALITY-CREATOR  -
+  E SBOM-QUALITY-SUPPLIER  acme-webapp
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/axios@0.21.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/express@4.17.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/jquery@3.5.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/lodash@4.17.20
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/moment@2.29.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/react@17.0.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/request@2.88.2
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/underscore@1.12.0
   I SBOM-QUALITY-ELEMENT-ID  acme-webapp
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/axios@0.21.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/express@4.17.1
@@ -317,7 +317,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/react@17.0.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/request@2.88.2
   I SBOM-QUALITY-ELEMENT-ID  pkg:npm/underscore@1.12.0
-  W SBOM-NTIA-DEPENDENCY  acme-webapp
+  W SBOM-QUALITY-DEPENDENCY  acme-webapp
   W SBOM-QUALITY-HASH  acme-webapp
   W SBOM-QUALITY-HASH  pkg:npm/axios@0.21.1
   W SBOM-QUALITY-HASH  pkg:npm/express@4.17.1

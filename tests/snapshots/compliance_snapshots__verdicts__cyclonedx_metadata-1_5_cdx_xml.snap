@@ -16,8 +16,9 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/ledger@2.4.0
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/openssl@3.0.15
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/pcre2@10.44
-[CraPhase1] compliant · E0 W5 I5
+[CraPhase1] compliant · E0 W5 I6
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/ledger@2.4.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/openssl@3.0.15
   I SBOM-CRA-ELEMENT-ID  pkg:generic/pcre2@10.44
@@ -27,9 +28,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
-[CraPhase2] compliant · E0 W7 I7
+[CraPhase2] compliant · E0 W7 I8
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/ledger@2.4.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/openssl@3.0.15
   I SBOM-CRA-ELEMENT-ID  pkg:generic/pcre2@10.44

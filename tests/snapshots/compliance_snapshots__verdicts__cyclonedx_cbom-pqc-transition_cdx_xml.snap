@@ -12,12 +12,13 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:cargo/hybrid-crypto@3.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-compat@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-transition-app@2.0.0
-[CraPhase1] compliant · E0 W12 I6
+[CraPhase1] compliant · E0 W12 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/hybrid-crypto@3.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-compat@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/pqc-transition-app@2.0.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   W SBOM-CRA-ART-13-16  -
@@ -31,13 +32,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/legacy-compat@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/pqc-transition-app@2.0.0
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W14 I7
+[CraPhase2] NON-COMPLIANT · E1 W14 I8
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/hybrid-crypto@3.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/legacy-compat@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/pqc-transition-app@2.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
@@ -62,7 +64,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:cargo/legacy-compat@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/pqc-transition-app@2.0.0
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (3/3)
@@ -154,9 +156,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
   W SBOM-FSCT-LICENSE-COVERAGE  - (1/3)
 [Comprehensive] NON-COMPLIANT · E3 W5 I0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/hybrid-crypto@3.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/legacy-compat@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/pqc-transition-app@2.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/hybrid-crypto@3.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/legacy-compat@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/pqc-transition-app@2.0.0
   W SBOM-QUALITY-HASH  pkg:cargo/hybrid-crypto@3.0.0
   W SBOM-QUALITY-HASH  pkg:cargo/legacy-compat@1.0.0
   W SBOM-QUALITY-HASH  pkg:cargo/pqc-transition-app@2.0.0

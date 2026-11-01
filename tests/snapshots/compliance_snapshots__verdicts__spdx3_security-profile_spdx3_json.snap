@@ -11,10 +11,11 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   E SBOM-NTIA-SUPPLIER  pkg:npm/logging-lib@1.5.2
-[CraPhase1] compliant · E0 W10 I3
+[CraPhase1] compliant · E0 W10 I4
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/crypto-lib@3.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/logging-lib@1.5.2
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/3)
@@ -25,12 +26,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W12 I5
+[CraPhase2] NON-COMPLIANT · E1 W12 I6
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/crypto-lib@3.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/logging-lib@1.5.2
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
@@ -119,8 +121,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E2 W4 I0
-  E SBOM-NTIA-SUPPLIER  pkg:npm/crypto-lib@3.0.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/logging-lib@1.5.2
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/crypto-lib@3.0.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-QUALITY-HASH  pkg:npm/crypto-lib@3.0.1
   W SBOM-QUALITY-HASH  pkg:npm/logging-lib@1.5.2
   W SBOM-QUALITY-LICENSE  pkg:npm/crypto-lib@3.0.1

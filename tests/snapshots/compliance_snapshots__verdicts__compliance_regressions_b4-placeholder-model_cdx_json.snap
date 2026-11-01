@@ -7,22 +7,25 @@ as_of: 2026-10-12T00:00:00Z
 [Minimum] NON-COMPLIANT · E1 W0 I1
   E SBOM-QUALITY-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
-[Standard] NON-COMPLIANT · E2 W1 I1
-  E SBOM-NTIA-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
+[Standard] NON-COMPLIANT · E2 W3 I1
   E SBOM-QUALITY-NAME  pkg:huggingface/datasets/example/reviews@2026.1
+  E SBOM-QUALITY-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   W SBOM-QUALITY-LICENSE  pkg:generic/example/assistant@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/datasets/example/reviews@2026.1
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/example/sentiment-model@1.2.3
 [NtiaMinimum] NON-COMPLIANT · E3 W0 I1
   E SBOM-NTIA-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-NTIA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-NTIA-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
-[CraPhase1] NON-COMPLIANT · E2 W7 I5
+[CraPhase1] NON-COMPLIANT · E2 W7 I6
   E SBOM-CRA-COMPONENT-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CRA-COMPONENT-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -32,12 +35,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
-[CraPhase2] NON-COMPLIANT · E2 W11 I6
+[CraPhase2] NON-COMPLIANT · E2 W11 I7
   E SBOM-CRA-COMPONENT-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CRA-COMPONENT-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -111,9 +115,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-BSIAI-DATASET-LICENSE  NOASSERTION (1/1)
   W SBOM-BSIAI-MODEL-CARD  TBD (1/1)
   W SBOM-BSIAI-MODEL-LICENSE  TBD (1/1)
-[Cisa2026] NON-COMPLIANT · E5 W3 I0
+[Cisa2026] NON-COMPLIANT · E6 W3 I0
   E SBOM-CISA2026-HASH  pkg:generic/example/assistant@1.0.0
   E SBOM-CISA2026-LICENSE  pkg:generic/example/assistant@1.0.0
+  E SBOM-CISA2026-LICENSE  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CISA2026-NAME  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CISA2026-PRODUCER  pkg:huggingface/datasets/example/reviews@2026.1
   E SBOM-CISA2026-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
@@ -141,10 +146,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:generic/example/assistant@1.0.0
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/3)
-[Comprehensive] NON-COMPLIANT · E3 W2 I1
-  E SBOM-NTIA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
-  E SBOM-NTIA-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
+[Comprehensive] NON-COMPLIANT · E3 W4 I1
   E SBOM-QUALITY-NAME  pkg:huggingface/datasets/example/reviews@2026.1
+  E SBOM-QUALITY-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
+  E SBOM-QUALITY-VERSION  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   W SBOM-QUALITY-HASH  pkg:generic/example/assistant@1.0.0
   W SBOM-QUALITY-LICENSE  pkg:generic/example/assistant@1.0.0
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/datasets/example/reviews@2026.1
+  W SBOM-QUALITY-LICENSE  pkg:huggingface/example/sentiment-model@1.2.3

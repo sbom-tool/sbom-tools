@@ -142,8 +142,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/5)
   W SBOM-FSCT-RELATIONSHIP-ALL  - (2/5)
 [Comprehensive] compliant · E0 W13 I0
-  W SBOM-NTIA-DEPENDENCY  - (3/5)
-  W SBOM-NTIA-DEPENDENCY  pkg:npm/test-app@1.0.0
+  W SBOM-QUALITY-DEPENDENCY  - (3/5)
+  W SBOM-QUALITY-DEPENDENCY  pkg:npm/test-app@1.0.0
   W SBOM-QUALITY-HASH  pkg:npm/axios@1.6.0
   W SBOM-QUALITY-HASH  pkg:npm/dayjs@1.11.10
   W SBOM-QUALITY-HASH  pkg:npm/express@4.18.2

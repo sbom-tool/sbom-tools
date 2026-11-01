@@ -20,7 +20,7 @@ source: tests/compliance_snapshots.rs
             {
               "name": "sha256",
               "ns": "https://sbom.tools/ns/oscal",
-              "value": "1071fc3ec39be2934a57c9b8d40aaa286f0bec8a0dd87fed65d4671b8260f2bb"
+              "value": "54964988348193d6f63e26a32b8a57224809f6bea921a6080d4758a7a759cef6"
             },
             {
               "name": "format",
@@ -38,14 +38,14 @@ source: tests/compliance_snapshots.rs
               "hashes": [
                 {
                   "algorithm": "SHA-256",
-                  "value": "1071fc3ec39be2934a57c9b8d40aaa286f0bec8a0dd87fed65d4671b8260f2bb"
+                  "value": "54964988348193d6f63e26a32b8a57224809f6bea921a6080d4758a7a759cef6"
                 }
               ],
               "href": "urn:uuid:fc1234ab-cdef-4567-89ab-cdef01234567"
             }
           ],
           "title": "example-app (CycloneDX 1.6 SBOM)",
-          "uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4"
+          "uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12"
         }
       ]
     },
@@ -63,7 +63,7 @@ source: tests/compliance_snapshots.rs
         "description": "Validation results for EU CRA Phase 2 (2027), derived only from the supplied SBOM.",
         "findings": [
           {
-            "description": "Overall verdict for EU CRA Phase 2 (2027): 0 error(s), 1 warning(s), 3 informational finding(s).",
+            "description": "Overall verdict for EU CRA Phase 2 (2027): 0 error(s), 1 warning(s), 4 informational finding(s).",
             "target": {
               "status": {
                 "state": "satisfied"
@@ -72,13 +72,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "EU CRA Phase 2 (2027) compliance roll-up",
-            "uuid": "34dc13d9-59f3-58cd-bf7c-7dd0ea10e28d"
+            "uuid": "768c0aae-9fca-576b-8440-09e558d7fc6c"
           },
           {
             "description": "Component 'lib-a' may be missing bom-ref",
             "related-observations": [
               {
-                "observation-uuid": "2f3b6e76-23a8-568b-94be-c6c41587f753"
+                "observation-uuid": "79b72e2e-477d-53ef-9327-d71461253dfa"
               }
             ],
             "target": {
@@ -89,13 +89,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "cc10ec5d-5ae6-5283-b99c-a94766bc9e70"
+            "uuid": "84e0e1f0-e2a9-5d7f-af01-6867ee1dc3a9"
           },
           {
             "description": "Component 'lib-b' may be missing bom-ref",
             "related-observations": [
               {
-                "observation-uuid": "f7143079-792a-5830-8376-ff623d09d9ee"
+                "observation-uuid": "fe1fca95-63c6-551c-8d8b-a4b92c375483"
               }
             ],
             "target": {
@@ -106,13 +106,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "4b947eea-3541-57a1-a42f-f42adf51a359"
+            "uuid": "ae3280ea-d2cb-5998-8fff-0e7690ea2f6d"
           },
           {
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
-                "observation-uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
+                "observation-uuid": "8fda3873-6eaf-5a5a-9d74-6ceb29ad8adb"
               }
             ],
             "target": {
@@ -123,13 +123,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-SBOM-FRESHNESS",
-            "uuid": "c480d6bd-6540-5ed1-8f9e-282a2048b95c"
+            "uuid": "c81a731c-1094-5399-9904-54df687f9e95"
           },
           {
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
-                "observation-uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
+                "observation-uuid": "a82ac3de-8a61-58c3-a6e1-83d473837821"
               }
             ],
             "target": {
@@ -140,7 +140,24 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-VULN-STATEMENT",
-            "uuid": "3e4845b8-f3aa-56b7-a9fd-d1b48acb3460"
+            "uuid": "b88f99ef-98bf-54fa-9cfc-c50d03f11225"
+          },
+          {
+            "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "related-observations": [
+              {
+                "observation-uuid": "3a83310e-bd8b-5a35-9b78-0f89e6695a9a"
+              }
+            ],
+            "target": {
+              "status": {
+                "state": "not-satisfied"
+              },
+              "target-id": "sbom-cra-doc-integrity",
+              "type": "objective-id"
+            },
+            "title": "SBOM-CRA-DOC-INTEGRITY",
+            "uuid": "d3e10a58-3626-5fa7-b458-4aa9375d8689"
           }
         ],
         "local-definitions": {
@@ -169,7 +186,7 @@ source: tests/compliance_snapshots.rs
               },
               "title": "lib-a 2.3.4",
               "type": "software",
-              "uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41"
+              "uuid": "d9a851cc-4fda-5c35-a9cb-d24a2679979c"
             },
             {
               "description": "A component listed in the assessed SBOM.",
@@ -195,7 +212,7 @@ source: tests/compliance_snapshots.rs
               },
               "title": "lib-b 0.9.1",
               "type": "software",
-              "uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d"
+              "uuid": "3c5fed7c-17e3-5653-98f1-186ed0172358"
             }
           ]
         },
@@ -235,12 +252,12 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               },
               {
-                "subject-uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41",
+                "subject-uuid": "d9a851cc-4fda-5c35-a9cb-d24a2679979c",
                 "title": "lib-a 2.3.4",
                 "type": "component"
               }
@@ -249,7 +266,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "2f3b6e76-23a8-568b-94be-c6c41587f753"
+            "uuid": "79b72e2e-477d-53ef-9327-d71461253dfa"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -286,12 +303,12 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               },
               {
-                "subject-uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d",
+                "subject-uuid": "3c5fed7c-17e3-5653-98f1-186ed0172358",
                 "title": "lib-b 0.9.1",
                 "type": "component"
               }
@@ -300,7 +317,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "f7143079-792a-5830-8376-ff623d09d9ee"
+            "uuid": "fe1fca95-63c6-551c-8d8b-a4b92c375483"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -332,7 +349,7 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               }
@@ -341,7 +358,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "44efd5b3-f88f-5d85-b596-bafeb9f8b220"
+            "uuid": "8fda3873-6eaf-5a5a-9d74-6ceb29ad8adb"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -373,7 +390,7 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               }
@@ -382,7 +399,48 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "232e4b30-9a47-5949-8f3a-13210eb3d37b"
+            "uuid": "a82ac3de-8a61-58c3-a6e1-83d473837821"
+          },
+          {
+            "collected": "2026-10-12T00:00:00Z",
+            "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "methods": [
+              "EXAMINE"
+            ],
+            "props": [
+              {
+                "name": "severity",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "info"
+              },
+              {
+                "name": "standard-reference",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CRA Annex I Part I (2)(f): Document signature/integrity"
+              },
+              {
+                "name": "rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-CRA-DOC-INTEGRITY"
+              },
+              {
+                "name": "sarif-rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-CRA-DOC-INTEGRITY"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
+            "title": "SBOM-CRA-DOC-INTEGRITY",
+            "types": [
+              "discovery"
+            ],
+            "uuid": "3a83310e-bd8b-5a35-9b78-0f89e6695a9a"
           }
         ],
         "props": [
@@ -419,7 +477,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "info-count",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "3"
+            "value": "4"
           },
           {
             "name": "passed-count",
@@ -442,13 +500,13 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EU CRA Phase 2 (2027)",
-        "uuid": "795b36b1-f2d0-55a6-a3cd-d2603c4eab87"
+        "uuid": "ea24e0b2-5c2f-5bd4-a43f-f457437ef705"
       },
       {
         "description": "Validation results for EU CRA Phase 1 (2026), derived only from the supplied SBOM.",
         "findings": [
           {
-            "description": "Overall verdict for EU CRA Phase 1 (2026): 0 error(s), 1 warning(s), 3 informational finding(s).",
+            "description": "Overall verdict for EU CRA Phase 1 (2026): 0 error(s), 1 warning(s), 4 informational finding(s).",
             "target": {
               "status": {
                 "state": "satisfied"
@@ -457,13 +515,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "EU CRA Phase 1 (2026) compliance roll-up",
-            "uuid": "e23fd178-dce2-5bc3-b90e-f204dc1cdbe1"
+            "uuid": "3c9534b8-df98-5249-8703-b54e972c8439"
           },
           {
             "description": "Component 'lib-a' may be missing bom-ref",
             "related-observations": [
               {
-                "observation-uuid": "363e158c-aba2-5f2c-a82c-e5f26f931c8f"
+                "observation-uuid": "61c13693-49de-5a08-b453-eb22eb6dbd80"
               }
             ],
             "target": {
@@ -474,13 +532,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "fe342c04-0fe3-5202-85e7-1f423a0bbf37"
+            "uuid": "6f40c0fd-be6a-55ed-9097-25c109a35271"
           },
           {
             "description": "Component 'lib-b' may be missing bom-ref",
             "related-observations": [
               {
-                "observation-uuid": "17dc5857-1cfb-5740-afa3-66cc7a7a1696"
+                "observation-uuid": "4b5bc060-a8c6-5c88-94fa-729d8c69d920"
               }
             ],
             "target": {
@@ -491,13 +549,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "1039793f-84fa-562b-b44b-effea742eb2f"
+            "uuid": "97901c79-9916-5fa0-881c-fa2af65a88a0"
           },
           {
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
             "related-observations": [
               {
-                "observation-uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
+                "observation-uuid": "c2e8e5f5-5221-5225-b7e8-c1694d8e659b"
               }
             ],
             "target": {
@@ -508,13 +566,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-SBOM-FRESHNESS",
-            "uuid": "303eab50-71d2-5625-ab7b-6ea487b987d1"
+            "uuid": "fe719865-4707-5d6d-9f37-2462ba449686"
           },
           {
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
             "related-observations": [
               {
-                "observation-uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
+                "observation-uuid": "08916f03-fcf3-52d3-bfab-d9798d9117fb"
               }
             ],
             "target": {
@@ -525,7 +583,24 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-VULN-STATEMENT",
-            "uuid": "e3aa9f4c-2590-513c-911e-29fbddc37de6"
+            "uuid": "af571dc9-ec3b-5b18-a144-cadace754c19"
+          },
+          {
+            "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "related-observations": [
+              {
+                "observation-uuid": "161749cb-cd88-5967-9be2-afd95ce22e34"
+              }
+            ],
+            "target": {
+              "status": {
+                "state": "not-satisfied"
+              },
+              "target-id": "sbom-cra-doc-integrity",
+              "type": "objective-id"
+            },
+            "title": "SBOM-CRA-DOC-INTEGRITY",
+            "uuid": "d3f11a61-d359-5b6c-b56f-6c1d0145312b"
           }
         ],
         "local-definitions": {
@@ -554,7 +629,7 @@ source: tests/compliance_snapshots.rs
               },
               "title": "lib-a 2.3.4",
               "type": "software",
-              "uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41"
+              "uuid": "d9a851cc-4fda-5c35-a9cb-d24a2679979c"
             },
             {
               "description": "A component listed in the assessed SBOM.",
@@ -580,7 +655,7 @@ source: tests/compliance_snapshots.rs
               },
               "title": "lib-b 0.9.1",
               "type": "software",
-              "uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d"
+              "uuid": "3c5fed7c-17e3-5653-98f1-186ed0172358"
             }
           ]
         },
@@ -620,12 +695,12 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               },
               {
-                "subject-uuid": "2bab3458-b959-54f3-b44d-adba1ba39a41",
+                "subject-uuid": "d9a851cc-4fda-5c35-a9cb-d24a2679979c",
                 "title": "lib-a 2.3.4",
                 "type": "component"
               }
@@ -634,7 +709,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "363e158c-aba2-5f2c-a82c-e5f26f931c8f"
+            "uuid": "61c13693-49de-5a08-b453-eb22eb6dbd80"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -671,12 +746,12 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               },
               {
-                "subject-uuid": "2f1fd1ab-3215-552c-ba77-a80d478d192d",
+                "subject-uuid": "3c5fed7c-17e3-5653-98f1-186ed0172358",
                 "title": "lib-b 0.9.1",
                 "type": "component"
               }
@@ -685,7 +760,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "17dc5857-1cfb-5740-afa3-66cc7a7a1696"
+            "uuid": "4b5bc060-a8c6-5c88-94fa-729d8c69d920"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -717,7 +792,7 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               }
@@ -726,7 +801,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "6bed1632-5ce6-5055-8810-3bd2b1c2795d"
+            "uuid": "c2e8e5f5-5221-5225-b7e8-c1694d8e659b"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -758,7 +833,7 @@ source: tests/compliance_snapshots.rs
             ],
             "subjects": [
               {
-                "subject-uuid": "4ec8e083-f6a1-56af-a8ca-0528a4a2a8d4",
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
                 "title": "example-app (CycloneDX 1.6 SBOM)",
                 "type": "resource"
               }
@@ -767,7 +842,48 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "49983ea9-77ff-572b-a5a5-2e6afb309a5c"
+            "uuid": "08916f03-fcf3-52d3-bfab-d9798d9117fb"
+          },
+          {
+            "collected": "2026-10-12T00:00:00Z",
+            "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "methods": [
+              "EXAMINE"
+            ],
+            "props": [
+              {
+                "name": "severity",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "info"
+              },
+              {
+                "name": "standard-reference",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CRA Annex I Part I (2)(f): Document signature/integrity"
+              },
+              {
+                "name": "rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-CRA-DOC-INTEGRITY"
+              },
+              {
+                "name": "sarif-rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-CRA-DOC-INTEGRITY"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "0fbc7da6-745f-5be3-8613-fde1c463bf12",
+                "title": "example-app (CycloneDX 1.6 SBOM)",
+                "type": "resource"
+              }
+            ],
+            "title": "SBOM-CRA-DOC-INTEGRITY",
+            "types": [
+              "discovery"
+            ],
+            "uuid": "161749cb-cd88-5967-9be2-afd95ce22e34"
           }
         ],
         "props": [
@@ -804,7 +920,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "info-count",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "3"
+            "value": "4"
           },
           {
             "name": "passed-count",
@@ -827,9 +943,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EU CRA Phase 1 (2026)",
-        "uuid": "813a55d8-7ffe-58f2-aea5-187cc77b6909"
+        "uuid": "1fa74c3b-16b2-5666-a22b-d37ccd35c6f7"
       }
     ],
-    "uuid": "3649f8a7-2af4-5112-91b5-9a620c4127b9"
+    "uuid": "96effa2f-c600-576f-8c09-ba495d76d3f3"
   }
 }
