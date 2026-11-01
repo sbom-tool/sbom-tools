@@ -1108,8 +1108,9 @@ fn sarif_result(
 /// artifact URI is relative to it, and `artifacts` as `run.artifacts`.
 ///
 /// The cap is decided before a compliance finding is built, so only the
-/// findings the run keeps are. Every finding still claims its finding key,
-/// in report order, so a kept finding gets the key it would get uncapped.
+/// findings the run keeps are. A kept finding gets the key it gets uncapped:
+/// when a key repeats (see [`keys_are_distinct`]), every finding claims its
+/// key in report order, kept or not.
 fn render_log(
     automation_id: String,
     rules: Vec<SarifRule>,
@@ -1424,9 +1425,9 @@ struct RunResults<'a> {
     /// The results.
     pending: Vec<Pending<'a>>,
     /// The finding keys the built results claimed. The compliance findings
-    /// claim theirs as [`render_log`] reaches them, in report order: their
-    /// keys start with a standard, never with the scope of a built result,
-    /// so no built result's key ever numbers one of theirs or the reverse.
+    /// are keyed as [`render_log`] reaches them, in report order: their keys
+    /// start with a standard, never with the scope of a built result, so no
+    /// built result's key ever numbers one of theirs or the reverse.
     keys: KeyBook,
     /// The SBOM file the results point into.
     artifact: Option<&'a SarifArtifact>,
