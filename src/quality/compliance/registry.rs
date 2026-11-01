@@ -4196,7 +4196,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA FSCT 3e §2.4 (supplemental): SBOM carries a verifiable digital signature",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.4")],
-            remediation: "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute; the check runs on CycloneDX input only.",
+            remediation: "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute. The check runs on CycloneDX and SPDX 3 input; SPDX 2.x has no in-document signature field.",
             advice: Some(&ADVICE_SIGNATURE),
         },
         // Generic bucket for FSCT-run findings whose check site has no

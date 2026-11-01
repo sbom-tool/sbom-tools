@@ -73,7 +73,7 @@ use shared::{
     ValueState, creator_contacts, creator_identified, digest_problems, document_signed,
     future_timestamp_violation, has_known_license, has_known_value, invalid_digest_note,
     inventory_absent_violation, is_contact_reference, is_declared_unknown, is_eucc_reference,
-    is_placeholder, is_valid_email_format, justified_not_affected, known_component_name,
+    is_placeholder, is_spdx2, is_valid_email_format, justified_not_affected, known_component_name,
     known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
     name_with_digest_problems, package_components, truncate_list, unparseable_timestamp,
     unreachable_contact_note, unreachable_creator_note, unreachable_sidecar_note, value_state,

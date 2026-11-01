@@ -23,8 +23,10 @@
 //!   via `CreatorComment` per Table 1 and SPDX 3.0 via `Software.Sbom
 //!   .sbomType`, but neither evidence path is parsed here — the check is
 //!   gated to CycloneDX input.
-//! - `SBOM-FSCT-SIGNATURE`: SPDX has no in-band signature field; gated to
-//!   CycloneDX (JSF `signature`).
+//! - `SBOM-FSCT-SIGNATURE`: SPDX 2.x has no in-band signature field, so the
+//!   check skips it (see `is_spdx2`); CycloneDX (JSF or XML-DSig
+//!   `signature`) and SPDX 3 (`verifiedUsing` signature) are checked, as
+//!   `SBOM-CISA2026-SIGNATURE` checks them.
 //! - `SBOM-FSCT-DYNAMIC-DEPS`: dynamic/runtime/provided link relationships
 //!   are parsed only from SPDX relationships (`DYNAMIC_LINK`,
 //!   `RUNTIME_DEPENDENCY_OF`, `PROVIDED_DEPENDENCY_OF`); CycloneDX's
@@ -1375,16 +1377,21 @@ fn fsct_aspirational_goals(
     }
 
     // §2.4 (supplemental element, not a Baseline Attribute) — verifiable
-    // digital signature. Evidence-gated to CycloneDX (JSF signature); SPDX
-    // has no in-band signature field, so sidecar/envelope signatures are
-    // unobservable there.
-    if sbom.document.format == SbomFormat::CycloneDx && !document_signed(sbom) {
+    // digital signature. §2.4 names no format ("authors must be able to
+    // digitally sign SBOMs"), so the check accepts the in-document signature
+    // of every format that can carry one, as SBOM-CISA2026-SIGNATURE does
+    // (`document_signed`): a CycloneDX JSF or XML-DSig signature, or an
+    // SPDX 3 verifiedUsing signature. SPDX 2.x has no in-band signature
+    // field, so its sidecar/envelope signatures are unobservable and the
+    // check skips it. Until v0.4.0 the check read CycloneDX only.
+    if !is_spdx2(sbom) && !document_signed(sbom) {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::IntegrityInfo,
             message: "[CISA FSCT 3e §2.4] SBOM carries no verifiable digital signature \
-                      (CycloneDX JSF signature) — supplemental authenticity/integrity \
-                      capability, not a Baseline Attribute"
+                      (CycloneDX JSF or XML-DSig signature, or SPDX 3 verifiedUsing \
+                      signature) — supplemental authenticity/integrity capability, not a \
+                      Baseline Attribute"
                 .to_string(),
             element: None,
             requirement: "CISA FSCT 3e §2.4: Authenticity and integrity (supplemental)".to_string(),

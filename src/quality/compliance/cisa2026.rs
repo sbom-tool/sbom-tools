@@ -89,30 +89,6 @@ fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<S
     }
 }
 
-/// Whether the document is SPDX 2.x, whose data model has no field for
-/// three pieces of evidence the 2026 elements ask for:
-/// - an in-document signature (SBOM Author Signature): SPDX 2.x defines no
-///   signature field, so its signatures live in detached files or
-///   envelopes, unlike CycloneDX JSF `signature` or SPDX 3 `verifiedUsing`;
-/// - the lifecycle phase (SBOM Generation Context): SPDX 2.x has no
-///   counterpart of CycloneDX `metadata.lifecycles` or SPDX 3 `sbomType`,
-///   only free-text comments;
-/// - a completeness declaration (Coverage): SPDX 2.x has no counterpart of
-///   CycloneDX `compositions` or SPDX 3 relationship `completeness`; a
-///   `NONE`/`NOASSERTION` relationship target speaks for one relationship,
-///   not for the inventory.
-///
-/// The rules looking for that evidence are gated off for SPDX 2.x, as the
-/// FSCT profile gates attributes a format cannot express. Unparseable SPDX
-/// versions count as 2.x: the SPDX 3 parser always records a 3.x version.
-fn is_spdx2(sbom: &NormalizedSbom) -> bool {
-    sbom.document.format == SbomFormat::Spdx
-        && sbom
-            .document
-            .spec_version_parsed()
-            .is_none_or(|v| v.major < 3)
-}
-
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CISA 2026 Minimum Elements (successor to NTIA 2021)

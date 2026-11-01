@@ -11,12 +11,14 @@
 //! disagreed: a NOASSERTION licence passed the Standard profile but failed
 //! CRA Art. 13(5), CRA Art. 13(17), EO 14028, FDA and BSI took any contact
 //! while PCI DSS rejected placeholders, the CRA and EUCC checks read
-//! different EUCC URL keywords, and FDA and PCI DSS counted vulnerabilities
-//! the CRA profiles exempt.
+//! different EUCC URL keywords, FDA and PCI DSS counted vulnerabilities the
+//! CRA profiles exempt, and FSCT read no SPDX 3 signature.
 //!
 //! Every case renders as CycloneDX JSON and XML, which carry each variant
-//! as written, and runs through the real parser and checker at the pinned
-//! test clock. The rule matrices hold each check in the other encodings.
+//! as written, and the signature cases as SPDX 3 too, the other format that
+//! can carry one; each runs through the real parser and checker at the
+//! pinned test clock. The rule matrices hold each check in the other
+//! encodings.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
@@ -45,7 +47,26 @@ fn judge(
     expect_fire: impl Fn(&Check) -> bool,
     mismatches: &mut Vec<String>,
 ) {
-    for &encoding in Encoding::CYCLONEDX {
+    judge_in(
+        Encoding::CYCLONEDX,
+        variant,
+        fixture,
+        checks,
+        expect_fire,
+        mismatches,
+    );
+}
+
+/// [`judge`] in `encodings`.
+fn judge_in(
+    encodings: &[Encoding],
+    variant: &str,
+    fixture: &SbomFixture,
+    checks: &[Check],
+    expect_fire: impl Fn(&Check) -> bool,
+    mismatches: &mut Vec<String>,
+) {
+    for &encoding in encodings {
         for check in checks {
             let (level, rule) = *check;
             let result = check_in(level, fixture, encoding);
@@ -388,7 +409,11 @@ fn vex_not_affected_evidence_gets_one_answer() {
 }
 
 /// Every check that reads the document signature: a signature with a value
-/// satisfies all of them; none, or one without a value, satisfies none.
+/// satisfies all of them; none, or one without a value, satisfies none, in
+/// every format that can carry one (CycloneDX and SPDX 3; until v0.4.0 FSCT
+/// read CycloneDX only). SPDX 2.x has no signature field: CISA 2026 and
+/// FSCT ask it for none, and the CRA reports its missing integrity evidence
+/// as Info (the rule matrices).
 #[test]
 fn signature_evidence_gets_one_answer() {
     const CHECKS: &[Check] = &[
@@ -409,7 +434,14 @@ fn signature_evidence_gets_one_answer() {
     ] {
         let mut fixture = product(Vec::new(), Some("MIT"));
         fixture.signature = signature.map(|(alg, value)| (alg.to_string(), value.to_string()));
-        judge(variant, &fixture, CHECKS, |_| unsigned, &mut mismatches);
+        judge_in(
+            Encoding::ALL_BUT_SPDX23,
+            variant,
+            &fixture,
+            CHECKS,
+            |_| unsigned,
+            &mut mismatches,
+        );
     }
     assert_consistent("signature", &mismatches);
 }

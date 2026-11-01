@@ -107,10 +107,12 @@ fn copyright_everywhere(s: &mut SbomFixture) {
     }
 }
 
-/// The CycloneDX-only evidence gates (SBOM Type, signature).
+/// The CycloneDX-only evidence gate (SBOM Type).
 const CYCLONEDX_GATED: &str = "FSCT reads this attribute from CycloneDX only (its documented \
-     evidence gate): the SPDX parsers record no lifecycle phase, and FSCT does not consult the \
-     SPDX 3 verifiedUsing signature that CISA 2026 reads";
+     evidence gate): the SPDX parsers record no lifecycle phase";
+/// The signature gate: SPDX 2.x cannot carry an in-document signature.
+const SPDX23_HAS_NO_SIGNATURE: &str = "SPDX 2.3 has no in-document signature field, so FSCT, \
+     like CISA 2026, asks no SPDX 2.x document for one (CycloneDX and SPDX 3 are asked)";
 /// The SPDX-only evidence gates (dynamic links, concluded licences).
 const SPDX_GATED: &str = "FSCT reads this evidence from SPDX only (its documented evidence \
      gate): a CycloneDX document can carry no dynamic link or concluded licence the parser \
@@ -430,12 +432,17 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
         )
-        .case_differs("firing", Encoding::SPDX, Outcome::Silent, CYCLONEDX_GATED)
+        .case_differs(
+            "firing",
+            &[Encoding::Spdx23Json],
+            Outcome::Silent,
+            SPDX23_HAS_NO_SIGNATURE,
+        )
         .case_differs(
             "signature without a value",
-            Encoding::SPDX,
+            &[Encoding::Spdx23Json],
             Outcome::Silent,
-            CYCLONEDX_GATED,
+            SPDX23_HAS_NO_SIGNATURE,
         ),
     ];
 
