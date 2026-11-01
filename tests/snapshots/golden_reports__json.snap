@@ -53,6 +53,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.",
@@ -155,6 +160,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check. CycloneDX: set metadata.component.purl (or cpe).",
@@ -241,6 +251,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…).",
@@ -264,6 +279,16 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21). CycloneDX: set components[].purl (or cpe, or swhid[]).",
@@ -287,6 +312,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -306,6 +336,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -329,6 +364,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -348,6 +388,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -371,6 +416,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -390,6 +440,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -413,6 +468,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -432,6 +492,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -455,6 +520,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -474,6 +544,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -497,6 +572,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -516,6 +596,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -539,6 +624,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -558,6 +648,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -581,6 +676,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -600,6 +700,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -623,6 +728,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -642,6 +752,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -661,6 +776,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
@@ -855,6 +975,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
@@ -877,6 +1002,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraArticle",
               "id": "Art. 13(5)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
@@ -907,6 +1037,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -925,6 +1060,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.2.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",
@@ -1066,6 +1206,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.",
@@ -1168,6 +1313,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check. CycloneDX: set metadata.component.purl (or cpe).",
@@ -1254,6 +1404,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…).",
@@ -1277,6 +1432,16 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-07"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21). CycloneDX: set components[].purl (or cpe, or swhid[]).",
@@ -1300,6 +1465,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1319,6 +1489,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1342,6 +1517,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1361,6 +1541,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1384,6 +1569,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1403,6 +1593,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1426,6 +1621,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1445,6 +1645,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1468,6 +1673,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1487,6 +1697,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1510,6 +1725,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1529,6 +1749,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1552,6 +1777,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1571,6 +1801,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1594,6 +1829,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1613,6 +1853,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1636,6 +1881,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1655,6 +1905,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
@@ -1674,6 +1929,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
@@ -1868,6 +2128,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part II (1)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§3.2",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
@@ -1890,6 +2155,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraArticle",
               "id": "Art. 13(5)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
@@ -1920,6 +2190,11 @@ expression: "render(&JsonReporter::new())"
             {
               "standard": "Pren40000_1_3",
               "id": "PRE-7-RQ-03"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.1.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
@@ -1938,6 +2213,11 @@ expression: "render(&JsonReporter::new())"
               "standard": "CraAnnex",
               "id": "Annex I Part I (2)(f)",
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            },
+            {
+              "standard": "EnisaSbomAdvisory",
+              "id": "§2.2.1",
+              "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
           ],
           "remediation": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace. CycloneDX: set serialNumber (urn:uuid:…).",

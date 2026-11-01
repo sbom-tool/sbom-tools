@@ -25,9 +25,10 @@ pub enum PolicyPreset {
     BsiTr03183_2,
     /// CRA Article 24 — Open-source software steward (lighter manufacturer profile)
     CraOssSteward,
-    /// EUCC Substantial — Reg. (EU) 2024/482 reference profile (Annex IV)
+    /// EUCC Substantial — Reg. (EU) 2024/482 (as amended) reference profile (Annex IV)
     EuccSubstantial,
-    /// EU AI Act — Reg. (EU) 2024/1689 Annex IV technical-documentation readiness
+    /// EU AI Act — Reg. (EU) 2024/1689 (as amended by Reg. (EU) 2026/1744)
+    /// Annex IV technical-documentation readiness
     EuAiAct,
     /// BSI/G7 SBOM-for-AI — Feb 2026 minimum-elements readiness
     BsiSbomForAi,

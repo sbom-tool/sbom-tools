@@ -462,7 +462,7 @@ mod tests {
             "SBOM-CRA-COMPONENT-VERSION · CraComponentVersion\nCRA Annex I Part II (1): Component version identification\n",
             "Default severity: Error\nReports:          findings\n",
             "Standards:\n  cra-phase1   EU CRA Phase 1 (2026)\n  cra          EU CRA Phase 2 (2027)\n  oss-steward  CRA OSS Steward (Art. 24)\n",
-            "References:\n  CRA Annex I Part II (1) <https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>\n  prEN 40000-1-3: PRE-7-RQ-06\n",
+            "References:\n  CRA Annex I Part II (1) <https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>\n  prEN 40000-1-3: PRE-7-RQ-06\n  ENISA SBOM TA: §2.1.1 <https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>\n",
             "Help:             https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng\n",
             "\nRemediation:\n  Every component must have a version string.",
             "\nWhere the fix goes:\n  CycloneDX: set components[].version.\n    field: components[].version\n",
@@ -474,7 +474,7 @@ mod tests {
         for expected in [
             "## `SBOM-CRA-COMPONENT-VERSION` CraComponentVersion\n",
             "- **Standards:** `cra-phase1` (EU CRA Phase 1 (2026)), `cra` (EU CRA Phase 2 (2027)), `oss-steward` (CRA OSS Steward (Art. 24))\n",
-            "- **References:** [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>), prEN 40000-1-3: PRE-7-RQ-06\n",
+            "- **References:** [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>), prEN 40000-1-3: PRE-7-RQ-06, [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)\n",
             "- **CycloneDX:** set components\\[\\].version. (field `components[].version`)\n",
         ] {
             assert!(

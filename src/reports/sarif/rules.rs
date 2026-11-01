@@ -710,6 +710,8 @@ mod tests {
                 "NTIA Minimum Elements",
             ),
             (K::Cnsa2, "CNSA 2.0", "CNSA 2.0"),
+            (K::Cnsa2, "CNSSP 15", "CNSA 2.0: CNSSP 15"),
+            (K::EnisaSbomAdvisory, "§2.1.1", "ENISA SBOM TA: §2.1.1"),
             (K::BsiTr03183_2, "TR-03183-2", "BSI TR-03183-2"),
             (K::BsiTr03183_2, "§5.2.2", "BSI TR-03183-2: §5.2.2"),
             (

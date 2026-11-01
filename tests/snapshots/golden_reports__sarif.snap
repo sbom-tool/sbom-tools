@@ -190,15 +190,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness — timely regeneration after changes"
               },
               "fullDescription": {
-                "text": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness — timely regeneration after changes. References: CRA Art. 13(7); CRA Annex I Part II (1)."
+                "text": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness — timely regeneration after changes. References: CRA Art. 13(7); CRA Annex I Part II (1); ENISA SBOM TA: §3.2."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.\n\nReferences:\n- CRA Art. 13(7) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.\n\n**References**\n\n- [CRA Art. 13(7)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.\n\nReferences:\n- CRA Art. 13(7) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §3.2 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.\n\n**References**\n\n- [CRA Art. 13(7)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §3.2](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -208,15 +208,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II (1): SBOM must be in a commonly used, machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+)"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II (1): SBOM must be in a commonly used, machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+). References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-04."
+                "text": "CRA Annex I Part II (1): SBOM must be in a commonly used, machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+). References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-04; ENISA SBOM TA: §2.1.2."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under CRA Annex I Part II (1).\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-04",
-                "markdown": "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under CRA Annex I Part II (1).\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-04"
+                "text": "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under CRA Annex I Part II (1).\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-04\n- ENISA SBOM TA: §2.1.2 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under CRA Annex I Part II (1).\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-04\n- [ENISA SBOM TA: §2.1.2](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -298,15 +298,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Art. 13(5): Third-party due diligence — license information for all components"
               },
               "fullDescription": {
-                "text": "CRA Art. 13(5): Third-party due diligence — license information for all components. References: CRA Art. 13(5)."
+                "text": "CRA Art. 13(5): Third-party due diligence — license information for all components. References: CRA Art. 13(5); ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- CRA Art. 13(5) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [CRA Art. 13(5)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- CRA Art. 13(5) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [CRA Art. 13(5)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -442,15 +442,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II (1): Component version identification"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II (1): Component version identification. References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-06."
+                "text": "CRA Annex I Part II (1): Component version identification. References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-06; ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-06",
-                "markdown": "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-06"
+                "text": "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-06\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-06\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -496,15 +496,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II (1): Component supplier identification"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II (1): Component supplier identification. References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-03."
+                "text": "CRA Annex I Part II (1): Component supplier identification. References: CRA Annex I Part II (1); prEN 40000-1-3: PRE-7-RQ-03; ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Identify each component's supplier; placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-03",
-                "markdown": "Identify each component's supplier; placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-03"
+                "text": "Identify each component's supplier; placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-03\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Identify each component's supplier; placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-03\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -532,15 +532,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I: Unique identifier (PURL, CPE, SWHID or SWID) on every component"
               },
               "fullDescription": {
-                "text": "CRA Annex I: Unique identifier (PURL, CPE, SWHID or SWID) on every component. References: CRA Annex I; prEN 40000-1-3: PRE-7-RQ-07."
+                "text": "CRA Annex I: Unique identifier (PURL, CPE, SWHID or SWID) on every component. References: CRA Annex I; prEN 40000-1-3: PRE-7-RQ-07; ENISA SBOM TA: §2.1.1; ENISA SBOM TA: §3.2."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- CRA Annex I (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-07",
-                "markdown": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [CRA Annex I](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-07"
+                "text": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- CRA Annex I (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-07\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)\n- ENISA SBOM TA: §3.2 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [CRA Annex I](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-07\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)\n- [ENISA SBOM TA: §3.2](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -550,15 +550,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II (1): Primary product component traceable across updates by a PURL or CPE"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II (1): Primary product component traceable across updates by a PURL or CPE. References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-07."
+                "text": "CRA Annex I Part II (1): Primary product component traceable across updates by a PURL or CPE. References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-07; ENISA SBOM TA: §3.2."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component.purl (or cpe).\n- SPDX 2.x: add a PACKAGE-MANAGER purl or SECURITY cpe23Type packages[].externalRefs[] entry to the described package.\n- SPDX 3.0: set software_packageUrl on the rootElement package, or add a cpe23 externalIdentifier[] entry to it.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-07",
-                "markdown": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component.purl (or cpe).\n- **SPDX 2.x:** add a PACKAGE-MANAGER purl or SECURITY cpe23Type packages\\[\\].externalRefs\\[\\] entry to the described package.\n- **SPDX 3.0:** set software\\_packageUrl on the rootElement package, or add a cpe23 externalIdentifier\\[\\] entry to it.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-07"
+                "text": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component.purl (or cpe).\n- SPDX 2.x: add a PACKAGE-MANAGER purl or SECURITY cpe23Type packages[].externalRefs[] entry to the described package.\n- SPDX 3.0: set software_packageUrl on the rootElement package, or add a cpe23 externalIdentifier[] entry to it.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-07\n- ENISA SBOM TA: §3.2 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component.purl (or cpe).\n- **SPDX 2.x:** add a PACKAGE-MANAGER purl or SECURITY cpe23Type packages\\[\\].externalRefs\\[\\] entry to the described package.\n- **SPDX 3.0:** set software\\_packageUrl on the rootElement package, or add a cpe23 externalIdentifier\\[\\] entry to it.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-07\n- [ENISA SBOM TA: §3.2](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -568,15 +568,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II: Supplier of every direct dependency identified (PRE-7-RQ-03, mandatory)"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II: Supplier of every direct dependency identified (PRE-7-RQ-03, mandatory). References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-01; prEN 40000-1-3: PRE-7-RQ-03."
+                "text": "CRA Annex I Part II: Supplier of every direct dependency identified (PRE-7-RQ-03, mandatory). References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-01; prEN 40000-1-3: PRE-7-RQ-03; ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03",
-                "markdown": "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03"
+                "text": "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Identify the supplier of every direct dependency, one hop from the primary component or, when none is declared, from a root of the dependency graph (mandatory under PRE-7-RQ-03).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -586,15 +586,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II: Suppliers of transitive dependencies identified (PRE-7-RQ-03, recommended)"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II: Suppliers of transitive dependencies identified (PRE-7-RQ-03, recommended). References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-01; prEN 40000-1-3: PRE-7-RQ-03."
+                "text": "CRA Annex I Part II: Suppliers of transitive dependencies identified (PRE-7-RQ-03, recommended). References: CRA Annex I Part II; prEN 40000-1-3: PRE-7-RQ-01; prEN 40000-1-3: PRE-7-RQ-03; ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "note"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03",
-                "markdown": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03"
+                "text": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-01\n- prEN 40000-1-3: PRE-7-RQ-03\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -604,15 +604,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part I (2)(f): Component hashes (SHA-256 or stronger) for integrity verification"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part I (2)(f): Component hashes (SHA-256 or stronger) for integrity verification. References: CRA Annex I Part I (2)(f)."
+                "text": "CRA Annex I Part I (2)(f): Component hashes (SHA-256 or stronger) for integrity verification. References: CRA Annex I Part I (2)(f); ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "note"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- CRA Annex I Part I (2)(f) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [CRA Annex I Part I (2)(f)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- CRA Annex I Part I (2)(f) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [CRA Annex I Part I (2)(f)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -622,15 +622,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I: Dependency relationships connect the primary component to its dependencies"
               },
               "fullDescription": {
-                "text": "CRA Annex I: Dependency relationships connect the primary component to its dependencies. References: CRA Annex I."
+                "text": "CRA Annex I: Dependency relationships connect the primary component to its dependencies. References: CRA Annex I; ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CRA Annex I (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CRA Annex I](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- CRA Annex I (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [CRA Annex I](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -712,15 +712,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part II (1): SBOM inventories the product's software components"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part II (1): SBOM inventories the product's software components. References: CRA Annex I Part II (1)."
+                "text": "CRA Annex I Part II (1): SBOM inventories the product's software components. References: CRA Annex I Part II (1); ENISA SBOM TA: §2.1."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component and list the components in components[].\n- SPDX 2.x: list the packages in packages[] and name the product in documentDescribes.\n- SPDX 3.0: add software_Package elements and set the SpdxDocument's rootElement to the product package.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component and list the components in components\\[\\].\n- **SPDX 2.x:** list the packages in packages\\[\\] and name the product in documentDescribes.\n- **SPDX 3.0:** add software\\_Package elements and set the SpdxDocument's rootElement to the product package.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component and list the components in components[].\n- SPDX 2.x: list the packages in packages[] and name the product in documentDescribes.\n- SPDX 3.0: add software_Package elements and set the SpdxDocument's rootElement to the product package.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component and list the components in components\\[\\].\n- **SPDX 2.x:** list the packages in packages\\[\\] and name the product in documentDescribes.\n- **SPDX 3.0:** add software\\_Package elements and set the SpdxDocument's rootElement to the product package.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -730,15 +730,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature"
               },
               "fullDescription": {
-                "text": "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature. References: CRA Annex I Part I (2)(f)."
+                "text": "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature. References: CRA Annex I Part I (2)(f); ENISA SBOM TA: §2.2.1."
               },
               "defaultConfiguration": {
                 "level": "note"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.\n\nReferences:\n- CRA Annex I Part I (2)(f) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId.\n\n**References**\n\n- [CRA Annex I Part I (2)(f)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.\n\nReferences:\n- CRA Annex I Part I (2)(f) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.2.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId.\n\n**References**\n\n- [CRA Annex I Part I (2)(f)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.2.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -892,15 +892,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: SBOM creator identified (person, organization or tool)"
               },
               "fullDescription": {
-                "text": "CRA readiness: SBOM creator identified (person, organization or tool). References: CRA Annex I Part II (1)."
+                "text": "CRA readiness: SBOM creator identified (person, organization or tool). References: CRA Annex I Part II (1); ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Identify who created the SBOM: a person, organization or tool.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Identify who created the SBOM: a person, organization or tool.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Identify who created the SBOM: a person, organization or tool.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Identify who created the SBOM: a person, organization or tool.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -910,15 +910,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: SBOM carries a unique document identifier"
               },
               "fullDescription": {
-                "text": "CRA readiness: SBOM carries a unique document identifier. References: CRA Annex I Part II (1)."
+                "text": "CRA readiness: SBOM carries a unique document identifier. References: CRA Annex I Part II (1); ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give the SBOM a unique document identifier.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Give the SBOM a unique document identifier.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Give the SBOM a unique document identifier.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Give the SBOM a unique document identifier.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -928,15 +928,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: Every component has a name"
               },
               "fullDescription": {
-                "text": "CRA readiness: Every component has a name. References: CRA Annex I Part II (1)."
+                "text": "CRA readiness: Every component has a name. References: CRA Annex I Part II (1); ENISA SBOM TA: §2.1.1."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
-                "markdown": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+                "text": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- ENISA SBOM TA: §2.1.1 (https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials)",
+                "markdown": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- [ENISA SBOM TA: §2.1.1](<https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials>)"
               }
             },
             {
@@ -1842,10 +1842,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-CREATOR|document",
             "findingId": "sbomtools:v1:761bc16c60e5f355",
             "standardIds": [
-              "CRA-Annex:Annex I Part II (1)"
+              "CRA-Annex:Annex I Part II (1)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ]
           }
         },
@@ -1999,10 +2001,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:b25878f8386a75c1",
             "standardIds": [
               "CRA-Annex:Annex I Part II",
-              "prEN-40000-1-3:PRE-7-RQ-07"
+              "prEN-40000-1-3:PRE-7-RQ-07",
+              "ENISA-SBOM-TA:§3.2"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "acme-webapp"
           }
@@ -2145,10 +2149,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-SERIAL|document",
             "findingId": "sbomtools:v1:7ebe5161af763b69",
             "standardIds": [
-              "CRA-Annex:Annex I Part II (1)"
+              "CRA-Annex:Annex I Part II (1)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ]
           }
         },
@@ -2187,10 +2193,14 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:7a3f325e79a0cd7f",
             "standardIds": [
               "CRA-Annex:Annex I",
-              "prEN-40000-1-3:PRE-7-RQ-07"
+              "prEN-40000-1-3:PRE-7-RQ-07",
+              "ENISA-SBOM-TA:§2.1.1",
+              "ENISA-SBOM-TA:§3.2"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "acme-webapp"
           }
@@ -2230,10 +2240,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:68e9c47444c36f9b",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "acme-webapp"
           }
@@ -2272,10 +2284,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|acme-webapp",
             "findingId": "sbomtools:v1:452cd9cfddf68fb5",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "acme-webapp"
           }
@@ -2315,10 +2329,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:ce0c11c414b3048a",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/lodash@4.17.21"
           }
@@ -2357,10 +2373,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/lodash@4.17.21",
             "findingId": "sbomtools:v1:9939ebd438a18cff",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/lodash@4.17.21"
           }
@@ -2400,10 +2418,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:0b51680552d4099b",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/express@4.18.2"
           }
@@ -2442,10 +2462,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/express@4.18.2",
             "findingId": "sbomtools:v1:e9f525e2f8df94f2",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/express@4.18.2"
           }
@@ -2485,10 +2507,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:19fc5457b18b8434",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/dayjs@1.11.7"
           }
@@ -2527,10 +2551,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/dayjs@1.11.7",
             "findingId": "sbomtools:v1:99c5f94f31939011",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/dayjs@1.11.7"
           }
@@ -2570,10 +2596,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:570cb148fec7e15d",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/axios@1.4.0"
           }
@@ -2612,10 +2640,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/axios@1.4.0",
             "findingId": "sbomtools:v1:151c410d70dcd1f0",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/axios@1.4.0"
           }
@@ -2655,10 +2685,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:f93120e6aa1d3382",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/react@18.2.0"
           }
@@ -2697,10 +2729,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/react@18.2.0",
             "findingId": "sbomtools:v1:00f6acc0678cb114",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/react@18.2.0"
           }
@@ -2740,10 +2774,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:453aab516ae558b1",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/typescript@5.0.4"
           }
@@ -2782,10 +2818,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/typescript@5.0.4",
             "findingId": "sbomtools:v1:7c31cb7a553350ae",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/typescript@5.0.4"
           }
@@ -2825,10 +2863,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:d45903214a42bc94",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/zod@3.21.4"
           }
@@ -2867,10 +2907,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/zod@3.21.4",
             "findingId": "sbomtools:v1:f3dca7c20698d616",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/zod@3.21.4"
           }
@@ -2910,10 +2952,12 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:de1bf2f0926523cb",
             "standardIds": [
               "CRA-Annex:Annex I Part II (1)",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/prisma@4.15.0"
           }
@@ -2952,10 +2996,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-INTEGRITY|pkg:npm/prisma@4.15.0",
             "findingId": "sbomtools:v1:a75e85f59d4ebeea",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "pkg:npm/prisma@4.15.0"
           }
@@ -2994,10 +3040,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ANNEX-I-DEPENDENCY|acme-webapp",
             "findingId": "sbomtools:v1:8a34287e9fb54e06",
             "standardIds": [
-              "CRA-Annex:Annex I"
+              "CRA-Annex:Annex I",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "componentId": "acme-webapp"
           }
@@ -3409,11 +3457,13 @@ expression: "render(&SarifReporter::new())"
             "findingId": "sbomtools:v1:2423ce73fc79ae3c",
             "standardIds": [
               "CRA:Art. 13(7)",
-              "CRA-Annex:Annex I Part II (1)"
+              "CRA-Annex:Annex I Part II (1)",
+              "ENISA-SBOM-TA:§3.2"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ]
           }
         },
@@ -3445,10 +3495,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-ART-13-5|document",
             "findingId": "sbomtools:v1:cdf532bc70743fc9",
             "standardIds": [
-              "CRA:Art. 13(5)"
+              "CRA:Art. 13(5)",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "affected": 1,
             "total": 9
@@ -3484,10 +3536,12 @@ expression: "render(&SarifReporter::new())"
             "standardIds": [
               "CRA-Annex:Annex I Part II",
               "prEN-40000-1-3:PRE-7-RQ-01",
-              "prEN-40000-1-3:PRE-7-RQ-03"
+              "prEN-40000-1-3:PRE-7-RQ-03",
+              "ENISA-SBOM-TA:§2.1.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
             "affected": 9,
             "total": 9
@@ -3521,10 +3575,12 @@ expression: "render(&SarifReporter::new())"
             "findingKey": "cra|SBOM-CRA-DOC-INTEGRITY|document",
             "findingId": "sbomtools:v1:1ee40fa737539681",
             "standardIds": [
-              "CRA-Annex:Annex I Part I (2)(f)"
+              "CRA-Annex:Annex I Part I (2)(f)",
+              "ENISA-SBOM-TA:§2.2.1"
             ],
             "standardHelpUris": [
-              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ]
           }
         },

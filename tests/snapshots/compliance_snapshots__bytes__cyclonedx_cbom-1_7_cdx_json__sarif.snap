@@ -19,15 +19,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one. References: CNSA 2.0."
+                "text": "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -37,15 +37,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: symmetric encryption must be AES-256"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: symmetric encryption must be AES-256. References: CNSA 2.0."
+                "text": "CNSA 2.0: symmetric encryption must be AES-256. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -55,15 +55,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: hashing must be SHA-384 or SHA-512"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: hashing must be SHA-384 or SHA-512. References: CNSA 2.0."
+                "text": "CNSA 2.0: hashing must be SHA-384 or SHA-512. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -73,15 +73,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: key establishment must be ML-KEM-1024"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: key establishment must be ML-KEM-1024. References: CNSA 2.0."
+                "text": "CNSA 2.0: key establishment must be ML-KEM-1024. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -91,15 +91,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures. References: CNSA 2.0."
+                "text": "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -109,15 +109,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use. References: CNSA 2.0."
+                "text": "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -127,15 +127,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite. References: CNSA 2.0."
+                "text": "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -145,15 +145,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: declared quantum security level below Level 5"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: declared quantum security level below Level 5. References: CNSA 2.0."
+                "text": "CNSA 2.0: declared quantum security level below Level 5. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -163,15 +163,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist. References: CNSA 2.0."
+                "text": "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -181,15 +181,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+                "text": "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -199,15 +199,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved. References: CNSA 2.0."
+                "text": "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -217,15 +217,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+                "text": "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -235,15 +235,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: network protocols must use TLS 1.3"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: network protocols must use TLS 1.3. References: CNSA 2.0."
+                "text": "CNSA 2.0: network protocols must use TLS 1.3. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -253,15 +253,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms. References: CNSA 2.0."
+                "text": "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -271,15 +271,15 @@ source: tests/compliance_snapshots.rs
                 "text": "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist"
               },
               "fullDescription": {
-                "text": "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist. References: CNSA 2.0."
+                "text": "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist. References: CNSA 2.0: CNSSP 15."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
               "help": {
-                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
-                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
+                "text": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\nReferences:\n- CNSA 2.0: CNSSP 15 (https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF)",
+                "markdown": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.\n\n**References**\n\n- [CNSA 2.0: CNSSP 15](<https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF>)"
               }
             },
             {
@@ -600,7 +600,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-kem-768",
             "findingId": "sbomtools:v1:db8f934f12fe2eaf",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -642,7 +642,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/ml-kem-768",
             "findingId": "sbomtools:v1:f6f3e69908944371",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -684,7 +684,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-dsa-65",
             "findingId": "sbomtools:v1:326a99536d9bc878",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -726,7 +726,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-004|crypto/algorithm/ml-dsa-65",
             "findingId": "sbomtools:v1:059cf70a9ae9a775",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -768,7 +768,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-008|crypto/algorithm/slh-dsa-shake-256s",
             "findingId": "sbomtools:v1:83cc7dc911fdae9e",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -810,7 +810,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/x25519",
             "findingId": "sbomtools:v1:9682dc81d044cfe2",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -852,7 +852,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/hybrid-kem",
             "findingId": "sbomtools:v1:ee8a3c54afb74d2d",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -894,7 +894,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/hybrid-kem",
             "findingId": "sbomtools:v1:3a93e421ce43b027",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -936,7 +936,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/ecdsa-p521",
             "findingId": "sbomtools:v1:3d1e46793ae574a2",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -978,7 +978,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384_ML_KEM_768|crypto/protocol/tls13-pqc",
             "findingId": "sbomtools:v1:994d5a495641e8ab",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
@@ -1020,7 +1020,7 @@ source: tests/compliance_snapshots.rs
             "findingKey": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc",
             "findingId": "sbomtools:v1:a5d96550a9b92abd",
             "standardIds": [
-              "CNSA-2.0:CNSA 2.0"
+              "CNSA-2.0:CNSSP 15"
             ],
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"

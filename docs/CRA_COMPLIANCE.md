@@ -34,7 +34,7 @@ ENISA / industry guidance. Use it to:
 | `CraPhase2`                 | `cra` (default CRA meaning), `cra-phase2`                                                           | Full CRA compliance (regulation fully applies from 2027-12-11)                                                                        |
 | `CraOssSteward`             | `oss-steward`, `cra-oss-steward`, `cra-oss`, `cra-art24`, `art24`                                   | Article 24 lighter profile for open-source software stewards                                                     |
 | `BsiTr03183_2`              | `bsi`, `tr-03183`, `tr03183`, `bsi-tr-03183-2`                                                      | BSI TR-03183-2 (German national CRA-aligned baseline)                                                            |
-| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems; `--pqc-mode deadline` applies its 2025–2033 timeline) |
+| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems, required by CNSSP 15; `--pqc-mode deadline` applies its 2025–2033 timeline) |
 | `NistPqc`                   | `pqc`, `nist-pqc`, `nist_pqc`                                                                       | NIST IR 8547 (final, Oct 2026) + FIPS 203/204/205 (PQC migration; `--pqc-mode deadline` applies its 2030/2035 milestones) |
 
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
@@ -59,6 +59,18 @@ Each row maps a sbom-tools `Violation::requirement` string to its
 regulatory anchor, the harmonised-standard requirement ID
 (prEN 40000-1-3 where known), the BSI section, and the canonical URL
 that ends up in SARIF `properties.standardHelpUris`.
+
+The SBOM-content rules also cite the ENISA Technical Advisory for Software
+Bill of Materials (v1.10, 22 October 2026), after their CRA and prEN
+references. Its data model (§2.1.1) backs the creator, document
+identifier, component name, version, supplier, identifier, hash, licence
+and dependency rules; its formats (§2.1.2) the machine-readable format
+rule; its signing step (§2.2.1) the document-integrity rule; and its risk
+table (§3.2) the freshness, identifier and traceability rules.
+[STANDARDS_VERSIONS.md](STANDARDS_VERSIONS.md) lists the rules. The
+advisory is guidance: it says it does not "create or modify any legal,
+regulatory, or compliance obligations", so these references change no
+check.
 
 ### CRA Article 13 (essential requirements & SBOM-related obligations)
 
@@ -568,7 +580,7 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 | CRA — Regulation (EU) 2024/2847    | https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng                                                                                                 |
 | prEN 40000-1-3 (in development)    | (CEN-CENELEC JTC 13 — paywalled draft; URLs unstable)                                                                                              |
 | BSI TR-03183-2 (v2.1.0)            | https://bsi.bund.de/dok/TR-03183-en                                                                                                                |
-| ENISA SBOM Implementation Guidance | https://www.enisa.europa.eu/publications/sbom-implementation-guidance                                                                              |
+| ENISA Technical Advisory for SBOM (v1.10, 2026-10-22, non-binding) | https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials                              |
 | NIST SP 800-218 SSDF               | https://doi.org/10.6028/NIST.SP.800-218                                                                                                            |
 | EO 14028                           | https://www.federalregister.gov/d/2021-10460                                                                                                       |
 | FDA premarket cybersecurity (final, 2026-02-03) | https://www.fda.gov/media/119933/download                                                                                          |
@@ -577,7 +589,7 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 | OpenVEX                            | https://github.com/openvex/spec                                                                                                                    |
 | CISA KEV                           | https://www.cisa.gov/known-exploited-vulnerabilities-catalog                                                                                       |
 | OSV.dev                            | https://osv.dev                                                                                                                                    |
-| EUCC (Reg. (EU) 2024/482)          | https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng                                                                                             |
+| EUCC (Implementing Reg. (EU) 2024/482, as amended by 2024/3144 and 2025/2462) | https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng (consolidated text of 2025-12-29: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02024R0482-20251229) |
 | CycloneDX Attestations (CDXA)      | https://cyclonedx.org/capabilities/attestations/                                                                                                   |
 
 ## Where this map lives in the code

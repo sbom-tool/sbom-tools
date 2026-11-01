@@ -62,6 +62,7 @@ fn standard_kinds_have_canonical_help_uri() {
         StandardKind::Csaf2,
         StandardKind::Cnsa2,
         StandardKind::NistPqc,
+        StandardKind::EnisaSbomAdvisory,
     ];
     for kind in kinds_with_uri {
         let uri = kind.canonical_help_uri("any-id");
