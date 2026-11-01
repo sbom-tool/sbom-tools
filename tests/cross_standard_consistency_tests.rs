@@ -11,8 +11,8 @@
 //! disagreed: a NOASSERTION licence passed the Standard profile but failed
 //! CRA Art. 13(5), CRA Art. 13(17), EO 14028, FDA and BSI took any contact
 //! while PCI DSS rejected placeholders, the CRA and EUCC checks read
-//! different EUCC URL keywords, and FDA counted vulnerabilities the CRA
-//! profiles exempt.
+//! different EUCC URL keywords, and FDA and PCI DSS counted vulnerabilities
+//! the CRA profiles exempt.
 //!
 //! Every case renders as CycloneDX JSON and XML, which carry each variant
 //! as written, and runs through the real parser and checker at the pinned
@@ -340,9 +340,10 @@ fn vex_statements() -> Vec<(&'static str, Option<VulnAnalysisFixture>, bool)> {
 
 /// Every check that asks whether a vulnerability is still open: a
 /// vulnerability whose own VEX statement is `not_affected` and names a
-/// justification is not, in any of them (until v0.4.0 FDA counted it); any
-/// other statement leaves it open. Each check gets the vulnerability it
-/// looks for: FDA a critical or high one, CRA Phase 2 an unrated one.
+/// justification is not, in any of them (until v0.4.0 FDA and PCI DSS
+/// counted it); any other statement leaves it open. Each check gets the
+/// vulnerability it looks for: FDA a critical or high one, CRA Phase 2 and
+/// PCI DSS an unrated one.
 #[test]
 fn vex_not_affected_evidence_gets_one_answer() {
     const CHECKS: &[(ComplianceLevel, &str, &str)] = &[
@@ -357,6 +358,7 @@ fn vex_not_affected_evidence_gets_one_answer() {
             "high",
         ),
         (ComplianceLevel::CraPhase2, "SBOM-CRA-VULN-METADATA", ""),
+        (ComplianceLevel::PciDss632, "SBOM-PCI-11-3-1-1-SEVERITY", ""),
     ];
     let mut mismatches = Vec::new();
     for (label, analysis, open) in vex_statements() {

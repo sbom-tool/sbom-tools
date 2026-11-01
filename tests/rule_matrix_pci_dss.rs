@@ -25,8 +25,8 @@ mod rule_matrix;
 use rule_matrix::clock::as_of;
 use rule_matrix::{
     ComponentFixture, Encoding, Outcome, RuleEntry, SPDX23_HAS_NO_COMPLETENESS,
-    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, assert_no_violations_in,
-    check, render_violations, run_matrix,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, VulnAnalysisFixture,
+    assert_no_violations_in, check, render_violations, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, PCIDSS_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -73,6 +73,29 @@ fn base() -> SbomFixture {
         )],
         vulnerabilities: Vec::new(),
         ..SbomFixture::default()
+    }
+}
+
+/// The id of [`unranked_vulnerability`].
+const UNRANKED_CVE: &str = "CVE-2026-0001";
+
+/// A vulnerability of libalpha whose only rating severity is "unknown",
+/// with no CVSS score: it carries no risk ranking.
+fn unranked_vulnerability() -> (String, String, String) {
+    (
+        UNRANKED_CVE.to_string(),
+        "unknown".to_string(),
+        "ref-libalpha".to_string(),
+    )
+}
+
+/// A VEX `not_affected` analysis, naming the CycloneDX `justification`
+/// when one is given.
+fn not_affected(justification: Option<&str>) -> VulnAnalysisFixture {
+    VulnAnalysisFixture {
+        state: Some("not_affected".to_string()),
+        justification: justification.map(str::to_string),
+        ..VulnAnalysisFixture::default()
     }
 }
 
@@ -297,23 +320,38 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         // An embedded entry whose only rating severity is "unknown" (and no
         // CVSS score) is unranked; a "medium" entry is ranked and must stay
         // silent — the rule is otherwise not applicable without any
-        // vulnerability data (covered by every other fixture here).
+        // vulnerability data (covered by every other fixture here). An
+        // entry whose own VEX statement is a justified not_affected needs no
+        // ranking, as under CRA and FDA; a bare not_affected claim does.
         RuleEntry::tested(
             "SBOM-PCI-11-3-1-1-SEVERITY",
             Sev::Warning,
-            broken(|s| {
-                s.vulnerabilities = vec![(
-                    "CVE-2026-0001".to_string(),
-                    "unknown".to_string(),
-                    "ref-libalpha".to_string(),
-                )];
-            }),
+            broken(|s| s.vulnerabilities = vec![unranked_vulnerability()]),
             broken(|s| {
                 s.vulnerabilities = vec![(
                     "CVE-2026-0002".to_string(),
                     "medium".to_string(),
                     "ref-libalpha".to_string(),
                 )];
+            }),
+        )
+        .with_firing(
+            "unranked vulnerability with a bare not_affected statement",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities = vec![unranked_vulnerability()];
+                s.vulnerability_analyses
+                    .push((UNRANKED_CVE.to_string(), not_affected(None)));
+            }),
+        )
+        .with_silent(
+            "unranked vulnerability with a justified not_affected statement",
+            broken(|s| {
+                s.vulnerabilities = vec![unranked_vulnerability()];
+                s.vulnerability_analyses.push((
+                    UNRANKED_CVE.to_string(),
+                    not_affected(Some("code_not_reachable")),
+                ));
             }),
         )
         .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),

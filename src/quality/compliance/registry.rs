@@ -3931,7 +3931,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "PCI DSS Req. 6.3.1 / 11.3.1.1: embedded vulnerability entries carry a risk ranking",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::PciDss4, "Req. 11.3.1.1"), (K::PciDss4, "Req. 6.3.1")],
-            remediation: "Give every embedded vulnerability entry a risk ranking — a Critical/High/Medium/Low severity or a CVSS score (an entry with only Info/None/Unknown severity and no CVSS is unranked) — so non-high-risk findings can be managed per the entity's Req. 6.3.1 rankings and the 11.3.1.1 targeted risk analysis. Emitted only when vulnerability data is present (no vacuous pass/fail).",
+            remediation: "Give every embedded vulnerability entry a risk ranking — a Critical/High/Medium/Low severity or a CVSS score (an entry with only Info/None/Unknown severity and no CVSS is unranked) — so non-high-risk findings can be managed per the entity's Req. 6.3.1 rankings and the 11.3.1.1 targeted risk analysis. A vulnerability whose own VEX statement is not_affected and names a justification needs no ranking and is not counted, as under the CRA and FDA profiles: it does not apply to the product. A bare not_affected claim still needs one. Emitted only when vulnerability data is present (no vacuous pass/fail).",
             advice: Some(&ADVICE_VULN_SEVERITY),
         },
         // Generic bucket for PCI-DSS-run findings whose check site has no

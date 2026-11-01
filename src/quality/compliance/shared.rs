@@ -512,8 +512,9 @@ pub(crate) fn document_signed(sbom: &NormalizedSbom) -> bool {
 /// justification. Only the vulnerability's own statement counts: the
 /// component-level VEX status sums up all of the component's statements and
 /// is no statement about this one. Every check that asks whether a
-/// vulnerability is still open (the CRA Phase 2 vulnerability checks and
-/// SBOM-FDA-SECURITY) skips such a vulnerability.
+/// vulnerability is still open (the CRA Phase 2 vulnerability checks,
+/// SBOM-FDA-SECURITY and SBOM-PCI-11-3-1-1-SEVERITY) skips such a
+/// vulnerability.
 pub(crate) fn justified_not_affected(vuln: &VulnerabilityRef) -> bool {
     vuln.vex_status
         .as_ref()

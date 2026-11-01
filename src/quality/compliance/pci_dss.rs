@@ -486,10 +486,19 @@ impl ComplianceChecker {
     /// is not applicable and stays silent (no vacuous pass/fail).
     fn check_pci_risk_ranking(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         let all = sbom.all_vulnerabilities();
-        if all.is_empty() {
+        // A vulnerability whose own VEX statement is a justified
+        // not_affected does not apply to the product, so it needs no risk
+        // ranking to be managed: the CRA and FDA vulnerability checks skip
+        // it the same way (`justified_not_affected`). Until v0.4.0 every
+        // entry counted, whatever its VEX state.
+        let open: Vec<_> = all
+            .iter()
+            .filter(|(_, vuln)| !justified_not_affected(vuln))
+            .collect();
+        if open.is_empty() {
             return;
         }
-        let unranked: Vec<String> = all
+        let unranked: Vec<String> = open
             .iter()
             .filter(|(_, vuln)| {
                 !matches!(
@@ -502,6 +511,15 @@ impl ComplianceChecker {
         if unranked.is_empty() {
             return;
         }
+        let not_affected = all.len() - open.len();
+        let not_affected_note = if not_affected == 0 {
+            String::new()
+        } else {
+            format!(
+                "; {not_affected} more with a justified not_affected VEX statement need none \
+                 and are not counted"
+            )
+        };
         violations.push(Violation {
             severity: ViolationSeverity::Warning,
             category: ViolationCategory::SecurityInfo,
@@ -509,9 +527,10 @@ impl ComplianceChecker {
                 "[PCI DSS 6.3.1 / 11.3.1.1] {affected}/{total} embedded vulnerability entries \
                  carry no risk ranking (no Critical/High/Medium/Low severity and no CVSS \
                  score): {list} — unranked entries cannot be managed per the entity's \
-                 Req. 6.3.1 risk rankings and the Req. 11.3.1.1 targeted risk analysis",
+                 Req. 6.3.1 risk rankings and the Req. 11.3.1.1 targeted risk \
+                 analysis{not_affected_note}",
                 affected = unranked.len(),
-                total = all.len(),
+                total = open.len(),
                 list = truncate_list(&unranked, 5),
             ),
             element: None,
@@ -521,7 +540,7 @@ impl ComplianceChecker {
             component_id: None,
             counts: Some(ViolationCounts {
                 affected: unranked.len(),
-                total: all.len(),
+                total: open.len(),
             }),
             standard_refs: Vec::new(),
             remediation: None,
