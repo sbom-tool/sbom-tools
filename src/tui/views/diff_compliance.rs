@@ -1535,6 +1535,7 @@ mod tests {
             info_count,
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
+            elements_checked: 1,
         }
     }
 

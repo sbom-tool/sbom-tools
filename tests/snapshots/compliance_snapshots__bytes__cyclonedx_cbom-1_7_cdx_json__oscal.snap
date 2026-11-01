@@ -1027,7 +1027,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "8"
+            "value": "30"
           }
         ],
         "reviewed-controls": {
@@ -1973,7 +1973,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "25"
+            "value": "42"
           }
         ],
         "reviewed-controls": {

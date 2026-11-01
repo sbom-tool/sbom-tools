@@ -41,8 +41,8 @@ pub use compliance::{
     RemediationFormat, RuleAdvice, RuleCatalogEntry, RuleCatalogFilter, RuleFormatAdvice, RuleKind,
     RuleMeta, RuleReference, SSDF_SARIF_RULE_IDS, StandardKind, StandardRef, StandardSelector,
     Violation, ViolationCategory, ViolationCounts, ViolationSeverity, all_rule_ids,
-    generic_rule_id_for_level, rule_catalog, rule_catalog_entry, rule_kind, rule_meta,
-    rules_for_level,
+    compliance_score, generic_rule_id_for_level, rule_catalog, rule_catalog_entry, rule_kind,
+    rule_meta, rules_for_level,
 };
 pub use compliance::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,

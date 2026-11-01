@@ -14,6 +14,10 @@ source: tests/compliance_snapshots.rs
       "applicable": true,
       "compliant": true,
       "score": 100,
+      "score_basis": {
+        "checked": 3,
+        "failed": 0
+      },
       "counts": {
         "error": 0,
         "warning": 0,
@@ -28,7 +32,11 @@ source: tests/compliance_snapshots.rs
       "name": "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
       "applicable": true,
       "compliant": false,
-      "score": 12,
+      "score": 15,
+      "score_basis": {
+        "checked": 3,
+        "failed": 7
+      },
       "counts": {
         "error": 2,
         "warning": 5,

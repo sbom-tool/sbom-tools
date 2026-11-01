@@ -979,7 +979,7 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "BSI TR-03183-2",
             "applicable": true,
-            "overallScore": 11.0,
+            "overallScore": 14.0,
             "compliant": false
           },
           {

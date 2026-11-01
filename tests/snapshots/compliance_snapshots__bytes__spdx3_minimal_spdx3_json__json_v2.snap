@@ -13,7 +13,11 @@ source: tests/compliance_snapshots.rs
       "name": "BSI TR-03183-2",
       "applicable": true,
       "compliant": false,
-      "score": 11,
+      "score": 14,
+      "score_basis": {
+        "checked": 4,
+        "failed": 10
+      },
       "counts": {
         "error": 3,
         "warning": 5,
@@ -224,6 +228,10 @@ source: tests/compliance_snapshots.rs
       "applicable": true,
       "compliant": false,
       "score": 20,
+      "score_basis": {
+        "checked": 4,
+        "failed": 6
+      },
       "counts": {
         "error": 2,
         "warning": 2,

@@ -13,7 +13,11 @@ source: tests/compliance_snapshots.rs
       "name": "EU CRA Phase 2 (2027)",
       "applicable": true,
       "compliant": true,
-      "score": 50,
+      "score": 90,
+      "score_basis": {
+        "checked": 4,
+        "failed": 1
+      },
       "counts": {
         "error": 0,
         "warning": 1,
@@ -137,7 +141,11 @@ source: tests/compliance_snapshots.rs
       "name": "EU CRA Phase 1 (2026)",
       "applicable": true,
       "compliant": true,
-      "score": 50,
+      "score": 90,
+      "score_basis": {
+        "checked": 4,
+        "failed": 1
+      },
       "counts": {
         "error": 0,
         "warning": 1,

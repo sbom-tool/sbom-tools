@@ -5,7 +5,9 @@
 
 use clap::ValueEnum;
 use sbom_tools::parse_sbom_str;
-use sbom_tools::quality::{ComplianceChecker, ComplianceResult, StandardSelector};
+use sbom_tools::quality::{
+    ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
+};
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -281,5 +283,111 @@ fn checkers_never_use_the_raw_producer_test() {
         offenders.is_empty(),
         "raw has_producer() in compliance code; use has_known_producer:\n  {}",
         offenders.join("\n  ")
+    );
+}
+
+/// Every parseable SBOM fixture's text, sorted by path, from the directories
+/// the snapshot harness walks.
+fn sbom_fixtures() -> Vec<(String, String)> {
+    fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    let root = std::path::Path::new(FIXTURES_DIR);
+    let mut paths = Vec::new();
+    for dir in [
+        "aibom",
+        "compliance/regressions",
+        "cra",
+        "cyclonedx",
+        "showcase",
+        "spdx",
+        "spdx3",
+    ] {
+        walk(&root.join(dir), &mut paths);
+    }
+    paths.sort();
+    paths
+        .into_iter()
+        .filter_map(|path| {
+            let rel = path
+                .strip_prefix(root)
+                .ok()?
+                .to_string_lossy()
+                .replace('\\', "/");
+            let raw = std::fs::read_to_string(&path).ok()?;
+            parse_sbom_str(&raw).ok()?;
+            Some((rel, raw))
+        })
+        .collect()
+}
+
+/// The score counts an aggregate finding by its failing items. Most
+/// aggregate findings count those in `counts.affected`; a coverage finding
+/// ("Only X/Y components carry …") counts the covered ones, so its failing
+/// items are the others. A new coverage rule missing from the score's list
+/// of coverage rules would be weighed by the items that pass.
+#[test]
+fn aggregate_findings_weigh_their_failing_items() {
+    let mut coverage_rules = std::collections::BTreeSet::new();
+    let mut offenders = Vec::new();
+    for (rel, raw) in sbom_fixtures() {
+        let sbom = parse_sbom_str(&raw).expect("fixture parses");
+        for level in ComplianceLevel::all() {
+            let result = ComplianceChecker::new(*level)
+                .with_as_of(as_of())
+                .check(&sbom);
+            for v in &result.violations {
+                let Some(counts) = v.counts else {
+                    continue;
+                };
+                if v.severity == ViolationSeverity::Info {
+                    assert_eq!(v.failed_checks(), 0, "{rel} {}", v.rule_id);
+                    continue;
+                }
+                let coverage = v
+                    .message
+                    .contains(&format!("Only {}/{}", counts.affected, counts.total));
+                let failing = if coverage {
+                    coverage_rules.insert(v.rule_id);
+                    counts.total - counts.affected
+                } else {
+                    counts.affected
+                };
+                if v.failed_checks() != failing.max(1) {
+                    offenders.push(format!(
+                        "{rel} {level:?} {}: weighs {} for {}/{} ({})",
+                        v.rule_id,
+                        v.failed_checks(),
+                        counts.affected,
+                        counts.total,
+                        v.message
+                    ));
+                }
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "aggregate findings weighed by the wrong count:\n  {}",
+        offenders.join("\n  ")
+    );
+    // The corpus exercises every coverage rule.
+    assert_eq!(
+        coverage_rules.into_iter().collect::<Vec<_>>(),
+        [
+            "SBOM-CRA-PRE-7-RQ-07-RE",
+            "SBOM-FSCT-COPYRIGHT-COVERAGE",
+            "SBOM-FSCT-LICENSE-COVERAGE",
+        ]
     );
 }

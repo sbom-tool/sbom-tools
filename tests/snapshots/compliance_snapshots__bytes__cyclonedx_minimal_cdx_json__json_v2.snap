@@ -13,7 +13,11 @@ source: tests/compliance_snapshots.rs
       "name": "NTIA Minimum Elements",
       "applicable": true,
       "compliant": false,
-      "score": 16,
+      "score": 22,
+      "score_basis": {
+        "checked": 4,
+        "failed": 5
+      },
       "counts": {
         "error": 4,
         "warning": 1,
@@ -155,7 +159,11 @@ source: tests/compliance_snapshots.rs
       "name": "CISA 2026 Minimum Elements",
       "applicable": true,
       "compliant": false,
-      "score": 7,
+      "score": 12,
+      "score_basis": {
+        "checked": 4,
+        "failed": 12
+      },
       "counts": {
         "error": 9,
         "warning": 3,

@@ -34,11 +34,21 @@
         "applicable": {"type": "boolean", "description": "Whether the standard evaluated the SBOM. When false the standard did not apply: `compliant` stays true by contract and must not be read as a pass."},
         "not_applicable_reason": {"type": "string", "description": "Why the standard did not apply. Present exactly when `applicable` is false."},
         "compliant": {"type": "boolean", "description": "No error-severity violations. Meaningful only when `applicable` is true."},
-        "score": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Compliance score; null exactly when `applicable` is false."},
+        "score": {"type": ["integer", "null"], "minimum": 0, "maximum": 100, "description": "Compliance score: (50 when `compliant`, else 0) + floor(50 × checked / (checked + failed)), with `checked` and `failed` from `score_basis`. A compliant result scores 50–100, a non-compliant one 0–49; Info findings and passed checks never move it. Null exactly when `applicable` is false."},
+        "score_basis": {"$ref": "#/$defs/score_basis"},
         "counts": {"$ref": "#/$defs/counts"},
         "violations": {"type": "array", "items": {"$ref": "#/$defs/violation"}},
         "passed": {"type": "array", "description": "Checks the SBOM passed, such as an algorithm NIST approves for post-quantum use. Not violations: no severity count includes them. Empty when the standard passed no check or did not apply.", "items": {"$ref": "#/$defs/passed_check"}},
         "conformity_summary": {"$ref": "#/$defs/conformity_summary"}
+      }
+    },
+    "score_basis": {
+      "type": "object",
+      "description": "What `score` is computed from. Present exactly when `applicable` is true.",
+      "required": ["checked", "failed"],
+      "properties": {
+        "checked": {"$ref": "#/$defs/count", "description": "Elements the standard checked: the document, plus the components in its scope (cryptographic assets for cnsa2 and pqc, ML models, datasets and components that look like ML models for ai-act and bsi-ai, none for eucc, package-scoped components for the others). At least 1."},
+        "failed": {"$ref": "#/$defs/count", "description": "Checks the errors and warnings failed: one per finding about one subject, and one per failing item for an aggregate finding (one with `counts`). Info findings fail none."}
       }
     },
     "counts": {

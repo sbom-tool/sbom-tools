@@ -13,7 +13,11 @@ source: tests/compliance_snapshots.rs
       "name": "CNSA 2.0",
       "applicable": true,
       "compliant": false,
-      "score": 8,
+      "score": 30,
+      "score_basis": {
+        "checked": 17,
+        "failed": 11
+      },
       "counts": {
         "error": 11,
         "warning": 0,
@@ -262,7 +266,11 @@ source: tests/compliance_snapshots.rs
       "name": "NIST PQC Readiness",
       "applicable": true,
       "compliant": false,
-      "score": 25,
+      "score": 42,
+      "score_basis": {
+        "checked": 17,
+        "failed": 3
+      },
       "counts": {
         "error": 3,
         "warning": 0,

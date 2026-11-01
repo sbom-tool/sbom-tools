@@ -63,6 +63,8 @@ struct EnvelopeResult<'a> {
     not_applicable_reason: Option<&'a str>,
     compliant: bool,
     score: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    score_basis: Option<ScoreBasis>,
     counts: Counts,
     violations: Vec<Identified<'a, Violation>>,
     passed: Vec<Identified<'a, PassedCheck>>,
@@ -72,6 +74,18 @@ struct EnvelopeResult<'a> {
     /// (nested keys sorted).
     #[serde(flatten)]
     rest: Map<String, Value>,
+}
+
+/// What a result's `score` is computed from (see
+/// [`crate::quality::compliance_score`]): with the verdict, enough to
+/// recompute it.
+#[derive(Serialize)]
+struct ScoreBasis {
+    /// The elements the standard checked: the document and the components
+    /// in its scope.
+    checked: usize,
+    /// The checks the errors and warnings failed.
+    failed: usize,
 }
 
 #[derive(Serialize)]
@@ -162,6 +176,10 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
         not_applicable_reason,
         compliant: result.is_compliant,
         score: result.score(),
+        score_basis: result.is_applicable().then(|| ScoreBasis {
+            checked: result.elements_checked,
+            failed: result.failed_checks(),
+        }),
         counts: Counts {
             error: result.error_count,
             warning: result.warning_count,
@@ -371,6 +389,37 @@ mod tests {
         assert_eq!(entry["applicable"], false);
         assert!(entry["not_applicable_reason"].is_string(), "{entry}");
         assert!(entry["score"].is_null(), "{entry}");
+        assert!(entry.get("score_basis").is_none(), "{entry}");
+    }
+
+    /// The score basis recomputes the score: (50 when compliant, else 0) +
+    /// floor(50 × checked / (checked + failed)).
+    #[test]
+    fn score_basis_recomputes_the_score() {
+        for level in [
+            ComplianceLevel::Minimum,
+            ComplianceLevel::NtiaMinimum,
+            ComplianceLevel::CraPhase2,
+            ComplianceLevel::BsiTr03183_2,
+            ComplianceLevel::Fsct,
+        ] {
+            let result = check(level);
+            let value = envelope(std::slice::from_ref(&result));
+            let entry = &value["results"][0];
+            let basis = &entry["score_basis"];
+            assert_eq!(basis["checked"], result.elements_checked, "{entry}");
+            assert_eq!(basis["checked"], 2, "the document and lodash: {entry}");
+            assert_eq!(basis["failed"], result.failed_checks(), "{entry}");
+            let checked = basis["checked"].as_u64().expect("checked");
+            let failed = basis["failed"].as_u64().expect("failed");
+            let band = if entry["compliant"] == true { 50 } else { 0 };
+            let within = if failed == 0 {
+                50
+            } else {
+                50 * checked / (checked + failed)
+            };
+            assert_eq!(entry["score"], band + within, "{level:?}: {entry}");
+        }
     }
 
     #[test]

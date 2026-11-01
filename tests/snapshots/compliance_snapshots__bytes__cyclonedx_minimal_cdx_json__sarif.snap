@@ -1285,13 +1285,13 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "NTIA Minimum Elements",
             "applicable": true,
-            "overallScore": 16.0,
+            "overallScore": 22.0,
             "compliant": false
           },
           {
             "profile": "CISA 2026 Minimum Elements",
             "applicable": true,
-            "overallScore": 7.0,
+            "overallScore": 12.0,
             "compliant": false
           }
         ]

@@ -641,6 +641,16 @@ pub struct ViolationCounts {
     pub total: usize,
 }
 
+/// The coverage findings: rules whose [`ViolationCounts::affected`] is the
+/// covered count ("only X/Y carry …"), so `total - affected` items fail.
+/// Every other aggregate finding counts the failing items.
+/// [`Violation::failed_checks`] reads this.
+const COVERAGE_COUNT_RULE_IDS: &[&str] = &[
+    "SBOM-CRA-PRE-7-RQ-07-RE",
+    "SBOM-FSCT-COPYRIGHT-COVERAGE",
+    "SBOM-FSCT-LICENSE-COVERAGE",
+];
+
 /// Serde default for [`Violation::rule_id`] when deserializing payloads that
 /// predate the field.
 fn default_rule_id() -> &'static str {
@@ -858,6 +868,29 @@ impl Violation {
     #[must_use]
     pub fn sarif_rule_id(&self) -> &'static str {
         registry_sarif_id(self.rule_id)
+    }
+
+    /// The checks this finding failed, the unit the score counts (see
+    /// [`compliance_score`]): none for an Info finding and one for a finding
+    /// about one subject. An aggregate finding (one with
+    /// [`Violation::counts`]) failed one check per item it reports as
+    /// failing, and at least one: `counts.affected`, or `counts.total -
+    /// counts.affected` for a coverage finding, whose `affected` counts the
+    /// items that pass.
+    #[must_use]
+    pub fn failed_checks(&self) -> usize {
+        if self.severity == ViolationSeverity::Info {
+            return 0;
+        }
+        let Some(counts) = self.counts else {
+            return 1;
+        };
+        let failing = if COVERAGE_COUNT_RULE_IDS.contains(&self.rule_id) {
+            counts.total.saturating_sub(counts.affected)
+        } else {
+            counts.affected
+        };
+        failing.max(1)
     }
 }
 
@@ -1222,6 +1255,23 @@ pub struct ComplianceResult {
     /// runs by contract; renderers must show N/A instead of a pass.
     #[serde(default)]
     pub applicability: Applicability,
+    /// The elements the standard checked, which the score is normalised by
+    /// (see [`compliance_score`]): the document itself, plus each component
+    /// in the standard's scope. `cnsa2` and `pqc` check cryptographic
+    /// assets, `ai-act` and `bsi-ai` ML models, datasets and components that
+    /// look like ML models, `eucc` only the document, and every other
+    /// standard the package-scoped components.
+    ///
+    /// Set by `ComplianceChecker::check()`; `1` (the document alone) for a
+    /// result built with [`ComplianceResult::new`]. Not serialized: the
+    /// `-o json` envelope reports it as `score_basis.checked`.
+    #[serde(skip, default = "document_only")]
+    pub elements_checked: usize,
+}
+
+/// Serde default for [`ComplianceResult::elements_checked`]: the document.
+const fn document_only() -> usize {
+    1
 }
 
 /// Per-route checklist of evidence the CRA Annex VIII conformity-assessment
@@ -1282,14 +1332,24 @@ impl ComplianceResult {
             error_count,
             warning_count,
             info_count,
+            elements_checked: document_only(),
         }
     }
 
-    /// This result with `passed` as its passed checks. Passes move no count
-    /// and no verdict.
+    /// This result with `passed` as its passed checks. Passes move no count,
+    /// no verdict and no score.
     #[must_use]
     pub fn with_passed(mut self, passed: Vec<PassedCheck>) -> Self {
         self.passed = passed;
+        self
+    }
+
+    /// This result with `elements` as its
+    /// [`ComplianceResult::elements_checked`]. A count below one is raised
+    /// to one: a standard always checks the document.
+    #[must_use]
+    pub fn with_elements_checked(mut self, elements: usize) -> Self {
+        self.elements_checked = elements.max(1);
         self
     }
 
@@ -1309,21 +1369,38 @@ impl ComplianceResult {
         self.applicability == Applicability::Applicable
     }
 
-    /// Badge/summary compliance score (0–100).
-    ///
-    /// Errors and warnings count against the score; Info findings are
-    /// neutral. (The formula this replaces used `violations.len()` as the
-    /// denominator, so adding Info findings *raised* the score — 5 errors
-    /// alone scored 16 while 5 errors + 20 infos scored 80.) `None` when
-    /// the standard was not applicable — an unevaluated SBOM has no score.
+    /// The checks the result's errors and warnings failed, the sum of their
+    /// [`Violation::failed_checks`]. Info findings fail none.
+    #[must_use]
+    pub fn failed_checks(&self) -> usize {
+        self.violations
+            .iter()
+            .fold(0, |sum, v| sum.saturating_add(v.failed_checks()))
+    }
+
+    /// Badge/summary compliance score (0–100): [`compliance_score`] of the
+    /// checks the errors and the warnings failed, over the
+    /// [`ComplianceResult::elements_checked`]. A compliant result scores
+    /// 50–100 and a non-compliant one 0–49; Info findings and passed checks
+    /// never move it. The JSON, SARIF, OSCAL, Markdown, HTML and TUI outputs
+    /// all render this value. `None` when the standard was not applicable:
+    /// an unevaluated SBOM has no score.
     #[must_use]
     pub fn score(&self) -> Option<u8> {
         if !self.is_applicable() {
             return None;
         }
-        let actionable = self.error_count + self.warning_count;
-        #[allow(clippy::cast_possible_truncation)]
-        Some((100 / (actionable + 1)) as u8)
+        let (mut errors, mut warnings) = (0usize, 0usize);
+        for v in &self.violations {
+            match v.severity {
+                ViolationSeverity::Error => errors = errors.saturating_add(v.failed_checks()),
+                ViolationSeverity::Warning => {
+                    warnings = warnings.saturating_add(v.failed_checks());
+                }
+                ViolationSeverity::Info => {}
+            }
+        }
+        Some(compliance_score(errors, warnings, self.elements_checked))
     }
 
     /// Get violations filtered by severity
@@ -1343,6 +1420,37 @@ impl ComplianceResult {
             .filter(|v| v.category == category)
             .collect()
     }
+}
+
+/// The compliance score (0–100) of a result whose errors failed `errors`
+/// checks and whose warnings failed `warnings` (see
+/// [`Violation::failed_checks`]), over `checked` elements (see
+/// [`ComplianceResult::elements_checked`]):
+///
+/// ```text
+/// score = band + floor(50 × checked / (checked + errors + warnings))
+/// band  = 50 without an error, 0 with one
+/// ```
+///
+/// A compliant result therefore scores 50–100 and a non-compliant one 0–49,
+/// so every compliant result outscores every non-compliant one. Within the
+/// band the score falls with the failed checks per element: none scores
+/// 100, one failed check per element halves the band (75, or 25 with an
+/// error), and one failed check in an SBOM of 500,000 elements still scores
+/// 99 (49 with an error). An extra failed check never raises the score.
+/// The arithmetic is exact for any counts.
+#[must_use]
+pub fn compliance_score(errors: usize, warnings: usize, checked: usize) -> u8 {
+    let failed = errors as u128 + warnings as u128;
+    let band: u8 = if errors == 0 { 50 } else { 0 };
+    if failed == 0 {
+        return band + 50;
+    }
+    let checked = checked as u128;
+    // Below 50: `failed` is at least 1.
+    let within = u8::try_from(50 * checked / (checked + failed))
+        .expect("the share of a 50-point band fits in a u8");
+    band + within
 }
 
 /// Calibration check identifiers for `ComplianceChecker::class_severity()`.
@@ -1677,7 +1785,9 @@ impl ComplianceChecker {
         finding::number_repeated_details(&mut violations);
         finding::number_repeated_details(&mut passed);
 
-        let mut result = ComplianceResult::new(self.level, violations).with_passed(passed);
+        let mut result = ComplianceResult::new(self.level, violations)
+            .with_passed(passed)
+            .with_elements_checked(elements_checked(self.level, sbom));
         result.applicability = applicability;
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA phase profile. Annex VIII
@@ -1694,6 +1804,28 @@ impl Default for ComplianceChecker {
     fn default() -> Self {
         Self::new(ComplianceLevel::Standard)
     }
+}
+
+/// The elements `level` checks in `sbom`, the unit its score is normalised
+/// by (see [`ComplianceResult::elements_checked`]): the document, plus the
+/// components in the standard's scope.
+fn elements_checked(level: ComplianceLevel, sbom: &NormalizedSbom) -> usize {
+    let components = match level {
+        // EUCC checks the sidecar's certification evidence, not components.
+        ComplianceLevel::EuccSubstantial => 0,
+        // All components: the count selects cryptographic assets by type,
+        // the subjects of the CNSA 2.0 and PQC checks.
+        ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc => sbom
+            .components
+            .values()
+            .filter(|c| c.component_type == crate::model::ComponentType::Cryptographic)
+            .count(),
+        ComplianceLevel::EuAiAct | ComplianceLevel::BsiSbomForAi => {
+            ai_shared::ai_bom_scope(sbom).component_count()
+        }
+        _ => package_components(sbom).count(),
+    };
+    components.saturating_add(1)
 }
 
 #[cfg(test)]
@@ -2729,8 +2861,9 @@ mod tests {
     }
 
     /// Info findings must not move the score: 5 errors alone and 5 errors +
-    /// 20 infos used to score 16 vs 80 because infos inflated the
-    /// denominator.
+    /// 20 infos once scored 16 vs 80 because infos inflated the
+    /// denominator. Over the document alone, 5 errors now score
+    /// floor(50 × 1 / 6) = 8.
     #[test]
     fn score_is_neutral_to_info_findings() {
         let violation = |severity| Violation {
@@ -2761,9 +2894,250 @@ mod tests {
                 .collect(),
         );
         assert_eq!(errors_only.score(), with_infos.score());
-        assert_eq!(errors_only.score(), Some(16));
+        assert_eq!(errors_only.score(), Some(8));
         let clean = ComplianceResult::new(ComplianceLevel::NtiaMinimum, Vec::new());
         assert_eq!(clean.score(), Some(100));
+    }
+
+    /// The score's boundaries: no finding, one and many warnings, one and
+    /// many errors, and element counts up to `usize::MAX`.
+    #[test]
+    fn score_boundaries() {
+        // No finding: 100 whatever was checked.
+        for checked in [0, 1, 4, 500_001, usize::MAX] {
+            assert_eq!(compliance_score(0, 0, checked), 100, "{checked}");
+        }
+        // Over the document and three components.
+        assert_eq!(compliance_score(0, 1, 4), 90);
+        assert_eq!(compliance_score(0, 3, 4), 78);
+        assert_eq!(
+            compliance_score(0, 4, 4),
+            75,
+            "one per element halves the band"
+        );
+        assert_eq!(compliance_score(0, 1_000, 4), 50);
+        assert_eq!(compliance_score(1, 0, 4), 40);
+        assert_eq!(compliance_score(1, 2, 4), 28);
+        assert_eq!(compliance_score(4, 0, 4), 25);
+        assert_eq!(compliance_score(1_000, 0, 4), 0);
+        // Many failed checks: the band's floor, never below.
+        assert_eq!(compliance_score(0, usize::MAX, 1), 50);
+        assert_eq!(compliance_score(usize::MAX, usize::MAX, 1), 0);
+        // A large SBOM: one finding barely moves the score.
+        assert_eq!(compliance_score(0, 1, 500_001), 99);
+        assert_eq!(compliance_score(1, 0, 500_001), 49);
+        assert_eq!(compliance_score(0, 1, usize::MAX), 99);
+        assert_eq!(compliance_score(1, 0, usize::MAX), 49);
+        assert_eq!(compliance_score(0, usize::MAX, usize::MAX), 75);
+        // One failed check per element of a large SBOM halves the band.
+        assert_eq!(compliance_score(0, 500_001, 500_001), 75);
+        assert_eq!(compliance_score(500_001, 0, 500_001), 25);
+        // Nothing checked but a failure: the band's floor.
+        assert_eq!(compliance_score(0, 1, 0), 50);
+        assert_eq!(compliance_score(1, 0, 0), 0);
+    }
+
+    /// Over a grid of counts: every compliant result outscores every
+    /// non-compliant one, an extra error or warning never raises the score,
+    /// turning a warning into an error never does either, and checking more
+    /// elements with the same failures never lowers it.
+    #[test]
+    fn score_orders_verdicts_and_is_monotone() {
+        let counts = [0usize, 1, 2, 3, 5, 10, 49, 50, 99, 1_000, 500_000];
+        let checked = [0usize, 1, 2, 4, 10, 100, 500_001];
+        let mut lowest_compliant = u8::MAX;
+        let mut highest_non_compliant = 0;
+        for &c in &checked {
+            for &e in &counts {
+                for &w in &counts {
+                    let score = compliance_score(e, w, c);
+                    assert!(score <= 100);
+                    if e == 0 {
+                        assert!(score >= 50, "compliant ({e},{w},{c}) scored {score}");
+                        assert_eq!(score == 100, w == 0, "({e},{w},{c})");
+                        lowest_compliant = lowest_compliant.min(score);
+                    } else {
+                        assert!(score <= 49, "non-compliant ({e},{w},{c}) scored {score}");
+                        highest_non_compliant = highest_non_compliant.max(score);
+                    }
+                    assert!(compliance_score(e + 1, w, c) <= score, "({e},{w},{c})");
+                    assert!(compliance_score(e, w + 1, c) <= score, "({e},{w},{c})");
+                    if w > 0 {
+                        assert!(compliance_score(e + 1, w - 1, c) <= score, "({e},{w},{c})");
+                    }
+                    assert!(compliance_score(e, w, c + 1) >= score, "({e},{w},{c})");
+                }
+            }
+        }
+        assert!(lowest_compliant > highest_non_compliant);
+    }
+
+    /// What a finding weighs in the score: an Info finding nothing, a
+    /// finding about one subject one check, an aggregate finding its failing
+    /// items, and a coverage finding the items it does not cover.
+    #[test]
+    fn failed_checks_count_the_failing_items() {
+        let finding = |severity, rule_id, counts| Violation {
+            severity,
+            category: ViolationCategory::DocumentMetadata,
+            message: "x".to_string(),
+            element: None,
+            requirement: "x".to_string(),
+            rule_id,
+            component_id: None,
+            counts,
+            standard_refs: Vec::new(),
+            remediation: None,
+            finding_detail: None,
+            deadline: None,
+        };
+        let of = |affected, total| Some(ViolationCounts { affected, total });
+        let w = ViolationSeverity::Warning;
+        let e = ViolationSeverity::Error;
+        assert_eq!(finding(w, "SBOM-NTIA-AUTHOR", None).failed_checks(), 1);
+        assert_eq!(finding(e, "SBOM-NTIA-AUTHOR", None).failed_checks(), 1);
+        assert_eq!(
+            finding(ViolationSeverity::Info, "SBOM-CRA-ART-13-5", of(7, 10)).failed_checks(),
+            0
+        );
+        assert_eq!(
+            finding(e, "SBOM-BSI-TR-03183-2-LICENSE", of(7, 10)).failed_checks(),
+            7
+        );
+        assert_eq!(
+            finding(w, "SBOM-BSI-TR-03183-2-LICENSE", of(0, 10)).failed_checks(),
+            1,
+            "a finding fails at least one check"
+        );
+        for rule in COVERAGE_COUNT_RULE_IDS {
+            assert!(rule_meta(rule).is_some(), "{rule} is registered");
+            assert_eq!(finding(w, rule, of(3, 10)).failed_checks(), 7, "{rule}");
+            assert_eq!(finding(w, rule, of(0, 10)).failed_checks(), 10, "{rule}");
+            assert_eq!(finding(w, rule, of(10, 10)).failed_checks(), 1, "{rule}");
+        }
+
+        // The result sums them; Info findings stay out of the sum.
+        let result = ComplianceResult::new(
+            ComplianceLevel::Fsct,
+            vec![
+                finding(e, "SBOM-FSCT-AUTHOR", None),
+                finding(w, "SBOM-FSCT-LICENSE-COVERAGE", of(1, 4)),
+                finding(ViolationSeverity::Info, "SBOM-FSCT-SIGNATURE", None),
+            ],
+        )
+        .with_elements_checked(5);
+        assert_eq!(result.failed_checks(), 4);
+        // floor(50 × 5 / (5 + 4)) = 27, in the non-compliant band.
+        assert_eq!(result.score(), Some(27));
+    }
+
+    /// The elements a standard checks: the document, plus the components in
+    /// its scope.
+    #[test]
+    fn elements_checked_follow_the_standards_scope() {
+        use crate::model::{
+            Component, ComponentType, CryptoAssetType, CryptoProperties, DocumentMetadata,
+            MlModelInfo, NormalizedSbom,
+        };
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        for name in ["a", "b"] {
+            sbom.add_component(
+                Component::new(name.to_string(), format!("{name}-ref"))
+                    .with_version("1.0".to_string())
+                    .with_purl(format!("pkg:npm/{name}@1.0")),
+            );
+        }
+        let mut file = Component::new("README".to_string(), "file-ref".to_string());
+        file.component_type = ComponentType::File;
+        sbom.add_component(file);
+        let mut aes = Component::new("AES-256-GCM".to_string(), "aes-ref".to_string());
+        aes.component_type = ComponentType::Cryptographic;
+        aes.crypto_properties = Some(CryptoProperties::new(CryptoAssetType::Algorithm));
+        sbom.add_component(aes);
+        let mut model = Component::new("model".to_string(), "model-ref".to_string());
+        model.component_type = ComponentType::MachineLearningModel;
+        model.ml_model = Some(MlModelInfo::default());
+        sbom.add_component(model);
+
+        let checked = |level| checker(level).check(&sbom).elements_checked;
+        // The document, the two libraries and the (package-scoped) model.
+        assert_eq!(checked(ComplianceLevel::NtiaMinimum), 4);
+        assert_eq!(checked(ComplianceLevel::CraPhase2), 4);
+        assert_eq!(checked(ComplianceLevel::Fsct), 4);
+        // The document and the algorithm.
+        assert_eq!(checked(ComplianceLevel::Cnsa2), 2);
+        assert_eq!(checked(ComplianceLevel::NistPqc), 2);
+        // The document and the model.
+        assert_eq!(checked(ComplianceLevel::EuAiAct), 2);
+        assert_eq!(checked(ComplianceLevel::BsiSbomForAi), 2);
+        // The document alone.
+        assert_eq!(checked(ComplianceLevel::EuccSubstantial), 1);
+        // A result built by hand checked the document.
+        assert_eq!(
+            ComplianceResult::new(ComplianceLevel::NtiaMinimum, Vec::new()).elements_checked,
+            1
+        );
+        assert_eq!(
+            ComplianceResult::new(ComplianceLevel::NtiaMinimum, Vec::new())
+                .with_elements_checked(0)
+                .elements_checked,
+            1,
+            "a standard always checks the document"
+        );
+    }
+
+    /// A large SBOM with one gap: the old formula halved the score of a
+    /// 500,000-component SBOM for one finding.
+    #[test]
+    fn one_gap_in_a_large_sbom_barely_moves_the_score() {
+        use crate::model::{Component, DocumentMetadata, NormalizedSbom};
+        let violation = |severity| Violation {
+            severity,
+            category: ViolationCategory::SupplierInfo,
+            message: "x".to_string(),
+            element: Some("lib".to_string()),
+            requirement: "x".to_string(),
+            rule_id: "SBOM-NTIA-SUPPLIER",
+            component_id: Some("pkg:npm/lib@1.0".to_string()),
+            counts: None,
+            standard_refs: Vec::new(),
+            remediation: None,
+            finding_detail: None,
+            deadline: None,
+        };
+        let large = |severity| {
+            ComplianceResult::new(ComplianceLevel::NtiaMinimum, vec![violation(severity)])
+                .with_elements_checked(500_001)
+        };
+        assert_eq!(large(ViolationSeverity::Warning).score(), Some(99));
+        assert_eq!(large(ViolationSeverity::Error).score(), Some(49));
+
+        // Through the checker: a clean SBOM scores 100, and the component
+        // count normalises its findings.
+        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        sbom.add_component(
+            Component::new("lib".to_string(), "lib@1".to_string())
+                .with_version("1.0".to_string())
+                .with_purl("pkg:cargo/lib@1.0".to_string()),
+        );
+        let r = checker(ComplianceLevel::Minimum).check(&sbom);
+        assert_eq!(r.elements_checked, 2);
+        assert_eq!(
+            r.score(),
+            Some(compliance_score(
+                r.violations
+                    .iter()
+                    .filter(|v| v.severity == ViolationSeverity::Error)
+                    .map(Violation::failed_checks)
+                    .sum(),
+                r.violations
+                    .iter()
+                    .filter(|v| v.severity == ViolationSeverity::Warning)
+                    .map(Violation::failed_checks)
+                    .sum(),
+                2,
+            ))
+        );
     }
 
     /// Payloads that predate the applicability field deserialize as
