@@ -94,6 +94,13 @@ pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
+/// A path for a human-readable message, cleaned by [`sanitize_line`]: a
+/// file name can come from a pull request like the SBOM itself.
+#[must_use]
+pub(crate) fn sanitize_path(path: &std::path::Path) -> String {
+    sanitize_line(&path.display().to_string()).into_owned()
+}
+
 /// Sanitize untrusted text for one CSV field, before quote doubling.
 ///
 /// Line breaks become spaces, so a field cannot start a new line of a CSV

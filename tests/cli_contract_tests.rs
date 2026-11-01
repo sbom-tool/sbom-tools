@@ -1946,6 +1946,74 @@ fn text_outputs_neutralize_the_sbom_file_name() {
     }
 }
 
+#[cfg(unix)]
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+/// Error messages and status lines quote file names too: a file that fails
+/// to parse or is missing, the sidecar `verify hash` picks up, and the file
+/// `convert` writes. They used to print the name raw on stderr. Unix only, as
+/// above.
+#[cfg(unix)]
+#[test]
+fn error_and_status_messages_neutralize_file_names() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let hostile = "x\n::error file=main.rs,line=1::FORGED\u{1b}[31m\u{7}\u{202E}";
+    let path = |suffix: &str| {
+        dir.path()
+            .join(format!("{hostile}{suffix}"))
+            .to_str()
+            .expect("utf-8")
+            .to_string()
+    };
+    let (good, bad, missing, out) = (
+        path(".cdx.json"),
+        path("-bad.cdx.json"),
+        path("-missing.cdx.json"),
+        path("-out.spdx.json"),
+    );
+    std::fs::copy(fixtures.join("demo-new.cdx.json"), &good).expect("copy fixture");
+    std::fs::write(&bad, "{ not an SBOM").expect("write fixture");
+    let digest = sha256_hex(&std::fs::read(&good).expect("read fixture"));
+    std::fs::write(format!("{good}.sha256"), format!("{digest}\n")).expect("write sidecar");
+
+    for (args, expected) in [
+        (vec!["validate", &bad, "--standard", "ntia"], 3),
+        (vec!["view", &bad, "-o", "summary"], 3),
+        (vec!["quality", &bad], 3),
+        (vec!["diff", &bad, &good, "-o", "summary"], 3),
+        (vec!["license-check", &bad], 3),
+        (vec!["validate", &missing, "--standard", "ntia"], 3),
+        (vec!["verify", "hash", &good], 0),
+        (vec!["convert", &good, "--to", "spdx", "-O", &out], 0),
+    ] {
+        let label = args
+            .iter()
+            .map(|a| if a.contains("FORGED") { "<file>" } else { a })
+            .collect::<Vec<_>>()
+            .join(" ");
+        let output = base_command()
+            .env("RUST_LOG", "info")
+            .args(&args)
+            .output()
+            .expect("command should run");
+        let err = stderr(&output);
+        assert_eq!(output.status.code(), Some(expected), "{label}:\n{err}");
+        assert!(
+            err.contains("FORGED"),
+            "{label}: the name must be shown:\n{err}"
+        );
+        assert_neutralized(&label, "stdout", &stdout(&output));
+        assert_neutralized(&label, "stderr", &err);
+    }
+}
+
 /// `validate` gives every violation a remediation in JSON and a `fix:` line
 /// in text, phrased for the input format: SPDX documents get SPDX field
 /// paths, never CycloneDX ones.

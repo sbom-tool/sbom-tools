@@ -2151,8 +2151,8 @@ fn main() {
     // 5 = license-check denial, 6 = --fail-on-kev, 7 = diff ML regression).
     if let Err(err) = run() {
         // Mirror the format the default `fn main() -> Result` termination
-        // prints: message plus the "Caused by:" chain.
-        eprintln!("Error: {err:?}");
+        // prints: message plus the "Caused by:" chain, each line cleaned.
+        eprintln!("Error: {}", sbom_tools::cli::error_report(&err));
         std::process::exit(exit_codes::ERROR);
     }
 }
