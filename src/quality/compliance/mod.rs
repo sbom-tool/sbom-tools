@@ -824,7 +824,7 @@ impl Serialize for Violation {
     /// and `severity_source`, right after `severity`, both skipped when
     /// `None`. `remediation` is always written (see
     /// [`Violation::remediation_guidance`]), followed by the derived
-    /// `help_uri`, which is skipped when no standard reference has a URL.
+    /// `help_uri` (see [`Violation::help_uri`]), skipped when there is none.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -957,14 +957,18 @@ impl Violation {
         )
     }
 
-    /// Canonical URL for this violation: the URL of the first standard
-    /// reference that has one (see [`StandardKind::canonical_help_uri`]).
-    /// Serialized as `help_uri`; `None` when no reference carries a URL.
+    /// The documentation link of this violation's rule: the URL of the first
+    /// standard reference that has one (see
+    /// [`StandardKind::canonical_help_uri`]), else the page of the rule's
+    /// standard family, as the rule catalogue (`sbom-tools rules`) and the
+    /// SARIF rule's `helpUri` give it. Serialized as `help_uri`; `None` only
+    /// for a rule of no known family.
     #[must_use]
     pub fn help_uri(&self) -> Option<&str> {
         self.standard_refs
             .iter()
             .find_map(|r| r.help_uri.as_deref())
+            .or_else(|| rule_family_help_uri(self.rule_id))
     }
 
     /// Externally-visible SARIF rule id for this violation, looked up from
@@ -3657,8 +3661,9 @@ mod tests {
         assert!(first_uri.is_some(), "NTIA references carry a URL");
         assert_eq!(json["help_uri"].as_str(), first_uri);
 
-        // prEN 40000-1-3 has no public URL, so a prEN-only rule has no
-        // help_uri — but still a remediation.
+        // prEN 40000-1-3 has no public URL, so a prEN-only rule links the
+        // page of its family, the CRA regulation, as `sbom-tools rules` and
+        // the SARIF rule do — and still has a remediation.
         let hardware = Violation {
             severity: ViolationSeverity::Error,
             category: ViolationCategory::SupplierInfo,
@@ -3682,9 +3687,16 @@ mod tests {
             observed: None,
         };
         let json = serde_json::to_value(&hardware).expect("violation serializes");
-        assert!(
-            json.get("help_uri").is_none(),
-            "no URL, no help_uri: {json}"
+        assert_eq!(
+            json["help_uri"], "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+            "no reference URL, the family's page: {json}"
+        );
+        assert_eq!(
+            json["help_uri"].as_str(),
+            rule_catalog_entry("SBOM-CRA-PRE-8-RQ-02-PRODUCER")
+                .and_then(|entry| entry.help_uri)
+                .as_deref(),
+            "the rule catalogue's help URI"
         );
         assert!(
             json["remediation"]
