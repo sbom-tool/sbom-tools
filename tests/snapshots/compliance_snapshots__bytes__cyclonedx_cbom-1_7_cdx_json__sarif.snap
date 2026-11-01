@@ -583,6 +583,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/cyclonedx/cbom-1.7.cdx.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "97b4195d754e26ef6db0406f488dfa1c08f68dd576ea51b30a4bd189170986a9"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-CNSA2-ALG-007",
@@ -1353,6 +1364,18 @@ source: tests/compliance_snapshots.rs
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "CycloneDX",
+          "specVersion": "1.7",
+          "components": 19,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
@@ -1360,6 +1383,10 @@ source: tests/compliance_snapshots.rs
             "profile": "CNSA 2.0",
             "compliant": false,
             "applicable": true,
+            "errorCount": 11,
+            "warningCount": 0,
+            "infoCount": 0,
+            "passedCount": 0,
             "overallScore": 30.0
           },
           {
@@ -1367,6 +1394,10 @@ source: tests/compliance_snapshots.rs
             "profile": "NIST PQC Readiness",
             "compliant": false,
             "applicable": true,
+            "errorCount": 3,
+            "warningCount": 0,
+            "infoCount": 0,
+            "passedCount": 7,
             "overallScore": 42.0,
             "notEvaluated": [
               {

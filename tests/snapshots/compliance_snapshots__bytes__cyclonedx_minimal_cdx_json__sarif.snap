@@ -565,6 +565,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/cyclonedx/minimal.cdx.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "be7995c235de8f84244baf2d5cd4a217deb705904ffe2e874647f3e3c0824d96"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-NTIA-IDENTIFIER",
@@ -1520,6 +1531,18 @@ source: tests/compliance_snapshots.rs
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "CycloneDX",
+          "specVersion": "1.5",
+          "components": 3,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
@@ -1527,6 +1550,10 @@ source: tests/compliance_snapshots.rs
             "profile": "NTIA Minimum Elements",
             "compliant": false,
             "applicable": true,
+            "errorCount": 4,
+            "warningCount": 1,
+            "infoCount": 1,
+            "passedCount": 0,
             "overallScore": 22.0
           },
           {
@@ -1534,6 +1561,10 @@ source: tests/compliance_snapshots.rs
             "profile": "CISA 2026 Minimum Elements",
             "compliant": false,
             "applicable": true,
+            "errorCount": 9,
+            "warningCount": 3,
+            "infoCount": 0,
+            "passedCount": 0,
             "overallScore": 12.0
           }
         ]

@@ -529,6 +529,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "c53e25847e7f12617e08f71fc4543a79df0dd141033f217f2e3424f782d12b56"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-1",
@@ -1128,6 +1139,18 @@ source: tests/compliance_snapshots.rs
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "SPDX",
+          "specVersion": "3.0.1",
+          "components": 4,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
@@ -1135,6 +1158,10 @@ source: tests/compliance_snapshots.rs
             "profile": "BSI TR-03183-2",
             "compliant": false,
             "applicable": true,
+            "errorCount": 3,
+            "warningCount": 5,
+            "infoCount": 0,
+            "passedCount": 0,
             "overallScore": 14.0
           },
           {
@@ -1142,6 +1169,10 @@ source: tests/compliance_snapshots.rs
             "profile": "EO 14028 Section 4",
             "compliant": false,
             "applicable": true,
+            "errorCount": 2,
+            "warningCount": 2,
+            "infoCount": 0,
+            "passedCount": 0,
             "overallScore": 20.0
           }
         ]

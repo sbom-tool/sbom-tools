@@ -943,6 +943,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/cra/cra-compliant.cdx.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "54964988348193d6f63e26a32b8a57224809f6bea921a6080d4758a7a759cef6"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
@@ -1490,6 +1501,18 @@ source: tests/compliance_snapshots.rs
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "CycloneDX",
+          "specVersion": "1.6",
+          "components": 3,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
@@ -1497,6 +1520,10 @@ source: tests/compliance_snapshots.rs
             "profile": "EU CRA Phase 2 (2027)",
             "compliant": true,
             "applicable": true,
+            "errorCount": 0,
+            "warningCount": 1,
+            "infoCount": 4,
+            "passedCount": 0,
             "overallScore": 90.0,
             "notEvaluated": [
               {
@@ -1543,6 +1570,10 @@ source: tests/compliance_snapshots.rs
             "profile": "EU CRA Phase 1 (2026)",
             "compliant": true,
             "applicable": true,
+            "errorCount": 0,
+            "warningCount": 1,
+            "infoCount": 4,
+            "passedCount": 0,
             "overallScore": 90.0,
             "notEvaluated": [
               {

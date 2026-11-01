@@ -745,6 +745,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/spdx/minimal.spdx.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "112025cca042383bb7172ffe41f60033816a7f49e8be3d21de6b1955bcdb9b4e"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-NTIA-SUPPLIER",
@@ -1218,6 +1229,18 @@ source: tests/compliance_snapshots.rs
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "SPDX",
+          "specVersion": "2.3",
+          "components": 2,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
@@ -1225,6 +1248,10 @@ source: tests/compliance_snapshots.rs
             "profile": "NTIA Minimum Elements",
             "compliant": false,
             "applicable": true,
+            "errorCount": 2,
+            "warningCount": 0,
+            "infoCount": 0,
+            "passedCount": 0,
             "overallScore": 30.0
           },
           {
@@ -1232,6 +1259,10 @@ source: tests/compliance_snapshots.rs
             "profile": "CISA Framing Software Component Transparency (3rd ed.)",
             "compliant": false,
             "applicable": true,
+            "errorCount": 3,
+            "warningCount": 3,
+            "infoCount": 1,
+            "passedCount": 0,
             "overallScore": 12.0,
             "notEvaluated": [
               {
