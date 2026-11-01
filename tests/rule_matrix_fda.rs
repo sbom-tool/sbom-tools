@@ -437,6 +437,24 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 )];
             }),
         )
+        // A contact must reach someone, as in every contact check.
+        .with_firing(
+            "the only contact email is a placeholder",
+            Sev::Warning,
+            broken(|s| {
+                s.manufacturer = Some(("Acme Medical Inc".to_string(), Some("n/a".to_string())));
+            }),
+        )
+        .with_firing(
+            "the only contact email is at a documentation domain",
+            Sev::Warning,
+            broken(|s| {
+                s.manufacturer = Some((
+                    "Acme Medical Inc".to_string(),
+                    Some("security@example.com".to_string()),
+                ));
+            }),
+        )
         .case_only(
             "silent",
             Encoding::ALL_BUT_SPDX3,

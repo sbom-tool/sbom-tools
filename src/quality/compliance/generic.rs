@@ -553,13 +553,23 @@ impl ComplianceChecker {
                 });
             }
 
-            // FDA recommends contact information
-            let has_contact = sbom.document.creators.iter().any(|c| c.email.is_some());
-            if !has_contact {
+            // FDA recommends contact information: a creator email that
+            // reaches someone (see `known_contact`), judged as every other
+            // contact check judges one.
+            let emails = || {
+                sbom.document
+                    .creators
+                    .iter()
+                    .filter_map(|c| c.email.as_deref())
+            };
+            if !emails().any(|email| known_contact(Some(email))) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
-                    message: "FDA: SBOM creators should include contact email".to_string(),
+                    message: format!(
+                        "FDA: SBOM creators should include contact email{}",
+                        unreachable_creator_note(emails())
+                    ),
                     element: None,
                     requirement: "FDA: Contact information".to_string(),
                     rule_id: "SBOM-FDA-CONTACT",

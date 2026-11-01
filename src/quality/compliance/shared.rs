@@ -2,8 +2,8 @@
 
 use super::{Violation, ViolationCategory, ViolationSeverity};
 use crate::model::{
-    Component, ComponentType, CreatorType, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
-    NormalizedSbom, Organization, VexState, VulnerabilityRef, is_known_contact,
+    Component, ComponentType, Creator, CreatorType, ExternalRefType, ExternalReference, Hash,
+    HashAlgorithm, NormalizedSbom, Organization, VexState, VulnerabilityRef, is_known_contact,
 };
 // The placeholder and sentinel tests every check reads live in the model,
 // which merges a component's entries with the same classification.
@@ -369,8 +369,8 @@ pub(crate) fn license_state(comp: &Component) -> ValueState {
 /// Whether `value` is a contact that reaches someone: present, known and no
 /// address at a documentation domain such as `example.com` (see
 /// [`crate::model::is_known_contact`], beside the placeholder list). Every
-/// check that reads a vulnerability contact asks this, in the SBOM and in
-/// the CRA sidecar.
+/// check that reads a contact asks this: the vulnerability contacts in the
+/// SBOM and in the CRA sidecar, and the SBOM creator's email.
 pub(crate) fn known_contact(value: Option<&str>) -> bool {
     value.is_some_and(is_known_contact)
 }
@@ -427,6 +427,35 @@ pub(crate) fn unreachable_contact_note(sbom: &NormalizedSbom) -> String {
             value.trim()
         )
     })
+}
+
+/// The contacts a creator gives: its email address, and the address or URL
+/// its name carries. Creators have no URL field, so the CycloneDX parser
+/// folds a manufacturer's URL into the name when it has no email, and an
+/// author with only an email is named by it.
+pub(crate) fn creator_contacts(creator: &Creator) -> impl Iterator<Item = &str> {
+    let name = creator.name.as_str();
+    creator
+        .email
+        .as_deref()
+        .into_iter()
+        .chain((name.contains('@') || name.contains("://")).then_some(name))
+}
+
+/// A note naming the first of the creator contacts `values` that is given
+/// but reaches nobody (see [`known_contact`]), for the message of a check
+/// that found no creator contact; empty when there is none.
+pub(crate) fn unreachable_creator_note<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
+    values
+        .into_iter()
+        .find(|value| !known_contact(Some(value)))
+        .map_or_else(String::new, |value| {
+            format!(
+                "; the creator contact '{}' reaches nobody (a placeholder, or an address at \
+                 example.com, example.net or example.org)",
+                value.trim()
+            )
+        })
 }
 
 /// The clause a contact finding appends when the CRA sidecar gives a

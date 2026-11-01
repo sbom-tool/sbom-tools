@@ -3,13 +3,14 @@
 //!
 //! Each group below names one piece of evidence, the checks of every
 //! standard that read it, and the evidence variants the checks must judge
-//! alike: a licence, a vulnerability contact, an EUCC certificate URL, a
-//! VEX `not_affected` statement and a document signature. A variant either
-//! satisfies every check of its group or none of them; the only exceptions
-//! are the ones a standard's text makes, named in the group. Until v0.4.0
-//! the standards disagreed: a NOASSERTION licence passed the Standard
-//! profile but failed CRA Art. 13(5), CRA Art. 13(17) and EO 14028 took any
-//! contact while PCI DSS rejected placeholders, the CRA and EUCC checks read
+//! alike: a licence, a contact (a vulnerability contact or the SBOM
+//! creator's email), an EUCC certificate URL, a VEX `not_affected`
+//! statement and a document signature. A variant either satisfies every
+//! check of its group or none of them; the only exceptions are the ones a
+//! standard's text makes, named in the group. Until v0.4.0 the standards
+//! disagreed: a NOASSERTION licence passed the Standard profile but failed
+//! CRA Art. 13(5), CRA Art. 13(17), EO 14028, FDA and BSI took any contact
+//! while PCI DSS rejected placeholders, the CRA and EUCC checks read
 //! different EUCC URL keywords, and FDA counted vulnerabilities the CRA
 //! profiles exempt.
 //!
@@ -110,6 +111,17 @@ fn contact_refs(security_contact: &str, advisories: &str) -> Vec<(String, String
     ]
 }
 
+/// A product whose security contact and advisories references are
+/// `contact` and `advisories`, and whose manufacturer, the SBOM's only
+/// creator besides the tool, gives `contact` (without a `mailto:` prefix)
+/// as its email: every contact check reads the same address.
+fn contactable(contact: &str, advisories: &str) -> SbomFixture {
+    let mut fixture = product(contact_refs(contact, advisories), Some("MIT"));
+    let email = contact.strip_prefix("mailto:").unwrap_or(contact);
+    fixture.manufacturer = Some(("Acme Networks GmbH".to_string(), Some(email.to_string())));
+    fixture
+}
+
 /// Every licence check: a known SPDX expression or LicenseRef-* id
 /// satisfies all of them; a placeholder or no licence satisfies none. The
 /// explicit unknown NOASSERTION satisfies only CISA 2026, whose Component
@@ -152,10 +164,11 @@ fn licence_evidence_gets_one_answer() {
     assert_consistent("licence", &mismatches);
 }
 
-/// Every check that reads a vulnerability contact: a contact that reaches
-/// someone satisfies all of them; a placeholder, or an address at a
-/// documentation domain (example.com, example.net, example.org), satisfies
-/// none.
+/// Every check that reads a contact, a vulnerability contact or the SBOM
+/// creator's email: a contact that reaches someone satisfies all of them; a
+/// placeholder, or an address at a documentation domain (example.com,
+/// example.net, example.org), satisfies none. The RFC 2606 `.example`
+/// top-level domain stays a real one, as test data uses it.
 #[test]
 fn contact_evidence_gets_one_answer() {
     const CHECKS: &[Check] = &[
@@ -167,6 +180,11 @@ fn contact_evidence_gets_one_answer() {
         (ComplianceLevel::Eo14028, "SBOM-EO14028-DISCLOSURE"),
         (ComplianceLevel::PciDss632, "SBOM-PCI-6-3-2-VULN-EVIDENCE"),
         (ComplianceLevel::NistSsdf, "SBOM-SSDF-PW6"),
+        (ComplianceLevel::FdaMedicalDevice, "SBOM-FDA-CONTACT"),
+        (
+            ComplianceLevel::BsiTr03183_2,
+            "SBOM-BSI-TR-03183-2-5-1-CONTACT",
+        ),
     ];
     let mut mismatches = Vec::new();
     for (variant, contact, advisories) in [
@@ -181,11 +199,11 @@ fn contact_evidence_gets_one_answer() {
             "https://security.example.com.acme.example/advisories",
         ),
     ] {
-        let fixture = product(contact_refs(contact, advisories), Some("MIT"));
+        let fixture = contactable(contact, advisories);
         judge(variant, &fixture, CHECKS, |_| false, &mut mismatches);
     }
     for placeholder in ["NOASSERTION", "unknown", "n/a", "TBD", "mailto:"] {
-        let fixture = product(contact_refs(placeholder, placeholder), Some("MIT"));
+        let fixture = contactable(placeholder, placeholder);
         judge(placeholder, &fixture, CHECKS, |_| true, &mut mismatches);
     }
     for (variant, contact, advisories) in [
@@ -200,7 +218,7 @@ fn contact_evidence_gets_one_answer() {
             "https://psirt.example.org/advisories",
         ),
     ] {
-        let fixture = product(contact_refs(contact, advisories), Some("MIT"));
+        let fixture = contactable(contact, advisories);
         judge(variant, &fixture, CHECKS, |_| true, &mut mismatches);
     }
     assert_consistent("contact", &mismatches);

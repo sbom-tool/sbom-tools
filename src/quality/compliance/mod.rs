@@ -70,13 +70,13 @@ pub(crate) use shared::plausible_digest;
 #[cfg(feature = "cli")]
 pub(crate) use shared::manufacturer_name;
 use shared::{
-    ValueState, creator_identified, digest_problems, document_signed, future_timestamp_violation,
-    has_known_license, has_known_value, invalid_digest_note, inventory_absent_violation,
-    is_contact_reference, is_declared_unknown, is_eucc_reference, is_placeholder,
-    is_valid_email_format, justified_not_affected, known_component_name, known_contact,
-    known_value, license_state, manufacturer_identified, manufacturer_reference,
+    ValueState, creator_contacts, creator_identified, digest_problems, document_signed,
+    future_timestamp_violation, has_known_license, has_known_value, invalid_digest_note,
+    inventory_absent_violation, is_contact_reference, is_declared_unknown, is_eucc_reference,
+    is_placeholder, is_valid_email_format, justified_not_affected, known_component_name,
+    known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
     name_with_digest_problems, package_components, truncate_list, unparseable_timestamp,
-    unreachable_contact_note, unreachable_sidecar_note, value_state,
+    unreachable_contact_note, unreachable_creator_note, unreachable_sidecar_note, value_state,
 };
 
 /// CRA enforcement phase
@@ -5765,7 +5765,7 @@ mod tests {
         sbom.document.creators.push(Creator {
             creator_type: CreatorType::Person,
             name: "Jane Doe".to_string(),
-            email: Some("jane@example.org".to_string()),
+            email: Some("jane@acme.example".to_string()),
         });
         sbom.add_component(bsi_ok_component("lib"));
         let r = checker(ComplianceLevel::BsiTr03183_2).check(&sbom);
@@ -6170,7 +6170,7 @@ mod tests {
         sbom.document.creators.push(Creator {
             creator_type: CreatorType::Person,
             name: "Release Engineering".to_string(),
-            email: Some("sbom@example.org".to_string()),
+            email: Some("sbom@acme.example".to_string()),
         });
         let a = bsi_ok_component("a");
         let b = bsi_ok_component("b");

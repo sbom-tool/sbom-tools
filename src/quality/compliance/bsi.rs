@@ -117,18 +117,19 @@ impl ComplianceChecker {
                 deadline: None,
             });
         } else {
-            let has_contact = non_tool_creators.iter().any(|c| {
-                known_value(c.email.as_deref()).is_some()
-                    || c.name.contains('@')
-                    || c.name.contains("://")
-            });
-            if !has_contact {
+            // The email, or the address or URL a creator's name carries,
+            // must reach someone (see `known_contact`), as every other
+            // contact check judges one.
+            let contacts = || non_tool_creators.iter().flat_map(|c| creator_contacts(c));
+            if !contacts().any(|contact| known_contact(Some(contact))) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
-                    message: "[BSI TR-03183-2 §5.2.1] SBOM creator carries neither an email \
-                              address nor a URL"
-                        .to_string(),
+                    message: format!(
+                        "[BSI TR-03183-2 §5.2.1] SBOM creator carries neither an email \
+                         address nor a URL{}",
+                        unreachable_creator_note(contacts())
+                    ),
                     element: None,
                     requirement: "BSI TR-03183-2 §5.2.1: Creator of the SBOM (email or URL)"
                         .to_string(),

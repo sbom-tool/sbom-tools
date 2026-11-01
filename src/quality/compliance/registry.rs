@@ -2713,7 +2713,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: SBOM creator contact email",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Give the SBOM creator a contact email (FDA premarket guidance).",
+            remediation: "Give the SBOM creator a contact email (FDA premarket guidance). A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_FDA_CONTACT),
         },
         "SBOM-FDA-NAME" => RuleMeta {
@@ -3192,7 +3192,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "BSI TR-03183-2 §5.2.1: SBOM creator must carry an email address or URL",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiTr03183_2, "§5.2.1")],
-            remediation: "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1.",
+            remediation: "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_CREATOR_CONTACT),
         },
         "SBOM-BSI-TR-03183-2-5-2" => RuleMeta {
