@@ -114,14 +114,16 @@ impl NormalizedSbom {
     /// A component whose canonical id is new is inserted, and `false` is
     /// returned. One whose id a component of the same name and version
     /// already holds is another entry of that component (the document lists
-    /// it twice): the two are merged ([`Component::merge_duplicate`]), so
-    /// the result does not depend on which entry came first and no entry's
-    /// data is lost. The duplicate is recorded in
-    /// [`Self::duplicate_components`] and counted in
+    /// it twice; a name or version that is absent or not known, such as
+    /// `NOASSERTION`, agrees with any, see [`Component::is_same_component`]):
+    /// the two are merged ([`Component::merge_duplicate`]), so the result
+    /// does not depend on which entry came first, no entry's data is lost,
+    /// and a known value always wins over a placeholder. The duplicate is
+    /// recorded in [`Self::duplicate_components`] and counted in
     /// [`Self::collision_count`], and `true` is returned.
     ///
-    /// A component of a different name or version under a taken id replaces
-    /// the one there (counted, and `true`). Parsers never pass one:
+    /// A component of a different known name or version under a taken id
+    /// replaces the one there (counted, and `true`). Parsers never pass one:
     /// [`Self::claim_canonical_id`] gives it an id of its own first.
     pub fn add_component(&mut self, component: Component) -> bool {
         let id = component.canonical_id.clone();
@@ -130,7 +132,7 @@ impl NormalizedSbom {
             return false;
         };
         self.collision_count += 1;
-        if existing.name != component.name || existing.version != component.version {
+        if !existing.is_same_component(&component) {
             *existing = component;
             return true;
         }
@@ -148,21 +150,21 @@ impl NormalizedSbom {
     ///
     /// Parsers call this before recording the ID in their reference maps.
     /// When another component already holds the same canonical ID but has a
-    /// different name or version, the two are distinct components that share
-    /// an identifier (two versions under one version-less purl, say).
+    /// different known name or version, the two are distinct components that
+    /// share an identifier (two versions under one version-less purl, say).
     /// Inserting would overwrite — silently dropping a component from every
     /// count and check — so `component` is re-keyed to an ID that appends its
     /// format ID (bom-ref or SPDXID), and the clash is logged. A true
-    /// duplicate (same name and version) keeps the shared ID, and
+    /// duplicate (the same name and version, where a name or version that is
+    /// absent or not known agrees with any; see
+    /// [`Component::is_same_component`]) keeps the shared ID, and
     /// [`Self::add_component`] merges the two entries. Returns the ID to
     /// register.
     pub fn claim_canonical_id(&self, component: &mut Component) -> CanonicalId {
         let distinct = self
             .components
             .get(&component.canonical_id)
-            .is_some_and(|existing| {
-                existing.name != component.name || existing.version != component.version
-            });
+            .is_some_and(|existing| !existing.is_same_component(component));
         if distinct {
             let base = format!(
                 "{}#{}",

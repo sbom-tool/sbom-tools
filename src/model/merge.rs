@@ -3,29 +3,34 @@
 //! A document can list one component twice: the same purl under two
 //! bom-refs, or one bom-ref repeated. Parsers settle each entry's canonical
 //! id with [`NormalizedSbom::claim_canonical_id`], which keeps entries of a
-//! different name or version apart, so entries that still share an id are
-//! one component. [`NormalizedSbom::add_component`] merges them with
+//! different known name or version apart, so entries that still share an id
+//! are one component ([`Component::is_same_component`]).
+//! [`NormalizedSbom::add_component`] merges them with
 //! [`Component::merge_duplicate`] and records the duplicate as a
 //! [`DuplicateComponent`]. The merged component does not depend on which
 //! entry came first:
 //!
 //! - a list field (hashes, licences, external references, identifiers,
 //!   properties, annotations, vulnerabilities) holds every value of every
-//!   entry once, sorted;
-//! - a single-valued field that one entry leaves empty takes the other
-//!   entry's value;
-//! - when the entries give a single-valued field two different values, the
-//!   value that sorts first is kept, and the field is recorded as a
-//!   conflict.
+//!   entry once, sorted; a licence that is not known (`NOASSERTION`, `NONE`,
+//!   `TBD`, blank, …) is dropped when another entry names a known one;
+//! - a single-valued field that one entry leaves empty, or gives a value
+//!   that is not known (a placeholder or sentinel such as `NOASSERTION`,
+//!   `NONE` or `TBD`), takes the other entry's known value, without a
+//!   conflict;
+//! - when the entries give a single-valued field two different known
+//!   values, the value that sorts first is kept, and the field is recorded
+//!   as a conflict.
 //!
-//! Values sort by their JSON form.
+//! Values sort by their JSON form. What counts as known is what every
+//! compliance check counts (see `model::known`).
 //!
 //! [`NormalizedSbom::claim_canonical_id`]: super::NormalizedSbom::claim_canonical_id
 //! [`NormalizedSbom::add_component`]: super::NormalizedSbom::add_component
 
 use super::{
     CanonicalId, Component, ComponentExtensions, ComponentIdentifiers, Hash, HashProvenance,
-    LicenseInfo, Organization,
+    LicenseExpression, LicenseInfo, Organization, is_known,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -183,27 +188,40 @@ fn pick_value<T: Serialize>(kept: &mut T, other: T) -> bool {
     current != incoming
 }
 
-/// [`pick`] for a text field, where a blank value counts as absent: a
-/// value takes the place of a blank one, and two blank values never
-/// disagree.
-fn pick_text(kept: &mut Option<String>, other: Option<String>) -> bool {
-    let blank = |value: Option<&String>| value.is_none_or(|v| v.trim().is_empty());
-    match (blank(kept.as_ref()), blank(other.as_ref())) {
-        (false, true) => false,
-        (true, false) => {
+/// Keep one value of a field some of whose values carry no information,
+/// which `known` tells apart: a known value beats one that is not known,
+/// whichever entry gives it, and the two do not disagree; of two known
+/// values the one that sorts first is kept, and they disagree when they
+/// differ; of two values that are not known, the one that sorts first is
+/// kept without a disagreement. Returns whether the entries disagree.
+fn pick_known<T: Serialize>(kept: &mut T, other: T, known: impl Fn(&T) -> bool) -> bool {
+    match (known(kept), known(&other)) {
+        (true, false) => false,
+        (false, true) => {
             *kept = other;
             false
         }
-        (false, false) => pick(kept, other),
-        (true, true) => {
-            pick(kept, other);
+        (true, true) => pick_value(kept, other),
+        (false, false) => {
+            pick_value(kept, other);
             false
         }
     }
 }
 
-/// [`pick`] for an organization: two entries naming the same organization
-/// add up its URLs and contacts; different names disagree.
+/// Whether a text field holds a known value: present, not blank, and no
+/// placeholder or sentinel such as `TBD` or `NOASSERTION`.
+fn known_text(value: &Option<String>) -> bool {
+    value.as_deref().is_some_and(is_known)
+}
+
+/// [`pick_known`] for a text field.
+fn pick_text(kept: &mut Option<String>, other: Option<String>) -> bool {
+    pick_known(kept, other, known_text)
+}
+
+/// [`pick_known`] for an organization, known when its name is: two entries
+/// naming the same organization add up its URLs and contacts.
 fn pick_organization(kept: &mut Option<Organization>, other: Option<Organization>) -> bool {
     match (kept.as_mut(), other) {
         (Some(current), Some(incoming)) if current.name == incoming.name => {
@@ -211,25 +229,54 @@ fn pick_organization(kept: &mut Option<Organization>, other: Option<Organization
             union_sorted(&mut current.contacts, incoming.contacts);
             false
         }
-        (_, other) => pick(kept, other),
+        (_, other) => pick_known(kept, other, |org| {
+            org.as_ref().is_some_and(|org| is_known(&org.name))
+        }),
     }
 }
 
+/// Whether a licence expression is known (not `NOASSERTION`, `NONE`, a
+/// placeholder or blank).
+fn known_license(license: &LicenseExpression) -> bool {
+    is_known(&license.expression)
+}
+
 impl Component {
-    /// Merge `other`, another entry of this component (the same canonical
-    /// id, name and version), into it, and return the single-valued fields
-    /// the two disagree on, by model field name.
+    /// Whether `other`, which shares this component's canonical id, is
+    /// another entry of it rather than another component: their names and
+    /// versions agree wherever both are known. A name or version that is
+    /// absent, blank or not known (`NOASSERTION`, `TBD`, …) agrees with any,
+    /// so an entry that leaves it out is merged into the one that gives it.
+    #[must_use]
+    pub fn is_same_component(&self, other: &Self) -> bool {
+        let agree = |a: Option<&str>, b: Option<&str>| match (
+            a.filter(|v| is_known(v)),
+            b.filter(|v| is_known(v)),
+        ) {
+            (Some(a), Some(b)) => a == b,
+            _ => true,
+        };
+        agree(Some(&self.name), Some(&other.name))
+            && agree(self.version.as_deref(), other.version.as_deref())
+    }
+
+    /// Merge `other`, another entry of this component (see
+    /// [`Self::is_same_component`]), into it, and return the single-valued
+    /// fields the two disagree on, by model field name.
     ///
     /// The result does not depend on which entry is `self` (see the module
-    /// docs of `model::merge`): list fields hold every value once, sorted;
-    /// an absent value takes the other entry's; of two different values the
-    /// one that sorts first (by its JSON form) is kept and the field is
-    /// returned as a conflict. Two entries naming the same supplier or
-    /// manufacturer add up its URLs and contacts. The format id (bom-ref,
-    /// SPDXID) that sorts first is kept without a conflict, since entries of
-    /// one component often carry two. The verbatim source JSON and the raw
-    /// extension data follow the same rule but are not reported: they differ
-    /// whenever the entries do. The content hash is recomputed.
+    /// docs of `model::merge`): list fields hold every value once, sorted,
+    /// and a licence that is not known is dropped when the other entry names
+    /// a known one; an absent or unknown value (`NOASSERTION`, `NONE`, `TBD`,
+    /// blank, …) takes the other entry's known value, without a conflict; of
+    /// two different known values the one that sorts first (by its JSON
+    /// form) is kept and the field is returned as a conflict. Two entries
+    /// naming the same supplier or manufacturer add up its URLs and
+    /// contacts. The format id (bom-ref, SPDXID) that sorts first is kept
+    /// without a conflict, since entries of one component often carry two.
+    /// The verbatim source JSON and the raw extension data follow the same
+    /// rule but are not reported: they differ whenever the entries do. The
+    /// content hash is recomputed.
     pub fn merge_duplicate(&mut self, other: Self) -> BTreeSet<&'static str> {
         let mut conflicts = BTreeSet::new();
         let mut record = |field: &'static str, disagree: bool| {
@@ -267,9 +314,9 @@ impl Component {
             crypto_properties,
         } = other;
 
-        record("name", pick_value(&mut self.name, name));
+        record("name", pick_known(&mut self.name, name, |n| is_known(n)));
         let version_before = self.version.clone();
-        record("version", pick(&mut self.version, version));
+        record("version", pick_text(&mut self.version, version));
         if self.version != version_before {
             self.semver = self
                 .version
@@ -307,7 +354,8 @@ impl Component {
             evidence,
         } = licenses;
         // Keyed by the expression alone: the resolved name is display
-        // metadata, and of two names the one that sorts first is kept.
+        // metadata, and of two names the one that sorts first is kept. A
+        // licence that is not known adds nothing beside a known one.
         union_sorted_by(
             &mut self.licenses.declared,
             declared,
@@ -316,9 +364,14 @@ impl Component {
                 pick(&mut kept.resolved_name, other.resolved_name);
             },
         );
+        if self.licenses.declared.iter().any(known_license) {
+            self.licenses.declared.retain(known_license);
+        }
         record(
             "licenses.concluded",
-            pick(&mut self.licenses.concluded, concluded),
+            pick_known(&mut self.licenses.concluded, concluded, |l| {
+                l.as_ref().is_some_and(known_license)
+            }),
         );
         union_sorted(&mut self.licenses.evidence, evidence);
 
@@ -553,6 +606,134 @@ mod tests {
             sbom.duplicate_components[&c.canonical_id].conflicts,
             ["supplier"]
         );
+    }
+
+    /// A known value beats one that is not known (NOASSERTION, NONE, TBD,
+    /// N/A, blank), whichever entry gives which, and that is no conflict.
+    /// Every known value here sorts after its placeholder, so keeping the
+    /// value that sorts first would keep the placeholder.
+    #[test]
+    fn a_known_value_beats_a_placeholder_in_either_order() {
+        let license = |id: &str| LicenseExpression::new(id.to_string());
+        let mut real = entry("ref-a");
+        real.supplier = Some(Organization::new("Zeta Components Ltd".to_string()));
+        real.manufacturer = Some(Organization::new("Zeta Labs".to_string()));
+        real.author = Some("Zoe Writer".to_string());
+        real.licenses.add_declared(license("MIT"));
+        real.licenses.concluded = Some(license("Zlib"));
+        real.identifiers.swid = Some("swid:zeta:lodash".to_string());
+        real.description = Some("Zeta's lodash build".to_string());
+        let mut placeholder = entry("ref-b");
+        placeholder.supplier = Some(Organization::new("NOASSERTION".to_string()));
+        placeholder.manufacturer = Some(Organization::new("  ".to_string()));
+        placeholder.author = Some("TBD".to_string());
+        placeholder.licenses.add_declared(license("NOASSERTION"));
+        placeholder.licenses.add_declared(license("NONE"));
+        placeholder.licenses.concluded = Some(license("NONE"));
+        placeholder.identifiers.swid = Some("NOASSERTION".to_string());
+        placeholder.description = Some("N/A".to_string());
+
+        for order in [
+            vec![real.clone(), placeholder.clone()],
+            vec![placeholder, real],
+        ] {
+            let sbom = sbom_of(order);
+            let c = sbom.components.values().next().expect("one component");
+            let name = |org: &Option<Organization>| org.as_ref().map(|o| o.name.clone());
+            assert_eq!(name(&c.supplier).as_deref(), Some("Zeta Components Ltd"));
+            assert_eq!(name(&c.manufacturer).as_deref(), Some("Zeta Labs"));
+            assert_eq!(c.author.as_deref(), Some("Zoe Writer"));
+            let declared: Vec<&str> = c
+                .licenses
+                .declared
+                .iter()
+                .map(|l| l.expression.as_str())
+                .collect();
+            assert_eq!(declared, ["MIT"], "NOASSERTION and NONE add nothing to MIT");
+            assert_eq!(
+                c.licenses.concluded.as_ref().map(|l| l.expression.as_str()),
+                Some("Zlib")
+            );
+            assert_eq!(c.identifiers.swid.as_deref(), Some("swid:zeta:lodash"));
+            assert_eq!(c.description.as_deref(), Some("Zeta's lodash build"));
+            assert!(
+                sbom.duplicate_components[&c.canonical_id]
+                    .conflicts
+                    .is_empty(),
+                "a placeholder against a known value is no conflict"
+            );
+        }
+    }
+
+    /// Placeholders alone stay as they are: a licence list of placeholders
+    /// only is kept, and two placeholders are no conflict.
+    #[test]
+    fn placeholders_alone_are_kept_without_a_conflict() {
+        let mut a = entry("ref-a");
+        a.licenses
+            .add_declared(LicenseExpression::new("NOASSERTION".to_string()));
+        a.author = Some("TBD".to_string());
+        let mut b = entry("ref-b");
+        b.author = Some("N/A".to_string());
+        let sbom = sbom_of(vec![a, b]);
+        let c = sbom.components.values().next().expect("one component");
+        assert_eq!(c.licenses.declared.len(), 1);
+        assert!(c.author.is_some());
+        assert!(
+            sbom.duplicate_components[&c.canonical_id]
+                .conflicts
+                .is_empty()
+        );
+    }
+
+    /// An entry that leaves out the name or version (absent, or a
+    /// placeholder) is no other component: in either order the parsers'
+    /// claim keeps the shared id, and the merged component has the known
+    /// name and version. Two known versions stay two components.
+    #[test]
+    fn an_entry_without_a_known_name_or_version_merges_in_either_order() {
+        const PURL: &str = "pkg:npm/lodash@4.17.21";
+        let known = entry("ref-a");
+        let unversioned =
+            Component::new("lodash".to_string(), "ref-b".to_string()).with_purl(PURL.to_string());
+        let placeholder_version = Component::new("lodash".to_string(), "ref-c".to_string())
+            .with_version("NOASSERTION".to_string())
+            .with_purl(PURL.to_string());
+        let placeholder_name = Component::new("NOASSERTION".to_string(), "ref-d".to_string())
+            .with_version("4.17.21".to_string())
+            .with_purl(PURL.to_string());
+        let parse = |entries: Vec<Component>| {
+            let mut sbom = NormalizedSbom::default();
+            for mut c in entries {
+                sbom.claim_canonical_id(&mut c);
+                sbom.add_component(c);
+            }
+            sbom
+        };
+        let entries = vec![known, unversioned, placeholder_version, placeholder_name];
+        for order in permutations(&entries) {
+            let sbom = parse(order);
+            assert_eq!(sbom.components.len(), 1, "one component for four entries");
+            let c = sbom.components.values().next().expect("one component");
+            assert_eq!(c.name, "lodash");
+            assert_eq!(c.version.as_deref(), Some("4.17.21"));
+            assert!(c.semver.is_some());
+            assert_eq!(sbom.duplicate_components[&c.canonical_id].entries, 4);
+        }
+
+        let other_version = Component::new("lodash".to_string(), "ref-e".to_string())
+            .with_version("4.17.20".to_string())
+            .with_purl("pkg:npm/lodash".to_string());
+        let this_version = Component::new("lodash".to_string(), "ref-f".to_string())
+            .with_version("4.17.21".to_string())
+            .with_purl("pkg:npm/lodash".to_string());
+        let sbom = parse(vec![other_version, this_version]);
+        assert_eq!(
+            sbom.components.len(),
+            2,
+            "two known versions are two components"
+        );
+        assert!(sbom.duplicate_components.is_empty());
     }
 
     #[test]

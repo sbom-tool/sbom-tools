@@ -94,6 +94,17 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "NOASSERTION version",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").version = Some("NOASSERTION".to_string())),
+        )
+        // libalpha listed twice, its first entry without a version: the
+        // entries are one component, which has the known version.
+        .with_silent(
+            "first of two entries without a version",
+            broken(|s| {
+                let mut first = s.component_mut("libalpha").clone();
+                first.bom_ref = "ref-libalpha-first".to_string();
+                first.version = None;
+                s.components.insert(0, first);
+            }),
         ),
         RuleEntry::tested(
             "SBOM-NTIA-SUPPLIER",
@@ -105,6 +116,20 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "NOASSERTION supplier",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").supplier = Some("NOASSERTION".to_string())),
+        )
+        // libalpha listed twice, its first entry with a NOASSERTION supplier
+        // and its second with a supplier that sorts after it: the merged
+        // component keeps the known supplier.
+        .with_silent(
+            "first of two entries with a NOASSERTION supplier",
+            broken(|s| {
+                let alpha = s.component_mut("libalpha");
+                alpha.supplier = Some("Zeta Components Ltd".to_string());
+                let mut first = alpha.clone();
+                first.bom_ref = "ref-libalpha-first".to_string();
+                first.supplier = Some("NOASSERTION".to_string());
+                s.components.insert(0, first);
+            }),
         ),
         RuleEntry::tested(
             "SBOM-NTIA-IDENTIFIER",

@@ -449,13 +449,6 @@ impl fmt::Display for CanonicalId {
     }
 }
 
-/// Placeholder values SBOM generators write where they have no value.
-fn is_placeholder(value: &str) -> bool {
-    ["NOASSERTION", "NONE", "UNKNOWN", "N/A", "NULL"]
-        .iter()
-        .any(|p| value.eq_ignore_ascii_case(p))
-}
-
 /// Whether `value` is usable as a component's package URL.
 ///
 /// A purl must carry its `pkg:` scheme, a type and a name
@@ -471,7 +464,7 @@ pub fn is_usable_purl(value: &str) -> bool {
     let has_scheme = value
         .get(..4)
         .is_some_and(|scheme| scheme.eq_ignore_ascii_case("pkg:"));
-    if is_placeholder(value) || !has_scheme {
+    if !super::is_known(value) || !has_scheme {
         return false;
     }
     // The scheme may be followed by optional slashes (`pkg://type/name`).
@@ -487,7 +480,7 @@ pub fn is_usable_purl(value: &str) -> bool {
 #[must_use]
 pub fn is_usable_cpe(value: &str) -> bool {
     let value = value.trim();
-    if is_placeholder(value) {
+    if !super::is_known(value) {
         return false;
     }
     let lower = value.to_ascii_lowercase();
