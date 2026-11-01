@@ -27,8 +27,8 @@ use info_classification::{INFO_FINDINGS, info_finding_reason};
 use sbom_tools::model::{CraProductClass, CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, PASS_RULE_IDS, RuleKind,
-    ViolationSeverity, all_rule_ids, rule_kind, rule_meta,
+    CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, PASS_RULE_IDS, PqcMode,
+    PqcProfile, RuleKind, ViolationSeverity, all_rule_ids, rule_kind, rule_meta,
 };
 use sbom_tools::reports::{
     SarifOptions, generate_compliance_sarif, generate_compliance_sarif_with,
@@ -144,6 +144,23 @@ fn checkers(sidecar: Option<&CraSidecarMetadata>) -> Vec<(String, ComplianceChec
                     format!("{level:?} + {class:?}"),
                     clock::checker(*level).with_product_class(class),
                 ));
+            }
+        }
+        // The crypto standards under `--pqc-mode deadline`, which reports
+        // an algorithm before its migration deadline at Info.
+        if matches!(level, ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc) {
+            for (label, profile, category) in [
+                ("nist", PqcProfile::Nist, None),
+                ("federal", PqcProfile::Federal, None),
+                ("niche", PqcProfile::Nist, Some(CnsaCategory::Niche)),
+            ] {
+                let mut checker = clock::checker(*level)
+                    .with_pqc_mode(PqcMode::Deadline)
+                    .with_pqc_profile(profile);
+                if let Some(category) = category {
+                    checker = checker.with_cnsa_category(category);
+                }
+                out.push((format!("{level:?} deadline {label}"), checker));
             }
         }
     }

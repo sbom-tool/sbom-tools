@@ -581,7 +581,7 @@ Documented quirks live in [`docs/STANDARDS_VERSIONS.md`](docs/STANDARDS_VERSIONS
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `sbomqs-json` |
 | `--min-score <n>` | Fail if quality score is below threshold (0–100) |
 | `--fail-on-noncompliant` | Exit with code 1 if the profile's embedded compliance check reports the SBOM as non-compliant |
-| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>` | Inputs of the embedded compliance check, taken as `validate` takes them; the clock also dates the score's age and expiry metrics |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>`, `--pqc-mode`, `--pqc-profile`, `--cnsa-category` | Inputs of the embedded compliance check, taken as `validate` takes them; the clock also dates the score's age and expiry metrics, and the PQC flags reach the `cbom` profile's NIST PQC check |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |

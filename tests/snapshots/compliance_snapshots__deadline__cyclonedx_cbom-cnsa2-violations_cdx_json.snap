@@ -1,0 +1,153 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-cnsa2-violations.cdx.json
+--pqc-mode deadline
+
+[pqc @ 2026-10-12] compliant · E0 W0 I5 P4
+  I SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2030-12-31 NIST IR 8547 Table 4
+[pqc @ 2031-06-01] compliant · E0 W5 I0 P4
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p256  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-001  crypto/algorithm/rsa-2048  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2035-12-31 NIST IR 8547 Table 4
+[pqc @ 2036-06-01] NON-COMPLIANT · E5 W0 I0 P4
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2035-12-31 NIST IR 8547 Table 4
+[pqc --pqc-profile federal @ 2026-10-12] compliant · E0 W6 I0 P4
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-PROTO-003  crypto/protocol/tls12-legacy  2030-01-02 EO 14306, OMB M-26-15
+[pqc --pqc-profile federal @ 2031-06-01] NON-COMPLIANT · E4 W2 I0 P4
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-PROTO-003  crypto/protocol/tls12-legacy  2030-01-02 EO 14306, OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+[pqc --pqc-profile federal @ 2036-06-01] NON-COMPLIANT · E6 W0 I0 P4
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p256  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-CERT-001  crypto/certificate/rsa-signed  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12-legacy  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-PROTO-003  crypto/protocol/tls12-legacy  2030-01-02 EO 14306, OMB M-26-15
+[cnsa2 @ 2026-10-12] NON-COMPLIANT · E16 W1 I0 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated
+  W SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2030-12-31 CNSA 2.0 timeline: strictest category
+[cnsa2 @ 2031-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated
+[cnsa2 @ 2036-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated
+[cnsa2 --cnsa-category niche @ 2026-10-12] NON-COMPLIANT · E16 W0 I1 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated
+  I SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2030-12-31 CNSA 2.0 timeline: niche equipment
+[cnsa2 --cnsa-category niche @ 2031-06-01] NON-COMPLIANT · E16 W1 I0 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated
+  W SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2033-12-31 CNSA 2.0 timeline: niche equipment
+[cnsa2 --cnsa-category niche @ 2036-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-128-gcm  undated
+  E SBOM-CNSA2-ALG-001  crypto/algorithm/aes-192-cbc  undated
+  E SBOM-CNSA2-ALG-002  crypto/algorithm/sha-256  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-44  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-512  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/rsa-signed  undated
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12-legacy  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12-legacy  undated

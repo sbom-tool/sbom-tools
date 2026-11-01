@@ -157,6 +157,8 @@ does not list (DSA, SM2), one that is not CNSA 1.0 either, ECB mode, and
 every finding about evidence the checks cannot read (an unidentified
 algorithm, a missing `nistQuantumSecurityLevel`, an empty inventory).
 `--pqc-profile` and `--cnsa-category` need `--pqc-mode deadline`.
+`quality --profile cbom` takes `--pqc-mode` and `--pqc-profile` too, for its
+embedded NIST PQC check.
 
 ## Passed checks
 
