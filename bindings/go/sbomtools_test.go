@@ -1,9 +1,12 @@
 package sbomtools
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -290,5 +293,214 @@ func TestDiffAndScoreDeduplicatedHelpers(t *testing.T) {
 	}
 	if scoreStats.ComponentsRemoved < 1 || scoreStats.EdgesRemoved < 1 {
 		t.Fatalf("unexpected score dedup stats: %+v", scoreStats)
+	}
+}
+
+func readFixture(t *testing.T, name string) string {
+	t.Helper()
+	content, err := os.ReadFile(fixturePath(name))
+	if err != nil {
+		t.Fatalf("failed to read fixture %s: %v", name, err)
+	}
+	return string(content)
+}
+
+func TestValidateReturnsTheComplianceEnvelope(t *testing.T) {
+	content := readFixture(t, "demo-new.cdx.json")
+	options := ValidateOptions{
+		Standards:  []string{"cra", "NTIA", "cra-phase2"},
+		RunOptions: RunOptions{AsOf: "2027-01-01", ProductClass: "important-class-1"},
+	}
+
+	envelope, err := Validate(content, options)
+	if err != nil {
+		t.Fatalf("Validate() failed: %v", err)
+	}
+	if envelope.Schema != "sbom-tools/compliance/v2" || envelope.Tool.Name != "sbom-tools" {
+		t.Fatalf("unexpected envelope header: %+v", envelope)
+	}
+	if envelope.AsOf != "2027-01-01T00:00:00Z" {
+		t.Fatalf("expected the pinned instant, got %q", envelope.AsOf)
+	}
+	digest := sha256.Sum256([]byte(content))
+	if envelope.Subject.SHA256 != hex.EncodeToString(digest[:]) || envelope.Subject.FileName != "" {
+		t.Fatalf("unexpected subject: %+v", envelope.Subject)
+	}
+	if envelope.Subject.Format != "CycloneDX" || envelope.Subject.Components == 0 {
+		t.Fatalf("unexpected subject: %+v", envelope.Subject)
+	}
+	// cra-phase2 names the level cra already selected, so it is checked once.
+	if len(envelope.Results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(envelope.Results))
+	}
+	if envelope.Results[0].Standard != "cra" || envelope.Results[1].Standard != "ntia" {
+		t.Fatalf("unexpected standards: %s, %s", envelope.Results[0].Standard, envelope.Results[1].Standard)
+	}
+	cra := envelope.Results[0]
+	if cra.Compliant || cra.Counts.Error == 0 || len(cra.Violations) == 0 {
+		t.Fatalf("expected CRA errors on the demo SBOM, got %+v", cra.Counts)
+	}
+	for _, violation := range cra.Violations {
+		if !strings.HasPrefix(violation.FindingID, "sbomtools:v1:") || violation.RuleID == "" {
+			t.Fatalf("finding without identity: %+v", violation)
+		}
+	}
+
+	raw, err := ValidateJSON(content, options)
+	if err != nil {
+		t.Fatalf("ValidateJSON() failed: %v", err)
+	}
+	decoded, err := Decode[ComplianceEnvelope](raw)
+	if err != nil {
+		t.Fatalf("failed to decode ValidateJSON(): %v", err)
+	}
+	if len(decoded.Results) != len(envelope.Results) {
+		t.Fatal("ValidateJSON() and Validate() disagree")
+	}
+
+	options.FileName = filepath.Join("some", "dir", "demo-new.cdx.json")
+	named, err := Validate(content, options)
+	if err != nil {
+		t.Fatalf("Validate() with FileName failed: %v", err)
+	}
+	if named.Subject.FileName != "demo-new.cdx.json" {
+		t.Fatalf("expected the file name without its directory, got %q", named.Subject.FileName)
+	}
+}
+
+func TestValidateAppliesSidecarAndRuleSettings(t *testing.T) {
+	content := readFixture(t, filepath.Join("cra", "cra-compliant.cdx.json"))
+	sidecar := readFixture(t, filepath.Join("cra", "cra-compliant.cra.json"))
+
+	envelope, err := Validate(content, ValidateOptions{
+		Standards: []string{"cra"},
+		RunOptions: RunOptions{
+			AsOf:    "2027-12-11",
+			Sidecar: json.RawMessage(sidecar),
+			Rules:   map[string]string{"SBOM-CRA-SBOM-FRESHNESS": "error"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Validate() failed: %v", err)
+	}
+	found := false
+	for _, violation := range envelope.Results[0].Violations {
+		if violation.RuleID == "SBOM-CRA-SBOM-FRESHNESS" {
+			found = true
+			if violation.Severity != "Error" || violation.SeveritySource != "cli" || violation.DefaultSeverity == "" {
+				t.Fatalf("rule setting not applied: %+v", violation)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected a SBOM-CRA-SBOM-FRESHNESS finding")
+	}
+}
+
+func TestValidateRejectsInvalidOptions(t *testing.T) {
+	content := readFixture(t, filepath.Join("cyclonedx", "minimal.cdx.json"))
+	cases := []ValidateOptions{
+		{Standards: []string{"ntai"}},
+		{RunOptions: RunOptions{AsOf: "01/01/2027"}},
+		{RunOptions: RunOptions{PqcProfile: "federal"}},
+		{RunOptions: RunOptions{Rules: map[string]string{"SBOM-NTIA-SUPLIER": "off"}}},
+		{RunOptions: RunOptions{Sidecar: json.RawMessage(`{"security_contact": "x"}`)}},
+	}
+	for _, options := range cases {
+		_, err := Validate(content, options)
+		abiErr, ok := err.(*Error)
+		if !ok || abiErr.Code != ErrorCodeValidation {
+			t.Fatalf("expected a validation error for %+v, got %v", options, err)
+		}
+	}
+}
+
+func TestRuleCatalog(t *testing.T) {
+	catalog, err := RuleCatalog()
+	if err != nil {
+		t.Fatalf("RuleCatalog() failed: %v", err)
+	}
+	if catalog.Schema != "sbom-tools/rules/v1" || len(catalog.Rules) < 100 {
+		t.Fatalf("unexpected catalogue: %s with %d rules", catalog.Schema, len(catalog.Rules))
+	}
+
+	ntia, err := RuleCatalog("ntia")
+	if err != nil {
+		t.Fatalf("RuleCatalog(ntia) failed: %v", err)
+	}
+	if len(ntia.Rules) == 0 || len(ntia.Rules) >= len(catalog.Rules) {
+		t.Fatalf("expected a subset, got %d of %d rules", len(ntia.Rules), len(catalog.Rules))
+	}
+	for _, rule := range ntia.Rules {
+		listed := false
+		for _, standard := range rule.Standards {
+			listed = listed || standard == "ntia"
+		}
+		if !listed {
+			t.Fatalf("rule %s is not an ntia rule: %v", rule.ID, rule.Standards)
+		}
+	}
+
+	if _, err := RuleCatalog("crab"); err == nil {
+		t.Fatal("expected an unknown standard to fail")
+	}
+}
+
+func TestScoreWithOptions(t *testing.T) {
+	content := readFixture(t, "demo-new.cdx.json")
+	options := ScoreOptions{Profile: "cra", RunOptions: RunOptions{AsOf: "2027-01-01"}}
+
+	output, err := ScoreWithOptions(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptions() failed: %v", err)
+	}
+	if output.Tool != "sbom-tools" || output.Profile != "cra" || output.Sbom != "-" || !output.Applicable {
+		t.Fatalf("unexpected quality document: %+v", output)
+	}
+	if output.Report.OverallScore == nil || *output.Report.OverallScore <= 0 || output.Report.Grade == "" {
+		t.Fatalf("unexpected report: %+v", output.Report)
+	}
+	if len(output.Report.Compliance) == 0 {
+		t.Fatal("expected the profile's compliance result in the report")
+	}
+
+	raw, err := ScoreWithOptionsJSON(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptionsJSON() failed: %v", err)
+	}
+	again, err := ScoreWithOptionsJSON(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptionsJSON() failed: %v", err)
+	}
+	if string(raw) != string(again) {
+		t.Fatal("a pinned clock must give the same document")
+	}
+
+	options.FileName = filepath.Join("some", "dir", "demo-new.cdx.json")
+	named, err := ScoreWithOptions(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptions() with FileName failed: %v", err)
+	}
+	if named.Sbom != "demo-new.cdx.json" {
+		t.Fatalf("expected the file name without its directory, got %q", named.Sbom)
+	}
+
+	_, err = ScoreWithOptions(content, ScoreOptions{Profile: "strict"})
+	if abiErr, ok := err.(*Error); !ok || abiErr.Code != ErrorCodeValidation {
+		t.Fatalf("expected a validation error for an unknown profile, got %v", err)
+	}
+}
+
+func TestScoreWithOptionsReportsAProfileThatDoesNotApply(t *testing.T) {
+	content := readFixture(t, filepath.Join("cyclonedx", "minimal.cdx.json"))
+	output, err := ScoreWithOptions(content, ScoreOptions{
+		Profile:    "ai-readiness",
+		RunOptions: RunOptions{AsOf: "2027-01-01"},
+	})
+	if err != nil {
+		t.Fatalf("ScoreWithOptions() failed: %v", err)
+	}
+	if output.Applicable || output.Report.OverallScore != nil || output.Report.Grade != "N/A" {
+		t.Fatalf("expected a not-applicable report without a score, got %+v", output)
 	}
 }

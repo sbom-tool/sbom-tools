@@ -18,7 +18,7 @@ fn fixture_path(name: &str) -> std::path::PathBuf {
 fn ffi_reports_abi_version() {
     let payload = consume_result(sbom_tools_abi_version_json()).expect("ABI version should load");
     let value: serde_json::Value = serde_json::from_str(&payload).expect("valid JSON response");
-    assert_eq!(value["abi_version"], "1");
+    assert_eq!(value["abi_version"], "2");
     assert!(value["crate_version"].as_str().is_some());
 }
 

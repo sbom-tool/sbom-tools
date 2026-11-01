@@ -31,6 +31,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "1.7"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "cbom-1.7.cdx.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "19"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "rlinks": [
@@ -72,15 +97,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "CNSA 2.0 compliance roll-up",
-            "uuid": "ada234fc-89a5-5ee5-9075-27f0395ac3f2"
+            "uuid": "154ca43e-4061-5cab-9be2-d424127d37a0"
           },
           {
             "description": "'ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:db8f934f12fe2eaf"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-kem-768"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "fba9a99e-0ea2-5e20-b535-a0ad06a373a2"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -89,15 +133,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "a2e50fd0-64da-5a0f-b99e-40e05dbb40c7"
+            "uuid": "b4be4076-37cf-5df0-99f4-3f76543cb894"
           },
           {
             "description": "'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "fb0e85db-b27a-5b9d-be1b-2465bd37a6b7"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f6f3e69908944371"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/ml-kem-768"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "67a44133-f780-56a1-8e8b-e782158b0be0"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -106,15 +169,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-003",
-            "uuid": "576aa26b-d05c-58ae-80ba-d16564d7e4ab"
+            "uuid": "1f2ebc0d-6136-5332-8318-5a71b7033e6f"
           },
           {
             "description": "'ML-DSA-65' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:326a99536d9bc878"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/ml-dsa-65"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "eb1c31f7-4d12-508a-bfca-584f566973e8"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -123,15 +205,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "f6a5571a-4b81-5219-beb8-a449262bc6c3"
+            "uuid": "d82fff83-f6e7-5bb7-87b7-4471aae4b665"
           },
           {
             "description": "'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "e6689049-6b50-5203-bbdb-026e9fe553b9"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:059cf70a9ae9a775"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-004|crypto/algorithm/ml-dsa-65"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "981dde05-540d-51df-af91-6fade1ed6bef"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -140,15 +241,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-004",
-            "uuid": "ab403f7d-91cc-5b73-b332-f91d996411a0"
+            "uuid": "7e864cc4-bc80-5877-b8ee-7e8169e7845d"
           },
           {
             "description": "'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "8aab58b5-d0ed-558f-89f5-f07778197876"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:83cc7dc911fdae9e"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-008|crypto/algorithm/slh-dsa-shake-256s"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "39fe3551-439f-52aa-874f-f3faf3885844"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -157,15 +277,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-008",
-            "uuid": "4d902b2a-1026-56fd-8fc6-fcf54144c217"
+            "uuid": "b827b7a1-7381-54d1-8b6c-30377cc6f886"
           },
           {
             "description": "'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "219f2c5c-b79e-5624-9643-b8ee672b6215"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9682dc81d044cfe2"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/x25519"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "623fe7c0-edb6-55ec-8e0b-e99551ecba07"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -174,15 +313,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-006",
-            "uuid": "28868e81-aeef-5565-b716-f6b8a3b55435"
+            "uuid": "2ec2da08-40b1-5bde-9eee-afe669539dc9"
           },
           {
             "description": "'X25519-ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:ee8a3c54afb74d2d"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-007|crypto/algorithm/hybrid-kem"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "c1d6422c-087d-5ff0-b550-543cdae2dbaa"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -191,15 +349,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-007",
-            "uuid": "0a09665e-98df-5e36-a44a-13c01f1dc1c6"
+            "uuid": "79f2d551-c932-5695-aeb1-12a4fccbd56a"
           },
           {
             "description": "'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:3a93e421ce43b027"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-003|crypto/algorithm/hybrid-kem"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "8e9c3c22-6e21-5706-be55-935597f96228"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -208,15 +385,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-003",
-            "uuid": "b540a580-74da-586e-95d1-6df5c4f6d2ec"
+            "uuid": "f3d4a657-d199-5c04-a487-fd3357d4e21d"
           },
           {
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "b0c49624-58db-592f-84a7-a42f91e1afb2"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:3d1e46793ae574a2"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-ALG-006|crypto/algorithm/ecdsa-p521"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "009163a3-2326-59d5-a391-92faa1f1daa8"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -225,15 +421,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-ALG-006",
-            "uuid": "42a3c7dd-4f3a-5628-9d21-295b6836e27f"
+            "uuid": "a4b632ea-c06f-5757-a7b4-8d763fe24d1a"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384\\_ML\\_KEM\\_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:994d5a495641e8ab"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384_ML_KEM_768|crypto/protocol/tls13-pqc"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "b2abdfdd-592c-5adf-a753-653e4a8b96bd"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -242,15 +457,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-PROTO-002",
-            "uuid": "bca247cf-f493-544c-ae48-7342f02db0fb"
+            "uuid": "8c718fec-7415-5e4f-ab71-23a81ac5542e"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:a5d96550a9b92abd"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cnsa2|SBOM-CNSA2-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "e24050d4-5cc1-5a6b-b966-563c82ed64f1"
+              }
+            ],
+            "remarks": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -259,7 +493,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CNSA2-PROTO-002",
-            "uuid": "ab380ede-c128-55d2-acdb-339fbc4947db"
+            "uuid": "f0fa95c5-968e-533f-bdb4-f9a9d4eaddf1"
           }
         ],
         "local-definitions": {
@@ -424,6 +658,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -434,7 +675,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Level 5"
               },
@@ -452,6 +693,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-kem-768"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -470,11 +722,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "fb8829fc-dc1a-5862-a940-31f0bd69cfdb"
+            "uuid": "fba9a99e-0ea2-5e20-b535-a0ad06a373a2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-KEM-768' uses ML-KEM-768, CNSA 2.0 requires ML-KEM-1024 only",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -485,7 +744,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 KEM"
               },
@@ -503,6 +762,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-kem-768"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ML-KEM-768"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -521,11 +796,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "fb0e85db-b27a-5b9d-be1b-2465bd37a6b7"
+            "uuid": "67a44133-f780-56a1-8e8b-e782158b0be0"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-DSA-65' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -536,7 +818,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Level 5"
               },
@@ -554,6 +836,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-65"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-dsa-65"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -572,11 +865,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "97c0dc15-d17a-5150-8cdd-c9d02750e64e"
+            "uuid": "eb1c31f7-4d12-508a-bfca-584f566973e8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-DSA-65' uses ML-DSA-65, CNSA 2.0 requires ML-DSA-87 only",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -587,7 +887,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Signature"
               },
@@ -605,6 +905,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-65"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-dsa-65"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ML-DSA-65"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -623,11 +939,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "e6689049-6b50-5203-bbdb-026e9fe553b9"
+            "uuid": "981dde05-540d-51df-af91-6fade1ed6bef"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'SLH-DSA-SHAKE-256s' uses SLH-DSA, which is NIST-approved (FIPS 205) but not part of CNSA 2.0",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -638,7 +961,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Approved Algorithms"
               },
@@ -656,6 +979,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SLH-DSA-SHAKE-256s"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/slh-dsa-shake-256s"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SLH-DSA-SHAKE-256s"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -674,11 +1013,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "8aab58b5-d0ed-558f-89f5-f07778197876"
+            "uuid": "39fe3551-439f-52aa-874f-f3faf3885844"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'X25519' (ECDH) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -689,7 +1035,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 PQC Migration"
               },
@@ -707,6 +1053,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/x25519"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDH"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -725,11 +1087,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "219f2c5c-b79e-5624-9643-b8ee672b6215"
+            "uuid": "623fe7c0-edb6-55ec-8e0b-e99551ecba07"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'X25519-ML-KEM-768' quantum level 3 \\< 5, CNSA 2.0 requires Level 5",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -740,7 +1109,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Level 5"
               },
@@ -758,6 +1127,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519-ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/hybrid-kem"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -776,11 +1156,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "62d42cf7-a0cd-53f5-b203-d8fefb9de912"
+            "uuid": "c1d6422c-087d-5ff0-b550-543cdae2dbaa"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'X25519-ML-KEM-768' uses the hybrid X25519 + ML-KEM-768, which CNSA 2.0 does not approve: ML-KEM-768 is not ML-KEM-1024, and X25519 is not a CNSA 1.0 algorithm (ECDH or ECDSA over P-384, or RSA or DH of 3072 bits or more)",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -791,7 +1178,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 KEM"
               },
@@ -809,6 +1196,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519-ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/hybrid-kem"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "X25519 + ML-KEM-768"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -827,11 +1230,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "d5952ed0-0744-562c-9b87-525951bf3312"
+            "uuid": "8e9c3c22-6e21-5706-be55-935597f96228"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable, must migrate to CNSA 2.0 approved algorithm",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -842,7 +1252,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 PQC Migration"
               },
@@ -860,6 +1270,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ECDSA-P521"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ecdsa-p521"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDSA"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -878,11 +1304,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "b0c49624-58db-592f-84a7-a42f91e1afb2"
+            "uuid": "009163a3-2326-59d5-a391-92faa1f1daa8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384\\_ML\\_KEM\\_768' includes non-CNSA 2.0 algorithms: X25519 + ML-KEM-768, ML-KEM-768",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -893,7 +1326,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Protocol"
               },
@@ -911,6 +1344,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "TLS 1.3 (PQC Hybrid)"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/protocol/tls13-pqc"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "X25519 + ML-KEM-768, ML-KEM-768"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -929,11 +1378,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "7ecac478-b7bd-5bcd-ba3a-f37a718bcf42"
+            "uuid": "b2abdfdd-592c-5adf-a753-653e4a8b96bd"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes non-CNSA 2.0 algorithms: ECDH",
+            "links": [
+              {
+                "href": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
+                "rel": "reference",
+                "text": "CNSA 2.0: CNSSP 15"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -944,7 +1400,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CNSA 2.0 Protocol"
               },
@@ -962,6 +1418,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "TLS 1.3 (PQC Hybrid)"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/protocol/tls13-pqc"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDH"
+              },
+              {
+                "class": "Cnsa2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CNSSP 15"
               }
             ],
             "subjects": [
@@ -980,14 +1452,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "dab3033c-715b-5fc5-a477-b2e6cd29eb7c"
+            "uuid": "e24050d4-5cc1-5a6b-b966-563c82ed64f1"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "Cnsa2"
+            "value": "cnsa2"
           },
           {
             "name": "standard-name",
@@ -1040,7 +1512,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CNSA 2.0",
-        "uuid": "e1df3a55-f69f-5bc6-b523-46e1d125c028"
+        "uuid": "eeb1f936-efe8-55db-88d9-9fa7756d5357"
       },
       {
         "description": "Validation results for NIST PQC Readiness, derived only from the supplied SBOM.",
@@ -1051,19 +1523,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "nistpqc-compliance",
+              "target-id": "pqc-compliance",
               "type": "objective-id"
             },
             "title": "NIST PQC Readiness compliance roll-up",
-            "uuid": "2bf74a7b-9593-500d-9f36-5fe39e632634"
+            "uuid": "561d4f28-70fb-5ac8-8227-b4571cf1d096"
           },
           {
             "description": "'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9f9263b04c514a5f"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-001|crypto/algorithm/x25519"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "b9bd0bc0-1f4e-5c73-8293-365130ae28a9"
+              }
+            ],
+            "remarks": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -1072,15 +1563,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "7b906c83-0cf0-590f-9e48-e47cd30e17df"
+            "uuid": "36c3ea64-969c-5ac1-9a24-6fcac36e3485"
           },
           {
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:461158e579e9d249"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-001|crypto/algorithm/ecdsa-p521"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "906121c4-6041-5f5f-b538-5f597c0dcef2"
+              }
+            ],
+            "remarks": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -1089,15 +1599,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-001",
-            "uuid": "5a41752c-1e7c-5a8f-8ea6-5ff838afe6c8"
+            "uuid": "17c0ed9b-1868-52c9-9ded-7cda618447cc"
           },
           {
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:19df590ce505e4d7"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-PROTO-002:TLS_AES_256_GCM_SHA384|crypto/protocol/tls13-pqc"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bfbd1486-5113-594a-8fa1-0dae7d95d3da"
+              }
+            ],
+            "remarks": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -1106,13 +1635,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-PROTO-002",
-            "uuid": "e1c6867f-0f0e-5f40-9159-f21400bc304a"
+            "uuid": "07c65c74-d5e4-526a-9261-bb4f1d78afa8"
           },
           {
             "description": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1b668fce7dabff77"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-1024"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
+                "observation-uuid": "b41ead6b-4e0c-5e82-a69b-438841440199"
               }
             ],
             "target": {
@@ -1123,13 +1664,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "6b2e9128-2148-51dc-93e2-ce5812bcd811"
+            "uuid": "84efeecd-144a-57ee-afb2-1e51c7674689"
           },
           {
             "description": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1ab07b91d0dfc149"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/ml-kem-768"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
+                "observation-uuid": "1a81c008-e38f-5ac9-a98c-e62ac3c6d0ee"
               }
             ],
             "target": {
@@ -1140,13 +1693,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "2405840a-ebc3-532f-9a94-02c7921b8188"
+            "uuid": "69fe9e34-2627-5388-8876-aeec071177ab"
           },
           {
             "description": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1e7ace63cafd4753"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-87"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
+                "observation-uuid": "37df951c-623f-5581-b007-77a96beb12ad"
               }
             ],
             "target": {
@@ -1157,13 +1722,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "893198dc-8115-57cf-963d-a323726b5f36"
+            "uuid": "4db42921-b578-543b-8d6a-face9ed38757"
           },
           {
             "description": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:82ab8e3138bc09d9"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/ml-dsa-65"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "f7832ea4-184a-546f-b849-54fae5327766"
+                "observation-uuid": "3eb3982e-c409-598b-83ba-5eba11489bc5"
               }
             ],
             "target": {
@@ -1174,13 +1751,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "5787679b-6754-54db-b07d-38fbffd1faed"
+            "uuid": "77d13b9a-31c4-5805-96b1-087fd312993c"
           },
           {
             "description": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:ce3f644b51d4d60e"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/slh-dsa-shake-256s"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
+                "observation-uuid": "141eba7f-1785-57b6-9e66-839d2f2cf14a"
               }
             ],
             "target": {
@@ -1191,13 +1780,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "7dc0b351-146a-553f-962a-48c96c5183fe"
+            "uuid": "6c9459a6-60fb-52b7-bb9d-84d634cf283d"
           },
           {
             "description": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:8119d896d50ea594"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-010|crypto/algorithm/hybrid-kem"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
+                "observation-uuid": "e182f273-54b9-5f54-b9b7-53f4912f6cf5"
               }
             ],
             "target": {
@@ -1208,13 +1809,25 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-010",
-            "uuid": "5c906be7-9347-580a-91e1-a8780b176154"
+            "uuid": "b13c04bf-fedf-5f46-b2af-3b48c9784a81"
           },
           {
             "description": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:77d714919f4f5c86"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pqc|SBOM-PQC-009|crypto/algorithm/xmss"
+              }
+            ],
             "related-observations": [
               {
-                "observation-uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
+                "observation-uuid": "2699df3e-839f-597c-9bbf-8ac4675a223c"
               }
             ],
             "target": {
@@ -1225,7 +1838,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-PQC-009",
-            "uuid": "28316281-d04c-5036-9e15-e10ddbd64805"
+            "uuid": "af8b1d4f-c7b9-5fe8-8777-c3df88700025"
           }
         ],
         "local-definitions": {
@@ -1456,6 +2069,18 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'X25519' (ECDH) is quantum-vulnerable and must migrate to PQC (IR 8547)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: IR 8547"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-131A Rev. 2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1466,7 +2091,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "IR 8547: quantum-vulnerable"
               },
@@ -1484,6 +2109,28 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/x25519"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDH"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "IR 8547"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-131A Rev. 2"
               }
             ],
             "subjects": [
@@ -1502,11 +2149,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c9f60d6e-8bcd-54f0-b7e1-483715f041ec"
+            "uuid": "b9bd0bc0-1f4e-5c73-8293-365130ae28a9"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ECDSA-P521' (ECDSA) is quantum-vulnerable and must migrate to PQC (IR 8547)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: IR 8547"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-131A Rev. 2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1517,7 +2176,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "IR 8547: quantum-vulnerable"
               },
@@ -1535,6 +2194,28 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ECDSA-P521"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ecdsa-p521"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDSA"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "IR 8547"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-131A Rev. 2"
               }
             ],
             "subjects": [
@@ -1553,11 +2234,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "7e6fc5b3-68a0-536d-a214-d53fd3f1f600"
+            "uuid": "906121c4-6041-5f5f-b538-5f597c0dcef2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Protocol 'TLS 1.3 (PQC Hybrid)' cipher suite 'TLS\\_AES\\_256\\_GCM\\_SHA384' includes broken or quantum-vulnerable algorithms: ECDH (quantum-vulnerable)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-131A / IR 8547"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1568,7 +2256,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "IR 8547 / SP 800-131A: protocol algorithms"
               },
@@ -1586,6 +2274,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "TLS 1.3 (PQC Hybrid)"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/protocol/tls13-pqc"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ECDH (quantum-vulnerable)"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-131A / IR 8547"
               }
             ],
             "subjects": [
@@ -1604,17 +2308,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "06be73b5-2084-5588-b1cf-56fb1f29bdbe"
+            "uuid": "bfbd1486-5113-594a-8fa1-0dae7d95d3da"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-KEM-1024' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1632,6 +2348,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-1024"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-kem-1024"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1650,17 +2383,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "8eb9be32-0a20-5396-a2f1-24e160d75f0f"
+            "uuid": "b41ead6b-4e0c-5e82-a69b-438841440199"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-KEM-768' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1678,6 +2423,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-kem-768"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1696,17 +2458,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "44acb7c8-67a4-5456-9211-413c29591f22"
+            "uuid": "1a81c008-e38f-5ac9-a98c-e62ac3c6d0ee"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-DSA-87' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1724,6 +2498,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-87"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-dsa-87"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1742,17 +2533,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "5fca561a-2a2b-550c-a47d-a4a30dbffe09"
+            "uuid": "37df951c-623f-5581-b007-77a96beb12ad"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'ML-DSA-65' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1770,6 +2573,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "ML-DSA-65"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/ml-dsa-65"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1788,17 +2608,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "f7832ea4-184a-546f-b849-54fae5327766"
+            "uuid": "3eb3982e-c409-598b-83ba-5eba11489bc5"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'SLH-DSA-SHAKE-256s' uses NIST-approved PQC algorithm (FIPS 203/204/205)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1816,6 +2648,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SLH-DSA-SHAKE-256s"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/slh-dsa-shake-256s"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1834,17 +2683,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "83c08d48-4408-5b0c-a39a-ff2e3f2fce11"
+            "uuid": "141eba7f-1785-57b6-9e66-839d2f2cf14a"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'X25519-ML-KEM-768' is a PQ/T hybrid (X25519 + ML-KEM-768) whose post-quantum part is NIST-approved (FIPS 203); SP 800-227 §4.6.2 approves the key combination",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-227"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: IR 8547"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SP 800-227 / IR 8547: PQ/T hybrid"
               },
@@ -1862,6 +2723,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "X25519-ML-KEM-768"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/hybrid-kem"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-227"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "IR 8547"
               }
             ],
             "subjects": [
@@ -1880,17 +2758,29 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "d42970ff-52c8-50ac-b6a1-c5f499fb9ef4"
+            "uuid": "e182f273-54b9-5f54-b9b7-53f4912f6cf5"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "'XMSS' uses NIST-approved PQC algorithm (SP 800-208 stateful hash-based signature)",
+            "links": [
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: FIPS 203/204/205"
+              },
+              {
+                "href": "https://csrc.nist.gov/projects/post-quantum-cryptography",
+                "rel": "reference",
+                "text": "NIST PQC: SP 800-208"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
             "props": [
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "FIPS 203/204/205: approved"
               },
@@ -1908,6 +2798,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "XMSS"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "crypto/algorithm/xmss"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "FIPS 203/204/205"
+              },
+              {
+                "class": "NistPqc",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SP 800-208"
               }
             ],
             "subjects": [
@@ -1926,14 +2833,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "control-objective"
             ],
-            "uuid": "b70fe4ab-87fd-5495-bb26-e25b217469fa"
+            "uuid": "2699df3e-839f-597c-9bbf-8ac4675a223c"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "NistPqc"
+            "value": "pqc"
           },
           {
             "name": "standard-name",
@@ -1974,6 +2881,12 @@ source: tests/compliance_snapshots.rs
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "42"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the federal TLS 1.3 deadline is checked only under --pqc-mode deadline --pqc-profile federal",
+            "value": "SBOM-PQC-PROTO-003"
           }
         ],
         "reviewed-controls": {
@@ -1986,9 +2899,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — NIST PQC Readiness",
-        "uuid": "132d664a-82dc-5fc2-92e7-e0602565967d"
+        "uuid": "9023915c-fdf9-5a8b-88dd-ccda0a246983"
       }
     ],
-    "uuid": "3eeb5d07-b95d-5ba5-a6af-305211d8c76a"
+    "uuid": "ec5278b8-c960-57c4-85fa-93002ff46d15"
   }
 }

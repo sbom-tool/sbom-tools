@@ -268,8 +268,9 @@ pub use error::{ErrorContext, OptionContext, Result, SbomDiffError};
 pub use ffi::{
     SbomToolsErrorCode, SbomToolsScoringProfile, SbomToolsStringResult,
     sbom_tools_abi_version_json, sbom_tools_detect_format_json, sbom_tools_diff_sboms_json,
-    sbom_tools_parse_sbom_path_json, sbom_tools_parse_sbom_str_json, sbom_tools_score_sbom_json,
-    sbom_tools_string_result_free,
+    sbom_tools_parse_sbom_path_json, sbom_tools_parse_sbom_str_json, sbom_tools_rule_catalog_json,
+    sbom_tools_score_sbom_json, sbom_tools_score_sbom_with_options_json,
+    sbom_tools_string_result_free, sbom_tools_validate_json,
 };
 pub use matching::{
     ComponentMatcher, FuzzyMatchConfig, FuzzyMatcher, MatchResult, MatchTier, MatchingRulesConfig,

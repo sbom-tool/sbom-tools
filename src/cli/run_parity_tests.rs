@@ -57,8 +57,9 @@ fn validate_levels() -> Vec<ComplianceLevel> {
         .collect()
 }
 
-/// `validate -o json` for every standard, with the sidecar auto-discovered.
-fn validate_envelope(sbom: &Path, out: &Path, as_of: &str, pqc: PqcOptions) -> String {
+/// The `results` of `validate -o json` for every standard, with the
+/// sidecar auto-discovered.
+fn validate_envelope(sbom: &Path, out: &Path, as_of: &str, pqc: PqcOptions) -> serde_json::Value {
     run_validate(
         sbom.to_path_buf(),
         StandardSelector::value_variants().to_vec(),
@@ -80,7 +81,7 @@ fn validate_envelope(sbom: &Path, out: &Path, as_of: &str, pqc: PqcOptions) -> S
         &[],
     )
     .expect("validate runs");
-    std::fs::read_to_string(out).expect("validate wrote the envelope")
+    results_of(&std::fs::read_to_string(out).expect("validate wrote the envelope"))
 }
 
 /// The `view` command's flags for `sbom`: a TUI, the product class, `as_of`
@@ -110,9 +111,18 @@ fn view_config(sbom: &Path, as_of: &str, pqc: PqcOptions) -> ViewConfig {
     }
 }
 
-/// The envelope `validate` would write for `results` (a TUI's results for
+/// The `results` of a `-o json` envelope: the verdicts every entry point is
+/// compared on. The envelope's `as_of` and `subject` describe the run and
+/// the file it read, which only `validate` writes.
+fn results_of(envelope: &str) -> serde_json::Value {
+    let mut envelope: serde_json::Value =
+        serde_json::from_str(envelope).expect("the envelope is JSON");
+    envelope["results"].take()
+}
+
+/// The `results` `validate` would write for `results` (a TUI's results for
 /// every level), restricted to the levels `validate` checked.
-fn envelope_of(results: &[ComplianceResult]) -> String {
+fn envelope_of(results: &[ComplianceResult]) -> serde_json::Value {
     let picked: Vec<ComplianceResult> = validate_levels()
         .iter()
         .map(|level| {
@@ -123,7 +133,7 @@ fn envelope_of(results: &[ComplianceResult]) -> String {
                 .clone()
         })
         .collect();
-    generate_compliance_json(&picked).expect("envelope serializes")
+    results_of(&generate_compliance_json(&picked).expect("envelope serializes"))
 }
 
 fn result(results: &[ComplianceResult], level: ComplianceLevel) -> &ComplianceResult {

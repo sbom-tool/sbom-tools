@@ -142,14 +142,27 @@ Current ABI scope:
 - `detect_format` on raw content
 - Parse from file path or raw SBOM string into normalized JSON
 - Diff two normalized SBOM JSON payloads
-- Score a normalized SBOM JSON payload
+- Score a normalized SBOM JSON payload by profile (unchanged, for
+  compatibility), or score a raw SBOM with options: the document
+  `quality -o json` prints, byte for byte, with any `--profile`, a pinned
+  `as_of` and the compliance inputs
+- Validate a raw SBOM against compliance standards: the
+  `sbom-tools/compliance/v2` envelope `validate -o json` writes, byte for
+  byte, with the same inputs as options (standards, `as_of`, an inline CRA
+  sidecar, product class, PQC mode, rule settings, excluded scope). Its
+  `subject` hashes exactly the bytes passed in and names a file only when
+  the `file_name` option gives one
+- The compliance rule catalogue (`sbom-tools/rules/v1`, as `rules -o json`)
 
 Current ABI exclusions:
 
-- CLI subcommands
+- Other CLI subcommands
 - TUI and watch mode
 - Enrichment providers
-- Non-JSON report formats
+- Non-JSON report formats (SARIF, OSCAL, text)
+
+The options and payloads are described in
+[docs/compliance-output.md](docs/compliance-output.md#from-the-c-abi-and-the-bindings).
 
 Build the native Rust library before using a wrapper:
 
@@ -258,14 +271,30 @@ console.log(parsed);
 Memory and compatibility rules:
 
 - The Rust ABI owns returned memory and wrappers must call `sbom_tools_string_result_free` exactly once.
-- JSON payload shape is the compatibility contract for normalized SBOMs, diff results, and quality reports.
+- JSON payload shape is the compatibility contract for normalized SBOMs, diff results, quality reports, the compliance envelope and the rule catalogue.
 - Error codes are stable across Go, Swift, Python, and Node.js wrappers.
+- `version()` reports the ABI version, `2` since v0.4.0. A release raises it when it changes the contract incompatibly (a function, enum value or payload field removed, renamed or retyped); additions keep it, and wrappers must accept fields and variants they do not know. The header states the full rule.
 
 Typed helper APIs are available in each wrapper:
 
-- Go: `ParsePath`, `ParseString`, `Diff`, `Score` over typed payload structs
-- Swift: `parsePath`, `parseString`, `diff`, `score` over Codable payload structs
-- Python: typed version/format results and JSON-decoded parse, diff, and score values
+- Go: `ParsePath`, `ParseString`, `Diff`, `Score`, `ScoreWithOptions`, `Validate`, `RuleCatalog` over typed payload structs
+- Swift: `parsePath`, `parseString`, `diff`, `score`, `scoreWithOptions`, `validate`, `ruleCatalog` over Codable payload structs
+- Python: typed version/format results, `TypedDict` hints for the compliance envelope, the rule catalogue and the quality document, and JSON-decoded parse, diff, and score values
+- Node.js: TypeScript interfaces for the compliance envelope, the rule catalogue and the quality document
+
+Compliance from a binding (Python; the other wrappers are alike):
+
+```python
+from sbomtools import rule_catalog_json, validate_json
+
+with open("bom.cdx.json", encoding="utf-8") as file:
+    envelope = validate_json(file.read(), standards=["cra", "ntia"], as_of="2027-01-01")
+
+for result in envelope["results"]:
+    print(result["standard"], result["compliant"], result["counts"])
+
+rules = {rule["id"]: rule for rule in rule_catalog_json(["cra"])["rules"]}
+```
 
 Deduplication helper APIs are available in both wrappers:
 
@@ -528,8 +557,14 @@ fails, scaled by the errors and warnings per element checked (see
 checks in the SBOM's format (`field`) and the value it read there
 (`observed`, such as a `NOASSERTION` supplier), and the checks a standard
 did not evaluate on the SBOM are listed under `evaluated` with the reason
-(CISA 2026's signature check on SPDX 2.x, say). The text report names the
-rule of each finding and lists the same checks under `Not evaluated:`.
+(CISA 2026's signature check on SPDX 2.x, say). The envelope states the
+instant the standards were judged at (`as_of`) and the SBOM it judged
+(`subject`: its SHA-256, format, version and file name, and how the document
+was read, such as duplicate entries merged). `-o sarif` and `-o oscal-json`
+carry the same fields for every finding and every standard's verdict (see
+[Fields in every output](docs/compliance-output.md#fields-in-every-output)).
+The text report names the rule of each finding and lists the same checks
+under `Not evaluated:`.
 
 </details>
 
@@ -857,11 +892,16 @@ format is gated). Both exit `3`.
 Which JSON payloads are a compatibility contract, and how firm it is
 (pre-1.0):
 
-- **Contractual payloads.** The normalized SBOM, diff results, and quality
-  reports, as emitted by the C ABI (`sbom_tools_parse_sbom_*_json`,
-  `sbom_tools_diff_*`, `sbom_tools_score_*`) and by the language bindings, and
-  the `-o json` output of `diff`, `diff-multi`, `matrix`, `timeline`,
-  `validate`, and `quality`. Field names are `snake_case` with no serde
+- **Contractual payloads.** The normalized SBOM, diff results, quality
+  reports, the compliance envelope and the rule catalogue, as emitted by the
+  C ABI (`sbom_tools_parse_sbom_*_json`, `sbom_tools_diff_*`,
+  `sbom_tools_score_*`, `sbom_tools_validate_json`,
+  `sbom_tools_rule_catalog_json`) and by the language bindings, and the
+  `-o json` output of `diff`, `diff-multi`, `matrix`, `timeline`,
+  `validate`, `quality` and `rules`. The ABI's validate envelope, quality
+  document (`sbom_tools_score_sbom_with_options_json`) and rule catalogue
+  are byte-identical to `validate -o json`, `quality -o json` and
+  `rules -o json`, pinned by `tests/ffi_compliance.rs`. Field names are `snake_case` with no serde
   renames; `Option` fields serialize as `null`, except a few additive blocks
   (e.g. `crypto_properties`, `document.supplier`, `ml_model`-adjacent
   extensions) that are omitted when absent.
@@ -931,7 +971,12 @@ with one run, shaped for GitHub code scanning:
   [finding identity](docs/compliance-output.md#finding-identity)), never from
   its line or message, so moving, reformatting or reordering the SBOM keeps
   its alerts. `properties.findingKey` and `properties.findingId` carry the
-  same identity.
+  same identity, and the other properties the finding's severity, rule,
+  references, field and observed value, remediation and help URI, as
+  `-o json` does. The run's properties carry each standard's verdict, keyed
+  by its canonical `--standard` value, with its counts, and `validate` adds
+  the instant (`asOf`) and the SBOM it judged (`subject`, and the SBOM's
+  SHA-256 in `artifacts`).
 - **One category per kind of run.** `automationDetails.id` is
   `sbom-tools/<standards>/` for `validate` (the canonical `--standard` values,
   sorted and joined by `+`, as in `sbom-tools/cra+ntia/`),

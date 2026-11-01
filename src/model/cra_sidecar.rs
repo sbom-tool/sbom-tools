@@ -397,6 +397,13 @@ impl CraSidecarMetadata {
         serde_json::from_str(&content).map_err(|e| sidecar_parse_error(&e))
     }
 
+    /// Read sidecar metadata from a JSON value: a sidecar passed inline, as
+    /// the C ABI's `sidecar` option does. It takes the keys a `.cra.json`
+    /// file holds, with the same checks (an unknown key is an error).
+    pub fn from_json_value(value: serde_json::Value) -> Result<Self, CraSidecarError> {
+        serde_json::from_value(value).map_err(|e| sidecar_parse_error(&e))
+    }
+
     /// Load sidecar metadata from a YAML file
     pub fn from_yaml_file(path: &Path) -> Result<Self, CraSidecarError> {
         let content =
@@ -701,6 +708,37 @@ mod tests {
             msg.contains("camelCase") && msg.contains("securityContact"),
             "error must hint at camelCase keys: {msg}"
         );
+    }
+
+    /// An inline sidecar reads like a `.cra.json` file: the same keys, and
+    /// the same error naming a typo'd key with the camelCase hint.
+    #[test]
+    fn from_json_value_reads_like_a_sidecar_file() {
+        let sidecar = CraSidecarMetadata::from_json_value(serde_json::json!({
+            "securityContact": "security@example.com",
+            "productClass": "important-class-1",
+        }))
+        .unwrap();
+        assert_eq!(
+            sidecar.security_contact.as_deref(),
+            Some("security@example.com")
+        );
+        assert_eq!(
+            sidecar.product_class,
+            Some(CraProductClass::ImportantClass1)
+        );
+
+        let msg = CraSidecarMetadata::from_json_value(serde_json::json!({
+            "security_contact": "security@example.com"
+        }))
+        .unwrap_err()
+        .to_string();
+        assert!(msg.contains("security_contact"), "{msg}");
+        assert!(msg.contains("camelCase"), "{msg}");
+        let msg = CraSidecarMetadata::from_json_value(serde_json::json!(["not", "an", "object"]))
+            .unwrap_err()
+            .to_string();
+        assert!(msg.contains("Parse error"), "{msg}");
     }
 
     #[test]
