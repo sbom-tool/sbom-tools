@@ -273,10 +273,11 @@ SARIF is now code-scanning grade (#422). The first upload after upgrading re-key
 
 ### Text, Markdown, HTML and CSV output
 
-Human-readable output escapes SBOM text that could break out of its field. This fixes the injection in the security advisory published with this release (#395, #413, #418):
+Human-readable output escapes SBOM text that could break out of its field. This fixes the injection in the security advisory published with this release (#395, #413, #418, #449):
 - **Terminal output:** a line break prints as `\n` and a leading `:` as `\:`. Control and bidi characters are dropped.
-- **Markdown and HTML:** text is Markdown-escaped, backslash included.
+- **Markdown and HTML:** text is Markdown-escaped, backslash included. In a Markdown table, `<` and `>` are written `\<` and `\>`, so `<2.0` renders as itself (#449).
 - **CSV:** formula-like values are quote-prefixed.
+- **File names:** error messages, status lines and the `quality` report header clean the file names they print the same way, since a file name can come from a pull request too (#449).
 
 Text output also gains a `fix:` line under each finding (#408) and an "N checks passed" line (#421). The `validate` text report changes further ([Text report](compliance-output.md#text-report)):
 - **Rule column:** the finding line names the rule after the severity: `[ERROR] SBOM-FDA-HASH | Integrity Information | …`. A script that splits the line on ` | ` sees one more column (#442).
@@ -369,6 +370,7 @@ What changes for your code:
   - New `cli::compliance_run_config(class, as_of, pqc, rules)`, which parses the run flags and loads the sidecar (#434, #437, #443).
   - New `cli::PqcOptions` (#437) with `with_config_defaults` (#443), `cli::RuleOptions` (`from_flags`), `parse_rule_setting_arg` and `parse_fail_on_arg` (#443).
   - New `cli::run_rules`, `run_rules_explain`, `parse_rule_id` and `RulesOutputFormat` (#435).
+  - New `cli::error_report(&anyhow::Error)`: the error report `main` prints, each line cleaned (#449).
 - **Reports:**
   - **SARIF:** new `SarifOptions`, `SarifArtifact`, `SarifArtifactLocation`, `SbomLocator`, and `generate_{compliance,multi_compliance,quality,ai_readiness}_sarif_with(.., &SarifOptions)` (#422). Without an artifact, a writer still emits no physical location. `SarifOptions::with_subject(&AssessedSbom, as_of)` adds the SBOM artifact and the `asOf` and `subject` run properties (#445).
   - **Config:** `ReportConfig` gains `sarif: SarifOptions`, and `config::OutputConfig` gains `sarif_base`, `sarif_category` and `sarif_max_results`. Struct literals that don't use `..Default::default()` break (#422).
@@ -377,6 +379,7 @@ What changes for your code:
   - **OSCAL:** `reports::oscal::generate_assessment_results_at(&results, &AssessedSbom, as_of: DateTime<Utc>)` is new in 0.4 (#420). Until #445 it took `(&results, &NormalizedSbom, sbom_digest, Option<DateTime<Utc>>)`: build an `AssessedSbom` from the SBOM and its bytes, and pass `Utc::now()` where you passed `None`.
   - **Rule catalogue:** new `reports::generate_rule_catalog_json` and `reports::RULE_CATALOG_JSON_SCHEMA` (#435).
   - **sbomqs:** `reports::sbomqs_compat::SBOMQS_PARITY_TARGET` is `"v2.1.2"` (#431).
+  - **Escaping:** `reports::escape::escape_markdown_table` also escapes `<` and `>` (#449).
 - **Types changed for speed (#447):**
   - `Violation::remediation` and `Violation::field` are `Option<Cow<'static, str>>`, not `Option<String>`. Read them with `.as_deref()` as before; build one with `Some(text.into())`.
   - `Violation::standard_refs` and `PassedCheck::standard_refs` are `Cow<'static, [StandardRef]>`, not `Vec<StandardRef>`. Iterate with `.iter()`, build one from a `Vec` with `.into()`, write an empty one as `Cow::Borrowed(&[])`, and change one in place with `.to_mut()`. `registry_standard_refs()` still returns a `Vec`.

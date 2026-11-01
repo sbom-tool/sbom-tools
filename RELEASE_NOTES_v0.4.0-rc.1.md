@@ -37,12 +37,12 @@ What changes for you:
 
 ## Security
 
-- **Injection through SBOM text in human-readable output** (the security advisory published with v0.4.0). A crafted component name could:
+- **Injection through SBOM text in human-readable output** (the security advisory published with v0.4.0). A crafted component name, or a crafted file name, could:
   - run GitHub Actions workflow commands from `validate`'s default output, forging annotations or hiding log lines;
   - send terminal escapes and bidi overrides to a terminal or log viewer;
   - inject Markdown or HTML into the reports, the `cra-docs` dossier and OSCAL markup fields.
 
-  SBOM text is now neutralized in every human-readable output. (#395, #413, #418, #420)
+  SBOM text and file names are now neutralized in every human-readable output, error messages included. (#395, #413, #418, #420, #449)
 - **Dependency advisories:** rustls, rustls-webpki and webpki-root-certs (RUSTSEC-2026-0346 to -0349, -0382, -0383, #403), tokio (RUSTSEC-2026-0386, #404), and anyhow in the Dagger CI tooling (RUSTSEC-2026-0190, #426).
 
 ## What's New
