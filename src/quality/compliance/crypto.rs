@@ -923,13 +923,16 @@ fn cnsa_not_approved(
     }
 }
 
-/// The date a certificate is judged on: the later of the evaluation date
-/// and its `notValidAfter`, since it keeps its signature until it expires.
-fn certificate_judged_on(calendar: &Calendar, cert: Option<&CertificateProperties>) -> NaiveDate {
+/// A certificate's `notValidAfter`, when it falls after the evaluation date:
+/// the certificate keeps its signature until it expires, so deadline mode
+/// judges it on the later of the two dates.
+fn certificate_expiry_after_today(
+    calendar: &Calendar,
+    cert: Option<&CertificateProperties>,
+) -> Option<NaiveDate> {
     cert.and_then(|c| c.not_valid_after)
         .map(|expiry| expiry.date_naive())
         .filter(|expiry| *expiry > calendar.today)
-        .unwrap_or(calendar.today)
 }
 
 /// What a finding takes from deadline mode: its severity, the note its
@@ -942,36 +945,26 @@ struct Calendared {
 }
 
 impl Calendared {
-    /// The finding as readiness mode reports it.
-    fn readiness() -> Self {
-        Self {
-            severity: ViolationSeverity::Error,
-            note: String::new(),
-            deadline: None,
-        }
-    }
-
-    /// The finding as `verdict` judges it, on `on` when that is a
-    /// certificate's expiry rather than the evaluation date.
-    fn of(verdict: Option<CalendarVerdict>, calendar: Option<&Calendar>, on: NaiveDate) -> Self {
+    /// The finding as `verdict` judges it (`None` in readiness mode), on a
+    /// certificate's later `expiry` when it was judged on that date.
+    fn of(verdict: Option<CalendarVerdict>, expiry: Option<NaiveDate>) -> Self {
         match verdict {
-            None => Self::readiness(),
-            Some(CalendarVerdict::Dated(dated)) => {
-                let note = match calendar {
-                    Some(cal) if on > cal.today => {
-                        format!(
-                            "; valid until {on}, so judged on that date: {}",
-                            dated.status
-                        )
-                    }
-                    _ => format!("; {}", dated.status),
-                };
-                Self {
-                    severity: dated.severity,
-                    note,
-                    deadline: Some(dated.deadline),
-                }
-            }
+            None => Self {
+                severity: ViolationSeverity::Error,
+                note: String::new(),
+                deadline: None,
+            },
+            Some(CalendarVerdict::Dated(dated)) => Self {
+                severity: dated.severity,
+                note: match expiry {
+                    Some(on) => format!(
+                        "; valid until {on}, so judged on that date: {}",
+                        dated.status
+                    ),
+                    None => format!("; {}", dated.status),
+                },
+                deadline: Some(dated.deadline),
+            },
             Some(CalendarVerdict::Undated(reason)) => Self {
                 severity: ViolationSeverity::Error,
                 note: format!("; {reason}"),
@@ -988,7 +981,7 @@ impl Calendared {
             .into_iter()
             .flatten()
             .reduce(CalendarVerdict::most_urgent);
-        Self::of(verdict, None, NaiveDate::MIN)
+        Self::of(verdict, None)
     }
 }
 
@@ -1152,16 +1145,19 @@ impl ComplianceChecker {
                                 // Deadline mode judges a CNSA 1.0 signature
                                 // on the later of the evaluation date and
                                 // the certificate's expiry.
-                                let on = calendar.map(|cal| {
-                                    certificate_judged_on(cal, cp.certificate_properties.as_ref())
+                                let expiry = calendar.and_then(|cal| {
+                                    certificate_expiry_after_today(
+                                        cal,
+                                        cp.certificate_properties.as_ref(),
+                                    )
                                 });
                                 let calendared = Calendared::of(
-                                    calendar.zip(on).map(|(cal, on)| {
+                                    calendar.map(|cal| {
                                         let declared = Declared::of_ref(sig_ref, sbom, &index);
+                                        let on = expiry.unwrap_or(cal.today);
                                         cnsa_not_approved(cal, &cls, &declared, on)
                                     }),
-                                    calendar,
-                                    on.unwrap_or(NaiveDate::MIN),
+                                    expiry,
                                 );
                                 violations.push(Violation {
                                     severity: calendared.severity,
@@ -1342,8 +1338,7 @@ impl ComplianceChecker {
                 let calendared = Calendared::of(
                     calendar
                         .map(|cal| cnsa_not_approved(cal, &cls, &Declared::of(comp), cal.today)),
-                    calendar,
-                    calendar.map_or(NaiveDate::MIN, |cal| cal.today),
+                    None,
                 );
                 violations.push(Violation {
                     severity: calendared.severity,
@@ -1468,8 +1463,7 @@ impl ComplianceChecker {
                 calendar
                     .filter(|_| tls12)
                     .map(|cal| CalendarVerdict::Dated(cal.cnsa1(cal.today))),
-                calendar,
-                NaiveDate::MIN,
+                None,
             );
             violations.push(Violation {
                 severity: calendared.severity,
@@ -1782,11 +1776,15 @@ impl ComplianceChecker {
                             // Deadline mode judges the signature on the later
                             // of the evaluation date and the certificate's
                             // expiry: it signs until then.
-                            let on = calendar.map(|cal| {
-                                certificate_judged_on(cal, cp.certificate_properties.as_ref())
+                            let expiry = calendar.and_then(|cal| {
+                                certificate_expiry_after_today(
+                                    cal,
+                                    cp.certificate_properties.as_ref(),
+                                )
                             });
                             let calendared = Calendared::of(
-                                calendar.zip(on).map(|(cal, on)| {
+                                calendar.map(|cal| {
+                                    let on = expiry.unwrap_or(cal.today);
                                     let declared = Declared {
                                         primitive: Some(CryptoPrimitive::Signature),
                                         ..Declared::of_ref(sig_ref, sbom, &index)
@@ -1797,8 +1795,7 @@ impl ComplianceChecker {
                                         nist_quantum_vulnerable(cal, subject, &declared, on)
                                     }
                                 }),
-                                calendar,
-                                on.unwrap_or(NaiveDate::MIN),
+                                expiry,
                             );
                             violations.push(Violation {
                                 severity: calendared.severity,
@@ -1889,8 +1886,7 @@ impl ComplianceChecker {
                                             )
                                         }
                                     }),
-                                    calendar,
-                                    NaiveDate::MIN,
+                                    None,
                                 );
                                 violations.push(Violation {
                                     severity: calendared.severity,
@@ -2015,8 +2011,7 @@ impl ComplianceChecker {
             let calendared = Calendared::of(
                 calendar
                     .map(|cal| nist_quantum_vulnerable(cal, &cls, &Declared::of(comp), cal.today)),
-                calendar,
-                NaiveDate::MIN,
+                None,
             );
             violations.push(Violation {
                 severity: calendared.severity,
@@ -2064,8 +2059,7 @@ impl ComplianceChecker {
             let signs = Declared::of(comp).signs();
             let calendared = Calendared::of(
                 calendar.map(|cal| nist_broken(&cls, signs, cal.today)),
-                calendar,
-                NaiveDate::MIN,
+                None,
             );
             violations.push(Violation {
                 severity: calendared.severity,

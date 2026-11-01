@@ -1115,7 +1115,8 @@ Gate codes only apply to runs that completed successfully and produced their
 report. Every usage error (an unknown flag or standard, an invalid flag value,
 a missing argument) and every operational error — I/O, parse failures, an
 unsupported `-o` format for the command, an invalid `--as-of`/
-`--cra-product-class` value, a broken explicit `--cra-sidecar`, or an invalid
+`--cra-product-class` value, `--pqc-profile` or `--cnsa-category` without
+`--pqc-mode deadline`, a broken explicit `--cra-sidecar`, or an invalid
 config file — exits `3`, in every command. `--help` and `--version` exit `0`.
 CI pipelines should therefore only interpret a nonzero exit as a gate verdict
 when the expected report output was produced.

@@ -565,7 +565,7 @@ the document.
 | `0` | Compliant: no errors, and no warnings with `--fail-on-warning`. A standard that does not apply also exits `0`, unless `--require-applicable`. | Success |
 | `1` | Compliance errors, or, under `--require-applicable`, a standard that does not apply (with several standards, any one of them). | Gate failed |
 | `2` | Compliance warnings, only with `--fail-on-warning`. | Vulnerabilities introduced (`--fail-on-vuln`) |
-| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same; for `rules`, also an unknown standard or rule id |
+| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument, `--pqc-profile` or `--cnsa-category` without `--pqc-mode deadline`) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same; for `rules`, also an unknown standard or rule id |
 
 Codes `4`–`7` belong to other gates (VEX gaps, license policy, KEV, ML
 regression); the README lists them all. Usage errors exit `3` in every command.
