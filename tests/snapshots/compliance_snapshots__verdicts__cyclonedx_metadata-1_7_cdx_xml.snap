@@ -42,10 +42,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
-[FdaMedicalDevice] compliant · E0 W1 I3
+[FdaMedicalDevice] compliant · E0 W2 I3
   I SBOM-FDA-ELEMENT-ID  pkg:generic/curl@8.10.1
   I SBOM-FDA-ELEMENT-ID  pkg:generic/example/console@5.0.0
   I SBOM-FDA-ELEMENT-ID  pkg:generic/sqlite@3.46.1
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W1 I2
   I SBOM-SSDF-PO3  -
@@ -57,7 +58,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-000  -
 [NistPqc] NON-COMPLIANT · E1 W0 I0
   E SBOM-PQC-000  -
-[BsiTr03183_2] compliant · E0 W1 I0
+[BsiTr03183_2] compliant · E0 W2 I0
+  W SBOM-BSI-TR-03183-2-5-1-CONTACT  -
   W SBOM-BSI-TR-03183-2-LICENSE-SPDX  - (1/3)
 [CraOssSteward] NON-COMPLIANT · E1 W1 I3
   E SBOM-CRA-ART-24  -
