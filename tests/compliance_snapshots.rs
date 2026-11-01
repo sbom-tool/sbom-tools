@@ -352,7 +352,9 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
     );
     let sarif = generate_multi_compliance_sarif_with(
         &results,
-        &SarifOptions::new().with_artifact(artifact),
+        &SarifOptions::new()
+            .with_artifact(artifact)
+            .with_subject(&assessed, as_of()),
     )
     .expect("SARIF serializes");
     let oscal =

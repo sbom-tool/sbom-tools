@@ -1,17 +1,17 @@
 //! The audit fields of a compliance report: what `-o json`, `-o sarif` and
-//! `-o oscal-json` each say about the SBOM, about each standard's verdict
-//! and about each finding, declared once.
+//! `-o oscal-json` each say about the run, the SBOM, each standard's
+//! verdict and each finding, declared once.
 //!
 //! Each field is an [`AuditName`]: its name in `-o json`, the SARIF property
-//! and the OSCAL property (or part) that carry it. [`SUBJECT_FIELDS`],
-//! [`RESULT_FIELDS`] and [`FINDING_FIELDS`] list them in output order, and
-//! [`subject_fields`], [`result_fields`], [`violation_fields`] and
-//! [`pass_fields`] give their values for one SBOM, result or finding. The
-//! SARIF writer renders them as run and result properties, the OSCAL writer
-//! as properties, links and remarks.
+//! and the OSCAL property (or part) that carry it. [`RUN_FIELDS`],
+//! [`SUBJECT_FIELDS`], [`RESULT_FIELDS`] and [`FINDING_FIELDS`] list them in
+//! output order, and [`run_fields`], [`subject_fields`], [`result_fields`],
+//! [`violation_fields`] and [`pass_fields`] give their values for one run,
+//! SBOM, result or finding. The SARIF writer renders them as run and result
+//! properties, the OSCAL writer as properties, links and remarks.
 //!
 //! The JSON envelope writes each result's and each finding's own
-//! serialization, and the subject from [`AssessedSbom`]. The tests check
+//! serialization, and the run and subject fields itself. The tests check
 //! that the envelope carries every field listed here under its name and
 //! with its value, and no field the lists leave out but the ones they name
 //! as the envelope's own. So a field a finding or a result gains reaches
@@ -41,9 +41,11 @@ use serde_json::Value;
 /// from.
 ///
 /// [`generate_compliance_json_at`](super::generate_compliance_json_at)
-/// describes it in the envelope's `subject`, and
+/// describes it in the envelope's `subject`,
 /// [`generate_assessment_results_at`](super::oscal::generate_assessment_results_at)
-/// in the OSCAL document's SBOM resource: the digest, the format and
+/// in the OSCAL document's SBOM resource, and
+/// [`SarifOptions::with_subject`](super::SarifOptions::with_subject) in the
+/// SARIF run's artifact and properties: the digest, the format and
 /// specification version, the file name, and how the document was read
 /// (its components, the duplicate entries merged, an unparseable creation
 /// timestamp).
@@ -151,6 +153,9 @@ pub(crate) fn instant_text(at: DateTime<Utc>) -> String {
 /// Where OSCAL carries a field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum OscalPart {
+    /// The document's own fields: the instant is `metadata.last-modified`,
+    /// each result's `start` and each observation's `collected`.
+    Metadata,
     /// The SBOM document's back-matter resource.
     Subject,
     /// The standard's `results[]` entry.
@@ -169,7 +174,9 @@ pub(crate) struct AuditName {
     /// is the `affected` field of `counts`.
     pub(crate) json: &'static str,
     /// The SARIF property, or `None` where SARIF says it in a field of its
-    /// own (a result's `findingId`, `ruleId` and message) or not at all.
+    /// own (a result's `findingId`, `ruleId` and message, the SBOM's
+    /// artifact). A dot nests it in an object, as in `-o json`:
+    /// `subject.duplicates.entries`.
     pub(crate) sarif: Option<&'static str>,
     /// The OSCAL property; for a link, its relation, and for guidance, the
     /// `remarks` that carry it.
@@ -192,38 +199,64 @@ const fn name(
     }
 }
 
+const AS_OF: AuditName = name("as_of", Some("asOf"), "last-modified", OscalPart::Metadata);
+
+/// The fields of a run, in output order: the instant every standard was
+/// judged at. `-o json` writes it beside the subject, SARIF as a run
+/// property, OSCAL as the document's and each result's and observation's
+/// timestamp.
+pub(crate) const RUN_FIELDS: &[AuditName] = &[AS_OF];
+
+/// The SHA-256 is the SBOM artifact's `sha-256` hash in SARIF
+/// (`run.artifacts`), and the file is the artifact's location.
 const SHA256: AuditName = name("sha256", None, "sha256", OscalPart::Subject);
-const FORMAT: AuditName = name("format", None, "format", OscalPart::Subject);
-const SPEC_VERSION: AuditName = name("spec_version", None, "spec-version", OscalPart::Subject);
+const FORMAT: AuditName = name(
+    "format",
+    Some("subject.format"),
+    "format",
+    OscalPart::Subject,
+);
+const SPEC_VERSION: AuditName = name(
+    "spec_version",
+    Some("subject.specVersion"),
+    "spec-version",
+    OscalPart::Subject,
+);
 const FILE_NAME: AuditName = name("file_name", None, "file-name", OscalPart::Subject);
-const COMPONENTS: AuditName = name("components", None, "component-count", OscalPart::Subject);
+const COMPONENTS: AuditName = name(
+    "components",
+    Some("subject.components"),
+    "component-count",
+    OscalPart::Subject,
+);
 const DUPLICATE_COMPONENTS: AuditName = name(
     "duplicates.components",
-    None,
+    Some("subject.duplicates.components"),
     "duplicate-components",
     OscalPart::Subject,
 );
 const DUPLICATE_ENTRIES: AuditName = name(
     "duplicates.entries",
-    None,
+    Some("subject.duplicates.entries"),
     "duplicate-entries",
     OscalPart::Subject,
 );
 const DUPLICATE_CONFLICTS: AuditName = name(
     "duplicates.conflicts",
-    None,
+    Some("subject.duplicates.conflicts"),
     "duplicate-conflict",
     OscalPart::Subject,
 );
 const TIMESTAMP_UNPARSED: AuditName = name(
     "timestamp_unparsed",
-    None,
+    Some("subject.timestampUnparsed"),
     "timestamp-unparsed",
     OscalPart::Subject,
 );
 
-/// The fields of the SBOM a report is about, in output order. SARIF names
-/// the SBOM file in each result's location instead.
+/// The fields of the SBOM a report is about, in output order. SARIF writes
+/// them in a `subject` run property, but for the SHA-256 and the file
+/// name, which are the SBOM's artifact.
 pub(crate) const SUBJECT_FIELDS: &[AuditName] = &[
     SHA256,
     FORMAT,
@@ -250,10 +283,30 @@ const APPLICABLE: AuditName = name(
     "applicability",
     OscalPart::Result,
 );
-const ERROR_COUNT: AuditName = name("counts.error", None, "error-count", OscalPart::Result);
-const WARNING_COUNT: AuditName = name("counts.warning", None, "warning-count", OscalPart::Result);
-const INFO_COUNT: AuditName = name("counts.info", None, "info-count", OscalPart::Result);
-const PASSED_COUNT: AuditName = name("counts.passed", None, "passed-count", OscalPart::Result);
+const ERROR_COUNT: AuditName = name(
+    "counts.error",
+    Some("errorCount"),
+    "error-count",
+    OscalPart::Result,
+);
+const WARNING_COUNT: AuditName = name(
+    "counts.warning",
+    Some("warningCount"),
+    "warning-count",
+    OscalPart::Result,
+);
+const INFO_COUNT: AuditName = name(
+    "counts.info",
+    Some("infoCount"),
+    "info-count",
+    OscalPart::Result,
+);
+const PASSED_COUNT: AuditName = name(
+    "counts.passed",
+    Some("passedCount"),
+    "passed-count",
+    OscalPart::Result,
+);
 const NOT_APPLICABLE_REASON: AuditName = name(
     "not_applicable_reason",
     Some("notApplicableReason"),
@@ -292,8 +345,9 @@ const CONFORMITY_SUMMARY: AuditName = name(
     OscalPart::Result,
 );
 
-/// The fields of one standard's verdict, in output order. SARIF counts no
-/// severity: its results are the findings.
+/// The fields of one standard's verdict, in output order. SARIF counts the
+/// severities too, so a run capped by `--sarif-max-results` still says how
+/// many findings there were.
 pub(crate) const RESULT_FIELDS: &[AuditName] = &[
     STANDARD,
     STANDARD_NAME,
@@ -637,6 +691,11 @@ fn references(refs: &[StandardRef]) -> Option<AuditValue<'_>> {
 // The fields of an SBOM, a result and a finding
 // ---------------------------------------------------------------------------
 
+/// The fields of a run judged at `as_of`, in [`RUN_FIELDS`] order.
+pub(crate) fn run_fields(as_of: DateTime<Utc>) -> Vec<AuditField<'static>> {
+    present(RUN_FIELDS, [(AS_OF, Some(text(instant_text(as_of))))])
+}
+
 /// The fields of `assessed`, in [`SUBJECT_FIELDS`] order.
 pub(crate) fn subject_fields<'a>(assessed: &'a AssessedSbom<'_>) -> Vec<AuditField<'a>> {
     let document = &assessed.sbom.document;
@@ -801,12 +860,34 @@ pub(crate) fn pass_fields(level: ComplianceLevel, pass: &PassedCheck) -> Vec<Aud
 }
 
 /// The SARIF properties `fields` give, in their order: those SARIF has a
-/// property for.
+/// property for, a dotted name nested in its objects in the order they
+/// first appear.
 pub(crate) fn sarif_properties(fields: &[AuditField<'_>]) -> Vec<(&'static str, SarifValue)> {
-    fields
+    let mut properties = Vec::new();
+    for field in fields {
+        if let Some(name) = field.name.sarif {
+            insert(&mut properties, name, field.value.sarif());
+        }
+    }
+    properties
+}
+
+/// Put `value` at the dotted `path` of `properties`.
+fn insert(properties: &mut Vec<(&'static str, SarifValue)>, path: &'static str, value: SarifValue) {
+    let Some((head, rest)) = path.split_once('.') else {
+        properties.push((path, value));
+        return;
+    };
+    let at = properties
         .iter()
-        .filter_map(|field| Some((field.name.sarif?, field.value.sarif())))
-        .collect()
+        .position(|(name, value)| *name == head && matches!(value, SarifValue::Object(_)))
+        .unwrap_or_else(|| {
+            properties.push((head, SarifValue::Object(Vec::new())));
+            properties.len() - 1
+        });
+    if let SarifValue::Object(inner) = &mut properties[at].1 {
+        insert(inner, rest, value);
+    }
 }
 
 #[cfg(test)]
@@ -970,6 +1051,10 @@ mod tests {
                 let text =
                     generate_compliance_json_at(&results, &assessed, as_of()).expect("serializes");
                 let envelope: Value = serde_json::from_str(&text).expect("JSON");
+                let run_level = run_fields(as_of());
+                let own = ["schema", "tool", "subject", "results"];
+                assert_carries(&envelope, &run_level, RUN_FIELDS, &own, &label);
+                seen.extend(run_level.iter().map(|field| field.name.json));
                 let subject = subject_fields(&assessed);
                 assert_carries(&envelope["subject"], &subject, SUBJECT_FIELDS, &[], &label);
                 seen.extend(subject.iter().map(|field| field.name.json));
@@ -1001,8 +1086,9 @@ mod tests {
                 }
             }
         }
-        for listed in SUBJECT_FIELDS
+        for listed in RUN_FIELDS
             .iter()
+            .chain(SUBJECT_FIELDS)
             .chain(RESULT_FIELDS)
             .chain(FINDING_FIELDS)
         {
@@ -1038,9 +1124,9 @@ mod tests {
     #[test]
     fn names_are_unique_in_each_output() {
         for (label, listed) in [
-            ("subject", SUBJECT_FIELDS),
-            ("result", RESULT_FIELDS),
-            ("finding", FINDING_FIELDS),
+            ("run and subject", [RUN_FIELDS, SUBJECT_FIELDS].concat()),
+            ("result", RESULT_FIELDS.to_vec()),
+            ("finding", FINDING_FIELDS.to_vec()),
         ] {
             let mut json = std::collections::HashSet::new();
             let mut sarif = std::collections::HashSet::new();
@@ -1057,6 +1143,38 @@ mod tests {
                 );
             }
         }
+        // A SARIF run of one standard writes its verdict beside the run and
+        // subject fields, so their names must not meet either.
+        let run_level: std::collections::HashSet<&str> = RUN_FIELDS
+            .iter()
+            .chain(SUBJECT_FIELDS)
+            .filter_map(|name| name.sarif)
+            .map(|property| property.split('.').next().unwrap_or(property))
+            .collect();
+        for name in RESULT_FIELDS {
+            if let Some(property) = name.sarif {
+                assert!(!run_level.contains(property), "SARIF {property}");
+            }
+        }
+    }
+
+    /// SARIF nests a dotted name: the subject is one `subject` object, its
+    /// duplicates one object in it, each in list order.
+    #[test]
+    fn sarif_nests_dotted_names_in_list_order() {
+        let sbom = crate::parse_sbom_str(DUPLICATES).expect("SBOM parses");
+        let assessed = AssessedSbom::new(&sbom, DUPLICATES.as_bytes());
+        let mut fields: Vec<AuditField<'_>> = run_fields(as_of());
+        fields.extend(subject_fields(&assessed));
+        let properties = SarifValue::Object(sarif_properties(&fields));
+        assert_eq!(
+            serde_json::to_string(&properties).expect("JSON"),
+            concat!(
+                r#"{"asOf":"2026-10-12T00:00:00Z","subject":{"format":"CycloneDX","#,
+                r#""specVersion":"1.6","components":2,"duplicates":{"components":1,"#,
+                r#""entries":2,"conflicts":["description"]},"timestampUnparsed":true}}"#
+            )
+        );
     }
 
     #[test]

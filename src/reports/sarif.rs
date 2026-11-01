@@ -12,7 +12,7 @@
 //! and a compliance run's properties the verdict of each standard, from the
 //! lists `-o json` and `-o oscal-json` share (`reports::audit`).
 
-use super::audit;
+use super::audit::{self, AssessedSbom};
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
@@ -20,6 +20,7 @@ use crate::quality::{
     ComplianceLevel, ComplianceResult, StandardRef, ViolationSeverity, compose_finding_key,
     finding_fingerprint, finding_id, generic_rule_id_for_level, rule_meta, standard_key,
 };
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -50,6 +51,7 @@ pub const DEFAULT_SARIF_MAX_RESULTS: usize = 25_000;
 #[derive(Debug, Clone)]
 pub struct SarifOptions {
     artifact: Option<SarifArtifact>,
+    subject: Option<SarifSubject>,
     category: Option<String>,
     include_passes: bool,
     max_results: usize,
@@ -59,11 +61,21 @@ impl Default for SarifOptions {
     fn default() -> Self {
         Self {
             artifact: None,
+            subject: None,
             category: None,
             include_passes: false,
             max_results: DEFAULT_SARIF_MAX_RESULTS,
         }
     }
+}
+
+/// What a compliance run judged, as SARIF states it: the SHA-256 of the
+/// SBOM's bytes, the `sha-256` hash of its artifact in `run.artifacts`, and
+/// the run and subject audit fields (`asOf`, `subject`) as run properties.
+#[derive(Debug, Clone)]
+struct SarifSubject {
+    sha256: String,
+    properties: Vec<(&'static str, audit::SarifValue)>,
 }
 
 impl SarifOptions {
@@ -79,6 +91,24 @@ impl SarifOptions {
     #[must_use]
     pub fn with_artifact(mut self, artifact: SarifArtifact) -> Self {
         self.artifact = Some(artifact);
+        self
+    }
+
+    /// State what a compliance run judged, as `-o json` does: `assessed`,
+    /// the SBOM, and `as_of`, the instant every standard was judged at. The
+    /// run lists the SBOM in `run.artifacts`, at the artifact's location
+    /// when the options have one, with the SHA-256 of its bytes as its
+    /// `sha-256` hash, and its properties gain `asOf` and `subject` (the
+    /// format, spec version and how the document was read). `validate`
+    /// sets it.
+    #[must_use]
+    pub fn with_subject(mut self, assessed: &AssessedSbom<'_>, as_of: DateTime<Utc>) -> Self {
+        let mut fields: Vec<audit::AuditField<'_>> = audit::run_fields(as_of);
+        fields.extend(audit::subject_fields(assessed));
+        self.subject = Some(SarifSubject {
+            sha256: assessed.sha256().to_string(),
+            properties: audit::sarif_properties(&fields),
+        });
         self
     }
 
@@ -148,6 +178,32 @@ impl SarifOptions {
     #[must_use]
     pub const fn max_results(&self) -> usize {
         self.max_results
+    }
+
+    /// The run properties the subject gives (`asOf`, `subject`); none
+    /// without one (see [`Self::with_subject`]).
+    fn subject_properties(&self) -> SarifProperties {
+        SarifProperties(
+            self.subject
+                .as_ref()
+                .map(|subject| subject.properties.clone())
+                .unwrap_or_default(),
+        )
+    }
+
+    /// `run.artifacts`: the SBOM, at the artifact's location when the
+    /// options have one, with the SHA-256 of its bytes; `None` without a
+    /// subject (see [`Self::with_subject`]).
+    fn run_artifacts(&self) -> Option<Vec<SarifRunArtifact>> {
+        let subject = self.subject.as_ref()?;
+        let location = self.artifact.as_ref().map(|a| SarifArtifactLocationJson {
+            uri: a.location().uri().to_string(),
+            uri_base_id: a.location().uri_base_id().map(str::to_string),
+        });
+        Some(vec![SarifRunArtifact {
+            location,
+            hashes: BTreeMap::from([("sha-256", subject.sha256.clone())]),
+        }])
     }
 }
 
@@ -446,6 +502,7 @@ impl ReportGenerator for SarifReporter {
             results,
             uses_srcroot([new]),
             None,
+            None,
             config.sarif.max_results(),
         )
     }
@@ -505,6 +562,7 @@ impl ReportGenerator for SarifReporter {
             rules,
             results,
             uses_srcroot([artifact]),
+            None,
             None,
             config.sarif.max_results(),
         )
@@ -601,6 +659,7 @@ pub fn generate_ai_readiness_sarif_with(
         rules::aibom_rules(),
         results,
         uses_srcroot([artifact]),
+        None,
         Some(properties),
         options.max_results(),
     )
@@ -629,6 +688,7 @@ pub fn generate_compliance_sarif_with(
     // standard that never evaluated the SBOM must be machine-distinguishable
     // from a pass), compliance, score and what the run kept out.
     let properties = SarifRunProperties {
+        run: options.subject_properties(),
         verdict: SarifProperties::of(&audit::result_fields(result)),
         ..SarifRunProperties::default()
     };
@@ -641,6 +701,7 @@ pub fn generate_compliance_sarif_with(
         rules,
         results,
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -689,6 +750,7 @@ pub fn generate_multi_compliance_sarif_with(
     // properties don't fit N standards). The flat per-standard fields stay
     // unset; `applicable` reports whether any standard evaluated the SBOM.
     let properties = SarifRunProperties {
+        run: options.subject_properties(),
         applicable: Some(results.iter().any(ComplianceResult::is_applicable)),
         standards: results
             .iter()
@@ -704,6 +766,7 @@ pub fn generate_multi_compliance_sarif_with(
         all_rules,
         all_results,
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -792,6 +855,7 @@ pub fn generate_quality_sarif_with(
     // The run names and scores itself (the quality profile and score), and
     // carries the rest of its embedded standard's verdict.
     let properties = SarifRunProperties {
+        run: options.subject_properties(),
         overall_score: Some(report.overall_score),
         grade: Some(report.grade.letter().to_string()),
         sbom: Some(sbom_name.to_string()),
@@ -804,6 +868,7 @@ pub fn generate_quality_sarif_with(
         catalogue,
         results,
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -990,13 +1055,15 @@ fn sarif_result(
 }
 
 /// Serialize one run: at most `max_results` results (see
-/// [`cap_results`]), each with its `ruleIndex` set from `rules`, and the
-/// `SRCROOT` base declared when an artifact URI is relative to it.
+/// [`cap_results`]), each with its `ruleIndex` set from `rules`, the
+/// `SRCROOT` base declared when an artifact URI is relative to it, and
+/// `artifacts` as `run.artifacts`.
 fn render_log(
     automation_id: String,
     rules: Vec<SarifRule>,
     mut results: Vec<SarifResult>,
     relative_to_srcroot: bool,
+    artifacts: Option<Vec<SarifRunArtifact>>,
     properties: Option<SarifRunProperties>,
     max_results: usize,
 ) -> Result<String, ReportError> {
@@ -1053,6 +1120,7 @@ fn render_log(
             invocations,
             automation_details: SarifAutomationDetails { id: automation_id },
             original_uri_base_ids,
+            artifacts,
             results,
             properties,
         }],
@@ -1341,9 +1409,24 @@ struct SarifRun {
     automation_details: SarifAutomationDetails,
     #[serde(skip_serializing_if = "Option::is_none")]
     original_uri_base_ids: Option<BTreeMap<&'static str, SarifBaseDescription>>,
+    /// The SBOM a compliance run judged, with its SHA-256 (see
+    /// [`SarifOptions::with_subject`]); absent without one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artifacts: Option<Vec<SarifRunArtifact>>,
     results: Vec<SarifResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<SarifRunProperties>,
+}
+
+/// A `run.artifacts[]` entry: the SBOM file, where results point when the
+/// run has its location, and the SHA-256 of its bytes under the
+/// algorithm's IANA name, `sha-256`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifRunArtifact {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    location: Option<SarifArtifactLocationJson>,
+    hashes: BTreeMap<&'static str, String>,
 }
 
 /// `run.invocations[]`: the run succeeded, and its notifications say what
@@ -1391,6 +1474,10 @@ struct SarifBaseDescription {
 #[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct SarifRunProperties {
+    /// What the run judged (see [`SarifOptions::with_subject`]): `asOf`,
+    /// the instant, and `subject`, the SBOM's summary. Empty without one.
+    #[serde(flatten)]
+    run: SarifProperties,
     /// Whether the AI-readiness profile applied to the SBOM; for a
     /// multi-standard run, whether at least one standard applied (each
     /// standard's own verdict is in `standards`). A run with one standard
@@ -1531,14 +1618,14 @@ struct SarifResultProperties {
     finding_id: String,
     /// Standard reference IDs in the form `<standard>:<id>`
     /// (e.g., `prEN-40000-1-3:PRE-7-RQ-07`, `CRA:Art. 13(8)`).
-    /// Plural to match SARIF `properties` extensibility convention. A
-    /// compliance result also carries its references as `-o json` does, in
-    /// `standardRefs`.
+    /// Plural to match SARIF `properties` extensibility convention.
+    /// Deprecated in v0.4.0 and removed in v0.5.0: a compliance result
+    /// carries its references as `-o json` does, in `standardRefs`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     standard_ids: Vec<String>,
     /// The canonical URLs of the references that have one, in reference
     /// order — lifted from `StandardRef::help_uri`. Empty when none of the
-    /// references has a canonical home.
+    /// references has a canonical home. Deprecated with `standardIds`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     standard_help_uris: Vec<String>,
     /// Recommendation priority (1 = highest) — quality recommendations only.
@@ -1746,6 +1833,7 @@ mod tests {
             results,
             false,
             None,
+            None,
             2,
         )
         .expect("serializes");
@@ -1767,6 +1855,7 @@ mod tests {
             Vec::new(),
             results,
             false,
+            None,
             None,
             DEFAULT_SARIF_MAX_RESULTS,
         )

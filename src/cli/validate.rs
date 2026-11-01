@@ -126,29 +126,31 @@ pub fn run_validate(
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
     let results = compliance.check_levels(&levels, parsed.sbom());
 
-    // Inputs that make machine output reproducible: -o json and OSCAL
-    // describe the SBOM (its SHA-256, format, file name and how it was read)
-    // and state the instant it was judged at; OSCAL derives its UUIDs from
-    // both, and also describes the components its findings are about.
+    // Inputs that make machine output reproducible: -o json, SARIF and
+    // OSCAL describe the SBOM (its SHA-256, format, file name and how it was
+    // read) and state the instant it was judged at; OSCAL derives its UUIDs
+    // from both, and also describes the components its findings are about.
     // SARIF results point at the SBOM lines of their components, and list
     // the passed checks only under --sarif-include-passes.
+    let mut assessed = AssessedSbom::new(parsed.sbom(), parsed.raw_content().as_bytes());
+    if !is_stdin_path(&sbom_path) {
+        assessed = assessed.with_file_name(&sbom_path);
+    }
     let mut sarif = SarifOptions::new()
         .with_passes(sarif_include_passes)
         .with_max_results(sarif_max_results);
     if !summary && output == ReportFormat::Sarif {
-        sarif = sarif.with_artifact(super::sarif_artifact(
-            &sbom_path,
-            sarif_base.as_deref(),
-            parsed.sbom(),
-            parsed.raw_content(),
-        )?);
+        sarif = sarif
+            .with_artifact(super::sarif_artifact(
+                &sbom_path,
+                sarif_base.as_deref(),
+                parsed.sbom(),
+                parsed.raw_content(),
+            )?)
+            .with_subject(&assessed, judged_at);
         if let Some(category) = sarif_category {
             sarif = sarif.with_category(category);
         }
-    }
-    let mut assessed = AssessedSbom::new(parsed.sbom(), parsed.raw_content().as_bytes());
-    if !is_stdin_path(&sbom_path) {
-        assessed = assessed.with_file_name(&sbom_path);
     }
     let provenance = OutputProvenance {
         assessed,
