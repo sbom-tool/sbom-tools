@@ -7,6 +7,20 @@ source: tests/compliance_snapshots.rs
     "name": "sbom-tools",
     "version": "[VERSION]"
   },
+  "as_of": "2026-10-12T00:00:00Z",
+  "subject": {
+    "sha256": "c53e25847e7f12617e08f71fc4543a79df0dd141033f217f2e3424f782d12b56",
+    "format": "SPDX",
+    "spec_version": "3.0.1",
+    "file_name": "minimal.spdx3.json",
+    "components": 4,
+    "duplicates": {
+      "components": 0,
+      "entries": 0,
+      "conflicts": []
+    },
+    "timestamp_unparsed": false
+  },
   "results": [
     {
       "standard": "bsi",

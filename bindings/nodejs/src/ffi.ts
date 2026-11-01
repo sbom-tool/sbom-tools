@@ -6,8 +6,14 @@ import {
   ErrorCode,
   ScoringProfile,
   type AbiVersion,
+  type ComplianceEnvelope,
   type DetectedFormat,
   type JsonValue,
+  type QualityOutput,
+  type RuleCatalog,
+  type RunOptions,
+  type ScoreOptions,
+  type ValidateOptions,
 } from "./types.js";
 
 type NativePointer = unknown | null;
@@ -25,6 +31,9 @@ interface NativeFunctions {
   readonly parseString: (content: string) => NativeResult;
   readonly diff: (oldSbom: string, newSbom: string) => NativeResult;
   readonly score: (sbom: string, profile: number) => NativeResult;
+  readonly validate: (sbom: string, options: string) => NativeResult;
+  readonly ruleCatalog: (filter: string) => NativeResult;
+  readonly scoreWithOptions: (sbom: string, options: string) => NativeResult;
   readonly free: (result: NativeResult) => void;
   readonly stringLength: (pointer: NativePointer) => number | bigint;
 }
@@ -71,6 +80,18 @@ function native(): NativeFunctions {
       "const char *",
       "uint32_t",
     ]),
+    validate: library.func("sbom_tools_validate_json", stringResult, [
+      "const char *",
+      "const char *",
+    ]),
+    ruleCatalog: library.func("sbom_tools_rule_catalog_json", stringResult, [
+      "const char *",
+    ]),
+    scoreWithOptions: library.func(
+      "sbom_tools_score_sbom_with_options_json",
+      stringResult,
+      ["const char *", "const char *"],
+    ),
     free: library.func("sbom_tools_string_result_free", "void", [stringResult]),
     stringLength: cRuntime.func("strlen", "size_t", [ownedString]),
   };
@@ -233,4 +254,122 @@ export function scoreJson(
   const checkedSbom = checkedInput(sbomJson, "sbomJson");
   const api = native();
   return consume(api, api.score(checkedSbom, profile));
+}
+
+function checkedNames(value: unknown, field: string): void {
+  if (
+    value !== undefined &&
+    (!Array.isArray(value) || !value.every((name) => typeof name === "string"))
+  ) {
+    throw new TypeError(`${field} must be an array of names`);
+  }
+}
+
+/** The options object as the native call reads it, with `as_of` as text. */
+function optionsInput(
+  options: RunOptions,
+  extra: { readonly [key: string]: unknown },
+): string {
+  const { as_of: asOf, ...rest } = options;
+  const payload: { [key: string]: unknown } = { ...rest, ...extra };
+  if (asOf !== undefined) {
+    payload["as_of"] = asOf instanceof Date ? asOf.toISOString() : asOf;
+  }
+  return checkedInput(JSON.stringify(payload), "options");
+}
+
+/**
+ * Validate raw SBOM content against compliance standards and return the
+ * `sbom-tools/compliance/v2` envelope: what `sbom-tools validate - -o json`
+ * writes for the same content and options (`validate <FILE>` when
+ * `options.file_name` names the file). The subject's SHA-256 is over the
+ * UTF-8 bytes of `content`, and `as_of` is `options.as_of`, else the wall
+ * clock when the call starts, to the second. Invalid options throw a
+ * `SbomToolsNativeError` with `ErrorCode.Validation`.
+ */
+export function validateJson(
+  content: string,
+  options: ValidateOptions = {},
+): ComplianceEnvelope {
+  const checkedContent = checkedInput(content, "content");
+  const { standards, ...run } = options;
+  checkedNames(standards, "standards");
+  const checkedOptions = optionsInput(
+    run,
+    standards === undefined ? {} : { standards },
+  );
+  const api = native();
+  const payload = objectPayload(
+    consume(api, api.validate(checkedContent, checkedOptions)),
+    "validateJson",
+  );
+  if (
+    payload.schema !== "sbom-tools/compliance/v2" ||
+    !Array.isArray(payload.results)
+  ) {
+    throw new SbomToolsNativeError(
+      "native library returned an invalid compliance envelope",
+      ErrorCode.Internal,
+    );
+  }
+  return payload as unknown as ComplianceEnvelope;
+}
+
+/**
+ * The `sbom-tools/rules/v1` rule catalogue: every rule, or the rules of the
+ * given `--standard` names.
+ */
+export function ruleCatalogJson(
+  standards: readonly string[] = [],
+): RuleCatalog {
+  checkedNames(standards, "standards");
+  const checkedFilter = checkedInput(JSON.stringify({ standards }), "filter");
+  const api = native();
+  const payload = objectPayload(
+    consume(api, api.ruleCatalog(checkedFilter)),
+    "ruleCatalogJson",
+  );
+  if (
+    payload.schema !== "sbom-tools/rules/v1" ||
+    !Array.isArray(payload.rules)
+  ) {
+    throw new SbomToolsNativeError(
+      "native library returned an invalid rule catalogue",
+      ErrorCode.Internal,
+    );
+  }
+  return payload as unknown as RuleCatalog;
+}
+
+/**
+ * Score raw SBOM content with a profile and the run options, judged at
+ * `options.as_of`, and return the document `sbom-tools quality - -o json`
+ * writes for the same content and options (`quality <FILE>` when
+ * `options.file_name` names the file). `scoreJson` keeps its old behaviour
+ * for compatibility.
+ */
+export function scoreWithOptionsJson(
+  content: string,
+  options: ScoreOptions = {},
+): QualityOutput {
+  const checkedContent = checkedInput(content, "content");
+  const checkedOptions = optionsInput(options, {});
+  const api = native();
+  const payload = objectPayload(
+    consume(api, api.scoreWithOptions(checkedContent, checkedOptions)),
+    "scoreWithOptionsJson",
+  );
+  if (
+    typeof payload.profile !== "string" ||
+    typeof payload.applicable !== "boolean" ||
+    payload.report === null ||
+    typeof payload.report !== "object" ||
+    Array.isArray(payload.report)
+  ) {
+    throw new SbomToolsNativeError(
+      "native library returned an invalid quality report",
+      ErrorCode.Internal,
+    );
+  }
+  return payload as unknown as QualityOutput;
 }

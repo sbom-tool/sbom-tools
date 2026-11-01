@@ -186,7 +186,10 @@ fn settings_move_severities_both_ways_and_the_verdict_follows() {
             .violations
             .iter()
             .filter(|v| v.rule_id == "SBOM-NTIA-SUPPLIER" || v.rule_id == "SBOM-NTIA-VERSION")
-            .map(|v| (v.message.clone(), v.field.clone(), v.observed.clone()))
+            .map(|v| {
+                let field = v.field.as_deref().map(str::to_string);
+                (v.message.clone(), field, v.observed.clone())
+            })
             .collect();
         v.sort();
         v

@@ -7,14 +7,21 @@
 //! finding identity (`partialFingerprints`), so a code-scanning alert
 //! survives the SBOM's lines moving. `automationDetails.id` gives each kind
 //! of run a stable analysis category.
+//!
+//! A compliance result's properties carry the audit fields of its finding,
+//! and a compliance run's properties the verdict of each standard, from the
+//! lists `-o json` and `-o oscal-json` share (`reports::audit`).
 
+use super::audit::{self, AssessedSbom};
 use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType};
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
 use crate::quality::{
-    ComplianceLevel, ComplianceResult, StandardRef, ViolationSeverity, compose_finding_key,
-    finding_fingerprint, finding_id, generic_rule_id_for_level, rule_meta, standard_key,
+    ComplianceLevel, ComplianceResult, FindingIdentity, PassedCheck, StandardRef, Violation,
+    ViolationSeverity, compose_finding_key, finding_fingerprint, finding_id,
+    generic_rule_id_for_level, rule_meta, standard_key,
 };
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -45,6 +52,7 @@ pub const DEFAULT_SARIF_MAX_RESULTS: usize = 25_000;
 #[derive(Debug, Clone)]
 pub struct SarifOptions {
     artifact: Option<SarifArtifact>,
+    subject: Option<SarifSubject>,
     category: Option<String>,
     include_passes: bool,
     max_results: usize,
@@ -54,11 +62,21 @@ impl Default for SarifOptions {
     fn default() -> Self {
         Self {
             artifact: None,
+            subject: None,
             category: None,
             include_passes: false,
             max_results: DEFAULT_SARIF_MAX_RESULTS,
         }
     }
+}
+
+/// What a compliance run judged, as SARIF states it: the SHA-256 of the
+/// SBOM's bytes, the `sha-256` hash of its artifact in `run.artifacts`, and
+/// the run and subject audit fields (`asOf`, `subject`) as run properties.
+#[derive(Debug, Clone)]
+struct SarifSubject {
+    sha256: String,
+    properties: Vec<(&'static str, audit::SarifValue)>,
 }
 
 impl SarifOptions {
@@ -74,6 +92,24 @@ impl SarifOptions {
     #[must_use]
     pub fn with_artifact(mut self, artifact: SarifArtifact) -> Self {
         self.artifact = Some(artifact);
+        self
+    }
+
+    /// State what a compliance run judged, as `-o json` does: `assessed`,
+    /// the SBOM, and `as_of`, the instant every standard was judged at. The
+    /// run lists the SBOM in `run.artifacts`, at the artifact's location
+    /// when the options have one, with the SHA-256 of its bytes as its
+    /// `sha-256` hash, and its properties gain `asOf` and `subject` (the
+    /// format, spec version and how the document was read). `validate`
+    /// sets it.
+    #[must_use]
+    pub fn with_subject(mut self, assessed: &AssessedSbom<'_>, as_of: DateTime<Utc>) -> Self {
+        let mut fields: Vec<audit::AuditField<'_>> = audit::run_fields(as_of);
+        fields.extend(audit::subject_fields(assessed));
+        self.subject = Some(SarifSubject {
+            sha256: assessed.sha256().to_string(),
+            properties: audit::sarif_properties(&fields),
+        });
         self
     }
 
@@ -143,6 +179,32 @@ impl SarifOptions {
     #[must_use]
     pub const fn max_results(&self) -> usize {
         self.max_results
+    }
+
+    /// The run properties the subject gives (`asOf`, `subject`); none
+    /// without one (see [`Self::with_subject`]).
+    fn subject_properties(&self) -> SarifProperties {
+        SarifProperties(
+            self.subject
+                .as_ref()
+                .map(|subject| subject.properties.clone())
+                .unwrap_or_default(),
+        )
+    }
+
+    /// `run.artifacts`: the SBOM, at the artifact's location when the
+    /// options have one, with the SHA-256 of its bytes; `None` without a
+    /// subject (see [`Self::with_subject`]).
+    fn run_artifacts(&self) -> Option<Vec<SarifRunArtifact>> {
+        let subject = self.subject.as_ref()?;
+        let location = self.artifact.as_ref().map(|a| SarifArtifactLocationJson {
+            uri: a.location().uri().to_string(),
+            uri_base_id: a.location().uri_base_id().map(str::to_string),
+        });
+        Some(vec![SarifRunArtifact {
+            location,
+            hashes: BTreeMap::from([("sha-256", subject.sha256.clone())]),
+        }])
     }
 }
 
@@ -425,21 +487,22 @@ impl ReportGenerator for SarifReporter {
 
         // CRA compliance results for the new SBOM (pre-computed if available).
         let cra_new = config.new_cra_compliance_or_bare(new_sbom);
-        results.extend(compliance_results_to_sarif(
-            &cra_new,
-            Some("New SBOM"),
-            new,
-            &mut new_keys,
-        ));
+        let mut pending: Vec<Pending<'_>> = results.into_iter().map(Pending::built).collect();
+        pending.extend(compliance_results_to_sarif(&cra_new, Some("New SBOM")));
 
         // Declare the rules of the standard checked, plus a descriptor for
         // any emitted ruleId it lacks (a fallback rule), each id once.
-        let rules = rules::complete_rule_catalogue(rules::diff_rules(cra_new.level), &results);
+        let rules = rules::complete_rule_catalogue(rules::diff_rules(cra_new.level), &pending);
         render_log(
             automation_id(config.sarif.category(), format!("sbom-tools/{DIFF_SCOPE}/")),
             rules,
-            results,
+            RunResults {
+                pending,
+                keys: new_keys,
+                artifact: new,
+            },
             uses_srcroot([new]),
+            None,
             None,
             config.sarif.max_results(),
         )
@@ -486,20 +549,21 @@ impl ReportGenerator for SarifReporter {
 
         // Add CRA compliance results (use pre-computed if available)
         let cra_result = config.view_cra_compliance_or_bare(sbom);
-        results.extend(compliance_results_to_sarif(
-            &cra_result,
-            None,
-            artifact,
-            &mut keys,
-        ));
+        let mut pending: Vec<Pending<'_>> = results.into_iter().map(Pending::built).collect();
+        pending.extend(compliance_results_to_sarif(&cra_result, None));
 
         // Same descriptor guarantee as the diff path (see above).
-        let rules = rules::complete_rule_catalogue(rules::view_rules(cra_result.level), &results);
+        let rules = rules::complete_rule_catalogue(rules::view_rules(cra_result.level), &pending);
         render_log(
             automation_id(config.sarif.category(), format!("sbom-tools/{VIEW_SCOPE}/")),
             rules,
-            results,
+            RunResults {
+                pending,
+                keys,
+                artifact,
+            },
             uses_srcroot([artifact]),
+            None,
             None,
             config.sarif.max_results(),
         )
@@ -580,7 +644,7 @@ pub fn generate_ai_readiness_sarif_with(
         .collect();
 
     let properties = SarifRunProperties {
-        applicable: !metrics.is_not_applicable(),
+        applicable: Some(!metrics.is_not_applicable()),
         // Same contract as the compliance N/A surfaces: an N/A run
         // carries its human-readable reason (`AiReadinessMetrics`
         // populates `na_reason` exactly when `not_applicable`).
@@ -589,17 +653,18 @@ pub fn generate_ai_readiness_sarif_with(
         grade: Some(grade.to_string()),
         sbom: Some(sbom_name.to_string()),
         profile: Some(profile.to_string()),
-        compliant: None,
-        not_evaluated: Vec::new(),
-        standards: Vec::new(),
-        suppressed: None,
-        excluded_components: None,
+        ..SarifRunProperties::default()
     };
     render_log(
         automation_id(options.category(), quality_category(profile)),
         rules::aibom_rules(),
-        results,
+        RunResults {
+            pending: results.into_iter().map(Pending::built).collect(),
+            keys,
+            artifact,
+        },
         uses_srcroot([artifact]),
+        None,
         Some(properties),
         options.max_results(),
     )
@@ -619,39 +684,32 @@ pub fn generate_compliance_sarif_with(
     options: &SarifOptions,
 ) -> Result<String, ReportError> {
     let artifact = options.artifact();
-    let mut keys = KeyBook::default();
-    let mut results = compliance_results_to_sarif(result, None, artifact, &mut keys);
+    let mut pending: Vec<Pending<'_>> = compliance_results_to_sarif(result, None).collect();
     if options.include_passes() {
-        results.extend(passed_checks_to_sarif(result, artifact, &mut keys));
+        pending.extend(passed_checks_to_sarif(result));
     }
-    // Surface applicability at run level: a readiness standard that never
-    // evaluated the SBOM must be machine-distinguishable from a pass.
-    let not_applicable_reason = match &result.applicability {
-        crate::quality::Applicability::NotApplicable(reason) => Some(reason.clone()),
-        crate::quality::Applicability::Applicable => None,
-    };
+    // The standard's verdict is the run's: its applicability (a readiness
+    // standard that never evaluated the SBOM must be machine-distinguishable
+    // from a pass), compliance, score and what the run kept out.
     let properties = SarifRunProperties {
-        applicable: result.is_applicable(),
-        not_applicable_reason,
-        overall_score: result.score().map(f32::from),
-        grade: None,
-        sbom: None,
-        profile: Some(result.level.name().to_string()),
-        compliant: None,
-        not_evaluated: SarifNotEvaluated::of(result),
-        standards: Vec::new(),
-        suppressed: nonzero(result.suppressed_count()),
-        excluded_components: nonzero(result.excluded_components),
+        run: options.subject_properties(),
+        verdict: SarifProperties::of(&audit::result_fields(result)),
+        ..SarifRunProperties::default()
     };
-    let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &results);
+    let rules = rules::complete_rule_catalogue(rules::rules_for_standard(result.level), &pending);
     render_log(
         automation_id(
             options.category(),
             standards_category(std::iter::once(result.level)),
         ),
         rules,
-        results,
+        RunResults {
+            pending,
+            keys: KeyBook::default(),
+            artifact,
+        },
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -679,17 +737,14 @@ pub fn generate_multi_compliance_sarif_with(
     // every descriptor twice, which SARIF validators reject) and covers any
     // emitted ruleId the static tables miss. Finding keys name their
     // standard, so one key book serves every standard.
-    let mut keys = KeyBook::default();
     let mut all_rules = Vec::new();
-    let mut all_results = Vec::new();
+    let mut all_results: Vec<Pending<'_>> = Vec::new();
 
     for result in results {
         all_rules.extend(rules::rules_for_standard(result.level));
-        all_results.extend(compliance_results_to_sarif(
-            result, None, artifact, &mut keys,
-        ));
+        all_results.extend(compliance_results_to_sarif(result, None));
         if options.include_passes() {
-            all_results.extend(passed_checks_to_sarif(result, artifact, &mut keys));
+            all_results.extend(passed_checks_to_sarif(result));
         }
     }
     let all_rules = rules::complete_rule_catalogue(all_rules, &all_results);
@@ -700,20 +755,13 @@ pub fn generate_multi_compliance_sarif_with(
     // properties don't fit N standards). The flat per-standard fields stay
     // unset; `applicable` reports whether any standard evaluated the SBOM.
     let properties = SarifRunProperties {
-        applicable: results.iter().any(ComplianceResult::is_applicable),
-        not_applicable_reason: None,
-        overall_score: None,
-        grade: None,
-        sbom: None,
-        profile: None,
-        compliant: None,
-        not_evaluated: Vec::new(),
+        run: options.subject_properties(),
+        applicable: Some(results.iter().any(ComplianceResult::is_applicable)),
         standards: results
             .iter()
-            .map(StandardRunSummary::from_result)
+            .map(|result| SarifProperties::of(&audit::result_fields(result)))
             .collect(),
-        suppressed: None,
-        excluded_components: None,
+        ..SarifRunProperties::default()
     };
     render_log(
         automation_id(
@@ -721,8 +769,13 @@ pub fn generate_multi_compliance_sarif_with(
             standards_category(results.iter().map(|r| r.level)),
         ),
         all_rules,
-        all_results,
+        RunResults {
+            pending: all_results,
+            keys: KeyBook::default(),
+            artifact,
+        },
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -756,13 +809,10 @@ pub fn generate_quality_sarif_with(
 ) -> Result<String, ReportError> {
     let artifact = options.artifact();
     let mut keys = KeyBook::default();
-    let mut results = compliance_results_to_sarif(&report.compliance, None, artifact, &mut keys);
+    let mut results: Vec<Pending<'_>> =
+        compliance_results_to_sarif(&report.compliance, None).collect();
     if options.include_passes() {
-        results.extend(passed_checks_to_sarif(
-            &report.compliance,
-            artifact,
-            &mut keys,
-        ));
+        results.extend(passed_checks_to_sarif(&report.compliance));
     }
     let mut catalogue = rules::rules_for_standard(report.compliance.level);
 
@@ -789,7 +839,7 @@ pub fn generate_quality_sarif_with(
             Some(&mask_digits(&rec.message)),
             None,
         );
-        results.push(sarif_result(
+        results.push(Pending::built(sarif_result(
             rule_id,
             recommendation_level(rec.priority),
             format!(
@@ -804,32 +854,31 @@ pub fn generate_quality_sarif_with(
                 impact: Some(rec.impact),
                 ..SarifResultProperties::default()
             },
-        ));
+        )));
     }
 
     let catalogue = rules::complete_rule_catalogue(catalogue, &results);
-    let not_applicable_reason = match &report.compliance.applicability {
-        crate::quality::Applicability::NotApplicable(reason) => Some(reason.clone()),
-        crate::quality::Applicability::Applicable => None,
-    };
+    // The run names and scores itself (the quality profile and score), and
+    // carries the rest of its embedded standard's verdict.
     let properties = SarifRunProperties {
-        applicable: report.compliance.is_applicable(),
-        not_applicable_reason,
+        run: options.subject_properties(),
         overall_score: Some(report.overall_score),
         grade: Some(report.grade.letter().to_string()),
         sbom: Some(sbom_name.to_string()),
         profile: Some(profile.to_string()),
-        compliant: Some(report.compliance.is_compliant),
-        not_evaluated: SarifNotEvaluated::of(&report.compliance),
-        standards: Vec::new(),
-        suppressed: nonzero(report.compliance.suppressed_count()),
-        excluded_components: nonzero(report.compliance.excluded_components),
+        verdict: SarifProperties::of(&audit::embedded_result_fields(&report.compliance)),
+        ..SarifRunProperties::default()
     };
     render_log(
         automation_id(options.category(), quality_category(profile)),
         catalogue,
-        results,
+        RunResults {
+            pending: results,
+            keys,
+            artifact,
+        },
         uses_srcroot([artifact]),
+        options.run_artifacts(),
         Some(properties),
         options.max_results(),
     )
@@ -850,6 +899,8 @@ struct KeyBook {
 }
 
 impl KeyBook {
+    /// The key of a result: the plain key, else the first numbered one no
+    /// result has taken.
     fn claim(
         &mut self,
         scope: &str,
@@ -857,15 +908,52 @@ impl KeyBook {
         detail: Option<&str>,
         component_id: Option<&str>,
     ) -> String {
+        let key = self.free_key(scope, rule_id, detail, component_id);
+        self.taken.insert(key.clone());
+        key
+    }
+
+    /// The key of a compliance finding made of `parts`: the key itself when
+    /// the run's keys are `distinct` (no key repeats, so none is numbered and
+    /// the book is not kept), else the one [`Self::claim`] gives.
+    fn claim_parts(&mut self, distinct: bool, parts: KeyParts<'_>) -> String {
+        if distinct {
+            parts.key()
+        } else {
+            self.claim(parts.scope, parts.rule_id, parts.detail, parts.component_id)
+        }
+    }
+
+    /// Take the key a result left out by the run's cap would get, so the
+    /// results after it are numbered as if it were kept.
+    fn reserve(
+        &mut self,
+        scope: &str,
+        rule_id: &str,
+        detail: Option<&str>,
+        component_id: Option<&str>,
+    ) {
+        let key = self.free_key(scope, rule_id, detail, component_id);
+        self.taken.insert(key);
+    }
+
+    /// The key [`Self::claim`] gives next for these parts.
+    fn free_key(
+        &self,
+        scope: &str,
+        rule_id: &str,
+        detail: Option<&str>,
+        component_id: Option<&str>,
+    ) -> String {
         let key = compose_finding_key(scope, rule_id, detail, component_id);
-        if self.taken.insert(key.clone()) {
+        if !self.taken.contains(&key) {
             return key;
         }
         let mut n = 2usize;
         loop {
             let numbered = detail.map_or_else(|| format!("#{n}"), |d| format!("{d}#{n}"));
             let key = compose_finding_key(scope, rule_id, Some(&numbered), component_id);
-            if self.taken.insert(key.clone()) {
+            if !self.taken.contains(&key) {
                 return key;
             }
             n += 1;
@@ -1015,19 +1103,63 @@ fn sarif_result(
     }
 }
 
-/// Serialize one run: at most `max_results` results (see
-/// [`cap_results`]), each with its `ruleIndex` set from `rules`, and the
-/// `SRCROOT` base declared when an artifact URI is relative to it.
+/// Serialize one run: at most `max_results` of `results` (see [`Cap`]), each
+/// with its `ruleIndex` set from `rules`, the `SRCROOT` base declared when an
+/// artifact URI is relative to it, and `artifacts` as `run.artifacts`.
+///
+/// The cap is decided before a compliance finding is built, so only the
+/// findings the run keeps are. A kept finding gets the key it gets uncapped:
+/// when a key repeats (see [`keys_are_distinct`]), every finding claims its
+/// key in report order, kept or not.
 fn render_log(
     automation_id: String,
     rules: Vec<SarifRule>,
-    mut results: Vec<SarifResult>,
+    results: RunResults<'_>,
     relative_to_srcroot: bool,
+    artifacts: Option<Vec<SarifRunArtifact>>,
     properties: Option<SarifRunProperties>,
     max_results: usize,
 ) -> Result<String, ReportError> {
-    let total = results.len();
-    let omitted = cap_results(&mut results, max_results);
+    let RunResults {
+        pending,
+        mut keys,
+        artifact,
+    } = results;
+    let total = pending.len();
+    let mut cap = Cap::new(pending.iter().map(Pending::level), max_results);
+    // The finding key is `finding_key(level, finding)`; the key book only
+    // numbers a key that would repeat, which no checker's key does. When no
+    // key repeats, every finding's key is its own, and the book can be left
+    // out.
+    let distinct = keys_are_distinct(&pending);
+    let mut results = Vec::with_capacity(cap.kept_total());
+    for item in pending {
+        if !cap.keeps(item.level()) {
+            // A finding the run leaves out still takes its key, so the
+            // findings after it are numbered as when it is kept.
+            if !distinct && let Some(parts) = item.key_parts() {
+                keys.reserve(parts.scope, parts.rule_id, parts.detail, parts.component_id);
+            }
+            continue;
+        }
+        results.push(match item {
+            Pending::Built(result) => *result,
+            Pending::Violation {
+                result,
+                violation,
+                rule_id,
+                label,
+            } => {
+                let key = keys.claim_parts(distinct, KeyParts::of(result.level, violation));
+                violation_result(result, violation, rule_id, label, key, artifact)
+            }
+            Pending::Pass { result, pass } => {
+                let key = keys.claim_parts(distinct, KeyParts::of(result.level, pass));
+                pass_result(result, pass, key, artifact)
+            }
+        });
+    }
+    let omitted = total - results.len();
     let invocations = (omitted > 0).then(|| {
         let text = format!(
             "{omitted} of {total} results were omitted to keep the run within {max_results} \
@@ -1079,6 +1211,7 @@ fn render_log(
             invocations,
             automation_details: SarifAutomationDetails { id: automation_id },
             original_uri_base_ids,
+            artifacts,
             results,
             properties,
         }],
@@ -1086,37 +1219,51 @@ fn render_log(
     serde_json::to_string_pretty(&sarif).map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
-/// Keep at most `max_results` of `results`; `0` keeps them all. The kept
-/// results are the most severe — every error, then warnings, notes and
-/// `none` (passes) while room is left — and, within the level the cap falls
-/// in, the first in report order; they stay in report order. Returns how
-/// many were omitted.
-fn cap_results(results: &mut Vec<SarifResult>, max_results: usize) -> usize {
-    if max_results == 0 || results.len() <= max_results {
-        return 0;
-    }
-    let mut per_level = [0usize; 4];
-    for result in results.iter() {
-        per_level[severity_rank(result.level)] += 1;
-    }
-    let mut room = max_results;
-    let mut keep = [0usize; 4];
-    for (kept, count) in keep.iter_mut().zip(per_level) {
-        *kept = count.min(room);
-        room -= *kept;
-    }
-    let omitted = results.len() - max_results;
-    let mut kept_so_far = [0usize; 4];
-    results.retain(|result| {
-        let rank = severity_rank(result.level);
-        let keep_it = kept_so_far[rank] < keep[rank];
-        kept_so_far[rank] += usize::from(keep_it);
-        keep_it
-    });
-    omitted
+/// Which results a run keeps under its cap of `max_results` (see
+/// [`SarifOptions::with_max_results`]; `0` keeps them all). The kept results
+/// are the most severe — every error, then warnings, notes and `none`
+/// (passes) while room is left — and, within the level the cap falls in, the
+/// first in report order; they stay in report order.
+struct Cap {
+    /// How many results of each level the run keeps, by [`severity_rank`].
+    keep: [usize; 4],
+    /// How many of each it has kept so far.
+    kept: [usize; 4],
 }
 
-/// The order in which [`cap_results`] keeps levels: error first.
+impl Cap {
+    /// The cap for a run whose results have `levels`, in report order.
+    fn new(levels: impl Iterator<Item = SarifLevel>, max_results: usize) -> Self {
+        let mut per_level = [0usize; 4];
+        for level in levels {
+            per_level[severity_rank(level)] += 1;
+        }
+        let mut keep = per_level;
+        if max_results != 0 && per_level.iter().sum::<usize>() > max_results {
+            let mut room = max_results;
+            for (kept, count) in keep.iter_mut().zip(per_level) {
+                *kept = count.min(room);
+                room -= *kept;
+            }
+        }
+        Self { keep, kept: [0; 4] }
+    }
+
+    /// How many results the run keeps.
+    fn kept_total(&self) -> usize {
+        self.keep.iter().sum()
+    }
+
+    /// Whether the run keeps the next result in report order, at `level`.
+    fn keeps(&mut self, level: SarifLevel) -> bool {
+        let rank = severity_rank(level);
+        let keep = self.kept[rank] < self.keep[rank];
+        self.kept[rank] += usize::from(keep);
+        keep
+    }
+}
+
+/// The order in which [`Cap`] keeps levels: error first.
 const fn severity_rank(level: SarifLevel) -> usize {
     match level {
         SarifLevel::Error => 0,
@@ -1176,154 +1323,270 @@ const fn violation_severity_to_level(severity: ViolationSeverity) -> SarifLevel 
     }
 }
 
+/// A result of a run before the run's cap applies (see [`render_log`]): one
+/// built as found, or a compliance finding, built only if the run keeps it.
+/// A run on a large SBOM can hold far more findings than the cap lets
+/// through, and building a result is most of the cost of writing it.
+enum Pending<'a> {
+    /// A result built as found.
+    Built(Box<SarifResult>),
+    /// One of `result`'s violations, filed under the SARIF rule `rule_id`,
+    /// its message after `label` when there is one.
+    Violation {
+        result: &'a ComplianceResult,
+        violation: &'a Violation,
+        rule_id: &'static str,
+        label: Option<&'a str>,
+    },
+    /// One of the checks `result` passed.
+    Pass {
+        result: &'a ComplianceResult,
+        pass: &'a PassedCheck,
+    },
+}
+
+impl Pending<'_> {
+    /// A result built as found.
+    fn built(result: SarifResult) -> Self {
+        Self::Built(Box::new(result))
+    }
+
+    /// The SARIF rule the result is filed under.
+    fn rule_id(&self) -> &str {
+        match self {
+            Self::Built(result) => &result.rule_id,
+            Self::Violation { rule_id, .. } => rule_id,
+            Self::Pass { pass, .. } => pass.sarif_rule_id(),
+        }
+    }
+
+    /// The result's level.
+    fn level(&self) -> SarifLevel {
+        match self {
+            Self::Built(result) => result.level,
+            Self::Violation { violation, .. } => violation_severity_to_level(violation.severity),
+            Self::Pass { .. } => SarifLevel::None,
+        }
+    }
+
+    /// What a compliance finding's key is made of; `None` for a result built
+    /// as found, which claimed its key already.
+    fn key_parts(&self) -> Option<KeyParts<'_>> {
+        match self {
+            Self::Built(_) => None,
+            Self::Violation {
+                result, violation, ..
+            } => Some(KeyParts::of(result.level, *violation)),
+            Self::Pass { result, pass } => Some(KeyParts::of(result.level, *pass)),
+        }
+    }
+}
+
+/// What a compliance finding's key is made of (see `quality::finding_key`).
+#[derive(Clone, Copy)]
+struct KeyParts<'a> {
+    scope: &'static str,
+    rule_id: &'static str,
+    detail: Option<&'a str>,
+    component_id: Option<&'a str>,
+}
+
+impl<'a> KeyParts<'a> {
+    /// The parts of the key of `finding`, reported under `level`.
+    fn of(level: ComplianceLevel, finding: &'a impl FindingIdentity) -> Self {
+        Self {
+            scope: standard_key(level),
+            rule_id: finding.rule_id(),
+            detail: finding.finding_detail(),
+            component_id: finding.component_id(),
+        }
+    }
+
+    /// The key itself.
+    fn key(self) -> String {
+        compose_finding_key(self.scope, self.rule_id, self.detail, self.component_id)
+    }
+}
+
+/// Whether the compliance findings among `pending` have keys of their own,
+/// as a checker's findings do: told by the keys' 64-bit hashes, since keys
+/// with distinct hashes are distinct. A repeated hash, from a repeated key
+/// or from two keys that collide, sends the run through the key book.
+fn keys_are_distinct(pending: &[Pending<'_>]) -> bool {
+    let mut hashes = HashSet::with_capacity(pending.len());
+    pending
+        .iter()
+        .filter_map(Pending::key_parts)
+        .all(|parts| hashes.insert(xxhash_rust::xxh3::xxh3_64(parts.key().as_bytes())))
+}
+
+/// The results of one run, in report order, before its cap.
+struct RunResults<'a> {
+    /// The results.
+    pending: Vec<Pending<'a>>,
+    /// The finding keys the built results claimed. The compliance findings
+    /// are keyed as [`render_log`] reaches them, in report order: their keys
+    /// start with a standard, never with the scope of a built result, so no
+    /// built result's key ever numbers one of theirs or the reverse.
+    keys: KeyBook,
+    /// The SBOM file the results point into.
+    artifact: Option<&'a SarifArtifact>,
+}
+
 /// The SARIF results of one compliance result: one per violation, at the
 /// line of the component it is about (or the document's), keyed by its
-/// finding identity (`quality::finding_key`).
-fn compliance_results_to_sarif(
-    result: &ComplianceResult,
-    label: Option<&str>,
-    artifact: Option<&SarifArtifact>,
-    keys: &mut KeyBook,
-) -> Vec<SarifResult> {
-    let prefix = label.map(|l| format!("{l} - ")).unwrap_or_default();
+/// finding identity (`quality::finding_key`), with the violation's audit
+/// fields as properties (`reports::audit`). [`render_log`] builds each one
+/// the run keeps (see [`violation_result`]).
+fn compliance_results_to_sarif<'a>(
+    result: &'a ComplianceResult,
+    label: Option<&'a str>,
+) -> impl Iterator<Item = Pending<'a>> {
     result
         .violations
         .iter()
-        .map(|v| {
-            let element = v.element.as_deref().unwrap_or("unknown");
-            // The externally-visible SARIF rule ID comes from the rule
-            // registry keyed by the violation's stable `rule_id` — never from
-            // re-parsing the human-readable requirement string. Every check
-            // is its own rule; a violation built outside the checkers carries
-            // the `SBOM-CRA-GENERAL` default or an unregistered key, and is
-            // re-bucketed onto the running standard's fallback rule so
-            // NTIA/quality/... findings never surface under a CRA identity.
-            let is_unmapped = v.rule_id == "SBOM-CRA-GENERAL" || rule_meta(v.rule_id).is_none();
-            let sarif_rule_id = if is_unmapped {
-                generic_rule_id_for_level(result.level)
-            } else {
-                v.sarif_rule_id()
-            };
-            // Fallback violations carry no standard_refs (the generic CRA
-            // bucket has none); resolve them from the family-generic rule so
-            // fallback results still carry `properties.standardIds` when the
-            // running standard is known.
-            let fallback_refs: Vec<StandardRef>;
-            let refs: &[StandardRef] = if is_unmapped && v.standard_refs.is_empty() {
-                fallback_refs = rule_meta(sarif_rule_id)
-                    .map(|m| {
-                        m.refs
-                            .iter()
-                            .map(|(kind, id)| StandardRef::new(*kind, *id))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                &fallback_refs
-            } else {
-                &v.standard_refs
-            };
-            let standard_ids: Vec<String> = refs
-                .iter()
-                .map(|sr| format!("{}:{}", sarif_standard_label(sr.standard), sr.id))
-                .collect();
-            let standard_help_uris: Vec<String> =
-                refs.iter().filter_map(|sr| sr.help_uri.clone()).collect();
-            // The finding key is `finding_key(level, v)`; the key book only
-            // numbers a key that would repeat.
-            let key = keys.claim(
-                standard_key(result.level),
-                v.rule_id,
-                v.finding_detail.as_deref(),
-                v.component_id.as_deref(),
-            );
-            sarif_result(
-                sarif_rule_id,
-                violation_severity_to_level(v.severity),
-                format!(
-                    "{}{}: {} (Requirement: {}) [Element: {}]",
-                    prefix,
-                    result.level.name(),
-                    v.message,
-                    v.requirement,
-                    element
-                ),
-                key,
-                locate(artifact, v.component_id.as_deref()),
-                SarifResultProperties {
-                    standard_ids,
-                    standard_help_uris,
-                    component_id: v.component_id.clone(),
-                    affected: v.counts.map(|c| c.affected),
-                    total: v.counts.map(|c| c.total),
-                    deadline: v.deadline.as_ref().map(|d| d.date.to_string()),
-                    deadline_source: v.deadline.as_ref().map(|d| d.source.clone()),
-                    field: v.field.clone(),
-                    observed: v.observed.clone(),
-                    default_severity: v.severity_override.map(|o| o.default.name().to_string()),
-                    severity_source: v.severity_override.map(|o| o.source.name().to_string()),
-                    ..SarifResultProperties::default()
-                },
-            )
+        .map(move |violation| Pending::Violation {
+            result,
+            violation,
+            rule_id: violation_rule_id(result.level, violation),
+            label,
         })
-        .collect()
+}
+
+/// Whether `v`'s rule is no rule of the registry: a violation built outside
+/// the checkers, with the `SBOM-CRA-GENERAL` default or an unregistered key.
+fn is_unmapped(v: &Violation) -> bool {
+    v.rule_id == "SBOM-CRA-GENERAL" || rule_meta(v.rule_id).is_none()
+}
+
+/// The SARIF rule a violation reported under `level` is filed under. The
+/// externally-visible SARIF rule ID comes from the rule registry keyed by
+/// the violation's stable `rule_id` — never from re-parsing the
+/// human-readable requirement string. Every check is its own rule; an
+/// unmapped violation (see [`is_unmapped`]) is re-bucketed onto the running
+/// standard's fallback rule so NTIA/quality/... findings never surface under
+/// a CRA identity.
+fn violation_rule_id(level: ComplianceLevel, v: &Violation) -> &'static str {
+    if is_unmapped(v) {
+        generic_rule_id_for_level(level)
+    } else {
+        v.sarif_rule_id()
+    }
+}
+
+/// The result of `v`, one of `result`'s violations, filed under `rule_id`
+/// and keyed by `key` (see [`compliance_results_to_sarif`]).
+fn violation_result(
+    result: &ComplianceResult,
+    v: &Violation,
+    rule_id: &'static str,
+    label: Option<&str>,
+    key: String,
+    artifact: Option<&SarifArtifact>,
+) -> SarifResult {
+    let prefix = label.map(|l| format!("{l} - ")).unwrap_or_default();
+    let element = v.element.as_deref().unwrap_or("unknown");
+    // Fallback violations carry no standard_refs (the generic CRA bucket has
+    // none); resolve them from the family-generic rule so fallback results
+    // still carry `properties.standardIds` when the running standard is
+    // known.
+    let fallback_refs: Vec<StandardRef>;
+    let refs: &[StandardRef] = if is_unmapped(v) && v.standard_refs.is_empty() {
+        fallback_refs = rule_meta(rule_id)
+            .map(|m| {
+                m.refs
+                    .iter()
+                    .map(|(kind, id)| StandardRef::new(*kind, *id))
+                    .collect()
+            })
+            .unwrap_or_default();
+        &fallback_refs
+    } else {
+        &v.standard_refs
+    };
+    let standard_ids: Vec<String> = refs
+        .iter()
+        .map(|sr| format!("{}:{}", sarif_standard_label(sr.standard), sr.id))
+        .collect();
+    let standard_help_uris: Vec<String> =
+        refs.iter().filter_map(|sr| sr.help_uri.clone()).collect();
+    sarif_result(
+        rule_id,
+        violation_severity_to_level(v.severity),
+        format!(
+            "{}{}: {} (Requirement: {}) [Element: {}]",
+            prefix,
+            result.level.name(),
+            v.message,
+            v.requirement,
+            element
+        ),
+        key,
+        locate(artifact, v.component_id.as_deref()),
+        SarifResultProperties {
+            standard_ids,
+            standard_help_uris,
+            audit: SarifProperties::of(&audit::violation_fields(result.level, v)),
+            ..SarifResultProperties::default()
+        },
+    )
 }
 
 /// One result per check `result` passed, emitted only under
 /// [`SarifOptions::include_passes`]: `kind: "pass"` at level `none` (SARIF
 /// 2.1.0 §3.27.10: a result whose kind is not `fail` has level `none`), under
-/// the pass-only rule, with the location, fingerprints and properties a
-/// violation's result carries. Passes and violations share one key space
-/// (a rule reports one or the other) and one key book, so no pass shares a
-/// violation's fingerprint.
-fn passed_checks_to_sarif(
-    result: &ComplianceResult,
-    artifact: Option<&SarifArtifact>,
-    keys: &mut KeyBook,
-) -> Vec<SarifResult> {
+/// the pass-only rule, with the location and fingerprints a violation's
+/// result carries and the pass's own audit fields as properties. Passes and
+/// violations share one key space (a rule reports one or the other) and one
+/// key book, so no pass shares a violation's fingerprint. [`render_log`]
+/// builds each one the run keeps (see [`pass_result`]).
+fn passed_checks_to_sarif(result: &ComplianceResult) -> impl Iterator<Item = Pending<'_>> {
     result
         .passed
         .iter()
-        .map(|pass| {
-            let element = pass.element.as_deref().unwrap_or("unknown");
-            let standard_ids: Vec<String> = pass
-                .standard_refs
-                .iter()
-                .map(|sr| format!("{}:{}", sarif_standard_label(sr.standard), sr.id))
-                .collect();
-            let standard_help_uris: Vec<String> = pass
-                .standard_refs
-                .iter()
-                .filter_map(|sr| sr.help_uri.clone())
-                .collect();
-            let key = keys.claim(
-                standard_key(result.level),
-                pass.rule_id,
-                pass.finding_detail.as_deref(),
-                pass.component_id.as_deref(),
-            );
-            let mut sarif = sarif_result(
-                pass.sarif_rule_id(),
-                SarifLevel::None,
-                format!(
-                    "{}: {} (Requirement: {}) [Element: {}]",
-                    result.level.name(),
-                    pass.message,
-                    pass.requirement,
-                    element
-                ),
-                key,
-                locate(artifact, pass.component_id.as_deref()),
-                SarifResultProperties {
-                    standard_ids,
-                    standard_help_uris,
-                    component_id: pass.component_id.clone(),
-                    ..SarifResultProperties::default()
-                },
-            );
-            sarif.kind = Some(SarifKind::Pass);
-            sarif
-        })
-        .collect()
+        .map(move |pass| Pending::Pass { result, pass })
+}
+
+/// The result of `pass`, one of the checks `result` passed, keyed by `key`
+/// (see [`passed_checks_to_sarif`]).
+fn pass_result(
+    result: &ComplianceResult,
+    pass: &PassedCheck,
+    key: String,
+    artifact: Option<&SarifArtifact>,
+) -> SarifResult {
+    let element = pass.element.as_deref().unwrap_or("unknown");
+    let standard_ids: Vec<String> = pass
+        .standard_refs
+        .iter()
+        .map(|sr| format!("{}:{}", sarif_standard_label(sr.standard), sr.id))
+        .collect();
+    let standard_help_uris: Vec<String> = pass
+        .standard_refs
+        .iter()
+        .filter_map(|sr| sr.help_uri.clone())
+        .collect();
+    let mut sarif = sarif_result(
+        pass.sarif_rule_id(),
+        SarifLevel::None,
+        format!(
+            "{}: {} (Requirement: {}) [Element: {}]",
+            result.level.name(),
+            pass.message,
+            pass.requirement,
+            element
+        ),
+        key,
+        locate(artifact, pass.component_id.as_deref()),
+        SarifResultProperties {
+            standard_ids,
+            standard_help_uris,
+            audit: SarifProperties::of(&audit::pass_fields(result.level, pass)),
+            ..SarifResultProperties::default()
+        },
+    );
+    sarif.kind = Some(SarifKind::Pass);
+    sarif
 }
 
 /// Compact, hyphen-safe label for a `StandardKind` used in SARIF
@@ -1368,15 +1631,30 @@ struct SarifReport {
 #[serde(rename_all = "camelCase")]
 struct SarifRun {
     tool: SarifTool,
-    /// Present only when results were omitted (see [`cap_results`]).
+    /// Present only when results were omitted (see [`Cap`]).
     #[serde(skip_serializing_if = "Option::is_none")]
     invocations: Option<Vec<SarifInvocation>>,
     automation_details: SarifAutomationDetails,
     #[serde(skip_serializing_if = "Option::is_none")]
     original_uri_base_ids: Option<BTreeMap<&'static str, SarifBaseDescription>>,
+    /// The SBOM a compliance run judged, with its SHA-256 (see
+    /// [`SarifOptions::with_subject`]); absent without one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    artifacts: Option<Vec<SarifRunArtifact>>,
     results: Vec<SarifResult>,
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<SarifRunProperties>,
+}
+
+/// A `run.artifacts[]` entry: the SBOM file, where results point when the
+/// run has its location, and the SHA-256 of its bytes under the
+/// algorithm's IANA name, `sha-256`.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SarifRunArtifact {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    location: Option<SarifArtifactLocationJson>,
+    hashes: BTreeMap<&'static str, String>,
 }
 
 /// `run.invocations[]`: the run succeeded, and its notifications say what
@@ -1412,141 +1690,79 @@ struct SarifBaseDescription {
 /// Run-level properties shared by every sbom-tools SARIF surface (`validate`
 /// single- and multi-standard, `quality`, and AI-readiness runs).
 ///
-/// Every `Option`/`Vec` field is *omitted* when absent (`skip_serializing_if`)
-/// — never emitted as `null`/`[]` — so machine consumers must treat a missing
-/// key as "no value" and check `applicable` before reading any verdict field.
-/// In particular, a run without an `overallScore` key is an unscored
-/// (not-applicable) run, not a score of 0.
-#[derive(Serialize)]
+/// A compliance standard's verdict is a set of audit fields
+/// (`reports::audit::result_fields`): the run's own properties for one
+/// standard (`verdict`), one `standards[]` entry each for several, and for a
+/// `quality` run the verdict of its embedded standard beside the quality
+/// score. Every field is *omitted* when absent — never emitted as
+/// `null`/`[]` — so machine consumers must treat a missing key as "no value"
+/// and check `applicable` before reading any verdict field. In particular, a
+/// run without an `overallScore` key is an unscored (not-applicable) run,
+/// not a score of 0.
+#[derive(Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 struct SarifRunProperties {
-    /// Whether the evaluated standard/profile actually applied to the SBOM.
-    /// For multi-standard runs: whether at least one standard applied (the
-    /// per-standard verdicts live in `standards`).
-    applicable: bool,
-    /// Human-readable reason when `applicable` is false; omitted otherwise.
+    /// What the run judged (see [`SarifOptions::with_subject`]): `asOf`,
+    /// the instant, and `subject`, the SBOM's summary. Empty without one.
+    #[serde(flatten)]
+    run: SarifProperties,
+    /// Whether the AI-readiness profile applied to the SBOM; for a
+    /// multi-standard run, whether at least one standard applied (each
+    /// standard's own verdict is in `standards`). A run with one standard
+    /// says it in its verdict.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    applicable: Option<bool>,
+    /// Human-readable reason when an AI-readiness run's `applicable` is
+    /// false; omitted otherwise.
     #[serde(skip_serializing_if = "Option::is_none")]
     not_applicable_reason: Option<String>,
-    /// Omitted when the run was not scored. Surface-dependent semantics: on
-    /// `quality` runs this is the weighted 0-100 quality score, while on
-    /// `validate` compliance runs it is the standard's compliance score
-    /// (`ComplianceResult::score`) — the two are not comparable.
+    /// The weighted 0-100 quality score of a `quality` or AI-readiness run.
+    /// A `validate` run with one standard has the standard's compliance
+    /// score (`ComplianceResult::score`) under the same name in its verdict;
+    /// the two are not comparable.
     #[serde(skip_serializing_if = "Option::is_none")]
     overall_score: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     grade: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     sbom: Option<String>,
-    /// CLI profile name on `quality` runs; standard display name on
-    /// `validate` runs. Omitted on multi-standard runs (see `standards`).
+    /// The CLI profile of a `quality` or AI-readiness run. A `validate` run
+    /// with one standard has the standard's display name under the same
+    /// name in its verdict.
     #[serde(skip_serializing_if = "Option::is_none")]
     profile: Option<String>,
-    /// Compliance verdict for the embedded standard (quality reports only).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    compliant: Option<bool>,
-    /// The checks the standard did not evaluate on the SBOM, with the
-    /// reason (`ComplianceResult::evaluated`). Single-standard and quality
-    /// runs only; a multi-standard run lists them per standard.
+    /// The verdict of the run's one standard, flattened into the run's
+    /// properties: `validate` with one standard, and `quality` (less the
+    /// standard's name and score, which the run's own fields replace).
+    #[serde(flatten)]
+    verdict: SarifProperties,
+    /// One verdict per checked standard of a multi-standard compliance
+    /// run, so a not-applicable standard stays machine-distinguishable from
+    /// a pass when several standards share one run.
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    not_evaluated: Vec<SarifNotEvaluated>,
-    /// Per-standard summaries for multi-standard compliance runs — one entry
-    /// per checked standard, so a not-applicable standard stays
-    /// machine-distinguishable from a pass when several standards share one
-    /// run. Omitted on single-standard and quality runs, whose verdict rides
-    /// on the flat fields above.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    standards: Vec<StandardRunSummary>,
-    /// Findings the run's rule settings turned off (`--rule RULE=off`), which
-    /// report no result. Omitted when none, and on multi-standard runs,
-    /// which carry it per standard in `standards`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    suppressed: Option<usize>,
-    /// Components the package rules left out for their excluded scope.
-    /// Omitted when none, and on multi-standard runs, which carry it per
-    /// standard in `standards`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    excluded_components: Option<usize>,
+    standards: Vec<SarifProperties>,
 }
 
-/// One `properties.standards` entry of a multi-standard compliance run.
-/// Field semantics mirror the flat fields a single-standard run carries.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct StandardRunSummary {
-    /// Standard display name (the value the single-standard run's `profile`
-    /// property carries).
-    profile: String,
-    /// Whether the standard actually evaluated the SBOM.
-    applicable: bool,
-    /// Human-readable N/A reason; omitted for applicable standards.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    not_applicable_reason: Option<String>,
-    /// Compliance score (0-100); omitted when the standard did not evaluate
-    /// the SBOM.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    overall_score: Option<f32>,
-    /// Raw verdict. Stays `true` for not-applicable standards by the
-    /// documented `ComplianceResult` contract — check `applicable` first.
-    compliant: bool,
-    /// Findings the run's rule settings turned off; omitted when none.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    suppressed: Option<usize>,
-    /// Components the package rules left out for their excluded scope;
-    /// omitted when none.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    excluded_components: Option<usize>,
-    /// The checks the standard did not evaluate on the SBOM; omitted when
-    /// it evaluated them all.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    not_evaluated: Vec<SarifNotEvaluated>,
-}
+/// Properties written in the order given: the audit fields of a compliance
+/// finding or verdict, by their SARIF names (see `reports::audit`).
+#[derive(Default)]
+struct SarifProperties(Vec<(&'static str, audit::SarifValue)>);
 
-/// One `notEvaluated` entry of the run properties: a check a standard did
-/// not evaluate on the SBOM, and why — mirrors a `RuleEvaluation` of
-/// `ComplianceResult::evaluated`. The rule is one the run declares in
-/// `rules[]`.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SarifNotEvaluated {
-    rule_id: &'static str,
-    reason: String,
-}
-
-impl SarifNotEvaluated {
-    fn of(result: &ComplianceResult) -> Vec<Self> {
-        result
-            .evaluated
-            .iter()
-            .map(|entry| Self {
-                rule_id: entry.rule_id,
-                reason: entry.reason.clone(),
-            })
-            .collect()
+impl SarifProperties {
+    fn of(fields: &[audit::AuditField<'_>]) -> Self {
+        Self(audit::sarif_properties(fields))
     }
 }
 
-impl StandardRunSummary {
-    fn from_result(result: &ComplianceResult) -> Self {
-        let not_applicable_reason = match &result.applicability {
-            crate::quality::Applicability::NotApplicable(reason) => Some(reason.clone()),
-            crate::quality::Applicability::Applicable => None,
-        };
-        Self {
-            profile: result.level.name().to_string(),
-            applicable: result.is_applicable(),
-            not_applicable_reason,
-            overall_score: result.score().map(f32::from),
-            compliant: result.is_compliant,
-            not_evaluated: SarifNotEvaluated::of(result),
-            suppressed: nonzero(result.suppressed_count()),
-            excluded_components: nonzero(result.excluded_components),
+impl Serialize for SarifProperties {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut map = serializer.serialize_map(Some(self.0.len()))?;
+        for (name, value) in &self.0 {
+            map.serialize_entry(name, value)?;
         }
+        map.end()
     }
-}
-
-/// `count`, or `None` when it is zero (an omitted property).
-const fn nonzero(count: usize) -> Option<usize> {
-    if count == 0 { None } else { Some(count) }
 }
 
 #[derive(Serialize)]
@@ -1631,11 +1847,13 @@ struct SarifResultProperties {
     /// Standard reference IDs in the form `<standard>:<id>`
     /// (e.g., `prEN-40000-1-3:PRE-7-RQ-07`, `CRA:Art. 13(8)`).
     /// Plural to match SARIF `properties` extensibility convention.
+    /// Deprecated in v0.4.0 and removed in v0.5.0: a compliance result
+    /// carries its references as `-o json` does, in `standardRefs`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     standard_ids: Vec<String>,
-    /// Canonical URLs for each standard the violation references — lifted
-    /// from `StandardRef::help_uri`. Order parallels `standard_ids`. Empty
-    /// when none of the references have a canonical home.
+    /// The canonical URLs of the references that have one, in reference
+    /// order — lifted from `StandardRef::help_uri`. Empty when none of the
+    /// references has a canonical home. Deprecated with `standardIds`.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     standard_help_uris: Vec<String>,
     /// Recommendation priority (1 = highest) — quality recommendations only.
@@ -1647,44 +1865,12 @@ struct SarifResultProperties {
     /// Estimated score impact — quality recommendations only.
     #[serde(skip_serializing_if = "Option::is_none")]
     impact: Option<f32>,
-    /// Canonical id of the offending component (compliance results only) —
-    /// mirrors `Violation::component_id`, the machine-readable join key back
-    /// to the SBOM component. Absent for document-level/aggregate findings.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    component_id: Option<String>,
-    /// Affected-component count for aggregate compliance findings — mirrors
-    /// `Violation::counts.affected` (the numerator printed in the message).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    affected: Option<usize>,
-    /// Total-component count for aggregate compliance findings — mirrors
-    /// `Violation::counts.total` (the message's denominator).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    total: Option<usize>,
-    /// The migration milestone (`YYYY-MM-DD`) a crypto finding is judged
-    /// against under `--pqc-mode deadline` — mirrors `Violation::deadline`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    deadline: Option<String>,
-    /// The schedule that sets [`Self::deadline`], e.g. `NIST IR 8547 Table
-    /// 4`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    deadline_source: Option<String>,
-    /// Where the checked field lives in the SBOM's format, e.g.
-    /// `components[].supplier.name` — mirrors `Violation::field`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    field: Option<String>,
-    /// The value the check read, as read and cut to 200 characters —
-    /// mirrors `Violation::observed`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    observed: Option<String>,
-    /// The severity the check gave a compliance finding whose rule the run
-    /// sets (`--rule`): mirrors `Violation::default_severity`. The result's
-    /// `level` follows the severity the setting gives it.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    default_severity: Option<String>,
-    /// Where that setting comes from (`config` or `cli`): mirrors
-    /// `Violation::severity_source`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    severity_source: Option<String>,
+    /// The audit fields of a compliance finding, by their SARIF names, the
+    /// same `-o json` and `-o oscal-json` carry (`reports::audit`): its
+    /// rule, severity, component, counts, deadline, field and observed value,
+    /// references, remediation and help URI. Empty for every other result.
+    #[serde(flatten)]
+    audit: SarifProperties,
 }
 
 #[derive(Serialize)]
@@ -1823,47 +2009,103 @@ mod tests {
         )
     }
 
-    fn messages(results: &[SarifResult]) -> Vec<&str> {
-        results.iter().map(|r| r.message.text.as_str()).collect()
+    /// A run of `results`, all built, with no key claimed yet.
+    fn built(results: Vec<SarifResult>) -> RunResults<'static> {
+        RunResults {
+            pending: results.into_iter().map(Pending::built).collect(),
+            keys: KeyBook::default(),
+            artifact: None,
+        }
+    }
+
+    /// The positions of the results at `levels` that a cap of `max_results`
+    /// keeps.
+    fn kept(levels: &[SarifLevel], max_results: usize) -> Vec<usize> {
+        let mut cap = Cap::new(levels.iter().copied(), max_results);
+        let kept: Vec<usize> = (0..levels.len())
+            .filter(|n| cap.keeps(levels[*n]))
+            .collect();
+        assert_eq!(cap.kept_total(), kept.len(), "max {max_results}");
+        kept
     }
 
     #[test]
     fn the_cap_keeps_the_most_severe_results_in_report_order() {
         use SarifLevel::{Error, None, Note, Warning};
         let levels = [Note, Error, None, Warning, Error, Note, Warning, Error];
-        let run = || -> Vec<SarifResult> {
-            levels
-                .iter()
-                .enumerate()
-                .map(|(n, level)| result_at(*level, n))
-                .collect()
-        };
 
         // Room for every error and one warning: the first warning in
         // report order, and the kept results stay in report order.
-        let mut results = run();
-        assert_eq!(cap_results(&mut results, 4), 4);
-        assert_eq!(
-            messages(&results),
-            ["result 1", "result 3", "result 4", "result 7"]
-        );
+        assert_eq!(kept(&levels, 4), [1, 3, 4, 7]);
 
         // Room for errors, warnings and one note; `none` goes first.
-        let mut results = run();
-        assert_eq!(cap_results(&mut results, 6), 2);
-        assert_eq!(
-            messages(&results),
-            [
-                "result 0", "result 1", "result 3", "result 4", "result 6", "result 7"
-            ]
-        );
+        assert_eq!(kept(&levels, 6), [0, 1, 3, 4, 6, 7]);
 
         // No cap, or a cap the run fits in, keeps everything.
         for cap in [0, 8, 9] {
-            let mut results = run();
-            assert_eq!(cap_results(&mut results, cap), 0, "cap {cap}");
-            assert_eq!(results.len(), 8, "cap {cap}");
+            assert_eq!(kept(&levels, cap), [0, 1, 2, 3, 4, 5, 6, 7], "cap {cap}");
         }
+    }
+
+    /// A capped run builds only the compliance findings it keeps, and gives
+    /// each the key it gets uncapped: a finding left out still takes its key,
+    /// so a later finding with the same key is numbered as before.
+    #[test]
+    fn a_capped_run_keys_its_findings_as_an_uncapped_one() {
+        let finding = |severity: ViolationSeverity| Violation {
+            severity,
+            category: crate::quality::ViolationCategory::SupplierInfo,
+            message: format!("{severity:?} finding"),
+            element: None,
+            component_id: Some("pkg:npm/a@1".to_string()),
+            finding_detail: Some("CVE-1".to_string()),
+            counts: None,
+            deadline: None,
+            field: None,
+            observed: None,
+            requirement: "requirement".to_string(),
+            rule_id: "SBOM-NTIA-SUPPLIER",
+            severity_override: None,
+            standard_refs: std::borrow::Cow::Borrowed(&[]),
+            remediation: None,
+        };
+        // One key twice: the warning claims it first, so the error, which a
+        // cap of one keeps alone, is numbered `#2` either way.
+        let result = ComplianceResult::new(
+            ComplianceLevel::NtiaMinimum,
+            vec![
+                finding(ViolationSeverity::Warning),
+                finding(ViolationSeverity::Error),
+            ],
+        );
+        let keys = |max_results: usize| -> Vec<String> {
+            let sarif = generate_compliance_sarif_with(
+                &result,
+                &SarifOptions::new().with_max_results(max_results),
+            )
+            .expect("serializes");
+            let doc: serde_json::Value = serde_json::from_str(&sarif).expect("JSON");
+            doc["runs"][0]["results"]
+                .as_array()
+                .expect("results")
+                .iter()
+                .map(|r| {
+                    r["properties"]["findingKey"]
+                        .as_str()
+                        .expect("key")
+                        .to_string()
+                })
+                .collect()
+        };
+        let uncapped = keys(0);
+        assert_eq!(
+            uncapped,
+            [
+                "ntia|SBOM-NTIA-SUPPLIER:CVE-1|pkg:npm/a@1",
+                "ntia|SBOM-NTIA-SUPPLIER:CVE-1#2|pkg:npm/a@1"
+            ]
+        );
+        assert_eq!(keys(1), [uncapped[1].clone()]);
     }
 
     #[test]
@@ -1872,8 +2114,9 @@ mod tests {
         let sarif = render_log(
             "sbom-tools/test/".to_string(),
             Vec::new(),
-            results,
+            built(results),
             false,
+            None,
             None,
             2,
         )
@@ -1894,8 +2137,9 @@ mod tests {
         let sarif = render_log(
             "sbom-tools/test/".to_string(),
             Vec::new(),
-            results,
+            built(results),
             false,
+            None,
             None,
             DEFAULT_SARIF_MAX_RESULTS,
         )
@@ -1932,6 +2176,7 @@ mod passed_check_tests {
     use super::*;
     use crate::quality::{PassedCheck, StandardKind};
     use serde_json::Value;
+    use std::borrow::Cow;
 
     /// A NIST PQC result with one passed check and no violation.
     fn pqc_with_one_pass() -> ComplianceResult {
@@ -1943,7 +2188,7 @@ mod passed_check_tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: vec![StandardRef::new(StandardKind::NistPqc, "FIPS 203/204/205")],
+            standard_refs: vec![StandardRef::new(StandardKind::NistPqc, "FIPS 203/204/205")].into(),
         }])
     }
 
@@ -2023,7 +2268,7 @@ mod passed_check_tests {
                 rule_id: "SBOM-NTIA-AUTHOR",
                 component_id: None,
                 counts: None,
-                standard_refs: Vec::new(),
+                standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
                 finding_detail: None,
                 severity_override: None,

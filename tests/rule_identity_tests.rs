@@ -422,7 +422,8 @@ fn oscal_emits_one_result_per_standard_with_verdict_and_applicability() {
         .as_array()
         .expect("results");
     assert_eq!(entries.len(), 2, "one results[] entry per standard");
-    for (entry, expected_id) in entries.iter().zip(["NtiaMinimum", "CraPhase2"]) {
+    // The standard is its canonical `--standard` value, as in -o json.
+    for (entry, expected_id) in entries.iter().zip(["ntia", "cra"]) {
         let props = entry["props"].as_array().expect("props");
         let get = |name: &str| {
             props
@@ -445,6 +446,10 @@ fn oscal_emits_one_result_per_standard_with_verdict_and_applicability() {
                 .as_str()
                 .expect("title")
                 .contains("compliance roll-up")
+        );
+        assert_eq!(
+            findings[0]["target"]["target-id"],
+            format!("{expected_id}-compliance")
         );
     }
 }

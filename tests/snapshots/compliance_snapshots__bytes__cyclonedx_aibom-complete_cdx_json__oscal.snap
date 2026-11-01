@@ -26,6 +26,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "1.6"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "aibom-complete.cdx.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "3"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "title": "aibom-complete-app (CycloneDX 1.6 SBOM)",
@@ -52,18 +77,18 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "satisfied"
               },
-              "target-id": "euaiact-compliance",
+              "target-id": "ai-act-compliance",
               "type": "objective-id"
             },
             "title": "EU AI Act Annex IV Readiness compliance roll-up",
-            "uuid": "1a84c25c-05c3-56d8-a717-7fe2f7ef9630"
+            "uuid": "a8787af8-5e38-572b-ae70-d2551bcd2e07"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "EuAiAct"
+            "value": "ai-act"
           },
           {
             "name": "standard-name",
@@ -116,7 +141,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EU AI Act Annex IV Readiness",
-        "uuid": "d7aa113e-0edc-5302-a29b-2c81e31797cd"
+        "uuid": "c610c97d-abc2-5f29-a271-d6f6fe6df596"
       },
       {
         "description": "Validation results for BSI/G7 SBOM-for-AI Minimum Elements Readiness, derived only from the supplied SBOM.",
@@ -127,19 +152,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "bsisbomforai-compliance",
+              "target-id": "bsi-ai-compliance",
               "type": "objective-id"
             },
             "title": "BSI/G7 SBOM-for-AI Minimum Elements Readiness compliance roll-up",
-            "uuid": "9f266429-d2a2-5d7c-807f-f35d7d3ff6e5"
+            "uuid": "0e2e453a-deb9-5a6d-8282-f9ccae281f68"
           },
           {
             "description": "\\[BSI-AI\\] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "cdbaec54-c888-5826-8374-1295a7456296"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:b230137e90a4e287"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-META-SIGNATURE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "8e3f6f16-3644-5e2e-b415-927935a992e5"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\>.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -148,15 +192,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-META-SIGNATURE",
-            "uuid": "70809126-e8b5-56cf-a087-a42d4d147741"
+            "uuid": "1737bbf7-6db7-5056-93cd-39e91d49ae44"
           },
           {
             "description": "\\[BSI-AI\\] System-Level readiness: no producer/supplier of the AI system is declared",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "6924e5f2-5b37-51b5-a1bd-11916b9186e1"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1783ac537445c03a"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-SYS-PRODUCER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "da921d2c-f5e5-5049-a245-669d3c3dcb88"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -165,15 +228,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-SYS-PRODUCER",
-            "uuid": "d1d31c63-f0f6-5120-8c87-5db101663ca3"
+            "uuid": "63b88a55-665c-52b8-a0c7-753fa411045e"
           },
           {
             "description": "\\[BSI-AI\\] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "525c37a1-358b-54f1-b66f-a70aed80c5a0"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:d7ca27dca398f343"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-SYS-DATAFLOW|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a5ff6332-f086-5c09-9af2-7d3198faf5f2"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -182,15 +264,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-SYS-DATAFLOW",
-            "uuid": "49b9ea7e-f0df-595b-b140-b3326759f129"
+            "uuid": "410f8dc9-aced-5216-ad35-92e14fae7fb3"
           },
           {
             "description": "\\[BSI-AI\\] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "947943a3-8c7a-5146-a367-39c948dfa908"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f8fa5c15054a729a"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-MODEL-IDENTIFIER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "78775b70-63b6-5781-b057-91b250f955f8"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license. CycloneDX: set components\\[\\].purl (or cpe, or swhid\\[\\]).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -199,15 +300,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-MODEL-IDENTIFIER",
-            "uuid": "96fc4be6-1d78-57a5-95d4-36e28a7eeffa"
+            "uuid": "92a010dd-02f7-5406-9d00-f3546c09e609"
           },
           {
             "description": "\\[BSI-AI\\] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "03227228-0eed-5905-b0c6-d0eb36005dd9"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:b1de68bec48da482"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-MODEL-LICENSE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "9e4c1bd2-40ae-54a2-b4a0-8d83113376e9"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license. CycloneDX: add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -216,15 +336,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-MODEL-LICENSE",
-            "uuid": "c37ecc05-740b-5a5d-9c74-ef910657da3c"
+            "uuid": "2b75cef8-9c78-5d35-99ee-8f35ecb64476"
           },
           {
             "description": "\\[BSI-AI\\] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "85853d82-9510-5f9e-a20b-331fe1de743e"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1684f9587b9bb310"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-DATASET-IDENTIFIER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "53697919-c3cf-56c6-b781-0d36b8fa4487"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: set components\\[\\].purl (or cpe, or swhid\\[\\]).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -233,15 +372,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-DATASET-IDENTIFIER",
-            "uuid": "761e5cda-b347-5e6a-9de5-a7bebe541323"
+            "uuid": "5ba03a13-6fc2-58c6-a1b7-91d1354afabe"
           },
           {
             "description": "\\[BSI-AI\\] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "1f86c77a-4871-526e-bbfe-d45e87c1e566"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:b4588b41034ea1f1"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-DATASET-HASH|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "518a66e3-58b4-59b2-836e-7c4c269e19be"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -250,15 +408,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-DATASET-HASH",
-            "uuid": "3eabee9d-cad2-5c67-84ca-c41c9e61c4d8"
+            "uuid": "85b0751e-6248-5b24-9557-047c59beb91b"
           },
           {
             "description": "\\[BSI-AI\\] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "a5fe0ff1-b5a3-55bf-bcb1-5284b1a86719"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:67a07bd975d84c32"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-DATASET-LICENSE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a666e503-9001-5e9c-b4a1-07940e316b69"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -267,15 +444,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-DATASET-LICENSE",
-            "uuid": "23615914-fad5-5123-bcc0-8cf70a8550a5"
+            "uuid": "e17f509d-4b9e-598e-a8f8-7fc0be808802"
           },
           {
             "description": "\\[BSI-AI\\] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "395da9fd-e370-5a34-8c93-3ebb54bde30b"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:5294c1949801d48c"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-DATASET-PROVENANCE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "008553a9-1b5a-5e1a-95d9-afc47339d416"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: name data\\[\\].governance owners, custodians or stewards (the first data\\[\\] entry is read).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -284,15 +480,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-DATASET-PROVENANCE",
-            "uuid": "f438aaea-b65f-51a4-b2ef-3efcdeaf0df0"
+            "uuid": "f3dcb61f-91d4-58b5-8a8a-c006b17a46f0"
           },
           {
             "description": "\\[BSI-AI\\] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c838d0ca-691c-54b9-a184-89b80cf72cbc"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:d687aaf1fa585eea"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-INFRA-RUNTIME|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "d70f5a76-e74e-5a3f-8548-9e84b57e4563"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -301,15 +516,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-INFRA-RUNTIME",
-            "uuid": "29e6bc91-d4b7-5220-adf8-dbb1c8a09c0a"
+            "uuid": "ef9c101a-9521-5b1d-a1bb-6bf9d78da126"
           },
           {
             "description": "\\[BSI-AI\\] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "824efbaf-d2e5-5722-9ad4-54ee4a5c0b50"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:bced627c90b2adc1"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-SEC-CONTROLS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "1d01e8d5-2a0d-5aac-8921-c658741dcdad"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -318,15 +552,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-SEC-CONTROLS",
-            "uuid": "41ec1521-b489-5451-91a5-c57dc2395354"
+            "uuid": "b24974b0-b3d8-5d40-9d3b-35a0fea69c82"
           },
           {
             "description": "\\[BSI-AI\\] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "68753274-c82c-5dc2-af69-40253966e107"
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9abd3f4073d259a1"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi-ai|SBOM-BSIAI-SEC-EXPLOITABILITY|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "b31d0046-a61c-5abc-99ff-4447577431b3"
+              }
+            ],
+            "remarks": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -335,13 +588,20 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSIAI-SEC-EXPLOITABILITY",
-            "uuid": "bf230d31-df37-59b7-b344-eb7a6576cb89"
+            "uuid": "f994a186-f3d6-5e5b-a1ea-2e8f4109836c"
           }
         ],
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Metadata / Signature"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -352,7 +612,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Metadata / Signature"
               },
@@ -365,6 +625,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-META-SIGNATURE"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "signature"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Metadata / Signature"
               }
             ],
             "subjects": [
@@ -378,11 +649,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "cdbaec54-c888-5826-8374-1295a7456296"
+            "uuid": "8e3f6f16-3644-5e2e-b415-927935a992e5"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] System-Level readiness: no producer/supplier of the AI system is declared",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: System-Level / Producer"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -393,7 +671,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — System-Level / Producer"
               },
@@ -406,6 +684,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SYS-PRODUCER"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].supplier.name"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "System-Level / Producer"
               }
             ],
             "subjects": [
@@ -419,11 +708,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "6924e5f2-5b37-51b5-a1bd-11916b9186e1"
+            "uuid": "da921d2c-f5e5-5049-a245-669d3c3dcb88"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] System-Level readiness: AI-system data-flow / usage / input-output description is not declared (no SBOM field carries it today)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: System-Level / Data flow & usage"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -434,7 +730,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — System-Level / Data flow & usage"
               },
@@ -447,6 +743,12 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SYS-DATAFLOW"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "System-Level / Data flow & usage"
               }
             ],
             "subjects": [
@@ -460,11 +762,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "525c37a1-358b-54f1-b66f-a70aed80c5a0"
+            "uuid": "a5ff6332-f086-5c09-9af2-7d3198faf5f2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Model identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): sentiment-classifier",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Models / Model identifier"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -475,7 +784,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Models / Model identifier"
               },
@@ -493,6 +802,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "sentiment-classifier"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].purl"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Models / Model identifier"
               }
             ],
             "subjects": [
@@ -506,11 +836,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "947943a3-8c7a-5146-a367-39c948dfa908"
+            "uuid": "78775b70-63b6-5781-b057-91b250f955f8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Model license readiness: 1 component(s) declare no license: sentiment-classifier",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Models / Model license"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -521,7 +858,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Models / Model license"
               },
@@ -539,6 +876,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "sentiment-classifier"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].licenses[]"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Models / Model license"
               }
             ],
             "subjects": [
@@ -552,11 +910,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "03227228-0eed-5905-b0c6-d0eb36005dd9"
+            "uuid": "9e4c1bd2-40ae-54a2-b4a0-8d83113376e9"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Dataset identifier readiness: 1 component(s) carry no unique identifier (PURL/CPE/SWHID/SWID): product-reviews-1M",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Datasets / Dataset identifier"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -567,7 +932,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Datasets / Dataset identifier"
               },
@@ -585,6 +950,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "product-reviews-1M"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].purl"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Datasets / Dataset identifier"
               }
             ],
             "subjects": [
@@ -598,11 +984,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "85853d82-9510-5f9e-a20b-331fe1de743e"
+            "uuid": "53697919-c3cf-56c6-b781-0d36b8fa4487"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Dataset hash value readiness: 1 component(s) carry no hash value: product-reviews-1M",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Datasets / Dataset hash value"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -613,7 +1006,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Datasets / Dataset hash value"
               },
@@ -631,6 +1024,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "product-reviews-1M"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].hashes[]"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Datasets / Dataset hash value"
               }
             ],
             "subjects": [
@@ -644,11 +1058,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "1f86c77a-4871-526e-bbfe-d45e87c1e566"
+            "uuid": "518a66e3-58b4-59b2-836e-7c4c269e19be"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Dataset license readiness: 1 component(s) declare no license: product-reviews-1M",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Datasets / Dataset license"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -659,7 +1080,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Datasets / Dataset license"
               },
@@ -677,6 +1098,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "product-reviews-1M"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].licenses[]"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Datasets / Dataset license"
               }
             ],
             "subjects": [
@@ -690,11 +1132,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "a5fe0ff1-b5a3-55bf-bcb1-5284b1a86719"
+            "uuid": "a666e503-9001-5e9c-b4a1-07940e316b69"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Provenance & intended use readiness: 1 component(s) declare no provenance / intended-use: product-reviews-1M",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Datasets / Provenance & intended use"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -705,7 +1154,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use"
               },
@@ -723,6 +1172,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "product-reviews-1M"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "data[].governance"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Datasets / Provenance & intended use"
               }
             ],
             "subjects": [
@@ -736,11 +1206,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "395da9fd-e370-5a34-8c93-3ebb54bde30b"
+            "uuid": "008553a9-1b5a-5e1a-95d9-afc47339d416"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Infrastructure / Runtime & framework"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -751,7 +1228,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework"
               },
@@ -764,6 +1241,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-INFRA-RUNTIME"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "dependencies[]"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Infrastructure / Runtime & framework"
               }
             ],
             "subjects": [
@@ -777,11 +1265,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c838d0ca-691c-54b9-a184-89b80cf72cbc"
+            "uuid": "d70f5a76-e74e-5a3f-8548-9e84b57e4563"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Security readiness: no AI-specific security controls are declared (no SBOM field carries them today)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Security / AI security controls"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -792,7 +1287,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Security / AI security controls"
               },
@@ -805,6 +1300,12 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SEC-CONTROLS"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Security / AI security controls"
               }
             ],
             "subjects": [
@@ -818,11 +1319,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "824efbaf-d2e5-5722-9ad4-54ee4a5c0b50"
+            "uuid": "1d01e8d5-2a0d-5aac-8921-c658741dcdad"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI-AI\\] Security readiness: no exploitability reference is declared (no SBOM field carries it today)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
+                "rel": "reference",
+                "text": "BSI/G7 AI-SBOM: Security / Exploitability reference"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -833,7 +1341,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI/G7 SBOM-for-AI — Security / Exploitability reference"
               },
@@ -846,6 +1354,12 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSIAI-SEC-EXPLOITABILITY"
+              },
+              {
+                "class": "BsiSbomForAi",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Security / Exploitability reference"
               }
             ],
             "subjects": [
@@ -859,14 +1373,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "68753274-c82c-5dc2-af69-40253966e107"
+            "uuid": "b31d0046-a61c-5abc-99ff-4447577431b3"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "BsiSbomForAi"
+            "value": "bsi-ai"
           },
           {
             "name": "standard-name",
@@ -919,9 +1433,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — BSI/G7 SBOM-for-AI Minimum Elements Readiness",
-        "uuid": "d41ed849-ae45-50dd-8894-5eff4b8efa30"
+        "uuid": "17d8d3d7-15f2-5021-bc78-4faea9954f7f"
       }
     ],
-    "uuid": "c7b3eda8-0816-5656-8e6a-54de793374e2"
+    "uuid": "c732acca-6b5f-5cb2-ab71-bc9613250314"
   }
 }

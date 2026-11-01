@@ -353,7 +353,7 @@ fn render_violation_detail(
                     Style::default().fg(scheme.text_muted),
                 ),
             ]));
-            for r in &v.standard_refs {
+            for r in v.standard_refs.iter() {
                 // Skip degenerate "CNSA 2.0: CNSA 2.0" citations — a ref
                 // whose id merely repeats the standard label adds nothing
                 // the [tag] hasn't already said.
