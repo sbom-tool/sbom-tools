@@ -4,7 +4,7 @@
 //! with hierarchical navigation, search, and deep inspection.
 
 use crate::model::{Component, NormalizedSbom, NormalizedSbomIndex};
-use crate::quality::{ComplianceResult, QualityReport, QualityScorer};
+use crate::quality::{ComplianceResult, ComplianceRunConfig, QualityReport, QualityScorer};
 use crate::tui::app_states::SourcePanelState;
 use crate::tui::state::ListNavigation;
 use crate::tui::widgets::TreeState;
@@ -154,33 +154,47 @@ pub struct ViewApp {
     /// Optional export filename template (from `--export-template` CLI arg).
     pub(crate) export_template: Option<String>,
 
-    /// Optional CRA sidecar metadata. When set, `compute_compliance_results`
-    /// passes it to `ComplianceChecker::with_sidecar()` so OSS-Steward,
-    /// EUCC, Article 14, and product-class checks render correctly in
-    /// the TUI compliance tab.
-    pub(crate) cra_sidecar: Option<crate::model::CraSidecarMetadata>,
-
-    /// Optional effective CRA Annex III/IV product class (resolved by the
-    /// CLI: sidecar `productClass` wins over `--cra-product-class`). Applied
-    /// by `compute_compliance_results` and TUI exports so the compliance tab
-    /// renders the same severity-calibrated verdicts as the non-TUI report
-    /// path.
-    pub(crate) cra_product_class: Option<crate::model::CraProductClass>,
+    /// The compliance run every check of this view uses (the compliance tab
+    /// and its exports, the CRA section of exported reports, the quality
+    /// score): the `--as-of` clock, the CRA sidecar and the product class,
+    /// resolved by the CLI exactly as `validate` resolves them.
+    pub(crate) compliance_run: ComplianceRunConfig,
 }
 
 impl ViewApp {
-    /// Create a new `ViewApp` for the given SBOM.
+    /// Create a new `ViewApp` for the given SBOM, judged on the wall clock
+    /// with no CRA sidecar or product class (see [`Self::new_with_compliance`]).
     #[must_use]
     pub fn new(
         sbom: NormalizedSbom,
         raw_content: &str,
         bom_profile: crate::model::BomProfile,
     ) -> Self {
+        Self::new_with_compliance(
+            sbom,
+            raw_content,
+            bom_profile,
+            ComplianceRunConfig::default(),
+        )
+    }
+
+    /// Create a new `ViewApp` whose compliance tab, exports and quality score
+    /// judge the SBOM with `compliance`'s inputs: the clock, the CRA sidecar
+    /// and the product class (`view --as-of`, `--cra-sidecar`,
+    /// `--cra-product-class`), so it shows the verdicts `validate` reports
+    /// for the same inputs.
+    #[must_use]
+    pub fn new_with_compliance(
+        sbom: NormalizedSbom,
+        raw_content: &str,
+        bom_profile: crate::model::BomProfile,
+        compliance: ComplianceRunConfig,
+    ) -> Self {
         let stats = SbomStats::from_sbom(&sbom);
 
         // Calculate quality score
         let scoring_profile = crate::tui::scoring_profile_for(bom_profile);
-        let scorer = QualityScorer::new(scoring_profile);
+        let scorer = QualityScorer::new(scoring_profile).with_compliance(compliance.clone());
         let quality_report = scorer.score(&sbom);
         let quality_state = QualityViewState::new(quality_report.recommendations.len());
 
@@ -258,8 +272,7 @@ impl ViewApp {
             ai_readiness_scroll: 0,
             bookmarked: HashSet::new(),
             export_template: None,
-            cra_sidecar: None,
-            cra_product_class: None,
+            compliance_run: compliance,
         };
 
         // Pre-compute vuln cache at startup to avoid freeze on first tab visit
@@ -269,35 +282,11 @@ impl ViewApp {
         app
     }
 
-    /// Set the CRA sidecar metadata on this `ViewApp`. Stored so the
-    /// compliance tab can render OSS-Steward / EUCC / Article 14 /
-    /// product-class checks against the same sidecar the CLI uses.
-    pub fn with_cra_sidecar(mut self, sidecar: crate::model::CraSidecarMetadata) -> Self {
-        // Invalidate cached results so the sidecar takes effect on next render.
-        self.compliance_results = None;
-        self.cra_sidecar = Some(sidecar);
-        self
-    }
-
-    /// Set the effective CRA product class on this `ViewApp` (the CLI
-    /// resolves it: sidecar wins over `--cra-product-class`). Stored so the
-    /// compliance tab and TUI exports apply the same severity calibration as
-    /// the non-TUI report path instead of silently scoring `Default` class.
-    pub fn with_cra_product_class(mut self, class: crate::model::CraProductClass) -> Self {
-        // Invalidate cached results so the class takes effect on next render.
-        self.compliance_results = None;
-        self.cra_product_class = Some(class);
-        self
-    }
-
     /// Lazily compute compliance results for all standards when first needed.
     pub fn ensure_compliance_results(&mut self) {
         if self.compliance_results.is_none() {
-            self.compliance_results = Some(compute_compliance_results(
-                &self.sbom,
-                self.cra_sidecar.as_ref(),
-                self.cra_product_class,
-            ));
+            self.compliance_results =
+                Some(compute_compliance_results(&self.sbom, &self.compliance_run));
         }
     }
 
@@ -959,20 +948,14 @@ impl ViewApp {
         use crate::tui::export::{export_view, view_tab_to_report_type};
 
         let report_type = view_tab_to_report_type(self.active_tab);
-        // Pre-compute CRA Phase 2 with this view's sidecar and product class
-        // so exported reports carry the same verdicts as the compliance tab
-        // instead of falling back to a bare (sidecar-less, Default-class)
-        // checker.
-        let mut cra_checker =
-            crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2);
-        if let Some(sidecar) = &self.cra_sidecar {
-            cra_checker = cra_checker.with_sidecar(sidecar.clone());
-        }
-        if let Some(class) = self.cra_product_class {
-            cra_checker = cra_checker.with_product_class(class);
-        }
+        // Pre-compute CRA Phase 2 with this view's run so exported reports
+        // carry the same verdicts as the compliance tab instead of falling
+        // back to a bare (sidecar-less, Default-class) checker.
         let config = ReportConfig {
-            view_cra_compliance: Some(cra_checker.check(&self.sbom)),
+            view_cra_compliance: Some(
+                self.compliance_run
+                    .check(crate::quality::ComplianceLevel::CraPhase2, &self.sbom),
+            ),
             ..ReportConfig::with_types(vec![report_type])
         };
         let result = export_view(
@@ -3359,7 +3342,7 @@ mod tests {
     }
 
     #[test]
-    fn with_cra_product_class_reaches_the_compliance_results() {
+    fn the_run_product_class_reaches_the_compliance_results() {
         // Regression: the view TUI used to silently drop the CLI-resolved
         // product class while the non-TUI report path applied it, so the same
         // invocation showed a milder verdict on a TTY. The class must reach
@@ -3375,17 +3358,24 @@ mod tests {
                 .expect("CraPhase2 result present")
                 .error_count
         }
-        let mut plain = ViewApp::new(
+        // The shared test clock (tests/common/clock.rs).
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        let mut plain = ViewApp::new_with_compliance(
             NormalizedSbom::default(),
             "",
             crate::model::BomProfile::Sbom,
+            ComplianceRunConfig::new().with_as_of(as_of),
         );
-        let mut critical = ViewApp::new(
+        let mut critical = ViewApp::new_with_compliance(
             NormalizedSbom::default(),
             "",
             crate::model::BomProfile::Sbom,
-        )
-        .with_cra_product_class(crate::model::CraProductClass::Critical);
+            ComplianceRunConfig::new()
+                .with_as_of(as_of)
+                .with_product_class(crate::model::CraProductClass::Critical),
+        );
         let plain_errors = cra_error_count(&mut plain);
         let critical_errors = cra_error_count(&mut critical);
         assert!(

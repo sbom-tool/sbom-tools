@@ -255,15 +255,18 @@ impl ReportConfig {
     }
 }
 
-/// Last-resort CRA Phase 2 check with no sidecar or product class attached.
+/// Last-resort CRA Phase 2 check of an empty compliance run: the wall clock,
+/// no sidecar or product class.
 ///
 /// Only reachable through the `*_or_bare` accessors on [`ReportConfig`] when a
 /// caller did not pre-compute compliance. First-party pipelines never hit this:
-/// they resolve the CRA sidecar (explicit flag or `<sbom>.cra.{json,yaml}`
-/// auto-discovery) and populate the config fields so every output format
-/// renders the same verdicts as the TUI.
+/// they resolve the run's inputs (`--as-of`, `--cra-product-class`, the CRA
+/// sidecar from the explicit flag or `<sbom>.cra.{json,yaml}` auto-discovery)
+/// and populate the config fields so every output format renders the same
+/// verdicts as the TUI.
 fn bare_cra_phase2_check(sbom: &crate::model::NormalizedSbom) -> crate::quality::ComplianceResult {
-    crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2).check(sbom)
+    crate::quality::ComplianceRunConfig::new()
+        .check(crate::quality::ComplianceLevel::CraPhase2, sbom)
 }
 
 /// Metadata included in reports

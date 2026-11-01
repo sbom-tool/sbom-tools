@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ComplianceRunConfig};
 
 pub const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -21,15 +21,6 @@ pub const SBOM_DIRS: &[&str] = &[
     "showcase",
     "spdx",
     "spdx3",
-];
-
-/// Levels the CLI hands a CRA sidecar to (see `cli/validate.rs`).
-pub const SIDECAR_LEVELS: &[ComplianceLevel] = &[
-    ComplianceLevel::CraPhase1,
-    ComplianceLevel::CraPhase2,
-    ComplianceLevel::CraOssSteward,
-    ComplianceLevel::EuccSubstantial,
-    ComplianceLevel::EuAiAct,
 ];
 
 /// The pinned evaluation instant of the snapshot harnesses.
@@ -65,16 +56,15 @@ pub struct Fixture {
 }
 
 impl Fixture {
-    /// `level` checked at the pinned instant, with the sidecar for the levels
-    /// the CLI hands one to.
+    /// `level` checked at the pinned instant through the shared run
+    /// configuration, which hands the sidecar to the levels `validate`
+    /// hands it to.
     pub fn check(&self, level: ComplianceLevel) -> ComplianceResult {
-        let mut checker = ComplianceChecker::new(level).with_as_of(as_of());
-        if let Some(sc) = self.sidecar.as_ref()
-            && SIDECAR_LEVELS.contains(&level)
-        {
-            checker = checker.with_sidecar(sc.clone());
+        let mut run = ComplianceRunConfig::new().with_as_of(as_of());
+        if let Some(sc) = self.sidecar.as_ref() {
+            run = run.with_sidecar(sc.clone());
         }
-        checker.check(&self.sbom)
+        run.check(level, &self.sbom)
     }
 }
 

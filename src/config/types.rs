@@ -390,6 +390,11 @@ pub struct DiffConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration (always defined, runtime feature check)
     pub enrichment: EnrichmentConfig,
+    /// The compliance inputs both SBOMs share (`--as-of`,
+    /// `--cra-product-class`). Each side adds the CRA sidecar found next to
+    /// its own SBOM, so the TUI and the reports judge each side as
+    /// `validate` would.
+    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Paths for diff operation
@@ -430,6 +435,11 @@ pub struct ViewConfig {
     /// Sidecar `productClass` overrides this. Drives severity calibration
     /// for vendor-hash, EOL, cycles, DoC, EUCC, PSIRT, attestation checks.
     pub cra_product_class: Option<String>,
+    /// Pinned evaluation clock as a CLI string (`--as-of`). The compliance
+    /// checks (the TUI's compliance tab, `--validate-ntia`, the reports'
+    /// CRA section) and the quality score judge this instant instead of the
+    /// wall clock, as `validate --as-of` does.
+    pub as_of: Option<String>,
 }
 
 /// Configuration for multi-diff operations
@@ -859,12 +869,13 @@ pub struct ComplianceConfig {
     pub fail_on_warning: bool,
     /// Default for `quality --fail-on-noncompliant`
     pub fail_on_noncompliant: bool,
-    /// Default CRA sidecar path (`--cra-sidecar`). Treated as explicitly
-    /// requested: a configured sidecar that fails to load is a hard error.
+    /// Default CRA sidecar path (`--cra-sidecar` of `validate`, `quality`,
+    /// `view` and `cra-docs`). Treated as explicitly requested: a configured
+    /// sidecar that fails to load is a hard error.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cra_sidecar: Option<PathBuf>,
-    /// Default CRA Annex III/IV product class (`--cra-product-class`):
-    /// default, important-class-1, important-class-2, critical
+    /// Default CRA Annex III/IV product class (`--cra-product-class`, `diff`
+    /// included): default, important-class-1, important-class-2, critical
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cra_product_class: Option<String>,
 }
@@ -1085,6 +1096,7 @@ pub struct DiffConfigBuilder {
     rules: MatchingRulesPathConfig,
     ecosystem_rules: EcosystemRulesConfig,
     enrichment: EnrichmentConfig,
+    compliance: crate::quality::ComplianceRunConfig,
 }
 
 impl DiffConfigBuilder {
@@ -1253,6 +1265,13 @@ impl DiffConfigBuilder {
         self
     }
 
+    /// The compliance inputs both SBOMs share (see [`DiffConfig::compliance`]).
+    #[must_use]
+    pub fn compliance(mut self, compliance: crate::quality::ComplianceRunConfig) -> Self {
+        self.compliance = compliance;
+        self
+    }
+
     pub fn build(self) -> anyhow::Result<DiffConfig> {
         let old = self
             .old
@@ -1271,6 +1290,7 @@ impl DiffConfigBuilder {
             rules: self.rules,
             ecosystem_rules: self.ecosystem_rules,
             enrichment: self.enrichment,
+            compliance: self.compliance,
         })
     }
 }

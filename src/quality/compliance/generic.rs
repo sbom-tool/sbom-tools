@@ -558,7 +558,9 @@ impl ComplianceChecker {
             // to accompany the SBOM, so absence is a Warning (not a gating
             // Error): we accept a document-level support end date, component
             // lifecycle/EOL properties, or the sidecar's support end date as
-            // evidence.
+            // evidence. (A run hands the CRA sidecar to the CRA, EUCC and AI
+            // Act profiles only, see `ComplianceRunConfig::checker`, so in the
+            // CLI FDA judges the SBOM's own lifecycle data.)
             if !self.has_support_lifecycle_evidence(sbom) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,

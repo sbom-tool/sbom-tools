@@ -468,10 +468,12 @@ compliance:
   fail_on_warning: false
   # Exit non-zero when `quality` reports NON-COMPLIANT
   fail_on_noncompliant: false
-  # CRA sidecar metadata file (JSON or YAML); a configured path that fails
-  # to load is a hard error
+  # CRA sidecar metadata file (JSON or YAML) for `validate`, `quality`,
+  # `view` and `cra-docs`; a configured path that fails to load is a hard
+  # error (`diff` uses the sidecar found next to each SBOM)
   # cra_sidecar: ./app.cra.json
-  # CRA product class: default, important-class-1, important-class-2, critical
+  # CRA product class for every command that checks compliance (`diff`
+  # too): default, important-class-1, important-class-2, critical
   # cra_product_class: default
 
 # Enrichment configuration (optional)

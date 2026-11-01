@@ -7,6 +7,7 @@ use crate::model::{BomProfile, NormalizedSbom, Severity};
 use crate::pipeline::{
     OutputTarget, auto_detect_format, parse_sbom_with_context, should_use_color, write_output,
 };
+use crate::quality::{ComplianceLevel, ComplianceRunConfig};
 use crate::reports::{ReportConfig, ReportFormat, create_reporter_with_options};
 use crate::tui::{ViewApp, run_view_tui};
 use anyhow::Result;
@@ -45,28 +46,10 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         parse_severity(s)?;
     }
 
-    // Resolve the CRA sidecar once for both the TUI and report paths: an
-    // explicit --cra-sidecar that fails to load is a hard error; auto-
-    // discovery next to the SBOM stays best-effort.
-    let cra_sidecar =
-        super::load_cra_sidecar(config.cra_sidecar_path.as_deref(), &config.sbom_path)?;
-
-    // Resolve the effective CRA product class once for both paths as well
-    // (the TUI branch used to silently drop the flag while the report path
-    // applied it): sidecar wins; an explicitly passed unrecognized value is
-    // a hard error.
-    let cli_class = super::parse_cra_product_class(config.cra_product_class.as_deref())?;
-    let sidecar_class = cra_sidecar.as_ref().and_then(|s| s.product_class);
-    if let (Some(cli), Some(side)) = (cli_class, sidecar_class)
-        && cli != side
-    {
-        tracing::warn!(
-            "CRA product class mismatch: --cra-product-class={} but sidecar says {}; using sidecar.",
-            cli.label(),
-            side.label()
-        );
-    }
-    let effective_class = sidecar_class.or(cli_class);
+    // Resolve the compliance inputs once for the TUI, the reports and
+    // `--validate-ntia`, exactly as `validate` does (the TUI used to drop the
+    // clock and hand every standard the sidecar and the product class).
+    let compliance = compliance_run(&config)?;
 
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
 
@@ -233,7 +216,7 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
 
     // Run NTIA validation if requested
     if config.validate_ntia {
-        super::validate::print_ntia_validation(parsed.sbom());
+        super::validate::print_ntia_validation(parsed.sbom(), &compliance);
     }
 
     // Output the result
@@ -247,18 +230,11 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     tracing::info!("BOM profile: {bom_profile}");
 
     if effective_output == ReportFormat::Tui {
-        // The compliance tab's OSS-Steward / EUCC / Article 14 /
-        // product-class checks render against the same sidecar metadata and
-        // effective product class the CLI report path uses (both resolved
-        // once at the top of `run_view`).
+        // The compliance tab, its exports and the quality tab judge the same
+        // run as `validate`: one clock, and the sidecar and product class
+        // only where `validate` applies them.
         let (sbom, raw_content) = parsed.into_parts();
-        let mut app = ViewApp::new(sbom, &raw_content, bom_profile);
-        if let Some(sc) = cra_sidecar.clone() {
-            app = app.with_cra_sidecar(sc);
-        }
-        if let Some(c) = effective_class {
-            app = app.with_cra_product_class(c);
-        }
+        let mut app = ViewApp::new_with_compliance(sbom, &raw_content, bom_profile, compliance);
         app.export_template = config.output.export_template.clone();
 
         // Show enrichment warnings in TUI footer
@@ -285,8 +261,7 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
         parsed.drop_raw_content();
         output_view_report(
             &config,
-            cra_sidecar,
-            effective_class,
+            &compliance,
             parsed.sbom(),
             &output_target,
             sarif_artifact,
@@ -298,6 +273,18 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     }
 
     Ok(crate::pipeline::exit_codes::SUCCESS)
+}
+
+/// The compliance run of `view`: its `--as-of`, `--cra-product-class` and
+/// CRA sidecar (`--cra-sidecar`, else the one next to the SBOM), resolved by
+/// the helper `validate` uses.
+pub(crate) fn compliance_run(config: &ViewConfig) -> Result<ComplianceRunConfig> {
+    super::compliance_run_config_for(
+        &config.sbom_path,
+        config.cra_sidecar_path.as_deref(),
+        config.cra_product_class.as_deref(),
+        config.as_of.as_deref(),
+    )
 }
 
 /// Apply view filters to the SBOM, returns number of components removed.
@@ -399,26 +386,16 @@ pub fn severity_meets_minimum(severity: &Severity, minimum: &Severity) -> bool {
 /// Output view report to file or stdout
 fn output_view_report(
     config: &ViewConfig,
-    sidecar: Option<crate::model::CraSidecarMetadata>,
-    effective_class: Option<crate::model::CraProductClass>,
+    compliance: &ComplianceRunConfig,
     sbom: &NormalizedSbom,
     output_target: &OutputTarget,
     sarif_artifact: Option<crate::reports::SarifArtifact>,
 ) -> Result<()> {
     let effective_output = auto_detect_format(config.output.format, output_target);
 
-    // Pre-compute CRA compliance once for reporters, using the sidecar and
-    // effective product class resolved in `run_view` (explicit values
-    // hard-error there; sidecar discovery is best-effort).
-    let mut checker =
-        crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2);
-    if let Some(sc) = sidecar {
-        checker = checker.with_sidecar(sc);
-    }
-    if let Some(c) = effective_class {
-        checker = checker.with_product_class(c);
-    }
-    let cra_result = checker.check(sbom);
+    // Pre-compute CRA compliance once for reporters, with the run resolved
+    // in `run_view` (explicit values hard-error there).
+    let cra_result = compliance.check(ComplianceLevel::CraPhase2, sbom);
 
     let report_config = ReportConfig {
         report_types: vec![config.output.report_types],
@@ -513,6 +490,7 @@ mod tests {
             enrichment: crate::config::EnrichmentConfig::default(),
             cra_sidecar_path: None,
             cra_product_class: None,
+            as_of: None,
         }
     }
 

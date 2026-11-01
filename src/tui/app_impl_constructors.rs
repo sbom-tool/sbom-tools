@@ -6,7 +6,7 @@ use super::app_states::{
 };
 use crate::diff::{DiffResult, MatrixResult, MultiDiffResult, TimelineResult};
 use crate::model::NormalizedSbom;
-use crate::quality::{ComplianceChecker, ComplianceLevel, QualityScorer};
+use crate::quality::{ComplianceLevel, ComplianceRunConfig, QualityScorer};
 
 impl App {
     /// Shared default initialization for all mode-independent fields.
@@ -37,8 +37,8 @@ impl App {
                 new_cra_compliance: None,
                 old_compliance_results: None,
                 new_compliance_results: None,
-                old_cra_sidecar: None,
-                new_cra_sidecar: None,
+                old_compliance_run: ComplianceRunConfig::default(),
+                new_compliance_run: ComplianceRunConfig::default(),
                 matching_threshold: 0.85,
                 #[cfg(feature = "enrichment")]
                 enrichment_stats_old: None,
@@ -75,31 +75,56 @@ impl App {
         }
     }
 
-    /// Create a new app for diff mode
+    /// Create a new app for diff mode, judging both SBOMs on the wall clock
+    /// with no CRA sidecar or product class (see
+    /// [`Self::new_diff_with_compliance`]).
     #[must_use]
     pub fn new_diff(
-        mut diff_result: DiffResult,
+        diff_result: DiffResult,
         old_sbom: NormalizedSbom,
         new_sbom: NormalizedSbom,
         old_raw: &str,
         new_raw: &str,
     ) -> Self {
-        // Calculate quality reports for both SBOMs using profile-aware scoring
-        let old_profile =
-            crate::tui::scoring_profile_for(crate::model::BomProfile::detect(&old_sbom));
-        let old_scorer = QualityScorer::new(old_profile);
-        let old_quality = Some(old_scorer.score(&old_sbom));
+        Self::new_diff_with_compliance(
+            diff_result,
+            old_sbom,
+            new_sbom,
+            old_raw,
+            new_raw,
+            ComplianceRunConfig::default(),
+            ComplianceRunConfig::default(),
+        )
+    }
 
-        let new_profile =
-            crate::tui::scoring_profile_for(crate::model::BomProfile::detect(&new_sbom));
-        let new_scorer = QualityScorer::new(new_profile);
-        let new_quality = Some(new_scorer.score(&new_sbom));
+    /// Create a new app for diff mode whose compliance tab, summary card,
+    /// exports and quality scores judge each SBOM with its own compliance
+    /// run: the shared `--as-of` clock and `--cra-product-class`, plus the
+    /// CRA sidecar found next to that SBOM. Each side then shows the
+    /// verdicts `validate` reports for it.
+    #[must_use]
+    pub fn new_diff_with_compliance(
+        mut diff_result: DiffResult,
+        old_sbom: NormalizedSbom,
+        new_sbom: NormalizedSbom,
+        old_raw: &str,
+        new_raw: &str,
+        old_compliance: ComplianceRunConfig,
+        new_compliance: ComplianceRunConfig,
+    ) -> Self {
+        // Calculate quality reports for both SBOMs using profile-aware scoring
+        let score = |sbom: &NormalizedSbom, compliance: &ComplianceRunConfig| {
+            let profile = crate::tui::scoring_profile_for(crate::model::BomProfile::detect(sbom));
+            QualityScorer::new(profile)
+                .with_compliance(compliance.clone())
+                .score(sbom)
+        };
+        let old_quality = Some(score(&old_sbom, &old_compliance));
+        let new_quality = Some(score(&new_sbom, &new_compliance));
 
         // Compute only CRA Phase2 for the summary card; full compliance is lazy
-        let old_cra_compliance =
-            Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&old_sbom));
-        let new_cra_compliance =
-            Some(ComplianceChecker::new(ComplianceLevel::CraPhase2).check(&new_sbom));
+        let old_cra_compliance = Some(old_compliance.check(ComplianceLevel::CraPhase2, &old_sbom));
+        let new_cra_compliance = Some(new_compliance.check(ComplianceLevel::CraPhase2, &new_sbom));
 
         // Build indexes for fast lookups (O(1) instead of O(n))
         let old_sbom_index = Some(old_sbom.build_index());
@@ -124,44 +149,11 @@ impl App {
         app.data.new_quality = new_quality;
         app.data.old_cra_compliance = old_cra_compliance;
         app.data.new_cra_compliance = new_cra_compliance;
+        app.data.old_compliance_run = old_compliance;
+        app.data.new_compliance_run = new_compliance;
         app.data.old_sbom_index = old_sbom_index;
         app.data.new_sbom_index = new_sbom_index;
         app
-    }
-
-    /// Attach per-SBOM CRA sidecar metadata so the compliance tab renders
-    /// sidecar-driven verdicts (EU AI Act high-risk escalation, OSS-Steward,
-    /// EUCC, Article 14) identically to the CLI reports. Each side of the diff
-    /// is judged against its own sidecar. Invalidates any cached compliance
-    /// results so the sidecars take effect on the next
-    /// `ensure_compliance_results`, and recomputes the summary-card CRA
-    /// Phase 2 results (pre-computed bare in `new_diff`) so the summary tab
-    /// agrees with the compliance tab.
-    #[must_use]
-    pub fn with_cra_sidecars(
-        mut self,
-        old_sidecar: Option<crate::model::CraSidecarMetadata>,
-        new_sidecar: Option<crate::model::CraSidecarMetadata>,
-    ) -> Self {
-        self.data.old_compliance_results = None;
-        self.data.new_compliance_results = None;
-        if let (Some(sidecar), Some(old_sbom)) = (&old_sidecar, &self.data.old_sbom) {
-            self.data.old_cra_compliance = Some(
-                ComplianceChecker::new(ComplianceLevel::CraPhase2)
-                    .with_sidecar(sidecar.clone())
-                    .check(old_sbom),
-            );
-        }
-        if let (Some(sidecar), Some(new_sbom)) = (&new_sidecar, &self.data.new_sbom) {
-            self.data.new_cra_compliance = Some(
-                ComplianceChecker::new(ComplianceLevel::CraPhase2)
-                    .with_sidecar(sidecar.clone())
-                    .check(new_sbom),
-            );
-        }
-        self.data.old_cra_sidecar = old_sidecar;
-        self.data.new_cra_sidecar = new_sidecar;
-        self
     }
 
     /// Set enrichment statistics for the diff mode

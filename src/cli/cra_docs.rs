@@ -14,7 +14,7 @@
 
 use crate::model::{ConformityRoute, CraProductClass, CraSidecarMetadata, NormalizedSbom};
 use crate::pipeline::parse_sbom_with_context;
-use crate::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use crate::quality::{ComplianceLevel, ComplianceResult};
 use crate::reports::escape::{
     escape_markdown_inline, markdown_link_destination, markdown_url_or_text,
 };
@@ -45,11 +45,14 @@ pub fn run_cra_docs(
         output_dir,
         cra_sidecar_path,
         cra_product_class,
+        None,
         false,
     )
 }
 
-/// [`run_cra_docs`] with an explicit overwrite decision.
+/// [`run_cra_docs`] with an explicit overwrite decision and evaluation
+/// clock (`--as-of`, judged like `validate --as-of`; the wall clock when
+/// `None`).
 ///
 /// The generated dossier is a *starting point* the operator completes by
 /// hand (`_TBD_` placeholders), so a re-run must not silently clobber those
@@ -61,6 +64,7 @@ pub fn run_cra_docs_with_force(
     output_dir: PathBuf,
     cra_sidecar_path: Option<PathBuf>,
     cra_product_class: Option<String>,
+    as_of: Option<&str>,
     force: bool,
 ) -> Result<()> {
     if !force {
@@ -79,36 +83,30 @@ pub fn run_cra_docs_with_force(
         }
     }
 
+    // The run `validate --standard cra` would use (shared helper): the
+    // pinned clock, the product class (strict parse) and the CRA sidecar
+    // (explicit, else found next to the SBOM; a sidecar that fails to load
+    // is a hard error).
+    let run = super::compliance_run_config_for(
+        &sbom_path,
+        cra_sidecar_path.as_deref(),
+        cra_product_class.as_deref(),
+        as_of,
+    )?;
+
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
     let sbom = parsed.sbom();
+    let sidecar = run.sidecar();
 
-    // Sidecar resolution (shared with validate/quality/view): an explicit
-    // path that fails to load is a hard error; auto-discovery is best-effort.
-    let sidecar = super::load_cra_sidecar(cra_sidecar_path.as_deref(), &sbom_path)?;
-
-    // Effective product class: sidecar wins, else CLI flag, else Default.
-    // An explicitly passed unrecognized class is a hard error (strict parse).
-    let cli_class = super::parse_cra_product_class(cra_product_class.as_deref())?;
-    let sidecar_class = sidecar.as_ref().and_then(|s| s.product_class);
-    if let (Some(cli), Some(side)) = (cli_class, sidecar_class)
-        && cli != side
-    {
-        tracing::warn!(
-            "CRA product class mismatch: --cra-product-class={} but sidecar says {}; using sidecar.",
-            cli.label(),
-            side.label()
-        );
-    }
-    let effective_class = sidecar_class
-        .or(cli_class)
+    // The dossier names a product class: the sidecar's, else the CLI flag's,
+    // else Default.
+    let effective_class = run
+        .effective_product_class()
         .unwrap_or(CraProductClass::Default);
 
-    // Build a compliance result so the dossier can summarise readiness.
-    let mut checker = ComplianceChecker::new(ComplianceLevel::CraPhase2);
-    if let Some(sc) = sidecar.clone() {
-        checker = checker.with_sidecar(sc);
-    }
-    checker = checker.with_product_class(effective_class);
+    // Build a compliance result so the dossier can summarise readiness with
+    // the verdict `validate --standard cra` reports for the same inputs.
+    let checker = run.checker(ComplianceLevel::CraPhase2);
     let compliance = checker.check(sbom);
     let route = checker.effective_route();
 
@@ -117,15 +115,15 @@ pub fn run_cra_docs_with_force(
 
     write_doc(
         &output_dir.join(DOSSIER_FILES[0]),
-        &render_doc(sbom, sidecar.as_ref(), effective_class, route),
+        &render_doc(sbom, sidecar, effective_class, route),
     )?;
     write_doc(
         &output_dir.join(DOSSIER_FILES[1]),
-        &render_tech_doc(sbom, sidecar.as_ref(), effective_class, route, &compliance),
+        &render_tech_doc(sbom, sidecar, effective_class, route, &compliance),
     )?;
     write_doc(
         &output_dir.join(DOSSIER_FILES[2]),
-        &render_vuln_policy(sbom, sidecar.as_ref()),
+        &render_vuln_policy(sbom, sidecar),
     )?;
 
     println!(
@@ -604,6 +602,7 @@ fn render_vuln_policy(sbom: &NormalizedSbom, sidecar: Option<&CraSidecarMetadata
 mod tests {
     use super::*;
     use crate::model::Component;
+    use crate::quality::ComplianceChecker;
     use tempfile::tempdir;
 
     #[test]
@@ -656,7 +655,7 @@ mod tests {
         );
 
         // --force overwrites.
-        run_cra_docs_with_force(sbom_path, out.clone(), None, None, true)
+        run_cra_docs_with_force(sbom_path, out.clone(), None, None, None, true)
             .expect("forced rerun succeeds");
         assert_ne!(std::fs::read_to_string(&doc).unwrap(), "HAND-EDITED");
     }

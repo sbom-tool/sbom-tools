@@ -159,6 +159,24 @@ impl StandardSelector {
             .collect::<Vec<_>>()
             .join(", ")
     }
+
+    /// `selectors` split into the ones to check, one per level in the order
+    /// each level was first selected, and the repeats, which select a level
+    /// an earlier selector already did. `cra,cra-phase2` names CRA Phase 2
+    /// twice: checking it twice would report every finding twice.
+    #[must_use]
+    pub fn dedup_by_level(selectors: &[Self]) -> (Vec<Self>, Vec<Self>) {
+        let mut kept: Vec<Self> = Vec::with_capacity(selectors.len());
+        let mut repeats = Vec::new();
+        for selector in selectors {
+            if kept.iter().any(|k| k.level() == selector.level()) {
+                repeats.push(*selector);
+            } else {
+                kept.push(*selector);
+            }
+        }
+        (kept, repeats)
+    }
 }
 
 impl std::fmt::Display for StandardSelector {
@@ -316,6 +334,32 @@ mod tests {
             // level() must not panic and must be a real checkable level
             let _ = variant.level().name();
         }
+    }
+
+    #[test]
+    fn dedup_by_level_keeps_the_first_selection_of_each_level() {
+        let parse = |s: &str| s.parse::<StandardSelector>().unwrap();
+        // `cra` and `cra-phase2` (alias) select one level.
+        let selected = [
+            parse("cra-phase2"),
+            parse("ntia"),
+            parse("cra"),
+            parse("cra-phase1"),
+            parse("ntia"),
+        ];
+        let (kept, repeats) = StandardSelector::dedup_by_level(&selected);
+        assert_eq!(
+            kept,
+            [
+                StandardSelector::Cra,
+                StandardSelector::Ntia,
+                StandardSelector::CraPhase1
+            ]
+        );
+        assert_eq!(repeats, [StandardSelector::Cra, StandardSelector::Ntia]);
+
+        let (kept, repeats) = StandardSelector::dedup_by_level(&[]);
+        assert!(kept.is_empty() && repeats.is_empty());
     }
 
     #[test]

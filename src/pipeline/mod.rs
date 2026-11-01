@@ -15,6 +15,9 @@ pub use diff_stage::{
 pub use enrich::{AggregatedEnrichmentStats, enrich_sbom_full, enrich_sboms};
 pub use output::{OutputTarget, auto_detect_format, should_use_color, write_output};
 pub use parse::{ParsedSbom, STDIN_PATH, is_stdin_path, parse_sbom_with_context, read_input};
+// The diff TUI (`cli/diff.rs`) resolves each side's run like the report stage.
+#[cfg(feature = "cli")]
+pub(crate) use report_stage::side_compliance;
 pub use report_stage::{discover_cra_sidecar, output_report, output_report_with_sarif};
 
 #[cfg(feature = "enrichment")]

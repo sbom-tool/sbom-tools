@@ -383,50 +383,6 @@ impl NormalizedSbom {
             .filter_map(|id| self.components.get(id))
             .collect()
     }
-
-    /// Apply CRA sidecar metadata to supplement SBOM fields.
-    ///
-    /// Sidecar values only override SBOM fields if the SBOM field is None/empty.
-    /// This ensures SBOM data takes precedence when available.
-    pub fn apply_cra_sidecar(&mut self, sidecar: &super::CraSidecarMetadata) {
-        // Only apply if SBOM doesn't already have the value
-        if self.document.security_contact.is_none() {
-            self.document
-                .security_contact
-                .clone_from(&sidecar.security_contact);
-        }
-
-        if self.document.vulnerability_disclosure_url.is_none() {
-            self.document
-                .vulnerability_disclosure_url
-                .clone_from(&sidecar.vulnerability_disclosure_url);
-        }
-
-        if self.document.support_end_date.is_none() {
-            self.document.support_end_date = sidecar.support_end_date;
-        }
-
-        if self.document.name.is_none() {
-            self.document.name.clone_from(&sidecar.product_name);
-        }
-
-        // Add manufacturer as creator if not present
-        if let Some(manufacturer) = &sidecar.manufacturer_name {
-            let has_org = self
-                .document
-                .creators
-                .iter()
-                .any(|c| c.creator_type == super::CreatorType::Organization);
-
-            if !has_org {
-                self.document.creators.push(super::Creator {
-                    creator_type: super::CreatorType::Organization,
-                    name: manufacturer.clone(),
-                    email: sidecar.manufacturer_email.clone(),
-                });
-            }
-        }
-    }
 }
 
 impl Default for NormalizedSbom {

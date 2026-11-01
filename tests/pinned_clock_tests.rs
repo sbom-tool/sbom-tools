@@ -6,8 +6,13 @@
 //! meaning when a date passes: the 2026-09-11 CRA Art. 14 gate broke snapshot
 //! tests that way (#369). Tests build checkers with `checker(level)` from
 //! `tests/common/clock.rs` (src test modules have a local equivalent) or pin
-//! an explicit instant with `.with_as_of(...)` in the same expression. The
+//! an explicit instant with `.with_as_of(...)` in the same expression; a
+//! `ComplianceRunConfig::new()` in a test pins its clock the same way. The
 //! boundary tests below use explicit instants on both sides of each gate.
+//!
+//! A second lint keeps production code building every checker through
+//! `ComplianceRunConfig::checker`, the one place that decides which of a
+//! run's inputs each level gets.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -26,6 +31,9 @@ const CRA_FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/
 // ============================================================================
 
 const CALL: &str = "ComplianceChecker::new(";
+/// What a test may build a checker from: a checker, or a run configuration
+/// whose checkers inherit its clock.
+const CALLS: &[&str] = &[CALL, "ComplianceRunConfig::new("];
 const PIN: &str = ".with_as_of(";
 
 /// `src` with comments and the contents of string and char literals blanked
@@ -177,21 +185,29 @@ fn module_file(parent: &Path, name: &str) -> Option<PathBuf> {
     .find(|p| p.is_file())
 }
 
-/// Count the `ComplianceChecker::new(` calls inside `regions` of masked
-/// `code`, and return the lines of those whose expression does not also
-/// call `.with_as_of(`.
+/// Count the `ComplianceChecker::new(` and `ComplianceRunConfig::new(` calls
+/// inside `regions` of masked `code`, and return the lines of those whose
+/// expression does not also call `.with_as_of(`, in line order.
 fn unpinned_calls(code: &str, regions: &[(usize, usize)]) -> (usize, Vec<usize>) {
     let (mut calls, mut unpinned) = (0, Vec::new());
-    for (at, _) in code.match_indices(CALL) {
-        if !regions.iter().any(|&(from, to)| (from..to).contains(&at)) {
-            continue;
-        }
-        calls += 1;
-        if !code[at..expression_end(code, at)].contains(PIN) {
-            unpinned.push(code[..at].matches('\n').count() + 1);
+    for call in CALLS {
+        for (at, _) in code.match_indices(call) {
+            if !regions.iter().any(|&(from, to)| (from..to).contains(&at)) {
+                continue;
+            }
+            calls += 1;
+            if !code[at..expression_end(code, at)].contains(PIN) {
+                unpinned.push(line_of(code, at));
+            }
         }
     }
+    unpinned.sort_unstable();
     (calls, unpinned)
+}
+
+/// The 1-based line of byte offset `at` in `code`.
+fn line_of(code: &str, at: usize) -> usize {
+    code[..at].matches('\n').count() + 1
 }
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -277,11 +293,71 @@ fn every_test_checker_pins_the_clock() {
     );
     assert!(
         offenders.is_empty(),
-        "ComplianceChecker::new in a test without a pinned clock (the checker \
-         reads the wall clock, so the test changes meaning when a date passes). \
-         Use `checker(level)` from tests/common/clock.rs (or the test module's \
-         local helper), or pin an instant with `.with_as_of(...)` in the same \
-         expression:\n{}",
+        "ComplianceChecker::new or ComplianceRunConfig::new in a test without \
+         a pinned clock (the checker reads the wall clock, so the test changes \
+         meaning when a date passes). Use `checker(level)` from \
+         tests/common/clock.rs (or the test module's local helper), or pin an \
+         instant with `.with_as_of(...)` in the same expression:\n{}",
+        offenders.join("\n")
+    );
+}
+
+/// Production code builds every checker through
+/// `ComplianceRunConfig::checker`, the one place that decides which of a
+/// run's inputs (clock, CRA sidecar, product class) a level gets. A checker
+/// built anywhere else would judge with inputs of its own: the TUIs once
+/// handed every level the sidecar and no clock, so they disagreed with
+/// `validate` on the same SBOM.
+#[test]
+fn production_checkers_come_from_the_run_configuration() {
+    let root = Path::new(ROOT);
+    let run_config = root.join("src/quality/compliance/run_config.rs");
+    let mut src_files = Vec::new();
+    rust_files(&root.join("src"), &mut src_files);
+    let src: Vec<(PathBuf, String)> = src_files
+        .into_iter()
+        .map(|path| {
+            let code = masked(&path);
+            (path, code)
+        })
+        .collect();
+    let test_module_files: BTreeSet<PathBuf> = src
+        .iter()
+        .flat_map(|(path, code)| {
+            let (_, out_of_line) = cfg_test_modules(code);
+            out_of_line
+                .into_iter()
+                .filter_map(|name| module_file(path, &name))
+        })
+        .collect();
+
+    let (mut run_config_calls, mut offenders) = (0, Vec::new());
+    for (path, code) in &src {
+        if test_module_files.contains(path) {
+            continue;
+        }
+        let (tests, _) = cfg_test_modules(code);
+        for (at, _) in code.match_indices(CALL) {
+            if tests.iter().any(|&(from, to)| (from..to).contains(&at)) {
+                continue;
+            }
+            if *path == run_config {
+                run_config_calls += 1;
+            } else {
+                let rel = path.strip_prefix(root).unwrap_or(path).display();
+                offenders.push(format!("  {rel}:{}", line_of(code, at)));
+            }
+        }
+    }
+    assert_eq!(
+        run_config_calls, 1,
+        "ComplianceRunConfig::checker builds the one production checker; is the lint scanning?"
+    );
+    assert!(
+        offenders.is_empty(),
+        "ComplianceChecker::new in production code: build the checker with \
+         ComplianceRunConfig::checker (or check with ComplianceRunConfig::check) \
+         so the level gets the run's inputs the way every entry point gives them:\n{}",
         offenders.join("\n")
     );
 }
@@ -315,6 +391,11 @@ mod tests {
         let mut e = ComplianceChecker::new(level);
         e = e.with_as_of(t);
     }
+
+    fn runs() {
+        let f = ComplianceRunConfig::new().with_as_of(t).checker(level);
+        let g = ComplianceRunConfig::new().with_sidecar(sc).check(level, &sbom);
+    }
 }
 
 #[cfg(test)]
@@ -325,13 +406,13 @@ mod render_tests;
     assert_eq!(out_of_line, ["render_tests"]);
     let (calls, unpinned) = unpinned_calls(&code, &inline);
     assert_eq!(
-        calls, 5,
-        "a, b, c, d, e; not the production call or the literals"
+        calls, 7,
+        "a, b, c, d, e, f, g; not the production call or the literals"
     );
     assert_eq!(
         unpinned,
-        [21, 22, 23],
-        "c, d and e are not pinned in their expression"
+        [21, 22, 23, 29],
+        "c, d, e and g are not pinned in their expression"
     );
 }
 

@@ -40,7 +40,16 @@ ENISA / industry guidance. Use it to:
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
 [CRA-P3.2 calibration table](#cra-p32-product-class-severity-calibration)
 that scales severity for vendor-hash, EOL, cycles, DoC, EUCC, PSIRT,
-and module-certificate checks.
+and module-certificate checks of `CraPhase1` and `CraPhase2`.
+
+Every command that checks compliance (`validate`, `quality`, `view` and
+`diff` with their TUIs, `cra-docs`) hands each profile the same inputs:
+the CRA sidecar reaches the CRA, OSS-steward, EUCC and EU AI Act profiles,
+and the product class reaches the two CRA phases only. The Article 24
+steward profile gets the sidecar without its `productClass` and
+`conformityAssessmentRoute`: the class picks a manufacturer's
+conformity-assessment procedure (Art. 32), which a steward does not
+follow. See [Inputs of a run](compliance-output.md#inputs-of-a-run).
 
 ## Reverse map
 
@@ -212,14 +221,18 @@ statement), but not as the route's certificate.
 
 Article 24 *suppresses* manufacturer-only checks (Art. 13(16) email,
 Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
-[PRE-8-RQ-02], vendor-hash carry-through).
+[PRE-8-RQ-02], vendor-hash carry-through). The steward profile takes no
+product class either: its results carry no `conformity_summary`, and
+`SBOM-CRA-CYCLES` stays a Warning whatever the class (before v0.4.0 a
+sidecar `productClass` reached it).
 
 ## CRA-P3.2 product-class severity calibration
 
 When `--cra-product-class` (or sidecar `productClass`) is set, the
-severity of certain checks scales per Annex III/IV class. Selecting a
-class also implies a default conformity-assessment route (Annex VIII),
-overridable via sidecar `conformityAssessmentRoute`.
+severity of certain CRA Phase 1 and Phase 2 checks scales per Annex
+III/IV class. Selecting a class also implies a default
+conformity-assessment route (Annex VIII), overridable via sidecar
+`conformityAssessmentRoute`. The OSS-steward profile ignores both.
 
 The classes are those of the CRA: `important-class-1` is Annex III class I
 (19 product categories, from identity management systems and browsers to
@@ -289,10 +302,10 @@ violation messages.
 | `SBOM-CRA-ART-14-PSIRT` / `-EARLY-WARNING` / `-NOTIFICATION` / `-ENISA` channels + the `conformity_summary` PSIRT row | no | sidecar fields |
 
 The `conformity_summary` block is the Annex VIII checklist emitted next to
-`violations` by `validate --standard cra -o json`. It only appears once a
-product class is pinned — via `--cra-product-class` or the sidecar
-`productClass` — since the class picks the conformity route whose rows are
-listed. A row strengthened by attestation names the level it was satisfied
+`violations` by `validate --standard cra -o json` (and `cra-phase1`). It
+only appears once a product class is pinned — via `--cra-product-class` or
+the sidecar `productClass` — since the class picks the conformity route
+whose rows are listed, and never on `oss-steward` results. A row strengthened by attestation names the level it was satisfied
 at:
 
 ```text
@@ -414,6 +427,10 @@ sbom-tools validate sbom.json --standard oss-steward
 # expiry) so CI runs are reproducible
 sbom-tools validate sbom.json --standard cra --as-of 2027-01-01
 
+# The TUIs take the same inputs and show the same verdicts
+sbom-tools view sbom.json --cra-product-class important-class-2 --as-of 2027-01-01
+sbom-tools diff old.json new.json --cra-product-class important-class-2 --as-of 2027-01-01
+
 # SARIF output for CI (with helpUri populated)
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
 
@@ -492,6 +509,9 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
   references has a URL, and of the rules outside the registry.
 - `ComplianceChecker::class_severity()` in `src/quality/compliance/mod.rs` —
   P3.2 calibration table.
+- `ComplianceRunConfig::checker()` in `src/quality/compliance/run_config.rs` —
+  which of a run's inputs (`--as-of`, CRA sidecar, product class) each
+  profile gets; every command and TUI builds its checkers there.
 - `cli::run_cra_docs` in `src/cli/cra_docs.rs` — Annex V DoC + Annex VII tech-doc dossier
   generator.
 - `AttestationRuleFamily::classify()` in `src/model/attestation.rs` —

@@ -215,8 +215,15 @@ pub fn compute_diff(
                 crate::quality::ScoringProfile::Standard
             }
         };
-        let old_report = crate::quality::QualityScorer::new(profile_for(old_sbom)).score(old_sbom);
-        let new_report = crate::quality::QualityScorer::new(profile_for(new_sbom)).score(new_sbom);
+        // Scored with the run's shared compliance inputs (the `--as-of`
+        // clock dates the time-sensitive metrics), as the TUI scores them.
+        let score = |sbom: &crate::model::NormalizedSbom| {
+            crate::quality::QualityScorer::new(profile_for(sbom))
+                .with_compliance(config.compliance.clone())
+                .score(sbom)
+        };
+        let old_report = score(old_sbom);
+        let new_report = score(new_sbom);
         result.quality_delta = Some(crate::diff::QualityDelta::from_reports(
             &old_report,
             &new_report,

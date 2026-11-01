@@ -16,6 +16,7 @@ use super::{DiffEngine, DiffResult};
 use crate::error::SbomDiffError;
 use crate::matching::{FuzzyMatchConfig, MatchingRulesConfig};
 use crate::model::{NormalizedSbom, VulnerabilityCounts};
+use crate::quality::ComplianceRunConfig;
 use std::collections::{HashMap, HashSet};
 
 /// Engine for multi-SBOM comparisons.
@@ -32,6 +33,9 @@ pub struct MultiDiffEngine {
     graph_diff_config: Option<super::GraphDiffConfig>,
     /// Custom matching rules (applied when building the engine).
     matching_rules: Option<MatchingRulesConfig>,
+    /// The compliance run the timeline's compliance trend checks every SBOM
+    /// with (the wall clock, no sidecar, unless set).
+    compliance: ComplianceRunConfig,
     /// Caching wrapper built lazily on first diff operation.
     incremental: Option<IncrementalDiffEngine>,
 }
@@ -44,6 +48,7 @@ impl MultiDiffEngine {
             include_unchanged: false,
             graph_diff_config: None,
             matching_rules: None,
+            compliance: ComplianceRunConfig::new(),
             incremental: None,
         }
     }
@@ -77,6 +82,14 @@ impl MultiDiffEngine {
     pub fn with_matching_rules(mut self, rules: MatchingRulesConfig) -> Self {
         self.matching_rules = Some(rules);
         self.incremental = None;
+        self
+    }
+
+    /// Check every SBOM of a timeline's compliance trend with `compliance`'s
+    /// inputs (for instance a pinned `as_of` clock).
+    #[must_use]
+    pub fn with_compliance(mut self, compliance: ComplianceRunConfig) -> Self {
+        self.compliance = compliance;
         self
     }
 
@@ -679,11 +692,12 @@ impl MultiDiffEngine {
             .iter()
             .enumerate()
             .map(|(i, (sbom, name, _))| {
-                use crate::quality::{ComplianceChecker, ComplianceLevel};
-                let scores = ComplianceLevel::all()
-                    .iter()
-                    .map(|level| {
-                        let result = ComplianceChecker::new(*level).check(sbom);
+                let scores = self
+                    .compliance
+                    .check_levels(crate::quality::ComplianceLevel::all(), sbom)
+                    .into_iter()
+                    .map(|result| {
+                        let level = result.level;
                         ComplianceScoreEntry {
                             standard: level.name().to_string(),
                             error_count: result.error_count,

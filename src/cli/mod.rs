@@ -16,6 +16,8 @@ mod merge;
 mod multi;
 mod quality;
 mod query;
+#[cfg(test)]
+mod run_parity_tests;
 mod tailor;
 mod validate;
 mod verify;
@@ -96,6 +98,50 @@ pub(crate) fn load_cra_sidecar(
     }
 }
 
+/// The compliance inputs of a run, parsed strictly from the flags every
+/// compliance-checking command shares: `--cra-product-class` and `--as-of`.
+/// `diff` judges both of its SBOMs with these; the commands that judge one
+/// SBOM add its CRA sidecar with [`compliance_run_config_for`].
+///
+/// # Errors
+///
+/// An unknown product class or an unparseable `--as-of` (usage errors,
+/// exit 3).
+pub fn compliance_run_config(
+    cra_product_class: Option<&str>,
+    as_of: Option<&str>,
+) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
+    let mut config = crate::quality::ComplianceRunConfig::new();
+    if let Some(as_of) = as_of.map(parse_as_of).transpose()? {
+        config = config.with_as_of(as_of);
+    }
+    if let Some(class) = parse_cra_product_class(cra_product_class)? {
+        config = config.with_product_class(class);
+    }
+    Ok(config)
+}
+
+/// The compliance run of a command that judges the SBOM at `sbom_path`:
+/// [`compliance_run_config`] plus the CRA sidecar from `explicit_sidecar`
+/// (`--cra-sidecar` or the config file), else the one found next to the
+/// SBOM (see [`load_cra_sidecar`]). `validate`, `quality`, `view` (and its
+/// TUI) and `cra-docs` all build their run here, so they judge one SBOM with
+/// the same inputs. A sidecar `productClass` that differs from
+/// `--cra-product-class` wins, with a warning on stderr.
+pub(crate) fn compliance_run_config_for(
+    sbom_path: &std::path::Path,
+    explicit_sidecar: Option<&std::path::Path>,
+    cra_product_class: Option<&str>,
+    as_of: Option<&str>,
+) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
+    let mut config = compliance_run_config(cra_product_class, as_of)?;
+    if let Some(sidecar) = load_cra_sidecar(explicit_sidecar, sbom_path)? {
+        config = config.with_sidecar(sidecar);
+    }
+    config.warn_on_product_class_conflict();
+    Ok(config)
+}
+
 /// Parse an **explicitly** passed `--cra-product-class` value strictly.
 ///
 /// A typo'd class used to be silently dropped (`parse_cli` → `None`, scored
@@ -164,8 +210,9 @@ pub(crate) fn sarif_artifact(
     Ok(crate::reports::SarifArtifact::new(location, sbom, content))
 }
 
-/// Parse an `--as-of` evaluation-clock value (shared by `validate` and
-/// `quality` so both commands accept the exact same spellings).
+/// Parse an `--as-of` evaluation-clock value (shared by every command that
+/// takes the flag, through [`compliance_run_config`], so all of them accept
+/// the exact same spellings).
 ///
 /// Accepted forms:
 /// - RFC 3339 datetime with offset (`2027-01-01T00:00:00Z`, `…+02:00`)

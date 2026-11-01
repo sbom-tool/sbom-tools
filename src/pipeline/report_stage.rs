@@ -6,6 +6,7 @@
 use crate::config::DiffConfig;
 use crate::diff::DiffResult;
 use crate::model::NormalizedSbom;
+use crate::quality::{ComplianceLevel, ComplianceRunConfig};
 use crate::reports::{
     ReportConfig, ReportFormat, StreamingJsonReporter, WriterReporter, create_reporter_with_options,
 };
@@ -54,20 +55,26 @@ pub fn output_report_with_sarif(
     // computing it themselves when the field is `None`, so leaving it unset for
     // non-consuming formats is output-identical.
     //
-    // Each side resolves its own CRA sidecar (auto-discovered next to that
-    // SBOM), matching the TUI path in `cli/diff.rs`, so `diff -o json|md|html|
-    // sarif` renders the same sidecar-driven verdicts as the interactive TUI.
-    // SARIF reports into the new SBOM only, so it needs no old-side
-    // compliance.
+    // Each side is judged with the run's shared inputs plus its own CRA
+    // sidecar (auto-discovered next to that SBOM), matching the TUI path in
+    // `cli/diff.rs`, so `diff -o json|md|html|sarif` renders the same
+    // verdicts as the interactive TUI. SARIF reports into the new SBOM only,
+    // so it needs no old-side compliance.
     let (old_cra, new_cra) = if !use_streaming && format_uses_compliance(effective_output) {
         let old_cra = if effective_output == ReportFormat::Sarif {
             None
         } else {
-            Some(cra_phase2_check(&config.paths.old, old_sbom)?)
+            Some(
+                side_compliance(&config.compliance, &config.paths.old)?
+                    .check(ComplianceLevel::CraPhase2, old_sbom),
+            )
         };
         (
             old_cra,
-            Some(cra_phase2_check(&config.paths.new, new_sbom)?),
+            Some(
+                side_compliance(&config.compliance, &config.paths.new)?
+                    .check(ComplianceLevel::CraPhase2, new_sbom),
+            ),
         )
     } else {
         (None, None)
@@ -118,14 +125,13 @@ pub fn output_report_with_sarif(
 /// `--cra-sidecar` contract — the trust decision must not depend on how the
 /// file was found.
 ///
-/// The `diff` command has no `--cra-sidecar` / `--cra-product-class` flags, so
-/// auto-discovery is the only sidecar channel for diffs; the sidecar's own
-/// `productClass` is honoured by [`ComplianceChecker::effective_product_class`].
-/// Shared by the diff TUI path (`cli/diff.rs`) and this report stage so both
-/// resolve sidecars identically.
+/// The `diff` command takes two SBOMs, so it has no `--cra-sidecar` flag:
+/// auto-discovery is the only sidecar channel for diffs, and the sidecar's
+/// own `productClass` wins over `--cra-product-class`. Shared by the diff TUI
+/// path (`cli/diff.rs`) and this report stage through [`side_compliance`],
+/// so both resolve sidecars identically.
 ///
 /// [`CraSidecarMetadata::discover_for_sbom`]: crate::model::CraSidecarMetadata::discover_for_sbom
-/// [`ComplianceChecker::effective_product_class`]: crate::quality::ComplianceChecker::effective_product_class
 pub fn discover_cra_sidecar(
     sbom_path: &std::path::Path,
 ) -> Result<Option<crate::model::CraSidecarMetadata>> {
@@ -137,21 +143,24 @@ pub fn discover_cra_sidecar(
     }
 }
 
-/// CRA Phase 2 compliance for one side of the diff, threading that SBOM's own
-/// auto-discovered sidecar. Sidecar resolution is per-SBOM: each side of the
-/// diff is judged against the metadata shipped next to it, so a product-class
-/// or contact change between releases (old sidecar vs new sidecar) shows up in
-/// the diff instead of being masked by one side's evidence.
-fn cra_phase2_check(
+/// The compliance run of one side of a diff: `shared` (the inputs both sides
+/// share, [`DiffConfig::compliance`]) plus the CRA sidecar found next to
+/// `sbom_path`. Sidecar resolution is per-SBOM: each side of the diff is
+/// judged against the metadata shipped next to it, so a product-class or
+/// contact change between releases (old sidecar vs new sidecar) shows up in
+/// the diff instead of being masked by one side's evidence. A sidecar
+/// `productClass` that differs from `--cra-product-class` wins, with a
+/// warning on stderr.
+pub(crate) fn side_compliance(
+    shared: &ComplianceRunConfig,
     sbom_path: &std::path::Path,
-    sbom: &NormalizedSbom,
-) -> Result<crate::quality::ComplianceResult> {
-    let mut checker =
-        crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::CraPhase2);
+) -> Result<ComplianceRunConfig> {
+    let mut config = shared.clone();
     if let Some(sidecar) = discover_cra_sidecar(sbom_path)? {
-        checker = checker.with_sidecar(sidecar);
+        config = config.with_sidecar(sidecar);
     }
-    Ok(checker.check(sbom))
+    config.warn_on_product_class_conflict();
+    Ok(config)
 }
 
 /// Whether a report format renders the pre-computed CRA compliance results.

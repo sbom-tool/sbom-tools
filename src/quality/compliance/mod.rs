@@ -30,6 +30,7 @@ mod fsct;
 mod generic;
 mod pci_dss;
 mod registry;
+mod run_config;
 mod selector;
 mod shared;
 mod ssdf;
@@ -47,6 +48,7 @@ pub use registry::{
     RemediationFormat, RuleKind, RuleMeta, SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta,
 };
 use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
+pub use run_config::ComplianceRunConfig;
 pub use selector::StandardSelector;
 // The vendor-hash metric behind SBOM-CRA-PRE-7-RQ-07-RE
 // (quality/metrics.rs) classifies vendor components with the same
@@ -1169,8 +1171,10 @@ pub struct ComplianceResult {
     /// see [`ComplianceResult::passed`].
     pub info_count: usize,
     /// CRA Annex VIII conformity-assessment summary (CRA-P4.3). Populated
-    /// only when the level is a CRA profile *and* a product class has been
-    /// pinned (explicitly or via sidecar). `None` otherwise.
+    /// only when the level is CRA Phase 1 or Phase 2 *and* a product class
+    /// has been pinned (explicitly or via sidecar). `None` otherwise,
+    /// including for the Art. 24 steward profile, which follows no
+    /// conformity-assessment procedure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub conformity_summary: Option<ConformityAssessmentSummary>,
     /// Whether the standard actually evaluated this SBOM (see
@@ -1329,7 +1333,11 @@ pub enum ClassCheck {
     ModuleAttestation,
 }
 
-/// Compliance checker for SBOMs
+/// Compliance checker for SBOMs.
+///
+/// To check with a run's inputs (clock, CRA sidecar, product class) as the
+/// CLI and the TUIs do, build it with [`ComplianceRunConfig::checker`], which
+/// gives each level only the inputs it reads.
 #[derive(Debug, Clone)]
 pub struct ComplianceChecker {
     /// Compliance level to check
@@ -1379,9 +1387,10 @@ impl ComplianceChecker {
     /// Attach CRA sidecar metadata to supplement SBOM-level fields.
     ///
     /// Sidecar values are only consulted as fallbacks — fields present in the
-    /// SBOM always take precedence. Used by `validate`, `quality`, and `view`
-    /// CLIs via the `--cra-sidecar` flag (with auto-discovery for adjacent
-    /// `<sbom>.cra.{json,yaml}` files).
+    /// SBOM always take precedence. The CLI commands attach it through
+    /// [`ComplianceRunConfig`] (`--cra-sidecar`, with auto-discovery for
+    /// adjacent `<sbom>.cra.{json,yaml}` files), which gives it only to the
+    /// levels that read it.
     #[must_use]
     pub fn with_sidecar(mut self, sidecar: crate::model::CraSidecarMetadata) -> Self {
         self.sidecar = Some(sidecar);
@@ -1514,7 +1523,11 @@ impl ComplianceChecker {
     /// every violation and every passed check keeps a key of its own, see
     /// [`finding_key`]), records whether the standard applied, and attaches
     /// the CRA Annex VIII conformity summary when a product class has been
-    /// pinned on a CRA profile.
+    /// pinned on CRA Phase 1 or Phase 2.
+    ///
+    /// Every entry point builds its checkers through
+    /// [`ComplianceRunConfig::checker`], which decides which of a run's
+    /// inputs (clock, sidecar, product class) each level gets.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
         let ctx = ComplianceContext::new(self, sbom);
@@ -1567,8 +1580,10 @@ impl ComplianceChecker {
         let mut result = ComplianceResult::new(self.level, violations).with_passed(passed);
         result.applicability = applicability;
         // Attach the CRA Annex VIII conformity summary when a product class
-        // has been pinned and the level is a CRA profile.
-        if self.level.is_cra() && self.has_explicit_product_class() {
+        // has been pinned and the level is a CRA phase profile. Annex VIII
+        // lists the manufacturer's conformity-assessment procedures; an
+        // open-source steward (Art. 24, `CraOssSteward`) follows none.
+        if self.level.cra_phase().is_some() && self.has_explicit_product_class() {
             result.conformity_summary = Some(self.build_conformity_summary(sbom));
         }
         result

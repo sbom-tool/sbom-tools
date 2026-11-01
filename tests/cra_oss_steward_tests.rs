@@ -249,3 +249,64 @@ fn sidecar_is_oss_steward_field_roundtrips() {
         "is_oss_steward=false should be skipped during serialization"
     );
 }
+
+/// The product class picks a manufacturer's conformity-assessment procedure
+/// (Art. 32), which a steward does not follow, so a run gives the steward
+/// profile no class: neither `--cra-product-class` nor the sidecar's
+/// `productClass`. Its cycle finding stays a Warning where CRA Phase 2, at
+/// the same Critical class, makes it an Error, and it carries no Annex VIII
+/// summary.
+#[test]
+fn a_run_gives_the_steward_profile_no_product_class() {
+    use sbom_tools::model::{CraProductClass, DependencyEdge, DependencyType};
+    use sbom_tools::quality::{ComplianceResult, ComplianceRunConfig};
+
+    let mut sbom = sbom_with_advisories();
+    let bar = Component::new("bar".to_string(), "bar".to_string())
+        .with_version("1.0".to_string())
+        .with_purl("pkg:cargo/bar@1.0".to_string());
+    let bar_id = bar.canonical_id.clone();
+    sbom.add_component(bar);
+    let foo_id = sbom
+        .components
+        .keys()
+        .find(|id| **id != bar_id)
+        .expect("foo")
+        .clone();
+    sbom.edges.push(DependencyEdge::new(
+        foo_id.clone(),
+        bar_id.clone(),
+        DependencyType::DependsOn,
+    ));
+    sbom.edges.push(DependencyEdge::new(
+        bar_id,
+        foo_id,
+        DependencyType::DependsOn,
+    ));
+
+    let cycles = |r: &ComplianceResult| {
+        r.violations
+            .iter()
+            .find(|v| v.rule_id == "SBOM-CRA-CYCLES")
+            .map(|v| v.severity)
+    };
+    let sidecar = CraSidecarMetadata {
+        product_class: Some(CraProductClass::Critical),
+        ..Default::default()
+    };
+    for run in [
+        ComplianceRunConfig::new()
+            .with_as_of(clock::as_of())
+            .with_sidecar(sidecar),
+        ComplianceRunConfig::new()
+            .with_as_of(clock::as_of())
+            .with_product_class(CraProductClass::Critical),
+    ] {
+        let steward = run.check(ComplianceLevel::CraOssSteward, &sbom);
+        assert_eq!(cycles(&steward), Some(ViolationSeverity::Warning));
+        assert!(steward.conformity_summary.is_none());
+        let phase2 = run.check(ComplianceLevel::CraPhase2, &sbom);
+        assert_eq!(cycles(&phase2), Some(ViolationSeverity::Error));
+        assert!(phase2.conformity_summary.is_some());
+    }
+}
