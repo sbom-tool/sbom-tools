@@ -35,7 +35,8 @@ mod types;
 
 pub use audit::AssessedSbom;
 pub use compliance_json::{
-    COMPLIANCE_JSON_SCHEMA, generate_compliance_json, generate_compliance_json_at,
+    COMPLIANCE_JSON_SCHEMA, compliance_result_json, generate_compliance_json,
+    generate_compliance_json_at,
 };
 pub use csaf::{CsafEmitOptions, emit_csaf};
 pub use csv::CsvReporter;

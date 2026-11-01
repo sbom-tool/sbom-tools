@@ -62,7 +62,7 @@ use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
 pub use rule_settings::{
     RuleSetting, RuleSettings, SettingSource, SeverityOverride, SuppressedRule,
 };
-pub use run_config::ComplianceRunConfig;
+pub use run_config::{ComplianceRunConfig, PqcInputsError, parse_as_of};
 pub use selector::StandardSelector;
 // The vendor-hash metric behind SBOM-CRA-PRE-7-RQ-07-RE
 // (quality/metrics.rs) classifies vendor components with the same

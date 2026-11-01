@@ -47,5 +47,31 @@
       "compliance",
       "recommendations"
     ]
+  },
+  "compliance_envelope_json": {
+    "required_keys": [
+      "schema",
+      "tool",
+      "as_of",
+      "subject",
+      "results"
+    ]
+  },
+  "rule_catalog_json": {
+    "required_keys": [
+      "schema",
+      "tool",
+      "rules"
+    ]
+  },
+  "score_report_json": {
+    "required_keys": [
+      "scoring_engine_version",
+      "overall_score",
+      "grade",
+      "profile",
+      "compliance",
+      "recommendations"
+    ]
   }
 }
