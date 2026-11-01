@@ -1002,7 +1002,6 @@ impl ComplianceChecker {
         // A channel counts only when it reaches someone (`known_contact`):
         // a placeholder such as TBD or an example.com address is no channel,
         // and the finding names it (`unreachable_sidecar_note`).
-
         let psirt = sidecar.and_then(|s| s.psirt_url.as_deref());
         if !known_contact(psirt) {
             let prefix = if art_14_active {

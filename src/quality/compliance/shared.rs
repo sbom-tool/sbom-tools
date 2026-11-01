@@ -373,7 +373,7 @@ const DOCUMENTATION_DOMAINS: [&str; 3] = ["example.com", "example.net", "example
 
 /// The host an email address or URL points at, lowercased: the domain after
 /// the last `@` of an address, or the host of a `scheme://` URL (without
-/// its user, port or path). A value naming no host gives what it starts
+/// its user, port or path). For other text, the host characters it starts
 /// with.
 fn address_host(value: &str) -> String {
     let value = value.trim();

@@ -337,8 +337,8 @@ digest instead of failing the whole document.
 
 | Requirement string                                          | CRA reference  | Cleared by                                            |
 |-------------------------------------------------------------|----------------|-------------------------------------------------------|
-| `CRA Art. 24: Vulnerability-handling process (steward floor)` | Art. 24      | `SecurityContact` / `Advisories` / `VulnerabilityAssertion` external ref OR `psirtUrl` / `vulnerabilityDisclosureUrl` |
-| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` |
+| `CRA Art. 24: Vulnerability-handling process (steward floor)` | Art. 24      | `SecurityContact` / `Advisories` / `VulnerabilityAssertion` external ref OR `psirtUrl` / `vulnerabilityDisclosureUrl` (a [contact](#contacts) that reaches nobody does not count) |
+| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` (a [contact](#contacts) that reaches nobody does not count) |
 
 Article 24 *suppresses* manufacturer-only checks (Art. 13(16) email,
 Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
