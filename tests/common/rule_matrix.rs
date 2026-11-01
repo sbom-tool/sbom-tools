@@ -83,6 +83,10 @@ pub const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715d
 /// Filler MD5 digest (32 hex chars) for weak-hash cases.
 pub const MD5_FILLER: &str = "d41d8cd98f00b204e9800998ecf8427e";
 
+/// A creation timestamp that is not an RFC 3339 date-time. A timestamp rule
+/// reports it as it reports a missing one, quoting the value.
+pub const UNPARSEABLE_TIMESTAMP: &str = "2026-13-45 noon";
+
 /// SHA-256 values no hash rule counts, as `(case label, algorithm, value)`:
 /// an empty value, one that is not hexadecimal (a `sha256:` prefix on the
 /// filler), and one of the wrong length (an MD5-sized value). Every hash
@@ -795,6 +799,18 @@ impl SbomFixture {
     /// Mutable access to the CRA sidecar (panics when absent).
     pub fn sidecar_mut(&mut self) -> &mut CraSidecarMetadata {
         self.sidecar.as_mut().expect("fixture has no CRA sidecar")
+    }
+
+    /// List the component `name` twice: a second entry with its name,
+    /// version and purl, under the bom-ref `<bom-ref>-again`, or under the
+    /// same bom-ref when `same_ref` is set. The parsers merge the two
+    /// entries into one component (panics when there is no such component).
+    pub fn list_twice(&mut self, name: &str, same_ref: bool) {
+        let mut again = self.component_mut(name).clone();
+        if !same_ref {
+            again.bom_ref = format!("{}-again", again.bom_ref);
+        }
+        self.components.push(again);
     }
 
     /// Parse the CycloneDX JSON rendering through the real parser (see

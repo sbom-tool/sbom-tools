@@ -29,6 +29,7 @@
 //! ```
 
 mod compliance;
+mod cycles;
 mod metrics;
 mod scorer;
 

@@ -31,8 +31,8 @@ use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, Outcome,
     RuleEntry, SHA256_FILLER, SPDX_REFERENCES_CARRY_NO_HASH, SPDX_VERSION_CASE,
     SPDX3_AGENT_EMAILS_NOT_READ, SPDX3_VALID_UNTIL_NOT_READ, SPDX23_HAS_NO_VULNERABILITIES,
-    SbomFixture, VulnAnalysisFixture, assert_no_violations_in, assert_spdx_version_unknown, check,
-    render_violations, run_matrix,
+    SbomFixture, UNPARSEABLE_TIMESTAMP, VulnAnalysisFixture, assert_no_violations_in,
+    assert_spdx_version_unknown, check, render_violations, run_matrix,
 };
 use sbom_tools::model::{
     ConformityRoute, ControlAssertion, CraProductClass, CraSidecarMetadata, EolStatus,
@@ -88,6 +88,7 @@ const PHASE1_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
     "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
     "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
@@ -145,6 +146,7 @@ const PHASE2_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
     "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
     "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
@@ -170,6 +172,7 @@ const STEWARD_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-CRA-ART-24-SUPPLIER",
     "SBOM-CRA-CYCLES",
 ];
@@ -537,6 +540,11 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             "SBOM 31 to 90 days old",
             Sev::Info,
             broken(|s| s.timestamp = Some(days_before_clock(41))),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Warning,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         // Tool policy floor: CycloneDX 1.4+ / SPDX 2.3+.
         RuleEntry::tested(
@@ -1059,6 +1067,19 @@ fn manufacturer_rows() -> Vec<RuleEntry> {
             Sev::Info,
             broken(|s| bom_ref_is_name(s, "libalpha")),
             base(),
+        ),
+        // A component listed twice, under a second bom-ref or under its own
+        // bom-ref again: the entries are merged, and one Info names it.
+        RuleEntry::tested(
+            "SBOM-CRA-DUPLICATE-COMPONENT",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", false)),
+            base(),
+        )
+        .with_firing(
+            "the same bom-ref twice",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", true)),
         ),
         // Art. 14 channels past the 2026-09-11 deadline (the pinned clock):
         // each missing channel warns, escalated to Error for important class
@@ -2107,6 +2128,19 @@ fn cra_oss_steward_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Info,
             steward_broken(|s| bom_ref_is_name(s, "libalpha")),
             steward_base(),
+        ),
+        // A component listed twice, under a second bom-ref or under its own
+        // bom-ref again: the entries are merged, and one Info names it.
+        RuleEntry::tested(
+            "SBOM-CRA-DUPLICATE-COMPONENT",
+            Sev::Info,
+            steward_broken(|s| s.list_twice("libalpha", false)),
+            steward_base(),
+        )
+        .with_firing(
+            "the same bom-ref twice",
+            Sev::Info,
+            steward_broken(|s| s.list_twice("libalpha", true)),
         ),
     ];
 

@@ -213,6 +213,9 @@ const REMEDIATION_SPEC_VERSION_UNKNOWN: &str =
 const REMEDIATION_ELEMENT_ID: &str =
     "Give every element its own well-formed identifier, the one dependency relationships refer to.";
 
+/// A component the document lists more than once (one finding per document).
+const REMEDIATION_DUPLICATE_COMPONENT: &str = "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.";
+
 /// Mistyped-ML remediation, shared by the EU AI Act and BSI/G7 SBOM-for-AI
 /// applicability guards.
 const REMEDIATION_UNTYPED_ML: &str = "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.";
@@ -1367,6 +1370,22 @@ const ADVICE_ELEMENT_ID: FormatAdvice = FormatAdvice {
         field: Some("spdxId"),
     },
 };
+
+/// One entry per component.
+const ADVICE_DUPLICATE_COMPONENT: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "list each component once in components[], under a bom-ref of its own.",
+        field: Some("components[]"),
+    },
+    spdx2: FieldAdvice {
+        text: "list each package once in packages[], under an SPDXID of its own.",
+        field: Some("packages[]"),
+    },
+    spdx3: FieldAdvice {
+        text: "describe each package in one software_Package element, under an spdxId of its own.",
+        field: Some("software_Package"),
+    },
+};
 /// Look up the static [`RuleMeta`] for a stable internal rule key.
 ///
 /// The key is the [`Violation::rule_id`] set at each check site. Returns
@@ -1945,7 +1964,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA general SBOM readiness requirement",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
-            remediation: "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
+            remediation: "Fix the document-level element the finding names. The CRA profiles' generic checks look for the SBOM's creator, a document serial number, a name on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0), well-formed element identifiers and one entry per component.",
             advice: Some(&ADVICE_CRA_GENERAL),
         },
         // The generic path's checks under the CRA profiles, one id each so
@@ -2008,6 +2027,18 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
         },
+        // One finding per document: the components it lists more than once,
+        // whose entries were merged. Info: the merge keeps every entry's
+        // data, so no verdict depends on the repeat.
+        "SBOM-CRA-DUPLICATE-COMPONENT" => RuleMeta {
+            sarif_id: "SBOM-CRA-DUPLICATE-COMPONENT",
+            name: "CraDuplicateComponent",
+            short_description: "CRA readiness: Every component is listed once",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(ANNEX, "Annex I Part II (1)")],
+            remediation: REMEDIATION_DUPLICATE_COMPONENT,
+            advice: Some(&ADVICE_DUPLICATE_COMPONENT),
+        },
         // Fallback SARIF rule of the quality profiles
         // (Minimum/Standard/Comprehensive): no check emits it, but the SARIF
         // renderer files a finding without a registered rule here for quality
@@ -2019,7 +2050,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "SBOM quality: general quality-profile requirement",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
-            remediation: "Fix the element the finding names. The quality profiles' generic checks look for the SBOM's creator, a document serial number, a component inventory, a name, unique identifier (PURL, CPE, SWHID or SWID), license and hash on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0) and well-formed element identifiers.",
+            remediation: "Fix the element the finding names. The quality profiles' generic checks look for the SBOM's creator, a document serial number, a component inventory, a name, unique identifier (PURL, CPE, SWHID or SWID), license and hash on every component, a spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0), well-formed element identifiers and one entry per component.",
             advice: Some(&ADVICE_QUALITY_GENERAL),
         },
         "SBOM-QUALITY-CREATOR" => RuleMeta {
@@ -2111,6 +2142,15 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[],
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
+        },
+        "SBOM-QUALITY-DUPLICATE-COMPONENT" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-DUPLICATE-COMPONENT",
+            name: "QualityDuplicateComponent",
+            short_description: "SBOM quality: Every component is listed once",
+            default_severity: ViolationSeverity::Info,
+            refs: &[],
+            remediation: REMEDIATION_DUPLICATE_COMPONENT,
+            advice: Some(&ADVICE_DUPLICATE_COMPONENT),
         },
         // ---- EUCC Substantial (reference-only profile) -------------------
         "SBOM-EUCC-PP" => RuleMeta {
@@ -2741,6 +2781,15 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
         },
+        "SBOM-FDA-DUPLICATE-COMPONENT" => RuleMeta {
+            sarif_id: "SBOM-FDA-DUPLICATE-COMPONENT",
+            name: "FdaDuplicateComponent",
+            short_description: "FDA Medical Device: Every component is listed once",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: REMEDIATION_DUPLICATE_COMPONENT,
+            advice: Some(&ADVICE_DUPLICATE_COMPONENT),
+        },
         // NTIA rules emitted by the `validate` fast-path.
         "SBOM-NTIA-AUTHOR" => RuleMeta {
             sarif_id: "SBOM-NTIA-AUTHOR",
@@ -2815,6 +2864,15 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
+        },
+        "SBOM-NTIA-DUPLICATE-COMPONENT" => RuleMeta {
+            sarif_id: "SBOM-NTIA-DUPLICATE-COMPONENT",
+            name: "NtiaDuplicateComponent",
+            short_description: "NTIA Minimum Elements: Every component is listed once",
+            default_severity: ViolationSeverity::Info,
+            refs: &[(K::NtiaMinimum, "NTIA Minimum Elements")],
+            remediation: REMEDIATION_DUPLICATE_COMPONENT,
+            advice: Some(&ADVICE_DUPLICATE_COMPONENT),
         },
         // Catch-all rule keys for the SSDF / EO 14028 profiles; not currently
         // emitted by any check site but kept so the registry mirrors the full
@@ -4147,6 +4205,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-QUALITY-GENERAL",
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
@@ -4158,6 +4217,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
+    "SBOM-QUALITY-DUPLICATE-COMPONENT",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -4224,6 +4284,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-FDA-SPEC-VERSION",
     "SBOM-FDA-SPEC-VERSION-UNKNOWN",
     "SBOM-FDA-ELEMENT-ID",
+    "SBOM-FDA-DUPLICATE-COMPONENT",
     "SBOM-NTIA-AUTHOR",
     "SBOM-NTIA-INVENTORY",
     "SBOM-NTIA-NAME",
@@ -4232,6 +4293,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-SPEC-VERSION",
     "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
     "SBOM-NTIA-ELEMENT-ID",
+    "SBOM-NTIA-DUPLICATE-COMPONENT",
     "SBOM-SSDF-GENERAL",
     "SBOM-EO14028-GENERAL",
     "SBOM-SSDF-PS1",
@@ -4478,6 +4540,7 @@ const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
+    "SBOM-QUALITY-DUPLICATE-COMPONENT",
 ];
 
 /// The Standard quality profile's rules (generic.rs): Minimum's, plus the
@@ -4494,6 +4557,7 @@ const STANDARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
+    "SBOM-QUALITY-DUPLICATE-COMPONENT",
 ];
 
 /// The Comprehensive quality profile's rules (generic.rs): Standard's, plus
@@ -4513,6 +4577,7 @@ const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
+    "SBOM-QUALITY-DUPLICATE-COMPONENT",
 ];
 
 /// CRA Phase 1 rules (generic.rs and cra.rs): the document, component,
@@ -4561,6 +4626,7 @@ const CRA_PHASE1_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
     "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
     "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
@@ -4619,6 +4685,7 @@ const CRA_PHASE2_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
     "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
     "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
     "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
@@ -4644,6 +4711,7 @@ const CRA_OSS_STEWARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SPEC-VERSION",
     "SBOM-CRA-SPEC-VERSION-UNKNOWN",
     "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-DUPLICATE-COMPONENT",
 ];
 
 /// BSI TR-03183-2 rules: every `SBOM-BSI-TR-03183-2-*` rule but the fallback.
@@ -4735,6 +4803,7 @@ pub const NTIA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-SPEC-VERSION",
     "SBOM-NTIA-SPEC-VERSION-UNKNOWN",
     "SBOM-NTIA-ELEMENT-ID",
+    "SBOM-NTIA-DUPLICATE-COMPONENT",
 ];
 
 /// FDA premarket SARIF rule catalogue. The FDA baseline check reuses the
@@ -4758,6 +4827,7 @@ pub const FDA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-FDA-SPEC-VERSION",
     "SBOM-FDA-SPEC-VERSION-UNKNOWN",
     "SBOM-FDA-ELEMENT-ID",
+    "SBOM-FDA-DUPLICATE-COMPONENT",
 ];
 
 /// NIST SSDF (SP 800-218) SARIF rule catalogue.

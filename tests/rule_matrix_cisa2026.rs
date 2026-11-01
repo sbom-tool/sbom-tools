@@ -19,7 +19,7 @@ use rule_matrix::clock::{AS_OF, checker};
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER,
     Outcome, RuleEntry, SPDX_VERSION_CASE, SPDX3_SBOM_TYPE_NOT_READ, SbomFixture,
-    assert_no_violations_in, check, render_violations, run_matrix,
+    UNPARSEABLE_TIMESTAMP, assert_no_violations_in, check, render_violations, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -183,6 +183,11 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-TOOL",

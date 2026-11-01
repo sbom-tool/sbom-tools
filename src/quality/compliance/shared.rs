@@ -71,6 +71,37 @@ pub(crate) fn inventory_absent_violation(
     })
 }
 
+/// The longest SBOM value a finding message quotes, in characters. A longer
+/// value is cut, with an ellipsis.
+const MAX_QUOTED_CHARS: usize = 64;
+
+/// `value` as a finding message quotes it: cut to [`MAX_QUOTED_CHARS`]
+/// characters.
+fn quoted(value: &str) -> String {
+    let mut chars = value.chars();
+    let head: String = chars.by_ref().take(MAX_QUOTED_CHARS).collect();
+    if chars.next().is_some() {
+        format!("'{head}…'")
+    } else {
+        format!("'{head}'")
+    }
+}
+
+/// How a timestamp check names a creation timestamp the document wrote but
+/// that is not an RFC 3339 date-time: "an unparseable creation timestamp
+/// '…', not an RFC 3339 date-time". `None` when the document's timestamp
+/// parsed or is absent: a check without a known timestamp then reports it
+/// missing, and with one it reports the value, so a user does not look for a
+/// field they did set.
+pub(crate) fn unparseable_timestamp(sbom: &NormalizedSbom) -> Option<String> {
+    sbom.document.created_unparsed.as_deref().map(|value| {
+        format!(
+            "an unparseable creation timestamp {}, not an RFC 3339 date-time",
+            quoted(value)
+        )
+    })
+}
+
 /// The freshness finding for an SBOM dated in the future, or `None` when its
 /// creation timestamp is missing or not later than `as_of`.
 ///

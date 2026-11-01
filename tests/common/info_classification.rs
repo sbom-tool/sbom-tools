@@ -125,6 +125,22 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
         "gap: a component's bom-ref or SPDX identifier is missing or malformed",
     ),
     (
+        "SBOM-QUALITY-DUPLICATE-COMPONENT",
+        "gap: the document lists a component more than once (its entries were merged)",
+    ),
+    (
+        "SBOM-NTIA-DUPLICATE-COMPONENT",
+        "gap: the document lists a component more than once (its entries were merged)",
+    ),
+    (
+        "SBOM-CRA-DUPLICATE-COMPONENT",
+        "gap: the document lists a component more than once (its entries were merged)",
+    ),
+    (
+        "SBOM-FDA-DUPLICATE-COMPONENT",
+        "gap: the document lists a component more than once (its entries were merged)",
+    ),
+    (
         "SBOM-QUALITY-SPEC-VERSION",
         "advice: CycloneDX older than 1.4 is outdated (Warning when newer than sbom-tools reads)",
     ),

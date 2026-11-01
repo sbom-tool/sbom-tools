@@ -19,7 +19,8 @@ mod rule_matrix;
 
 use rule_matrix::{
     ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER, Outcome, RuleEntry,
-    SPDX23_HAS_NO_AI_PROFILE, SbomFixture, check_in, render_violations, run_matrix,
+    SPDX23_HAS_NO_AI_PROFILE, SbomFixture, UNPARSEABLE_TIMESTAMP, check_in, render_violations,
+    run_matrix,
 };
 use sbom_tools::quality::{
     ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
@@ -220,6 +221,11 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         RuleEntry::tested(
             "SBOM-BSIAI-META-TOOL",

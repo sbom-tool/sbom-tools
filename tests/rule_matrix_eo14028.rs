@@ -12,7 +12,7 @@ mod rule_matrix;
 
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, RuleEntry,
-    SPDX_VERSION_CASE, SbomFixture, assert_no_violations_in, run_matrix,
+    SPDX_VERSION_CASE, SbomFixture, UNPARSEABLE_TIMESTAMP, assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, EO14028_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -96,6 +96,11 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         RuleEntry::tested(
             "SBOM-EO14028-NAME",

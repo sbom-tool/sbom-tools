@@ -357,12 +357,15 @@ impl ComplianceChecker {
     /// inventory process.
     fn check_pci_freshness(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         if !sbom.document.has_known_timestamp() {
+            let gap =
+                unparseable_timestamp(sbom).unwrap_or_else(|| "no creation timestamp".to_string());
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
-                message: "[PCI DSS 6.3.2] SBOM has no creation timestamp, so nothing evidences \
-                          when the inventory was last maintained"
-                    .to_string(),
+                message: format!(
+                    "[PCI DSS 6.3.2] SBOM has {gap}, so nothing evidences when the inventory \
+                     was last maintained"
+                ),
                 element: None,
                 requirement: "PCI DSS v4.0.1 Req. 6.3.2: inventory 'is maintained' — creation \
                               timestamp"

@@ -87,13 +87,16 @@ impl ComplianceChecker {
         // Sec 4(e) — NTIA baseline: creation timestamp. EO 14028 §4(e)
         // incorporates the NTIA minimum elements, which include Timestamp;
         // a missing/invalid source timestamp is stored as the UNIX_EPOCH
-        // sentinel (see `has_known_timestamp`).
+        // sentinel (see `has_known_timestamp`); an invalid one is quoted.
         if !sbom.document.has_known_timestamp() {
+            let message = unparseable_timestamp(sbom).map_or_else(
+                || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
+                |gap| format!("SBOM has {gap} (NTIA required data field)"),
+            );
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "SBOM is missing a creation timestamp (NTIA required data field)"
-                    .to_string(),
+                message,
                 element: None,
                 requirement: "EO 14028 §4(e) practice: Timestamp (NTIA baseline)".to_string(),
                 rule_id: "SBOM-EO14028-TIMESTAMP",

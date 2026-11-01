@@ -216,12 +216,15 @@ impl ComplianceChecker {
         // either and warns like a missing one, instead of passing as fresh.
         let now = self.now();
         if !sbom.document.has_known_timestamp() {
+            let gap =
+                unparseable_timestamp(sbom).unwrap_or_else(|| "no creation timestamp".to_string());
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
-                message: "[CRA Art. 13(7) / Annex I Part II (1)] SBOM has no creation timestamp; \
-                          keep the documented component inventory current when components change"
-                    .to_string(),
+                message: format!(
+                    "[CRA Art. 13(7) / Annex I Part II (1)] SBOM has {gap}; keep the documented \
+                     component inventory current when components change"
+                ),
                 element: None,
                 requirement: "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness".to_string(),
                 rule_id: "SBOM-CRA-SBOM-FRESHNESS",

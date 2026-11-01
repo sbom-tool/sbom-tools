@@ -16,7 +16,8 @@ mod rule_matrix;
 use rule_matrix::{
     ComponentFixture, Encoding, IMPLAUSIBLE_SHA512_DIGESTS, Outcome, RuleEntry, SHA256_FILLER,
     SHA512_FILLER, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
-    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, run_matrix,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, assert_no_violations_in,
+    run_matrix,
 };
 use sbom_tools::quality::{
     ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
@@ -139,6 +140,11 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         // "unknown" without a corroborating PURL name segment is no name.
         RuleEntry::tested(

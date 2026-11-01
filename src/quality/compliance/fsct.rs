@@ -510,14 +510,25 @@ fn fsct_minimum_expected(
 
     // §2.2.1.2 (untiered = Minimum) — Timestamp. Parsers substitute the
     // UNIX_EPOCH sentinel for missing/unparseable timestamps, so the epoch
-    // reads as ABSENT, not as 1970.
+    // reads as ABSENT, not as 1970. An unparseable value is quoted.
     if !sbom.document.has_known_timestamp() {
+        let message = unparseable_timestamp(sbom).map_or_else(
+            || {
+                "[CISA FSCT 3e §2.2.1.2] SBOM creation timestamp missing or unparseable \
+                 (ISO 8601-style international format expected)"
+                    .to_string()
+            },
+            |gap| {
+                format!(
+                    "[CISA FSCT 3e §2.2.1.2] SBOM has {gap} (ISO 8601-style international \
+                     format expected)"
+                )
+            },
+        );
         violations.push(Violation {
             severity: ViolationSeverity::Error,
             category: ViolationCategory::DocumentMetadata,
-            message: "[CISA FSCT 3e §2.2.1.2] SBOM creation timestamp missing or unparseable \
-                      (ISO 8601-style international format expected)"
-                .to_string(),
+            message,
             element: None,
             requirement: "CISA FSCT 3e §2.2.1.2: Timestamp (Minimum Expected)".to_string(),
             rule_id: "SBOM-FSCT-TIMESTAMP",
