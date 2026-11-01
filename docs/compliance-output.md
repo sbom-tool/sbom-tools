@@ -162,10 +162,10 @@ algorithm, a missing `nistQuantumSecurityLevel`, an empty inventory).
 `--pqc-profile` and `--cnsa-category` need `--pqc-mode deadline`; without
 it either is a usage error (exit `3`). Like the other
 [inputs of a run](#inputs-of-a-run), the three flags are taken by every
-command that checks compliance: `quality --profile cbom` applies them to its
-embedded NIST PQC check, and the compliance tabs of `view` and `diff` show
-the verdicts `validate` reports for them. `cra-docs` takes them too, though
-its CRA check reads none.
+command that checks compliance: `quality --profile cbom` applies the mode
+and the profile to its embedded NIST PQC check, and the compliance tabs of
+`view` and `diff` show the verdicts `validate` reports for them. `cra-docs`
+takes them too, though its CRA check reads none.
 
 ## Passed checks
 
