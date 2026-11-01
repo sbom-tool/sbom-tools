@@ -153,8 +153,11 @@ fn render_doc(
     // manufacturer the Art. 13(16) check accepts, from the same sources in
     // the same order (`manufacturer_name`: an organization creator, the
     // product's supplier, the described product's manufacturer or
-    // supplier). Placeholders name nobody. Until v0.4.0 only the first
-    // organization creator was read, whatever its name.
+    // supplier). Placeholders name nobody. The sidecar comes first because
+    // it is the manufacturer's own statement for the dossier; the check
+    // only asks whether any source names the manufacturer, so the order
+    // changes no verdict. Until v0.4.0 only the first organization creator
+    // was read, whatever its name.
     let manufacturer = sidecar
         .and_then(|s| s.manufacturer_name.as_deref())
         .or_else(|| crate::quality::manufacturer_name(sbom))

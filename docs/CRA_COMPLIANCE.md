@@ -131,6 +131,10 @@ CycloneDX VEX document passed with `--vex` map all nine the same way, each
 to the closest of the five model justifications (see the table below). The
 CSAF reader ignores `flags` and `threats`, so a CSAF `known_not_affected`
 entry does not count yet. Before v0.4.0 every unrated vulnerability warned.
+The other standards' open-vulnerability checks skip the same statements, as
+tool policy kept the same across standards: `SBOM-FDA-SECURITY` does not
+count such a vulnerability as critical or high, and
+`SBOM-PCI-11-3-1-1-SEVERITY` does not ask it for a risk ranking.
 Sources: the FAQ as
 the Commission's Markdown conversion
 (<https://ec.europa.eu/newsroom/dae/redirection/document/123307>) and PDF
@@ -288,8 +292,10 @@ only an organization creator (with any name) or the sidecar counted.
 Conformity from the same sources, in the same order: the sidecar's
 `manufacturerName` first (as for the product name), then the first of the
 sources above that gives a name. It writes `_TBD_` only when none does.
-Before v0.4.0 it read only the first organization creator, whatever its
-name.
+The sidecar comes first because it is the manufacturer's own statement for
+the dossier, while the Art. 13(16) check only asks whether any source names
+the manufacturer, so the order changes no verdict. Before v0.4.0 it read
+only the first organization creator, whatever its name.
 
 The document's vulnerability-disclosure URL, which the CVD policy, EO 14028
 disclosure and PCI DSS checks read, comes from one rule in every format: the
@@ -308,15 +314,25 @@ A contact counts only when it reaches someone. A placeholder (`NOASSERTION`,
 an address at one of the domains RFC 2606 reserves for documentation —
 `example.com`, `example.net`, `example.org` and the hosts under them, such as
 `psirt.example.com` — with or without a `mailto:` prefix. Every check that
-reads a vulnerability contact applies this, in the SBOM and in the CRA
-sidecar: the security contact (Art. 13(17)), the CVD policy, the Art. 14
-channels (`psirtUrl`, `earlyWarningContact`, `incidentReportContact`), the
-Art. 24 steward floors, `SBOM-EO14028-DISCLOSURE`,
-`SBOM-PCI-6-3-2-VULN-EVIDENCE` and `SBOM-SSDF-PW6`. The finding names the
-value that did not count. A VDR or VEX reference is a document, not a
-contact, and is judged as before. Before v0.4.0 these checks took any value,
-except that PCI DSS rejected placeholders in the document's own fields; so
-the same contact passed one standard and failed another.
+reads a contact applies this, in the SBOM and in the CRA sidecar: the
+security contact (Art. 13(17)), the CVD policy, the Art. 14 channels
+(`psirtUrl`, `earlyWarningContact`, `incidentReportContact`), the Art. 24
+steward floors, `SBOM-EO14028-DISCLOSURE`, `SBOM-PCI-6-3-2-VULN-EVIDENCE`
+and `SBOM-SSDF-PW6`, and the SBOM creator's email in `SBOM-FDA-CONTACT` and
+`SBOM-BSI-TR-03183-2-5-1-CONTACT` (BSI TR-03183-2 §5.2.1, which also takes
+the address or URL a creator's name carries). The finding names the value
+that did not count. A VDR or VEX reference is a document, not a contact,
+and is judged as before. Naming the creator, the author or the manufacturer
+still takes its name: only the checks that ask for a contact judge the
+address. Before v0.4.0 these checks took any value, except that PCI DSS
+rejected placeholders in the document's own fields; so the same contact
+passed one standard and failed another.
+
+Only those three second-level domains count as documentation addresses. The
+top-level domains RFC 2606 also reserves (`.example`, `.test`, `.invalid`,
+`.localhost`) do not: test data, this project's fixtures among it, uses
+them for a stand-in real domain such as `psirt@acme.example`, and generator
+templates do not ship them.
 
 ### Hash values
 
