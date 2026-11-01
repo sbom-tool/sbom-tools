@@ -13,6 +13,7 @@ fits in the end-to-end workflow.
 - **Multi-format support**: SPDX (2.x, 3.0), CycloneDX, and more
 - **Normalization**: All formats converted to a unified internal representation
 - **Validation & Scoring**: Multiple scoring profiles (Minimal, Standard, Security, License Compliance, CRA, Comprehensive)
+- **Compliance**: Validate against every `sbom-tools validate` standard (CRA, NTIA, BSI TR-03183-2, CISA 2026, PQC, ...), with the same envelope and options as the CLI, and read the rule catalogue
 - **Diffing**: Compare two SBOMs and identify changes with semantic analysis
 - **Deduplication**: Remove duplicate components and edges while preserving structure
 - **Type-safe Swift API**: Fully typed Swift wrapper around the C FFI using async/await patterns
@@ -130,6 +131,27 @@ do {
 }
 ```
 
+### 5. Validate Against Compliance Standards
+
+```swift
+do {
+    let content = try String(contentsOfFile: "sbom.cdx.json", encoding: .utf8)
+    let envelope = try SbomTools.validate(
+        content,
+        options: ValidateOptions(standards: ["cra", "ntia"], asOf: "2027-01-01")
+    )
+
+    for result in envelope.results {
+        print("\(result.standard): compliant=\(result.compliant), errors=\(result.counts.error)")
+        for violation in result.violations {
+            print("  [\(violation.severity)] \(violation.ruleID) \(violation.message)")
+        }
+    }
+} catch {
+    print("Error: \(error)")
+}
+```
+
 ## Error Handling
 
 All operations throw `SbomToolsError` on failure. The error includes a code and message:
@@ -172,7 +194,7 @@ print("Crate: \(version.crateVersion)")
 
 **Returns:**
 
-- `abiVersion`: Semantic version of the ABI contract (stable at "1")
+- `abiVersion`: Version of the ABI contract ("2" since sbom-tools 0.4.0). A release raises it when it changes the contract incompatibly; additions keep it (the C header states the rule).
 - `crateVersion`: Version of the sbom-tools crate
 
 ---
@@ -328,6 +350,75 @@ let (report, stats) = try SbomTools.scoreDeduplicated(sbom, profile: .standard)
 
 print("Score: \(report.overallScore)")
 print("Duplicates removed: \(stats.componentsRemoved) components, \(stats.edgesRemoved) edges")
+```
+
+---
+
+#### `static func score(_ sbom: NormalizedSbomPayload, options: ScoreOptions) throws -> ScoreReport`
+
+Scores an SBOM with a `quality --profile` name (`standard` by default, and also `bsi` or `cbom`) and the compliance run options, judged at `options.asOf`.
+
+```swift
+let report = try SbomTools.score(sbom, options: ScoreOptions(profile: "cra", asOf: "2027-01-01"))
+
+print("\(report.profile): \(report.overallScore) (\(report.grade))")
+print("Compliance (\(report.compliance.standard)): \(report.compliance.counts.error) errors")
+```
+
+`profile` is the `--profile` name, and `compliance` is a `ComplianceResultPayload`, the shape of a `validate` result, with a `findingID` on every finding. `scoreJSON(_:options:)` returns the raw JSON.
+
+---
+
+### Compliance
+
+#### `static func validate(_ content: String, options: ValidateOptions = ValidateOptions()) throws -> ComplianceEnvelope`
+
+Validates raw SBOM content (any supported format) against compliance standards. The envelope is what `sbom-tools validate - -o json` writes for the same content and options; `validateJSON(_:options:)` returns it unchanged.
+
+```swift
+let sidecar = try JSONDecoder().decode(JSONValue.self, from: Data(contentsOf: sidecarURL))
+
+let envelope = try SbomTools.validate(
+    content,
+    options: ValidateOptions(
+        standards: ["cra", "cra-phase1"],
+        asOf: "2027-12-11",
+        sidecar: sidecar,
+        rules: ["SBOM-CRA-SBOM-FRESHNESS": "off"]
+    )
+)
+```
+
+**Options** (`nil` leaves an input out, so its default applies):
+
+| Property               | CLI flag                   | Meaning                                                      |
+| ---------------------- | -------------------------- | ------------------------------------------------------------ |
+| `standards`            | `--standard`               | Names or aliases; `nil` means `["ntia"]`. A level named twice is checked once |
+| `fileName`             | `validate <FILE>`          | The file the content came from; the subject names it without its directory. `nil` names none |
+| `asOf`                 | `--as-of`                  | Evaluation instant: RFC 3339, offset-less (UTC) or a date    |
+| `sidecar`              | `--cra-sidecar`            | A CRA sidecar object (the keys of a `.cra.json` file)        |
+| `productClass`         | `--cra-product-class`      | CRA product class                                            |
+| `pqcMode`              | `--pqc-mode`               | `readiness` or `deadline`                                    |
+| `pqcProfile`           | `--pqc-profile`            | Deadline mode only                                           |
+| `cnsaCategory`         | `--cnsa-category`          | Deadline mode only                                           |
+| `rules`                | `--rule`                   | Rule id to `off`, `info`, `warning` or `error`               |
+| `includeExcludedScope` | `--include-excluded-scope` | Judge components whose scope is excluded too                 |
+
+An invalid option throws `SbomToolsError` with code 3 (validation).
+
+**Returns** a `ComplianceEnvelope`: `schema` (`sbom-tools/compliance/v2`), `tool`, `asOf` (the instant every standard was judged at: `asOf`, else the wall clock when the call starts, to the second), `subject` (the SHA-256 of exactly the content passed in, its format and spec version, `fileName`, and how the document was read), and one `ComplianceResultPayload` per standard with `standard`, `name`, `applicable`, `compliant`, `score`, `counts`, `violations` (each with `findingID`, `ruleID`, `severity`, `message`, `remediation`, ...), `passed`, `evaluated` and `suppressed`. [docs/compliance-output.md](../../docs/compliance-output.md) describes every field.
+
+---
+
+#### `static func ruleCatalog(standards: [String] = []) throws -> RuleCatalog`
+
+Returns the rule catalogue (`sbom-tools rules -o json`): every rule, or the rules of the given `--standard` names. `ruleCatalogJSON(standards:)` returns the raw JSON.
+
+```swift
+let catalog = try SbomTools.ruleCatalog(standards: ["cra"])
+for rule in catalog.rules {
+    print("\(rule.id) (\(rule.defaultSeverity)): \(rule.remediationSummary)")
+}
 ```
 
 ---

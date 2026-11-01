@@ -85,6 +85,54 @@ from sbomtools import diff_json
 result = diff_json(json.dumps(old), json.dumps(new))
 ```
 
+## Compliance
+
+`validate_json` checks raw SBOM content (any supported format) against
+compliance standards and returns the `sbom-tools/compliance/v2` envelope:
+what `sbom-tools validate - -o json` writes for the same content and
+options. The keyword options are the CLI flags of the same names:
+
+```python
+from datetime import date
+from pathlib import Path
+
+from sbomtools import validate_json
+
+path = Path("bom.cdx.json")
+envelope = validate_json(
+    path.read_text(encoding="utf-8"),
+    file_name=path,                     # validate <FILE>: named in the subject
+    standards=["cra", "ntia"],          # --standard; default ["ntia"]
+    as_of=date(2027, 1, 1),             # --as-of; a str, date or datetime
+    product_class="important-class-1",  # --cra-product-class
+    rules={"SBOM-NTIA-SUPPLIER": "warning"},  # --rule
+)
+
+print(envelope["as_of"], envelope["subject"]["sha256"])
+for result in envelope["results"]:
+    print(result["standard"], result["compliant"], result["counts"])
+    for violation in result["violations"]:
+        print(" ", violation["finding_id"], violation["rule_id"], violation["message"])
+```
+
+The envelope's `as_of` is the instant every standard was judged at (the
+`as_of` option, else the wall clock when the call starts, to the second),
+and its `subject` gives the SHA-256 of the content passed in and the file
+name without its directory, which only `file_name` provides. The other
+options are `sidecar` (a dict with the keys of a `.cra.json` file),
+`pqc_mode`, `pqc_profile`, `cnsa_category` and `include_excluded_scope`. A
+naive `datetime` is taken as UTC. An invalid option raises
+`SbomToolsNativeError` with `ErrorCode.VALIDATION`.
+
+`rule_catalog_json()` returns the rule catalogue (`sbom-tools rules -o
+json`), every rule or those of the standards given, and
+`score_with_options_json(sbom_json, profile="cra", as_of=...)` scores with a
+pinned clock and the same run options. Its report names the profile as
+`quality --profile` does and reports the compliance check as an entry of the
+envelope's `results`. `ComplianceEnvelope`, `ComplianceSubject`,
+`ComplianceResult`, `RuleCatalog` and `RuleCatalogEntry` are `TypedDict`
+hints for these values.
+
 ## Memory and errors
 
 Every native result is decoded before the binding calls

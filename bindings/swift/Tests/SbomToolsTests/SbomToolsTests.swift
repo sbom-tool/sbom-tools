@@ -60,6 +60,114 @@ private func fixtureURL(_ name: String) -> URL {
     }
 }
 
+@Test func validateReturnsTheComplianceEnvelope() throws {
+    let content = try String(contentsOf: fixtureURL("demo-new.cdx.json"), encoding: .utf8)
+    let options = ValidateOptions(
+        standards: ["cra", "NTIA", "cra-phase2"],
+        asOf: "2027-01-01",
+        productClass: "important-class-1"
+    )
+
+    let envelope = try SbomTools.validate(content, options: options)
+    #expect(envelope.schema == "sbom-tools/compliance/v2")
+    #expect(envelope.tool.name == "sbom-tools")
+    #expect(envelope.asOf == "2027-01-01T00:00:00Z")
+    #expect(envelope.subject.sha256.count == 64)
+    #expect(envelope.subject.sha256.allSatisfy { $0.isHexDigit })
+    #expect(envelope.subject.format == "CycloneDX")
+    #expect(envelope.subject.fileName == nil)
+    // cra-phase2 names the level cra already selected, so it is checked once.
+    #expect(envelope.results.map(\.standard) == ["cra", "ntia"])
+    let cra = envelope.results[0]
+    #expect(!cra.compliant)
+    #expect(cra.counts.error > 0)
+    #expect(!cra.violations.isEmpty)
+    #expect(cra.violations.allSatisfy { $0.findingID.hasPrefix("sbomtools:v1:") && !$0.ruleID.isEmpty })
+
+    let json = try SbomTools.validateJSON(content, options: options)
+    #expect(try SbomTools.decode(ComplianceEnvelope.self, from: json) == envelope)
+
+    var named = options
+    named.fileName = "some/dir/demo-new.cdx.json"
+    #expect(try SbomTools.validate(content, options: named).subject.fileName == "demo-new.cdx.json")
+}
+
+@Test func validateAppliesSidecarAndRuleSettings() throws {
+    let content = try String(contentsOf: fixtureURL("cra/cra-compliant.cdx.json"), encoding: .utf8)
+    let sidecarData = try Data(contentsOf: fixtureURL("cra/cra-compliant.cra.json"))
+    let sidecar = try JSONDecoder().decode(JSONValue.self, from: sidecarData)
+
+    let envelope = try SbomTools.validate(
+        content,
+        options: ValidateOptions(
+            standards: ["cra"],
+            asOf: "2027-12-11",
+            sidecar: sidecar,
+            rules: ["SBOM-CRA-SBOM-FRESHNESS": "error"]
+        )
+    )
+    let freshness = envelope.results[0].violations.first { $0.ruleID == "SBOM-CRA-SBOM-FRESHNESS" }
+    #expect(freshness?.severity == "Error")
+    #expect(freshness?.severitySource == "cli")
+    #expect(freshness?.defaultSeverity != nil)
+}
+
+@Test func validateRejectsInvalidOptions() throws {
+    let content = try String(contentsOf: fixtureURL("cyclonedx/minimal.cdx.json"), encoding: .utf8)
+    let invalid = [
+        ValidateOptions(standards: ["ntai"]),
+        ValidateOptions(asOf: "01/01/2027"),
+        ValidateOptions(pqcProfile: "federal"),
+        ValidateOptions(rules: ["SBOM-NTIA-SUPLIER": "off"]),
+        ValidateOptions(sidecar: .object(["security_contact": .string("x")])),
+    ]
+    for options in invalid {
+        do {
+            _ = try SbomTools.validate(content, options: options)
+            Issue.record("Expected \(options) to fail")
+        } catch let error as SbomToolsError {
+            #expect(error.code == 3)
+        }
+    }
+}
+
+@Test func ruleCatalogListsTheRegistry() throws {
+    let catalog = try SbomTools.ruleCatalog()
+    #expect(catalog.schema == "sbom-tools/rules/v1")
+    #expect(catalog.rules.count >= 100)
+
+    let ntia = try SbomTools.ruleCatalog(standards: ["ntia"])
+    #expect(!ntia.rules.isEmpty)
+    #expect(ntia.rules.count < catalog.rules.count)
+    #expect(ntia.rules.allSatisfy { $0.standards.contains("ntia") })
+
+    do {
+        _ = try SbomTools.ruleCatalog(standards: ["crab"])
+        Issue.record("Expected an unknown standard to fail")
+    } catch let error as SbomToolsError {
+        #expect(error.code == 3)
+    }
+}
+
+@Test func scoreWithOptionsPinsTheClockAndNamesLevels() throws {
+    let payload = try SbomTools.parsePath(fixtureURL("demo-new.cdx.json").path())
+    let options = ScoreOptions(profile: "cra", asOf: "2027-01-01")
+
+    let report = try SbomTools.score(payload, options: options)
+    #expect(report.profile == "cra")
+    #expect(report.compliance.standard == "cra")
+    #expect(report.overallScore > 0)
+    #expect(report.compliance.violations.allSatisfy { !$0.findingID.isEmpty })
+    #expect(try SbomTools.score(payload, options: options) == report)
+
+    do {
+        _ = try SbomTools.score(payload, options: ScoreOptions(profile: "strict"))
+        Issue.record("Expected an unknown profile to fail")
+    } catch let error as SbomToolsError {
+        #expect(error.code == 3)
+    }
+}
+
 @Test func deduplicateInPlaceLastWins() throws {
     var payload = makeDedupFixturePayload()
     let originalComponentCount = payload.components.count

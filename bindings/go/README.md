@@ -13,6 +13,7 @@ fits in the end-to-end workflow.
 - **Multi-format support**: SPDX (2.x, 3.0), CycloneDX, and more
 - **Normalization**: All formats converted to a unified internal representation
 - **Validation & Scoring**: Multiple scoring profiles (Minimal, Standard, Security, License Compliance, CRA, Comprehensive)
+- **Compliance**: Validate against every `sbom-tools validate` standard (CRA, NTIA, BSI TR-03183-2, CISA 2026, PQC, ...), with the same envelope and options as the CLI, and read the rule catalogue
 - **Diffing**: Compare two SBOMs and identify changes with semantic analysis
 - **Deduplication**: Remove duplicate components and edges while preserving structure
 - **Type-safe Go API**: Fully typed Go wrapper around the C FFI
@@ -141,6 +142,30 @@ fmt.Printf("Components removed: %d\n", diff.Summary.ComponentsRemoved)
 fmt.Printf("Semantic score: %.2f\n", diff.SemanticScore)
 ```
 
+### 5. Validate Against Compliance Standards
+
+```go
+content, err := os.ReadFile("sbom.cdx.json")
+if err != nil {
+ log.Fatal(err)
+}
+
+envelope, err := sbomtools.Validate(string(content), sbomtools.ValidateOptions{
+ Standards:  []string{"cra", "ntia"},
+ RunOptions: sbomtools.RunOptions{AsOf: "2027-01-01"},
+})
+if err != nil {
+ log.Fatalf("Validation failed: %v", err)
+}
+
+for _, result := range envelope.Results {
+ fmt.Printf("%s: compliant=%v errors=%d\n", result.Standard, result.Compliant, result.Counts.Error)
+ for _, violation := range result.Violations {
+  fmt.Printf("  [%s] %s %s\n", violation.Severity, violation.RuleID, violation.Message)
+ }
+}
+```
+
 ## Error Handling
 
 All operations return a standard Go `error`. For detailed error information, use type assertion:
@@ -199,7 +224,7 @@ fmt.Printf("Crate Version: %s\n", version.CrateVersion)
 
 **Returns:**
 
-- `ABIVersion`: Semantic version of the ABI contract (stable at "1")
+- `ABIVersion`: Version of the ABI contract ("2" since sbom-tools 0.4.0). A release raises it when it changes the contract incompatibly; additions keep it (the C header states the rule).
 - `CrateVersion`: Version of the sbom-tools crate
 
 ---
@@ -389,6 +414,83 @@ if err != nil {
 fmt.Printf("Score: %.2f\n", report.OverallScore)
 fmt.Printf("Duplicates removed: %d components, %d edges\n",
  dedupStats.ComponentsRemoved, dedupStats.EdgesRemoved)
+```
+
+---
+
+#### `func ScoreWithOptions(sbomPayload *NormalizedSbomPayload, options ScoreOptions) (*ScoreReport, error)`
+
+Scores an SBOM with a `quality --profile` name (`standard` when empty, and also `bsi` or `cbom`) and the compliance run options, judged at `options.AsOf`.
+
+```go
+report, err := sbomtools.ScoreWithOptions(sbom, sbomtools.ScoreOptions{
+ Profile:    "cra",
+ RunOptions: sbomtools.RunOptions{AsOf: "2027-01-01", ProductClass: "important-class-1"},
+})
+if err != nil {
+ log.Fatal(err)
+}
+
+fmt.Printf("%s: %.2f (%s)\n", report.Profile, report.OverallScore, report.Grade)
+fmt.Printf("Compliance (%s): %d errors\n", report.Compliance.Standard, report.Compliance.Counts.Error)
+```
+
+`Profile` is the `--profile` name, and `Compliance` is a typed `ComplianceResult`, the shape of a `Validate` result, with a `FindingID` on every finding. `ScoreWithOptionsJSON` returns the raw JSON.
+
+---
+
+### Compliance
+
+#### `func Validate(content string, options ValidateOptions) (*ComplianceEnvelope, error)`
+
+Validates raw SBOM content (any supported format) against compliance standards. The envelope is what `sbom-tools validate - -o json` writes for the same content and options; `ValidateJSON` returns its bytes unchanged.
+
+```go
+sidecar, _ := os.ReadFile("sbom.cra.json")
+
+envelope, err := sbomtools.Validate(content, sbomtools.ValidateOptions{
+ Standards: []string{"cra", "cra-phase1"},
+ RunOptions: sbomtools.RunOptions{
+  AsOf:    "2027-12-11",
+  Sidecar: json.RawMessage(sidecar),
+  Rules:   map[string]string{"SBOM-CRA-SBOM-FRESHNESS": "off"},
+ },
+})
+```
+
+**Options** (zero values are left out, so the defaults apply):
+
+| Field                  | CLI flag                   | Meaning                                                      |
+| ---------------------- | -------------------------- | ------------------------------------------------------------ |
+| `Standards`            | `--standard`               | Names or aliases; empty means `ntia`. A level named twice is checked once |
+| `FileName`             | `validate <FILE>`          | The file the content came from; the subject names it without its directory. Empty names none |
+| `AsOf`                 | `--as-of`                  | Evaluation instant: RFC 3339, offset-less (UTC) or a date    |
+| `Sidecar`              | `--cra-sidecar`            | A CRA sidecar object (the bytes of a `.cra.json` file)       |
+| `ProductClass`         | `--cra-product-class`      | CRA product class                                            |
+| `PqcMode`              | `--pqc-mode`               | `readiness` or `deadline`                                    |
+| `PqcProfile`           | `--pqc-profile`            | Deadline mode only                                           |
+| `CnsaCategory`         | `--cnsa-category`          | Deadline mode only                                           |
+| `Rules`                | `--rule`                   | Rule id to `off`, `info`, `warning` or `error`               |
+| `IncludeExcludedScope` | `--include-excluded-scope` | Judge components whose scope is excluded too                 |
+
+An invalid option (an unknown standard, a bad date, a profile outside deadline mode, an unknown rule id, a typo'd sidecar key) fails with `ErrorCodeValidation`.
+
+**Returns** a `ComplianceEnvelope`: `Schema` (`sbom-tools/compliance/v2`), `Tool`, `AsOf` (the instant every standard was judged at: `AsOf`, else the wall clock when the call starts, to the second), `Subject` (the SHA-256 of exactly the content passed in, its format and spec version, `FileName`, and how the document was read), and one `ComplianceResult` per standard with `Standard`, `Name`, `Applicable`, `Compliant`, `Score`, `Counts`, `Violations` (each with `FindingID`, `RuleID`, `Severity`, `Message`, `Remediation`, ...), `Passed`, `Evaluated` and `Suppressed`. [docs/compliance-output.md](../../docs/compliance-output.md) describes every field.
+
+---
+
+#### `func RuleCatalog(standards ...string) (*RuleCatalogDocument, error)`
+
+Returns the rule catalogue (`sbom-tools rules -o json`): every rule, or the rules of the given `--standard` names. `RuleCatalogJSON` returns its bytes.
+
+```go
+catalog, err := sbomtools.RuleCatalog("cra")
+if err != nil {
+ log.Fatal(err)
+}
+for _, rule := range catalog.Rules {
+ fmt.Printf("%s (%s): %s\n", rule.ID, rule.DefaultSeverity, rule.RemediationSummary)
+}
 ```
 
 ---
@@ -719,7 +821,8 @@ Tests cover:
 
 - Parsing all supported formats
 - Error conditions (missing files, invalid input)
-- Scoring with all profiles
+- Scoring with all profiles, and with options
+- Compliance validation (standards, sidecar, rule settings, invalid options) and the rule catalogue
 - Diff operations (same SBOM, different SBOMs)
 - Deduplication
 

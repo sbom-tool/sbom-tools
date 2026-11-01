@@ -100,7 +100,8 @@ SBOMs larger than 512MB are parsed with a streaming strategy to avoid memory exh
 
 The repository now includes a C-compatible ABI layer in [src/ffi.rs](src/ffi.rs) for the Go and Swift MVP bindings.
 
-- The ABI surface is intentionally narrow: format detection, parse from path/string, diffing, quality scoring, and ABI version reporting.
+- The ABI surface is intentionally narrow: format detection, parse from path/string, diffing, quality scoring (by profile, or with options), compliance validation, the rule catalogue, and ABI version reporting.
+- The compliance calls take a JSON options object and build each run through `ComplianceRunConfig` with the parsers the CLI flags use, and return the bytes `validate -o json` and `rules -o json` print (pinned by `tests/ffi_compliance.rs`).
 - All complex values cross the ABI as JSON strings rather than field-by-field structs. This keeps the ABI stable for both `cgo` and Swift while allowing the Rust data model to evolve internally.
 - The stable header lives at [bindings/swift/Sources/CSbomTools/include/sbom_tools.h](bindings/swift/Sources/CSbomTools/include/sbom_tools.h). Both wrappers consume that same header.
 - The Go wrapper lives in [bindings/go](bindings/go) and the Swift package lives in [bindings/swift](bindings/swift).

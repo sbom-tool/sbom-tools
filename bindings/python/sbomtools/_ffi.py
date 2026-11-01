@@ -4,11 +4,22 @@ from __future__ import annotations
 
 import ctypes
 import json
+import os
+from collections.abc import Mapping, Sequence
+from datetime import date, datetime
 from typing import cast
 
 from ._errors import SbomToolsNativeError
 from ._loader import load_library
-from .types import AbiVersion, DetectedFormat, ErrorCode, JsonValue, ScoringProfile
+from .types import (
+    AbiVersion,
+    ComplianceEnvelope,
+    DetectedFormat,
+    ErrorCode,
+    JsonValue,
+    RuleCatalog,
+    ScoringProfile,
+)
 
 
 class _StringResult(ctypes.Structure):
@@ -39,6 +50,18 @@ def _native() -> ctypes.CDLL:
 
     library.sbom_tools_score_sbom_json.argtypes = [ctypes.c_char_p, ctypes.c_uint32]
     library.sbom_tools_score_sbom_json.restype = _StringResult
+
+    library.sbom_tools_validate_json.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+    library.sbom_tools_validate_json.restype = _StringResult
+
+    library.sbom_tools_rule_catalog_json.argtypes = [ctypes.c_char_p]
+    library.sbom_tools_rule_catalog_json.restype = _StringResult
+
+    library.sbom_tools_score_sbom_with_options_json.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+    ]
+    library.sbom_tools_score_sbom_with_options_json.restype = _StringResult
 
     library.sbom_tools_string_result_free.argtypes = [_StringResult]
     library.sbom_tools_string_result_free.restype = None
@@ -200,3 +223,155 @@ def score_json(
             validated_profile.value,
         )
     )
+
+
+def _names(value: Sequence[str], field: str) -> list[str]:
+    if isinstance(value, str):
+        raise TypeError(f"{field} must be a sequence of names, not a string")
+    return list(value)
+
+
+def _run_options(
+    as_of: str | date | datetime | None,
+    sidecar: Mapping[str, JsonValue] | None,
+    product_class: str | None,
+    pqc_mode: str | None,
+    pqc_profile: str | None,
+    cnsa_category: str | None,
+    rules: Mapping[str, str] | None,
+    include_excluded_scope: bool | None,
+) -> dict[str, JsonValue]:
+    """The run options as the native options object spells them."""
+
+    options: dict[str, JsonValue] = {}
+    if as_of is not None:
+        # A naive datetime has no offset, so the native side takes it as UTC.
+        options["as_of"] = as_of.isoformat() if isinstance(as_of, date) else as_of
+    if sidecar is not None:
+        options["sidecar"] = dict(sidecar)
+    if product_class is not None:
+        options["product_class"] = product_class
+    if pqc_mode is not None:
+        options["pqc_mode"] = pqc_mode
+    if pqc_profile is not None:
+        options["pqc_profile"] = pqc_profile
+    if cnsa_category is not None:
+        options["cnsa_category"] = cnsa_category
+    if rules is not None:
+        options["rules"] = cast(JsonValue, dict(rules))
+    if include_excluded_scope is not None:
+        options["include_excluded_scope"] = include_excluded_scope
+    return options
+
+
+def validate_json(
+    content: str,
+    *,
+    standards: Sequence[str] | None = None,
+    file_name: str | os.PathLike[str] | None = None,
+    as_of: str | date | datetime | None = None,
+    sidecar: Mapping[str, JsonValue] | None = None,
+    product_class: str | None = None,
+    pqc_mode: str | None = None,
+    pqc_profile: str | None = None,
+    cnsa_category: str | None = None,
+    rules: Mapping[str, str] | None = None,
+    include_excluded_scope: bool | None = None,
+) -> ComplianceEnvelope:
+    """Validate raw SBOM content against compliance standards.
+
+    Returns the decoded ``sbom-tools/compliance/v2`` envelope: what
+    ``sbom-tools validate - -o json`` writes for the same content and
+    options, or ``validate <FILE>`` when ``file_name`` names the file, which
+    the subject states without its directory. The subject's SHA-256 is over
+    the UTF-8 bytes of ``content``, and ``as_of`` defaults to the wall clock
+    when the call starts, to the second. The other options are the CLI
+    flags of the same names; ``standards`` defaults to ``["ntia"]`` and
+    ``sidecar`` takes the keys of a ``.cra.json`` file. Invalid options
+    raise ``SbomToolsNativeError`` with ``ErrorCode.VALIDATION``.
+    """
+
+    options = _run_options(
+        as_of,
+        sidecar,
+        product_class,
+        pqc_mode,
+        pqc_profile,
+        cnsa_category,
+        rules,
+        include_excluded_scope,
+    )
+    if standards is not None:
+        options["standards"] = cast(JsonValue, _names(standards, "standards"))
+    if file_name is not None:
+        options["file_name"] = os.fspath(file_name)
+    library = _native()
+    value = _consume(
+        library,
+        library.sbom_tools_validate_json(
+            _encode(content, "content"),
+            _encode(json.dumps(options), "options"),
+        ),
+    )
+    return cast(ComplianceEnvelope, _mapping(value, "validate"))
+
+
+def rule_catalog_json(standards: Sequence[str] | None = None) -> RuleCatalog:
+    """Return the ``sbom-tools/rules/v1`` rule catalogue.
+
+    Every rule, or the rules of the ``--standard`` names given.
+    """
+
+    filter_options: dict[str, JsonValue] = {}
+    if standards is not None:
+        filter_options["standards"] = cast(JsonValue, _names(standards, "standards"))
+    library = _native()
+    value = _consume(
+        library,
+        library.sbom_tools_rule_catalog_json(_encode(json.dumps(filter_options), "filter")),
+    )
+    return cast(RuleCatalog, _mapping(value, "rule_catalog"))
+
+
+def score_with_options_json(
+    sbom_json: str,
+    *,
+    profile: str | None = None,
+    as_of: str | date | datetime | None = None,
+    sidecar: Mapping[str, JsonValue] | None = None,
+    product_class: str | None = None,
+    pqc_mode: str | None = None,
+    pqc_profile: str | None = None,
+    cnsa_category: str | None = None,
+    rules: Mapping[str, str] | None = None,
+    include_excluded_scope: bool | None = None,
+) -> dict[str, JsonValue]:
+    """Score a normalized SBOM JSON string with a profile and run options.
+
+    ``profile`` is a ``quality --profile`` name (default ``standard``); the
+    other options are those of ``validate_json``. The report names the
+    profile as ``--profile`` does, and its ``compliance`` is an entry of the
+    validate envelope's ``results``.
+    """
+
+    options = _run_options(
+        as_of,
+        sidecar,
+        product_class,
+        pqc_mode,
+        pqc_profile,
+        cnsa_category,
+        rules,
+        include_excluded_scope,
+    )
+    if profile is not None:
+        options["profile"] = profile
+    library = _native()
+    value = _consume(
+        library,
+        library.sbom_tools_score_sbom_with_options_json(
+            _encode(sbom_json, "sbom_json"),
+            _encode(json.dumps(options), "options"),
+        ),
+    )
+    return _mapping(value, "score_with_options")

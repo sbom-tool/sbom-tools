@@ -219,6 +219,267 @@ type QualityReportPayload struct {
 	Recommendations []map[string]any `json:"recommendations"`
 }
 
+// RunOptions are the inputs of a compliance run, as the CLI's shared
+// compliance flags give them. Zero values are left out, so the defaults
+// apply.
+type RunOptions struct {
+	// AsOf pins the evaluation clock (--as-of): an RFC 3339 datetime, an
+	// offset-less datetime taken as UTC, or a date (midnight UTC).
+	AsOf string `json:"as_of,omitempty"`
+
+	// Sidecar is a CRA sidecar object, with the keys of a .cra.json file
+	// (--cra-sidecar), e.g. the bytes of that file.
+	Sidecar json.RawMessage `json:"sidecar,omitempty"`
+
+	// ProductClass is the CRA product class (--cra-product-class).
+	ProductClass string `json:"product_class,omitempty"`
+
+	// PqcMode is "readiness" or "deadline" (--pqc-mode).
+	PqcMode string `json:"pqc_mode,omitempty"`
+
+	// PqcProfile applies only with PqcMode "deadline" (--pqc-profile).
+	PqcProfile string `json:"pqc_profile,omitempty"`
+
+	// CnsaCategory applies only with PqcMode "deadline" (--cnsa-category).
+	CnsaCategory string `json:"cnsa_category,omitempty"`
+
+	// Rules maps a rule id to "off", "info", "warning" or "error" (--rule).
+	Rules map[string]string `json:"rules,omitempty"`
+
+	// IncludeExcludedScope judges components whose scope is excluded too
+	// (--include-excluded-scope).
+	IncludeExcludedScope bool `json:"include_excluded_scope,omitempty"`
+}
+
+// ValidateOptions are the inputs of Validate: the standards, the name of
+// the SBOM's file, and the run options.
+type ValidateOptions struct {
+	// Standards are --standard names or aliases; empty means ntia.
+	Standards []string `json:"standards,omitempty"`
+
+	// FileName is the file the content was read from, which the envelope's
+	// subject names without its directory, as `validate <FILE>` does; empty
+	// names no file, as for standard input.
+	FileName string `json:"file_name,omitempty"`
+
+	RunOptions
+}
+
+// ScoreOptions are the inputs of ScoreWithOptions: the profile and the run
+// options.
+type ScoreOptions struct {
+	// Profile is a `quality --profile` name; empty means standard.
+	Profile string `json:"profile,omitempty"`
+
+	RunOptions
+}
+
+// ToolInfo names the tool that wrote a compliance envelope or a rule
+// catalogue.
+type ToolInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// ComplianceEnvelope is the sbom-tools/compliance/v2 document Validate
+// returns, as `sbom-tools validate -o json` writes it. AsOf is the instant
+// every standard was judged at (RFC 3339, UTC), and Subject the SBOM the
+// results judge.
+type ComplianceEnvelope struct {
+	Schema  string             `json:"schema"`
+	Tool    ToolInfo           `json:"tool"`
+	AsOf    string             `json:"as_of"`
+	Subject ComplianceSubject  `json:"subject"`
+	Results []ComplianceResult `json:"results"`
+}
+
+// ComplianceSubject is the SBOM a compliance envelope judges, and how its
+// document was read. SHA256 is the lowercase hex SHA-256 of the content
+// passed in, and FileName is ValidateOptions.FileName without its directory.
+type ComplianceSubject struct {
+	SHA256            string           `json:"sha256"`
+	Format            string           `json:"format"`
+	SpecVersion       string           `json:"spec_version"`
+	FileName          string           `json:"file_name,omitempty"`
+	Components        int              `json:"components"`
+	Duplicates        DuplicateSummary `json:"duplicates"`
+	TimestampUnparsed bool             `json:"timestamp_unparsed"`
+}
+
+// DuplicateSummary counts the components a document lists more than once,
+// whose entries were merged into one each.
+type DuplicateSummary struct {
+	Components int      `json:"components"`
+	Entries    int      `json:"entries"`
+	Conflicts  []string `json:"conflicts"`
+}
+
+// ComplianceResult is one standard's verdict.
+type ComplianceResult struct {
+	Standard            string           `json:"standard"`
+	Name                string           `json:"name"`
+	Applicable          bool             `json:"applicable"`
+	NotApplicableReason string           `json:"not_applicable_reason,omitempty"`
+	Compliant           bool             `json:"compliant"`
+	Score               *int             `json:"score"`
+	ScoreBasis          *ScoreBasis      `json:"score_basis,omitempty"`
+	Counts              ComplianceCounts `json:"counts"`
+	Violations          []Violation      `json:"violations"`
+	Passed              []PassedCheck    `json:"passed"`
+	Evaluated           []RuleEvaluation `json:"evaluated,omitempty"`
+	Suppressed          []SuppressedRule `json:"suppressed,omitempty"`
+	ExcludedComponents  int              `json:"excluded_components,omitempty"`
+	ConformitySummary   map[string]any   `json:"conformity_summary,omitempty"`
+}
+
+// ScoreBasis is what a result's score is computed from.
+type ScoreBasis struct {
+	Checked int `json:"checked"`
+	Failed  int `json:"failed"`
+}
+
+// ComplianceCounts counts a result's findings by severity, its passed checks
+// and the findings the rule settings turned off.
+type ComplianceCounts struct {
+	Error      int `json:"error"`
+	Warning    int `json:"warning"`
+	Info       int `json:"info"`
+	Passed     int `json:"passed"`
+	Suppressed int `json:"suppressed,omitempty"`
+}
+
+// Violation is one finding of a standard.
+type Violation struct {
+	FindingID       string           `json:"finding_id"`
+	FindingKey      string           `json:"finding_key"`
+	Severity        string           `json:"severity"`
+	DefaultSeverity string           `json:"default_severity,omitempty"`
+	SeveritySource  string           `json:"severity_source,omitempty"`
+	Category        string           `json:"category"`
+	Message         string           `json:"message"`
+	Element         *string          `json:"element"`
+	ComponentID     string           `json:"component_id,omitempty"`
+	FindingDetail   string           `json:"finding_detail,omitempty"`
+	Counts          *ViolationCounts `json:"counts,omitempty"`
+	Deadline        string           `json:"deadline,omitempty"`
+	DeadlineSource  string           `json:"deadline_source,omitempty"`
+	Field           string           `json:"field,omitempty"`
+	Observed        string           `json:"observed,omitempty"`
+	Requirement     string           `json:"requirement"`
+	RuleID          string           `json:"rule_id"`
+	SarifRuleID     string           `json:"sarif_rule_id"`
+	StandardRefs    []StandardRef    `json:"standard_refs,omitempty"`
+	Remediation     string           `json:"remediation,omitempty"`
+	HelpURI         string           `json:"help_uri,omitempty"`
+}
+
+// PassedCheck is a check the SBOM passed; it is not a violation.
+type PassedCheck struct {
+	FindingID     string        `json:"finding_id"`
+	FindingKey    string        `json:"finding_key"`
+	Message       string        `json:"message"`
+	Element       *string       `json:"element"`
+	ComponentID   string        `json:"component_id,omitempty"`
+	FindingDetail string        `json:"finding_detail,omitempty"`
+	Requirement   string        `json:"requirement"`
+	RuleID        string        `json:"rule_id"`
+	SarifRuleID   string        `json:"sarif_rule_id"`
+	StandardRefs  []StandardRef `json:"standard_refs,omitempty"`
+}
+
+// ViolationCounts says how many of a set an aggregate finding is about.
+type ViolationCounts struct {
+	Affected int `json:"affected"`
+	Total    int `json:"total"`
+}
+
+// StandardRef is a clause a finding cites.
+type StandardRef struct {
+	Standard string `json:"standard"`
+	ID       string `json:"id"`
+	HelpURI  string `json:"help_uri,omitempty"`
+}
+
+// RuleEvaluation is a check the standard did not evaluate, with the reason.
+type RuleEvaluation struct {
+	RuleID string `json:"rule_id"`
+	Status string `json:"status"`
+	Reason string `json:"reason"`
+}
+
+// SuppressedRule is a rule the run's settings turned off.
+type SuppressedRule struct {
+	RuleID   string `json:"rule_id"`
+	Findings int    `json:"findings"`
+	Source   string `json:"source"`
+}
+
+// RuleCatalogDocument is the sbom-tools/rules/v1 document RuleCatalog
+// returns, as `sbom-tools rules -o json` prints it.
+type RuleCatalogDocument struct {
+	Schema string             `json:"schema"`
+	Tool   ToolInfo           `json:"tool"`
+	Rules  []RuleCatalogEntry `json:"rules"`
+}
+
+// RuleCatalogEntry is everything the registry records about one rule.
+type RuleCatalogEntry struct {
+	ID                 string          `json:"id"`
+	Name               string          `json:"name"`
+	Description        string          `json:"description"`
+	DefaultSeverity    string          `json:"default_severity"`
+	Kind               string          `json:"kind"`
+	Fallback           bool            `json:"fallback"`
+	Standards          []string        `json:"standards"`
+	References         []RuleReference `json:"references"`
+	HelpURI            string          `json:"help_uri,omitempty"`
+	Remediation        string          `json:"remediation"`
+	RemediationSummary string          `json:"remediation_summary"`
+	Advice             *RuleAdvice     `json:"advice,omitempty"`
+}
+
+// RuleReference is a clause a rule implements.
+type RuleReference struct {
+	Standard string `json:"standard"`
+	ID       string `json:"id"`
+	Label    string `json:"label"`
+	HelpURI  string `json:"help_uri,omitempty"`
+}
+
+// RuleAdvice says where a rule's fix goes in each SBOM format.
+type RuleAdvice struct {
+	CycloneDX RuleFormatAdvice `json:"cyclonedx"`
+	SPDX2     RuleFormatAdvice `json:"spdx2"`
+	SPDX3     RuleFormatAdvice `json:"spdx3"`
+}
+
+// RuleFormatAdvice is a rule's fix in one SBOM format.
+type RuleFormatAdvice struct {
+	Text  string `json:"text"`
+	Field string `json:"field,omitempty"`
+}
+
+// ScoreReport is the quality report ScoreWithOptions returns: the profile
+// named as `quality --profile` names it, and the compliance check as an
+// entry of the compliance envelope's results.
+type ScoreReport struct {
+	ScoringEngineVersion string           `json:"scoring_engine_version"`
+	OverallScore         float64          `json:"overall_score"`
+	Grade                string           `json:"grade"`
+	Profile              string           `json:"profile"`
+	CompletenessScore    float64          `json:"completeness_score"`
+	IdentifierScore      float64          `json:"identifier_score"`
+	LicenseScore         float64          `json:"license_score"`
+	VulnerabilityScore   *float64         `json:"vulnerability_score"`
+	DependencyScore      float64          `json:"dependency_score"`
+	IntegrityScore       float64          `json:"integrity_score"`
+	ProvenanceScore      float64          `json:"provenance_score"`
+	LifecycleScore       *float64         `json:"lifecycle_score"`
+	CryptographyScore    *float64         `json:"cryptography_score"`
+	Compliance           ComplianceResult `json:"compliance"`
+	Recommendations      []map[string]any `json:"recommendations"`
+}
+
 func Version() (*AbiVersion, error) {
 	payload, err := consumeResult(C.sbom_tools_abi_version_json())
 	if err != nil {
@@ -378,6 +639,98 @@ func ScoreDeduplicated(sbomPayload *NormalizedSbomPayload, profile ScoringProfil
 
 	stats := DedupStats{ComponentsRemoved: componentsRemoved, EdgesRemoved: edgesRemoved}
 	return report, stats, nil
+}
+
+// ValidateJSON validates raw SBOM content against compliance standards and
+// returns the sbom-tools/compliance/v2 envelope: byte for byte what
+// `sbom-tools validate - -o json` writes for the same content and options
+// (`validate <FILE>` when options.FileName names the file). The subject's
+// SHA-256 is over exactly the content passed in, and the envelope's AsOf is
+// options.AsOf, else the wall clock when the call starts, to the second.
+func ValidateJSON(content string, options ValidateOptions) ([]byte, error) {
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		return nil, err
+	}
+
+	input, cleanup := makeCString(content)
+	defer cleanup()
+	optionsInput, optionsCleanup := makeCString(string(optionsJSON))
+	defer optionsCleanup()
+
+	return consumeResult(C.sbom_tools_validate_json(input, optionsInput))
+}
+
+// Validate validates raw SBOM content against compliance standards and
+// returns the decoded compliance envelope.
+func Validate(content string, options ValidateOptions) (*ComplianceEnvelope, error) {
+	payload, err := ValidateJSON(content, options)
+	if err != nil {
+		return nil, err
+	}
+	return Decode[ComplianceEnvelope](payload)
+}
+
+// RuleCatalogJSON returns the sbom-tools/rules/v1 rule catalogue: every
+// rule, or the rules of the given --standard names.
+func RuleCatalogJSON(standards ...string) ([]byte, error) {
+	filter := struct {
+		Standards []string `json:"standards,omitempty"`
+	}{Standards: standards}
+	filterJSON, err := json.Marshal(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	input, cleanup := makeCString(string(filterJSON))
+	defer cleanup()
+
+	return consumeResult(C.sbom_tools_rule_catalog_json(input))
+}
+
+// RuleCatalog returns the decoded rule catalogue: every rule, or the rules
+// of the given --standard names.
+func RuleCatalog(standards ...string) (*RuleCatalogDocument, error) {
+	payload, err := RuleCatalogJSON(standards...)
+	if err != nil {
+		return nil, err
+	}
+	return Decode[RuleCatalogDocument](payload)
+}
+
+// ScoreWithOptionsJSON scores normalized SBOM JSON with a profile and the
+// run options, judged at options.AsOf.
+func ScoreWithOptionsJSON(sbomJSON []byte, options ScoreOptions) ([]byte, error) {
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		return nil, err
+	}
+
+	input, cleanup := makeCString(string(sbomJSON))
+	defer cleanup()
+	optionsInput, optionsCleanup := makeCString(string(optionsJSON))
+	defer optionsCleanup()
+
+	return consumeResult(C.sbom_tools_score_sbom_with_options_json(input, optionsInput))
+}
+
+// ScoreWithOptions scores a normalized SBOM with a profile and the run
+// options and returns the decoded report.
+func ScoreWithOptions(sbomPayload *NormalizedSbomPayload, options ScoreOptions) (*ScoreReport, error) {
+	if sbomPayload == nil {
+		return nil, fmt.Errorf("sbomPayload must not be nil")
+	}
+
+	sbomJSON, err := json.Marshal(sbomPayload)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := ScoreWithOptionsJSON(sbomJSON, options)
+	if err != nil {
+		return nil, err
+	}
+	return Decode[ScoreReport](payload)
 }
 
 func Decode[T any](payload []byte) (*T, error) {

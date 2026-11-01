@@ -11,7 +11,7 @@
 //!   check-ffi-crate      Verify FFI crate compiles with feature enabled
 //!   build-staticlib      Build debug static library
 //!   release-staticlib    Build release static library
-//!   test-abi             Run all ABI tests (bindings, snapshots, conformance, regression)
+//!   test-abi             Run all ABI tests (bindings, snapshots, conformance, regression, compliance)
 //!   test-go              Build release lib and run Go binding tests
 //!   ci-all               Full pipeline: check → build → release → test-abi → test-go
 
@@ -112,6 +112,7 @@ async fn main() -> eyre::Result<()> {
                     // 2. ffi_schema_snapshots — contract keys and header signatures
                     // 3. conformance_ffi — bidirectional spec↔runtime conformance (10 tests)
                     // 4. ffi_regression — multi-format parsing and edge cases (8 tests)
+                    // 5. ffi_compliance — validate and the rule catalogue against the CLI
                     let output = rust_test
                         .with_exec(vec![
                             "cargo",
@@ -152,6 +153,16 @@ async fn main() -> eyre::Result<()> {
                             "ffi",
                             "--test",
                             "ffi_regression",
+                        ])
+                        .with_exec(vec![
+                            "cargo",
+                            "test",
+                            "-j",
+                            "1",
+                            "--features",
+                            "ffi",
+                            "--test",
+                            "ffi_compliance",
                         ])
                         .stdout()
                         .await?;
@@ -219,7 +230,7 @@ async fn main() -> eyre::Result<()> {
                             "1",
                         ]);
 
-                    // Step 5: test-abi (all 4 test suites)
+                    // Step 5: test-abi (all 5 test suites)
                     let rust = rust
                         .with_env_variable("CARGO_PROFILE_DEV_DEBUG", "0")
                         .with_env_variable("CARGO_PROFILE_TEST_DEBUG", "0")
@@ -263,6 +274,16 @@ async fn main() -> eyre::Result<()> {
                             "ffi",
                             "--test",
                             "ffi_regression",
+                        ])
+                        .with_exec(vec![
+                            "cargo",
+                            "test",
+                            "-j",
+                            "1",
+                            "--features",
+                            "ffi",
+                            "--test",
+                            "ffi_compliance",
                         ]);
 
                     // Export the compiled release staticlib from final Rust container.
