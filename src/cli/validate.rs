@@ -52,7 +52,8 @@ pub enum ValidateJsonSchema {
 /// These gate codes only apply to runs that completed a validation. A
 /// usage/configuration error surfaced from this function (unsupported output
 /// format, invalid `--as-of` or `--cra-product-class`, broken explicit
-/// sidecar) propagates as an `Err`, which the binary's `main()` maps to
+/// sidecar, `--pqc-profile` or `--cnsa-category` without
+/// `--pqc-mode deadline`) propagates as an `Err`, which the binary's `main()` maps to
 /// [`exit_codes::ERROR`] (3) — the code clap's own argument-parse errors
 /// exit with too, so exit 2 only ever means the warnings gate.
 ///
@@ -75,6 +76,7 @@ pub fn run_validate(
     sarif_category: Option<String>,
     sarif_include_passes: bool,
     sarif_max_results: usize,
+    pqc: super::PqcOptions,
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -82,15 +84,16 @@ pub fn run_validate(
         super::ensure_output_format_supported("validate", output, VALIDATE_OUTPUT_FORMATS)?;
         super::check_sarif_flags(output, sarif_base.as_deref(), sarif_category.as_deref())?;
     }
-    // The run's inputs: the pinned clock, the product class and the CRA
-    // sidecar (explicit, else found next to the SBOM), resolved like every
-    // other compliance command's. The run configuration hands each level the
-    // inputs it reads.
+    // The run's inputs: the pinned clock, the product class, the CRA
+    // sidecar (explicit, else found next to the SBOM) and the PQC mode,
+    // resolved like every other compliance command's. The run configuration
+    // hands each level the inputs it reads.
     let compliance = super::compliance_run_config_for(
         &sbom_path,
         cra_sidecar_path.as_deref(),
         cra_product_class.as_deref(),
         as_of,
+        pqc,
     )?;
     anyhow::ensure!(
         !standards.is_empty(),
@@ -348,7 +351,8 @@ fn passed_checks_line(result: &ComplianceResult) -> Option<String> {
 
 /// Render a compliance result as plain text, one finding per three lines:
 /// the finding, its message, and a `fix:` line with the remediation for the
-/// SBOM's format.
+/// SBOM's format. A finding `--pqc-mode deadline` dates adds a `deadline:`
+/// line with the date and its source before the `fix:` line.
 ///
 /// Requirement, element, message and the N/A reason can carry SBOM-supplied
 /// text (component names, versions, purls), so each passes through
@@ -404,6 +408,13 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
             sanitize_line(element)
         ));
         lines.push(format!("  {}", sanitize_line(&v.message)));
+        if let Some(deadline) = &v.deadline {
+            lines.push(format!(
+                "  deadline: {} ({})",
+                deadline.date,
+                sanitize_line(&deadline.source)
+            ));
+        }
         lines.push(format!(
             "  fix: {}",
             sanitize_line(&v.remediation_guidance())
@@ -507,6 +518,7 @@ mod tests {
                 None,
                 false,
                 crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+                crate::cli::PqcOptions::default(),
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -539,6 +551,7 @@ mod tests {
             None,
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            crate::cli::PqcOptions::default(),
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -572,6 +585,7 @@ mod tests {
             None,
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            crate::cli::PqcOptions::default(),
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -607,6 +621,7 @@ mod tests {
             None,
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            crate::cli::PqcOptions::default(),
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -644,6 +659,7 @@ mod tests {
             None,
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            crate::cli::PqcOptions::default(),
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -685,6 +701,7 @@ mod tests {
                 None,
                 false,
                 crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+                crate::cli::PqcOptions::default(),
             )
             .expect("validate runs");
             std::fs::read_to_string(out).unwrap()
@@ -745,6 +762,7 @@ mod tests {
             None,
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            crate::cli::PqcOptions::default(),
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

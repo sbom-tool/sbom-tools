@@ -75,6 +75,19 @@ pub fn render_violation_detail_overlay(
         Span::styled(violation.rule_id, Style::default().fg(scheme.accent)),
     ]));
 
+    // Under `--pqc-mode deadline`, the migration milestone the finding is
+    // judged against and the schedule that sets it, as the text report's
+    // `deadline:` line shows them.
+    if let Some(deadline) = &violation.deadline {
+        lines.push(Line::from(vec![
+            Span::styled("Deadline: ", Style::default().fg(scheme.muted)),
+            Span::styled(
+                format!("{} ({})", deadline.date, deadline.source),
+                Style::default().fg(scheme.text),
+            ),
+        ]));
+    }
+
     // Harmonised-standard / regulation references, e.g. "EU AI Act: Annex IV §2(d)".
     // Mirrors the markdown "Standard refs" column and the SARIF help_uri.
     if !violation.standard_refs.is_empty() {
@@ -208,6 +221,7 @@ mod tests {
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
             remediation: None,
             finding_detail: None,
+            deadline: None,
         }
     }
 
@@ -259,6 +273,7 @@ mod tests {
                     .remediation_for(crate::quality::RemediationFormat::CycloneDx),
             ),
             finding_detail: None,
+            deadline: None,
         }
     }
 
@@ -309,6 +324,47 @@ mod tests {
                 super::render_violation_detail_overlay(frame, frame.area(), &violation);
             });
         }
+    }
+
+    /// A deadline-mode finding shows its deadline and source; a readiness
+    /// finding (no deadline) shows no such line.
+    #[test]
+    fn overlay_shows_the_deadline_of_a_dated_finding() {
+        let undated = ai_act_violation();
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &undated);
+        });
+        assert!(!text.contains("Deadline:"), "{text}");
+
+        let checker =
+            crate::quality::ComplianceChecker::new(crate::quality::ComplianceLevel::NistPqc)
+                .with_as_of(
+                    chrono::DateTime::parse_from_rfc3339("2031-06-01T00:00:00Z")
+                        .expect("valid instant")
+                        .with_timezone(&chrono::Utc),
+                )
+                .with_pqc_mode(crate::quality::PqcMode::Deadline);
+        let sbom = crate::parse_sbom_str(include_str!(
+            "../../../tests/fixtures/cyclonedx/cbom-pqc-calendar.cdx.json"
+        ))
+        .expect("fixture parses");
+        let result = checker.check(&sbom);
+        let dated = result
+            .violations
+            .iter()
+            .find(|v| v.deadline.is_some())
+            .expect("a dated finding");
+        let deadline = dated.deadline.as_ref().expect("dated");
+        let text = render_to_text(120, 40, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), dated);
+        });
+        assert!(
+            text.contains(&format!(
+                "Deadline: {} ({})",
+                deadline.date, deadline.source
+            )),
+            "{text}"
+        );
     }
 
     #[test]

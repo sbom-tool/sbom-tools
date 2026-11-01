@@ -165,9 +165,9 @@ impl FormatAdvice {
 
 /// NIST PQC readiness remediation, shared by the SBOM-PQC-* rules.
 ///
-/// NIST IR 8547 is cited as its Initial Public Draft (Nov 2024) — still a
-/// draft as of 2026-07; SP 800-131A is at Rev. 2 (Rev. 3 is draft-only).
-const REMEDIATION_PQC: &str = "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.";
+/// NIST IR 8547 is cited as its final edition (October 2026, published
+/// 2026-10-27); SP 800-131A is at Rev. 2 (Rev. 3 is draft-only).
+const REMEDIATION_PQC: &str = "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.";
 
 /// Remediation for a violation whose rule id the registry does not know (one
 /// built outside the checkers): the registry has no guidance for it, so the
@@ -237,6 +237,9 @@ const REMEDIATION_PQC_PROTO: &str = "Disable SSL and TLS versions below 1.2 (SP 
 
 /// NIST PQC certificate remediation.
 const REMEDIATION_PQC_CERT: &str = "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).";
+
+/// Remediation for the federal TLS 1.3 deadline (SBOM-PQC-PROTO-003).
+const REMEDIATION_PQC_TLS13: &str = "Support TLS 1.3 or a successor version by January 2, 2030, as EO 14306 and OMB M-26-15 require of federal agencies: enable TLS 1.3, which carries the hybrid and post-quantum key exchanges, and record the version the protocol asset negotiates.";
 
 /// Remediation for unverifiable crypto evidence under the PQC standard.
 const REMEDIATION_PQC_UNKNOWN: &str = "Declare the asset's algorithm identity (algorithmFamily, OID, or a recognizable name), make bom-refs resolvable within the SBOM, and use parseable protocol versions so signature algorithms, cipher suites, and protocol references can be verified for PQC readiness.";
@@ -3327,7 +3330,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcCryptoInventory",
             short_description: "NIST PQC: cryptographic inventory (CBOM) with evaluable assets required — readiness cannot be verified without one",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },
@@ -3336,10 +3339,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcQuantumVulnerable",
             short_description: "NIST IR 8547: quantum-vulnerable algorithm must migrate to a NIST PQC standard",
             default_severity: ViolationSeverity::Error,
-            refs: &[
-                (K::NistPqc, "IR 8547 ipd"),
-                (K::NistPqc, "SP 800-131A Rev. 2"),
-            ],
+            refs: &[(K::NistPqc, "IR 8547"), (K::NistPqc, "SP 800-131A Rev. 2")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },
@@ -3348,13 +3348,13 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcQuantumAssessmentMissing",
             short_description: "NIST IR 8547: missing quantum security level assessment (nistQuantumSecurityLevel)",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },
         // A PQ/T hybrid (hybrid key exchange or composite signature) whose
         // post-quantum part NIST approves: an approved combination (SP
-        // 800-227 §4.6.2 key combiners, IR 8547 ipd §3.2.2 composite
+        // 800-227 §4.6.2 key combiners, IR 8547 §3.2.2 composite
         // signatures). A pass-only rule (`PASS_RULE_IDS`): its Info default
         // is the SARIF catalogue's `note`; the check site reports a pass.
         "SBOM-PQC-010" => RuleMeta {
@@ -3362,7 +3362,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcHybridCombiner",
             short_description: "NIST PQC: PQ/T hybrid with a NIST-approved post-quantum part — approved combination (SP 800-227, IR 8547)",
             default_severity: ViolationSeverity::Info,
-            refs: &[(K::NistPqc, "SP 800-227"), (K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "SP 800-227"), (K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },
@@ -3410,7 +3410,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcCertificateSignature",
             short_description: "NIST IR 8547: certificate signed with a broken or quantum-vulnerable algorithm",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC_CERT,
             advice: None,
         },
@@ -3421,7 +3421,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcUnclassifiableAlgorithm",
             short_description: "NIST PQC: algorithm cannot be classified — readiness cannot be verified",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC_UNKNOWN,
             advice: None,
         },
@@ -3430,7 +3430,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcCertificateUnverifiable",
             short_description: "NIST PQC: certificate signature algorithm cannot be resolved — readiness cannot be verified",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC_UNKNOWN,
             advice: None,
         },
@@ -3455,6 +3455,23 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC_PROTO,
             advice: None,
         },
+        // TLS 1.2 against the federal TLS 1.3 deadline, reported only under
+        // `--pqc-mode deadline --pqc-profile federal`: EO 14306 and OMB
+        // M-26-15 have agencies support TLS 1.3 by 2030-01-02, so the
+        // Warning becomes an Error after it. The reference is the NIST text
+        // that relays the deadline (IR 8547 §4.2: "agencies are required to
+        // support TLS version 1.3 no later than January 2, 2030"); the order
+        // and the memo, which no standard kind describes, are named in the
+        // description and in each finding's `deadline_source`.
+        "SBOM-PQC-PROTO-003" => RuleMeta {
+            sarif_id: "SBOM-PQC-PROTO-003",
+            name: "PqcFederalTls13",
+            short_description: "Federal PQC deadline: TLS 1.3 must be supported by 2030-01-02 (EO 14306, OMB M-26-15)",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::NistPqc, "IR 8547 §4.2")],
+            remediation: REMEDIATION_PQC_TLS13,
+            advice: None,
+        },
         // Protocol asset with unresolvable/unclassifiable crypto references,
         // an unparseable TLS version, or nothing evaluable at all — PQC
         // readiness cannot be verified (Warning, never a silent pass).
@@ -3463,7 +3480,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcProtocolUnverifiable",
             short_description: "NIST PQC: protocol crypto references cannot be verified — readiness cannot be verified",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC_UNKNOWN,
             advice: None,
         },
@@ -3474,7 +3491,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "PqcGeneralRequirement",
             short_description: "NIST PQC: general post-quantum readiness requirement",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 ipd")],
+            refs: &[(K::NistPqc, "IR 8547")],
             remediation: REMEDIATION_PQC,
             advice: None,
         },
@@ -4248,6 +4265,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",
     "SBOM-PQC-PROTO-002",
+    "SBOM-PQC-PROTO-003",
     "SBOM-PQC-PROTO-UNKNOWN",
     "SBOM-PQC-GENERAL",
     "SBOM-CISA2026-AUTHOR",
@@ -4774,6 +4792,7 @@ pub const PQC_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",
     "SBOM-PQC-PROTO-002",
+    "SBOM-PQC-PROTO-003",
     "SBOM-PQC-PROTO-UNKNOWN",
 ];
 

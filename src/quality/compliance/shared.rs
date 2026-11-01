@@ -67,6 +67,7 @@ pub(crate) fn inventory_absent_violation(
         standard_refs: Vec::new(),
         remediation: None,
         finding_detail: None,
+        deadline: None,
     })
 }
 
@@ -113,6 +114,7 @@ pub(crate) fn future_timestamp_violation(
         standard_refs: Vec::new(),
         remediation: None,
         finding_detail: None,
+        deadline: None,
     })
 }
 

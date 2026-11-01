@@ -1,0 +1,150 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-pqc-transition.cdx.json
+--pqc-mode deadline
+
+[pqc @ 2026-10-12] compliant · E0 W0 I6 P6
+  I SBOM-PQC-001  crypto/algorithm/ecdh-p384  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-001  crypto/algorithm/x25519  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 NIST IR 8547 Table 4
+[pqc @ 2031-06-01] compliant · E0 W6 I0 P6
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p384  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-001  crypto/algorithm/rsa-3072  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-001  crypto/algorithm/x25519  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2035-12-31 NIST IR 8547 Table 4
+[pqc @ 2036-06-01] NON-COMPLIANT · E6 W0 I0 P6
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p384  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-001  crypto/algorithm/x25519  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2035-12-31 NIST IR 8547 Table 4
+[pqc --pqc-profile federal @ 2026-10-12] compliant · E0 W6 I0 P6
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p384  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/x25519  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+[pqc --pqc-profile federal @ 2031-06-01] NON-COMPLIANT · E4 W2 I0 P6
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p384  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/x25519  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+[pqc --pqc-profile federal @ 2036-06-01] NON-COMPLIANT · E6 W0 I0 P6
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p384  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/x25519  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-CERT-001  crypto/certificate/legacy-compat-cert  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+[cnsa2 @ 2026-10-12] NON-COMPLIANT · E11 W5 I0 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 CNSA 2.0 timeline: strictest category
+[cnsa2 @ 2031-06-01] NON-COMPLIANT · E16 W0 I0 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated
+[cnsa2 @ 2036-06-01] NON-COMPLIANT · E16 W0 I0 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated
+[cnsa2 --cnsa-category niche @ 2026-10-12] NON-COMPLIANT · E11 W0 I5 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated
+  I SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2030-12-31 CNSA 2.0 timeline: niche equipment
+[cnsa2 --cnsa-category niche @ 2031-06-01] NON-COMPLIANT · E11 W5 I0 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2033-12-31 CNSA 2.0 timeline: niche equipment
+[cnsa2 --cnsa-category niche @ 2036-06-01] NON-COMPLIANT · E16 W0 I0 P0
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-003  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-004  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/x25519  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-ecdsa-ml-dsa  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/hybrid-x25519-ml-kem-768  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-dsa-65  undated
+  E SBOM-CNSA2-ALG-007  crypto/algorithm/ml-kem-768  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/hybrid-cert  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/legacy-compat-cert  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13-hybrid  undated

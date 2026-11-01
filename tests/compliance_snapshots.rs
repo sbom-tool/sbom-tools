@@ -16,6 +16,10 @@
 //!   `sbom-tools/compliance/v2` envelope), SARIF and OSCAL writers for six
 //!   pinned fixtures, plus a check that each writer is byte-identical across
 //!   runs.
+//! - **Deadline snapshots**, one per CBOM fixture: `cnsa2` and `pqc` under
+//!   `--pqc-mode deadline` at three dates and in four configurations, each
+//!   finding with its deadline and source. The verdict snapshots are the
+//!   readiness mode, the default.
 //!
 //! Everything runs at a pinned `as_of`, so no snapshot depends on today's
 //! date. Accept intended changes with `cargo insta review`.
@@ -26,7 +30,8 @@ use std::path::{Path, PathBuf};
 use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceLevel, ComplianceResult, ComplianceRunConfig, StandardSelector, ViolationSeverity,
+    CnsaCategory, ComplianceLevel, ComplianceResult, ComplianceRunConfig, PqcMode, PqcProfile,
+    StandardSelector, ViolationSeverity,
 };
 use sbom_tools::reports::oscal::generate_assessment_results_at;
 use sbom_tools::reports::{
@@ -369,5 +374,110 @@ fn writer_byte_snapshots_are_stable_and_deterministic() {
                 redact_version(text)
             );
         }
+    }
+}
+
+/// The CBOM fixtures deadline mode is pinned on: the calendar fixture, which
+/// exercises every schedule, and two others with real-world mixes.
+const DEADLINE_FIXTURES: &[&str] = &[
+    "cyclonedx/cbom-pqc-calendar.cdx.json",
+    "cyclonedx/cbom-pqc-transition.cdx.json",
+    "cyclonedx/cbom-cnsa2-violations.cdx.json",
+];
+
+/// The dates deadline mode is judged at: the review date, a date in NIST IR
+/// 8547's 2031–2035 deprecation window, and one after its disallowance.
+const DEADLINE_DATES: &[&str] = &[
+    "2026-10-12T00:00:00Z",
+    "2031-06-01T00:00:00Z",
+    "2036-06-01T00:00:00Z",
+];
+
+/// The deadline-mode configurations, as the `validate` flags name them.
+const DEADLINE_CONFIGS: &[(&str, ComplianceLevel, PqcProfile, Option<CnsaCategory>)] = &[
+    ("pqc", ComplianceLevel::NistPqc, PqcProfile::Nist, None),
+    (
+        "pqc --pqc-profile federal",
+        ComplianceLevel::NistPqc,
+        PqcProfile::Federal,
+        None,
+    ),
+    ("cnsa2", ComplianceLevel::Cnsa2, PqcProfile::Nist, None),
+    (
+        "cnsa2 --cnsa-category niche",
+        ComplianceLevel::Cnsa2,
+        PqcProfile::Nist,
+        Some(CnsaCategory::Niche),
+    ),
+];
+
+/// One deadline-mode block: the verdict line, then each finding as
+/// (severity, rule ID, subject, deadline and source), sorted.
+fn render_deadline_verdict(out: &mut String, label: &str, result: &ComplianceResult) {
+    let verdict = if result.is_compliant {
+        "compliant"
+    } else {
+        "NON-COMPLIANT"
+    };
+    let _ = writeln!(
+        out,
+        "[{label}] {verdict} · E{} W{} I{} P{}",
+        result.error_count,
+        result.warning_count,
+        result.info_count,
+        result.passed.len()
+    );
+    let findings: Vec<String> = result
+        .violations
+        .iter()
+        .map(|v| {
+            let deadline = v.deadline.as_ref().map_or_else(
+                || "undated".to_string(),
+                |d| format!("{} {}", d.date, d.source),
+            );
+            format!(
+                "{} {}  {}  {deadline}",
+                severity_letter(v.severity),
+                v.rule_id,
+                subject(v.component_id.as_deref(), v.element.as_deref()),
+            )
+        })
+        .collect();
+    write_sorted(out, findings);
+}
+
+#[test]
+fn deadline_mode_snapshots_for_the_cbom_fixtures() {
+    let mut settings = insta::Settings::clone_current();
+    settings.set_prepend_module_to_snapshot(true);
+    settings.set_omit_expression(true);
+    let _guard = settings.bind_to_scope();
+
+    for rel in DEADLINE_FIXTURES {
+        let raw =
+            std::fs::read_to_string(Path::new(FIXTURES_DIR).join(rel)).expect("fixture readable");
+        let sbom = parse_sbom_str(&raw).unwrap_or_else(|e| panic!("{rel} must parse: {e}"));
+        let mut out = format!("fixture: {rel}\n--pqc-mode deadline\n\n");
+        for (label, level, profile, category) in DEADLINE_CONFIGS {
+            for as_of in DEADLINE_DATES {
+                let instant = chrono::DateTime::parse_from_rfc3339(as_of)
+                    .expect("valid instant")
+                    .with_timezone(&chrono::Utc);
+                let mut run = ComplianceRunConfig::new()
+                    .with_as_of(instant)
+                    .with_pqc_mode(PqcMode::Deadline)
+                    .with_pqc_profile(*profile);
+                if let Some(category) = category {
+                    run = run.with_cnsa_category(*category);
+                }
+                let day = &as_of[..10];
+                render_deadline_verdict(
+                    &mut out,
+                    &format!("{label} @ {day}"),
+                    &run.check(*level, &sbom),
+                );
+            }
+        }
+        insta::assert_snapshot!(format!("deadline__{}", snapshot_name(rel)), out);
     }
 }

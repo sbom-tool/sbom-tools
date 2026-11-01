@@ -1,0 +1,207 @@
+---
+source: tests/compliance_snapshots.rs
+---
+fixture: cyclonedx/cbom-pqc-calendar.cdx.json
+--pqc-mode deadline
+
+[pqc @ 2026-10-12] NON-COMPLIANT · E4 W3 I10 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  I SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-001  crypto/algorithm/ed25519  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 NIST IR 8547 Table 4
+  I SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 NIST IR 8547 Tables 2 and 4
+  I SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  I SBOM-PQC-PROTO-002  crypto/protocol/tls12  2030-12-31 NIST IR 8547 Table 2
+  I SBOM-PQC-PROTO-002  crypto/protocol/tls12  2030-12-31 NIST IR 8547 Table 4 ×2
+  W SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+  W SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2035-12-31 NIST IR 8547 Table 2
+[pqc @ 2031-06-01] NON-COMPLIANT · E6 W11 I0 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  E SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p256  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-001  crypto/algorithm/ed25519  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-001  crypto/algorithm/rsa-2048  2035-12-31 NIST IR 8547 Table 4
+  W SBOM-PQC-001  crypto/algorithm/rsa-3072  2035-12-31 NIST IR 8547 Tables 2 and 4
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+  W SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12  2035-12-31 NIST IR 8547 Table 2
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12  2035-12-31 NIST IR 8547 Table 4 ×2
+[pqc @ 2036-06-01] NON-COMPLIANT · E16 W1 I0 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-001  crypto/algorithm/ed25519  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2035-12-31 NIST IR 8547 Table 4
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2035-12-31 NIST IR 8547 Tables 2 and 4
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12  2035-12-31 NIST IR 8547 Table 2
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12  2035-12-31 NIST IR 8547 Table 4 ×2
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+[pqc --pqc-profile federal @ 2026-10-12] NON-COMPLIANT · E5 W12 I1 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  I SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  W SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ed25519  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  W SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+  W SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15 ×2
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-PROTO-003  crypto/protocol/tls12  2030-01-02 EO 14306, OMB M-26-15
+[pqc --pqc-profile federal @ 2031-06-01] NON-COMPLIANT · E13 W5 I0 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15 ×2
+  E SBOM-PQC-PROTO-003  crypto/protocol/tls12  2030-01-02 EO 14306, OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-001  crypto/algorithm/ed25519  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+  W SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  W SBOM-PQC-PROTO-002  crypto/protocol/tls12  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+[pqc --pqc-profile federal @ 2036-06-01] NON-COMPLIANT · E17 W1 I0 P2
+  E SBOM-PQC-001  crypto/algorithm/dsa-2048  undated
+  E SBOM-PQC-001  crypto/algorithm/ecdh-p256  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/ecdsa-p384  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/ed25519  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-1024  undated
+  E SBOM-PQC-001  crypto/algorithm/rsa-2048  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-001  crypto/algorithm/rsa-3072  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15
+  E SBOM-PQC-005  crypto/algorithm/md5  undated
+  E SBOM-PQC-005  crypto/algorithm/sha-1  2030-12-31 NIST IR 8547 Table 8
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-ecdsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-CERT-001  crypto/certificate/gateway-rsa  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-KEY-001  crypto/key/hmac-key-112  2030-12-31 NIST IR 8547 §4.1.3
+  E SBOM-PQC-KEY-001  crypto/key/legacy-key-64  undated
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12  2030-12-31 EO 14412 §4(b)(ii), OMB M-26-15 ×2
+  E SBOM-PQC-PROTO-002  crypto/protocol/tls12  2031-12-31 EO 14412 §4(b)(iii), OMB M-26-15
+  E SBOM-PQC-PROTO-003  crypto/protocol/tls12  2030-01-02 EO 14306, OMB M-26-15
+  W SBOM-PQC-012  crypto/algorithm/md5  undated
+[cnsa2 @ 2026-10-12] NON-COMPLIANT · E11 W6 I0 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category
+  W SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category ×2
+[cnsa2 @ 2031-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category ×2
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2
+[cnsa2 @ 2036-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: strictest category ×2
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2
+[cnsa2 --cnsa-category niche @ 2026-10-12] NON-COMPLIANT · E10 W1 I6 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2
+  I SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: niche equipment
+  I SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2030-12-31 CNSA 2.0 timeline: niche equipment ×2
+  W SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2033-12-31 CNSA 2.0 timeline: niche equipment
+[cnsa2 --cnsa-category niche @ 2031-06-01] NON-COMPLIANT · E10 W7 I0 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2033-12-31 CNSA 2.0 timeline: niche equipment
+  W SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2033-12-31 CNSA 2.0 timeline: niche equipment ×2
+[cnsa2 --cnsa-category niche @ 2036-06-01] NON-COMPLIANT · E17 W0 I0 P0
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/md5  undated
+  E SBOM-CNSA2-ALG-005  crypto/algorithm/sha-1  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/dsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdh-p256  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ecdsa-p384  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/ed25519  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-1024  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-2048  undated
+  E SBOM-CNSA2-ALG-006  crypto/algorithm/rsa-3072  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-ecdsa  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-CERT-001  crypto/certificate/gateway-rsa  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-PROTO-001  crypto/protocol/tls12  2033-12-31 CNSA 2.0 timeline: niche equipment
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  2033-12-31 CNSA 2.0 timeline: niche equipment ×2
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls12  undated
+  E SBOM-CNSA2-PROTO-002  crypto/protocol/tls13  undated ×2

@@ -275,15 +275,20 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     Ok(crate::pipeline::exit_codes::SUCCESS)
 }
 
-/// The compliance run of `view`: its `--as-of`, `--cra-product-class` and
-/// CRA sidecar (`--cra-sidecar`, else the one next to the SBOM), resolved by
-/// the helper `validate` uses.
+/// The compliance run of `view`: its `--as-of`, `--cra-product-class`, CRA
+/// sidecar (`--cra-sidecar`, else the one next to the SBOM) and PQC flags,
+/// resolved by the helper `validate` uses.
 pub(crate) fn compliance_run(config: &ViewConfig) -> Result<ComplianceRunConfig> {
     super::compliance_run_config_for(
         &config.sbom_path,
         config.cra_sidecar_path.as_deref(),
         config.cra_product_class.as_deref(),
         config.as_of.as_deref(),
+        super::PqcOptions {
+            mode: config.pqc_mode.unwrap_or_default(),
+            profile: config.pqc_profile,
+            cnsa_category: config.cnsa_category,
+        },
     )
 }
 
@@ -491,6 +496,9 @@ mod tests {
             cra_sidecar_path: None,
             cra_product_class: None,
             as_of: None,
+            pqc_mode: None,
+            pqc_profile: None,
+            cnsa_category: None,
         }
     }
 

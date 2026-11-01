@@ -34,8 +34,8 @@ ENISA / industry guidance. Use it to:
 | `CraPhase2`                 | `cra` (default CRA meaning), `cra-phase2`                                                           | Full CRA compliance (regulation fully applies from 2027-12-11)                                                                        |
 | `CraOssSteward`             | `oss-steward`, `cra-oss-steward`, `cra-oss`, `cra-art24`, `art24`                                   | Article 24 lighter profile for open-source software stewards                                                     |
 | `BsiTr03183_2`              | `bsi`, `tr-03183`, `tr03183`, `bsi-tr-03183-2`                                                      | BSI TR-03183-2 (German national CRA-aligned baseline)                                                            |
-| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems)                                             |
-| `NistPqc`                   | `pqc`, `nist-pqc`, `nist_pqc`                                                                       | NIST IR 8547 + FIPS 203/204/205 (PQC migration)                                                                  |
+| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems; `--pqc-mode deadline` applies its 2025–2033 timeline) |
+| `NistPqc`                   | `pqc`, `nist-pqc`, `nist_pqc`                                                                       | NIST IR 8547 (final, Oct 2026) + FIPS 203/204/205 (PQC migration; `--pqc-mode deadline` applies its 2030/2035 milestones) |
 
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
 [CRA-P3.2 calibration table](#cra-p32-product-class-severity-calibration)
@@ -45,7 +45,9 @@ and module-certificate checks of `CraPhase1` and `CraPhase2`.
 Every command that checks compliance (`validate`, `quality`, `view` and
 `diff` with their TUIs, `cra-docs`) hands each profile the same inputs:
 the CRA sidecar reaches the CRA, OSS-steward, EUCC and EU AI Act profiles,
-and the product class reaches the two CRA phases only. The Article 24
+the product class reaches the two CRA phases only, and the PQC flags
+(`--pqc-mode`, `--pqc-profile`, `--cnsa-category`) reach the CNSA 2.0 and
+NIST PQC profiles only. The Article 24
 steward profile gets the sidecar without its `productClass` and
 `conformityAssessmentRoute`: the class picks a manufacturer's
 conformity-assessment procedure (Art. 32), which a steward does not

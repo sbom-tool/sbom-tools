@@ -12,17 +12,47 @@
 //! two pass-only rules, SBOM-PQC-009 and SBOM-PQC-010, get passing fixtures
 //! instead: each adds an approved asset, which the result reports as a
 //! passed check.
+//!
+//! Rows whose findings `--pqc-mode deadline` dates add cases in that mode
+//! ([`DeadlineFixture`]): NIST IR 8547 makes a quantum-vulnerable scheme an
+//! Info before its 2030 deprecation, a Warning until its 2035 disallowance
+//! and an Error after; the federal profile has its own deadlines and its
+//! own rule, SBOM-PQC-PROTO-003 (TLS 1.3 by 2030-01-02).
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    CBOM_IS_CYCLONEDX, CryptoAssetFixture, Encoding, RuleEntry, SbomFixture,
+    CBOM_IS_CYCLONEDX, CryptoAssetFixture, DeadlineFixture, Encoding, RuleEntry, SbomFixture,
     assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, PQC_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::NistPqc;
+
+/// Deadline-mode instants: the shared test clock (before IR 8547's 2030
+/// deprecation), a date in its deprecation window, one after its 2035
+/// disallowance, and one past the federal TLS 1.3 deadline.
+const BEFORE_2031: &str = rule_matrix::clock::AS_OF;
+const IN_2031: &str = "2031-06-01T00:00:00Z";
+const AFTER_2035: &str = "2036-06-01T00:00:00Z";
+const AFTER_TLS13_DEADLINE: &str = "2030-06-01T00:00:00Z";
+
+/// An RSA-3072 signature asset declaring quantum level 0.
+fn rsa_signature() -> CryptoAssetFixture {
+    CryptoAssetFixture::algorithm("algo-rsa", "RSA")
+        .primitive("signature")
+        .parameter_set("3072")
+        .quantum_level(0)
+}
+
+/// The ready baseline plus `asset`, judged in deadline mode by `deadline`.
+fn dated(asset: CryptoAssetFixture, deadline: DeadlineFixture) -> SbomFixture {
+    broken(|s| {
+        s.crypto_assets.push(asset);
+        s.deadline = Some(deadline);
+    })
+}
 
 /// A PQC-ready CBOM that triggers no finding at all: AES-256-GCM and SHA-384
 /// with declared quantum levels, a 256-bit symmetric key, a certificate
@@ -147,6 +177,69 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .quantum_level(0),
                 );
             }),
+        )
+        // Deadline mode: IR 8547 Table 2 deprecates RSA signatures after
+        // 2030 and disallows them after 2035.
+        .with_departing_firing(
+            "deadline mode before 2031: deprecated after 2030",
+            Sev::Info,
+            dated(rsa_signature(), DeadlineFixture::nist(BEFORE_2031)),
+        )
+        .with_departing_firing(
+            "deadline mode in 2031: deprecated, disallowed after 2035",
+            Sev::Warning,
+            dated(rsa_signature(), DeadlineFixture::nist(IN_2031)),
+        )
+        .with_firing(
+            "deadline mode after 2035: disallowed",
+            Sev::Error,
+            dated(rsa_signature(), DeadlineFixture::nist(AFTER_2035)),
+        )
+        // The federal profile: post-quantum key establishment by 2030-12-31.
+        .with_departing_firing(
+            "federal deadline mode before 2031: key establishment due by 2030-12-31",
+            Sev::Warning,
+            dated(
+                CryptoAssetFixture::algorithm("algo-ecdh", "ECDH")
+                    .primitive("key-agree")
+                    .curve("secp256r1")
+                    .quantum_level(0),
+                DeadlineFixture::federal(BEFORE_2031),
+            ),
+        )
+        .with_firing(
+            "federal deadline mode in 2031: key establishment overdue",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::algorithm("algo-ecdh", "ECDH")
+                    .primitive("key-agree")
+                    .curve("secp256r1")
+                    .quantum_level(0),
+                DeadlineFixture::federal(IN_2031),
+            ),
+        )
+        // No transition dates what is disallowed already or not listed.
+        .with_firing(
+            "deadline mode keeps RSA-1024, below 112 bits, an error",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::algorithm("algo-rsa", "RSA")
+                    .primitive("signature")
+                    .parameter_set("1024")
+                    .quantum_level(0),
+                DeadlineFixture::nist(BEFORE_2031),
+            ),
+        )
+        .with_firing(
+            "deadline mode keeps DSA, which FIPS 186-5 dropped, an error",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::algorithm("algo-dsa", "DSA")
+                    .primitive("signature")
+                    .parameter_set("2048")
+                    .quantum_level(0),
+                DeadlineFixture::nist(BEFORE_2031),
+            ),
         ),
         RuleEntry::tested(
             "SBOM-PQC-012",
@@ -203,6 +296,38 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 );
             }),
             base(),
+        )
+        // Deadline mode: IR 8547 Table 8 deprecates SHA-1 now and disallows
+        // it after 2030; MD5 has no transition.
+        .with_departing_firing(
+            "deadline mode before 2031: SHA-1 deprecated",
+            Sev::Warning,
+            dated(
+                CryptoAssetFixture::algorithm("algo-sha1", "SHA-1")
+                    .primitive("hash")
+                    .quantum_level(1),
+                DeadlineFixture::nist(BEFORE_2031),
+            ),
+        )
+        .with_firing(
+            "deadline mode in 2031: SHA-1 disallowed",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::algorithm("algo-sha1", "SHA-1")
+                    .primitive("hash")
+                    .quantum_level(1),
+                DeadlineFixture::nist(IN_2031),
+            ),
+        )
+        .with_firing(
+            "deadline mode keeps MD5 an error",
+            Sev::Error,
+            dated(
+                CryptoAssetFixture::algorithm("algo-md5", "MD5")
+                    .primitive("hash")
+                    .quantum_level(1),
+                DeadlineFixture::nist(BEFORE_2031),
+            ),
         ),
         RuleEntry::tested(
             "SBOM-PQC-008",
@@ -245,6 +370,32 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 );
             }),
             base(),
+        )
+        // Deadline mode: IR 8547 §4.1.3 disallows the 112-bit security
+        // level after 2030.
+        .with_departing_firing(
+            "deadline mode before 2031: a 112-bit key",
+            Sev::Info,
+            broken(|s| {
+                replace(
+                    s,
+                    "session-key",
+                    CryptoAssetFixture::material("session-key", "symmetric-key", Some(112)),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode in 2031: a 112-bit key",
+            Sev::Error,
+            broken(|s| {
+                replace(
+                    s,
+                    "session-key",
+                    CryptoAssetFixture::material("session-key", "symmetric-key", Some(112)),
+                );
+                s.deadline = Some(DeadlineFixture::nist(IN_2031));
+            }),
         ),
         // Unresolved signature refs are token-classified ("ecdsa-p384").
         RuleEntry::tested(
@@ -254,6 +405,37 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.crypto_mut("leaf-cert").signature_algorithm_ref = Some("ecdsa-p384".to_string());
             }),
             base(),
+        )
+        // Deadline mode judges a certificate on the later of the evaluation
+        // date and its notValidAfter: one valid into 2033 signs while ECDSA
+        // is deprecated.
+        .with_departing_firing(
+            "deadline mode before 2031: an ECDSA signature",
+            Sev::Info,
+            broken(|s| {
+                s.crypto_mut("leaf-cert").signature_algorithm_ref = Some("ecdsa-p384".to_string());
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_departing_firing(
+            "deadline mode: valid until 2033, judged on that date",
+            Sev::Warning,
+            broken(|s| {
+                *s.crypto_mut("leaf-cert") =
+                    CryptoAssetFixture::certificate("leaf-cert", "ecdsa-p384")
+                        .valid_until("2033-06-30T00:00:00Z");
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "federal deadline mode: valid until 2032, after the 2031 signature deadline",
+            Sev::Error,
+            broken(|s| {
+                *s.crypto_mut("leaf-cert") =
+                    CryptoAssetFixture::certificate("leaf-cert", "ecdsa-p384")
+                        .valid_until("2032-06-30T00:00:00Z");
+                s.deadline = Some(DeadlineFixture::federal(BEFORE_2031));
+            }),
         ),
         RuleEntry::tested(
             "SBOM-PQC-CERT-UNKNOWN",
@@ -340,6 +522,76 @@ fn pqc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
                         .tls_signature_schemes(&["mldsa44", "rsa_pss_rsae_sha256"]),
                 );
+            }),
+        )
+        // Deadline mode: the suite's ECDHE and RSA are on IR 8547's
+        // calendar; its SHA-1 record MAC is deprecated now (Table 8).
+        .with_departing_firing(
+            "deadline mode before 2031: an ECDHE-RSA suite",
+            Sev::Info,
+            broken(|s| {
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.2"))
+                        .cipher_suite("TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", &[]),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_departing_firing(
+            "deadline mode before 2031: an ECDHE-RSA suite with a SHA-1 MAC",
+            Sev::Warning,
+            broken(|s| {
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.2"))
+                        .cipher_suite("TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA", &[]),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        ),
+        // TLS 1.2 against the federal TLS 1.3 deadline (EO 14306, OMB
+        // M-26-15), under the federal profile only.
+        RuleEntry::tested(
+            "SBOM-PQC-PROTO-003",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_mut("tls13").protocol_mut().version = Some("1.2".to_string());
+                s.deadline = Some(DeadlineFixture::federal(BEFORE_2031));
+            }),
+            broken(|s| s.deadline = Some(DeadlineFixture::federal(BEFORE_2031))),
+        )
+        .with_departing_firing(
+            "after 2030-01-02",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_mut("tls13").protocol_mut().version = Some("TLSv1.2".to_string());
+                s.deadline = Some(DeadlineFixture::federal(AFTER_TLS13_DEADLINE));
+            }),
+        )
+        .with_silent(
+            "TLS 1.2 in readiness mode",
+            broken(|s| s.crypto_mut("tls13").protocol_mut().version = Some("1.2".to_string())),
+        )
+        .with_silent(
+            "TLS 1.2 under the NIST profile",
+            broken(|s| {
+                s.crypto_mut("tls13").protocol_mut().version = Some("1.2".to_string());
+                s.deadline = Some(DeadlineFixture::nist(AFTER_TLS13_DEADLINE));
+            }),
+        )
+        .with_silent(
+            "DTLS 1.2, which the deadline does not name",
+            broken(|s| {
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "dtls", Some("1.2"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"]),
+                );
+                s.deadline = Some(DeadlineFixture::federal(AFTER_TLS13_DEADLINE));
             }),
         ),
         // Opaque references, an unparseable version, or a protocol that

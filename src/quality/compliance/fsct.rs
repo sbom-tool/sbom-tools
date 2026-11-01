@@ -504,6 +504,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -525,6 +526,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -547,6 +549,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -577,6 +580,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
     // Direct-dependency edges whose target is not in the inventory: the
@@ -600,6 +604,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -624,6 +629,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -651,6 +657,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -678,6 +685,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -708,6 +716,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -737,6 +746,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -767,6 +777,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -791,6 +802,7 @@ fn fsct_minimum_expected(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -814,6 +826,7 @@ fn fsct_minimum_expected(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -846,6 +859,7 @@ fn fsct_minimum_expected(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 }
@@ -894,6 +908,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     } else if !tool_creators
         .iter()
@@ -915,6 +930,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -945,6 +961,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -974,6 +991,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1012,6 +1030,7 @@ fn fsct_recommended_practice(
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -1041,6 +1060,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1072,6 +1092,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1098,6 +1119,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1125,6 +1147,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1152,6 +1175,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1181,6 +1205,7 @@ fn fsct_recommended_practice(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 }
@@ -1226,6 +1251,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1252,6 +1278,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1279,6 +1306,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
     // …including concluded-license attestation. Evidence-gated to SPDX
@@ -1303,6 +1331,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1330,6 +1359,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -1359,6 +1389,7 @@ fn fsct_aspirational_goals(
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 }

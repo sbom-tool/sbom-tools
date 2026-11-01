@@ -6,13 +6,17 @@
 //! same verdicts on every surface. Which input reaches which level is
 //! decided in one place: [`ComplianceRunConfig::checker`].
 
-use super::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use super::{
+    CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, PqcMode, PqcProfile,
+};
 use crate::model::{CraProductClass, CraSidecarMetadata, NormalizedSbom};
 use chrono::{DateTime, Utc};
 
 /// The inputs of one compliance run: the evaluation clock (`--as-of`), the
-/// CRA sidecar (`--cra-sidecar`, or the one found next to the SBOM) and the
-/// CRA product class (`--cra-product-class`).
+/// CRA sidecar (`--cra-sidecar`, or the one found next to the SBOM), the
+/// CRA product class (`--cra-product-class`) and how the crypto standards
+/// judge quantum-vulnerable cryptography (`--pqc-mode`, `--pqc-profile`,
+/// `--cnsa-category`).
 ///
 /// [`Self::checker`] builds the checker for a level with exactly the inputs
 /// that level reads, so no caller decides that itself.
@@ -40,16 +44,23 @@ pub struct ComplianceRunConfig {
     as_of: Option<DateTime<Utc>>,
     sidecar: Option<CraSidecarMetadata>,
     product_class: Option<CraProductClass>,
+    pqc_mode: PqcMode,
+    pqc_profile: PqcProfile,
+    cnsa_category: Option<CnsaCategory>,
 }
 
 impl ComplianceRunConfig {
-    /// A run with no inputs: the wall clock, no sidecar, no product class.
+    /// A run with no inputs: the wall clock, no sidecar, no product class,
+    /// PQC readiness mode.
     #[must_use]
     pub const fn new() -> Self {
         Self {
             as_of: None,
             sidecar: None,
             product_class: None,
+            pqc_mode: PqcMode::Readiness,
+            pqc_profile: PqcProfile::Nist,
+            cnsa_category: None,
         }
     }
 
@@ -80,6 +91,32 @@ impl ComplianceRunConfig {
         self
     }
 
+    /// Judge quantum-vulnerable cryptography under CNSA 2.0 and NIST PQC by
+    /// `mode` (`--pqc-mode`): readiness, the default, or by each finding's
+    /// migration deadline at the run's clock (see
+    /// [`ComplianceChecker::with_pqc_mode`]).
+    #[must_use]
+    pub const fn with_pqc_mode(mut self, mode: PqcMode) -> Self {
+        self.pqc_mode = mode;
+        self
+    }
+
+    /// The deadlines deadline mode applies under NIST PQC (`--pqc-profile`):
+    /// NIST IR 8547's, the default, or the federal ones as well.
+    #[must_use]
+    pub const fn with_pqc_profile(mut self, profile: PqcProfile) -> Self {
+        self.pqc_profile = profile;
+        self
+    }
+
+    /// The CNSA 2.0 equipment category whose timeline deadline mode applies
+    /// under CNSA 2.0 (`--cnsa-category`); unset, the strictest.
+    #[must_use]
+    pub const fn with_cnsa_category(mut self, category: CnsaCategory) -> Self {
+        self.cnsa_category = Some(category);
+        self
+    }
+
     /// The pinned evaluation clock, or `None` for the wall clock.
     #[must_use]
     pub const fn as_of(&self) -> Option<DateTime<Utc>> {
@@ -96,6 +133,25 @@ impl ComplianceRunConfig {
     #[must_use]
     pub const fn product_class(&self) -> Option<CraProductClass> {
         self.product_class
+    }
+
+    /// How CNSA 2.0 and NIST PQC judge quantum-vulnerable cryptography.
+    #[must_use]
+    pub const fn pqc_mode(&self) -> PqcMode {
+        self.pqc_mode
+    }
+
+    /// The deadlines deadline mode applies under NIST PQC.
+    #[must_use]
+    pub const fn pqc_profile(&self) -> PqcProfile {
+        self.pqc_profile
+    }
+
+    /// The CNSA 2.0 equipment category set with
+    /// [`Self::with_cnsa_category`].
+    #[must_use]
+    pub const fn cnsa_category(&self) -> Option<CnsaCategory> {
+        self.cnsa_category
     }
 
     /// The product class the CRA phase checks use: the sidecar's
@@ -143,15 +199,39 @@ impl ComplianceRunConfig {
         )
     }
 
+    /// Whether a run hands the PQC mode to `level`'s checker. See
+    /// [`Self::checker`] for why.
+    #[must_use]
+    pub const fn pqc_mode_applies(level: ComplianceLevel) -> bool {
+        matches!(level, ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc)
+    }
+
+    /// Whether a run hands the PQC profile to `level`'s checker. See
+    /// [`Self::checker`] for why.
+    #[must_use]
+    pub const fn pqc_profile_applies(level: ComplianceLevel) -> bool {
+        matches!(level, ComplianceLevel::NistPqc)
+    }
+
+    /// Whether a run hands the CNSA 2.0 category to `level`'s checker. See
+    /// [`Self::checker`] for why.
+    #[must_use]
+    pub const fn cnsa_category_applies(level: ComplianceLevel) -> bool {
+        matches!(level, ComplianceLevel::Cnsa2)
+    }
+
     /// The checker for `level`, given the inputs of this run that `level`
     /// reads. This is the one place that decides which input reaches which
     /// level:
     ///
     /// | Input | Levels | Why |
     /// |---|---|---|
-    /// | `as_of` | every level | A run judges one instant. Deadline-sensitive checks (CRA Art. 14 readiness, SBOM age, certificate expiry) read it. |
+    /// | `as_of` | every level | A run judges one instant. Deadline-sensitive checks (CRA Art. 14 readiness, SBOM age, certificate expiry, PQC deadlines) read it. |
     /// | CRA sidecar | CRA Phase 1 and 2, OSS steward, EUCC, EU AI Act | It holds CRA metadata (manufacturer, disclosure contacts, Art. 14 channels, support period), EUCC certificate evidence and the AI Act high-risk flag. A sidecar next to the SBOM is used without being asked for, so the other standards, which judge the SBOM document alone, never read it. |
     /// | product class | CRA Phase 1 and 2 | The Annex III/IV class picks the manufacturer's conformity-assessment procedure (Art. 32), which calibrates the CRA phase checks. An open-source steward (Art. 24) follows no such procedure. |
+    /// | PQC mode | CNSA 2.0, NIST PQC | Only the crypto standards judge quantum-vulnerable cryptography; deadline mode dates their findings by the migration schedules. |
+    /// | PQC profile | NIST PQC | The federal deadlines (EO 14412, OMB M-26-15) bind federal civilian systems on NIST's schedule; national security systems follow CNSA 2.0. |
+    /// | CNSA 2.0 category | CNSA 2.0 | The equipment category picks NSA's CNSA 2.0 preference and exclusive-use years. |
     ///
     /// The sidecar's `productClass` and `conformityAssessmentRoute` are the
     /// product class input too, so a level outside the product-class row
@@ -161,6 +241,17 @@ impl ComplianceRunConfig {
         let mut checker = ComplianceChecker::new(level);
         if let Some(as_of) = self.as_of {
             checker = checker.with_as_of(as_of);
+        }
+        if Self::pqc_mode_applies(level) {
+            checker = checker.with_pqc_mode(self.pqc_mode);
+        }
+        if Self::pqc_profile_applies(level) {
+            checker = checker.with_pqc_profile(self.pqc_profile);
+        }
+        if Self::cnsa_category_applies(level)
+            && let Some(category) = self.cnsa_category
+        {
+            checker = checker.with_cnsa_category(category);
         }
         if Self::sidecar_applies(level)
             && let Some(sidecar) = &self.sidecar
@@ -238,17 +329,42 @@ mod tests {
             .with_as_of(as_of())
             .with_sidecar(sidecar())
             .with_product_class(CraProductClass::ImportantClass1)
+            .with_pqc_mode(PqcMode::Deadline)
+            .with_pqc_profile(PqcProfile::Federal)
+            .with_cnsa_category(CnsaCategory::Niche)
     }
 
     /// The policy table of `checker`: every level gets the clock; the
     /// sidecar reaches the CRA, EUCC and AI Act profiles; the product class
-    /// (from either channel) reaches the CRA phases only.
+    /// (from either channel) reaches the CRA phases only; the PQC mode
+    /// reaches CNSA 2.0 and NIST PQC, the PQC profile NIST PQC and the CNSA
+    /// 2.0 category CNSA 2.0.
     #[test]
     fn checker_hands_each_level_its_inputs() {
         let run = full_run();
         for level in ComplianceLevel::all() {
             let checker = run.checker(*level);
             assert_eq!(checker.now(), as_of(), "{level:?} reads the pinned clock");
+            let crypto = matches!(level, ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc);
+            assert_eq!(
+                checker.pqc_mode(),
+                if crypto {
+                    PqcMode::Deadline
+                } else {
+                    PqcMode::Readiness
+                },
+                "{level:?}: PQC mode"
+            );
+            assert_eq!(
+                checker.pqc_profile == PqcProfile::Federal,
+                *level == ComplianceLevel::NistPqc,
+                "{level:?}: PQC profile"
+            );
+            assert_eq!(
+                checker.cnsa_category,
+                (*level == ComplianceLevel::Cnsa2).then_some(CnsaCategory::Niche),
+                "{level:?}: CNSA 2.0 category"
+            );
             let sidecar_expected = matches!(
                 level,
                 ComplianceLevel::CraPhase1
@@ -300,10 +416,17 @@ mod tests {
         assert_eq!(run.as_of(), None);
         assert!(run.sidecar().is_none());
         assert_eq!(run.effective_product_class(), None);
+        assert_eq!(run.pqc_mode(), PqcMode::Readiness);
+        assert_eq!(run.pqc_profile(), PqcProfile::Nist);
+        assert_eq!(run.cnsa_category(), None);
         let checker = run.checker(ComplianceLevel::CraPhase2);
         assert!(checker.as_of.is_none());
         assert!(checker.sidecar.is_none());
         assert!(!checker.has_explicit_product_class());
+        assert_eq!(
+            run.checker(ComplianceLevel::NistPqc).pqc_mode(),
+            PqcMode::Readiness
+        );
     }
 
     #[test]

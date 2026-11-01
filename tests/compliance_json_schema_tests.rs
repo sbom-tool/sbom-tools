@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, DOCUMENT_SUBJECT, RuleKind, finding_id,
-    rule_kind, standard_key,
+    CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, DOCUMENT_SUBJECT, PqcMode,
+    PqcProfile, RuleKind, finding_id, rule_kind, standard_key,
 };
 use sbom_tools::reports::{COMPLIANCE_JSON_SCHEMA, generate_compliance_json};
 use serde_json::{Value, json};
@@ -109,6 +109,27 @@ fn check(
     let mut checker = ComplianceChecker::new(level).with_as_of(as_of());
     if let Some(sc) = sidecar {
         checker = checker.with_sidecar(sc.clone());
+    }
+    checker.check(sbom)
+}
+
+/// `level` under `--pqc-mode deadline` at `as_of`.
+fn deadline_check(
+    sbom: &NormalizedSbom,
+    level: ComplianceLevel,
+    as_of: &str,
+    profile: PqcProfile,
+    category: Option<CnsaCategory>,
+) -> ComplianceResult {
+    let instant = chrono::DateTime::parse_from_rfc3339(as_of)
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let mut checker = ComplianceChecker::new(level)
+        .with_as_of(instant)
+        .with_pqc_mode(PqcMode::Deadline)
+        .with_pqc_profile(profile);
+    if let Some(category) = category {
+        checker = checker.with_cnsa_category(category);
     }
     checker.check(sbom)
 }
@@ -227,6 +248,29 @@ fn every_level_on_every_fixture_matches_the_schema_and_its_strict_copy() {
                 .map(|level| check(sbom, *level, None))
                 .collect(),
         )];
+        // The crypto standards in deadline mode, which is where `deadline`
+        // and `deadline_source` appear: the federal profile in the 2030
+        // deprecation window (Warnings and Errors) and a CNSA 2.0 category
+        // still before its milestones (Infos).
+        envelopes.push((
+            format!("{rel} [--pqc-mode deadline]"),
+            vec![
+                deadline_check(
+                    sbom,
+                    ComplianceLevel::NistPqc,
+                    "2031-06-01T00:00:00Z",
+                    PqcProfile::Federal,
+                    None,
+                ),
+                deadline_check(
+                    sbom,
+                    ComplianceLevel::Cnsa2,
+                    "2026-10-12T00:00:00Z",
+                    PqcProfile::Nist,
+                    Some(CnsaCategory::Niche),
+                ),
+            ],
+        ));
         // The CRA family with the fixture's sidecar, which is where
         // `conformity_summary` appears.
         if let Some(sc) = sidecar {
