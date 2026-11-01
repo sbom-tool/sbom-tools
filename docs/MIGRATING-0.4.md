@@ -377,8 +377,10 @@ What changes for your code:
   - **OSCAL:** `reports::oscal::generate_assessment_results_at(&results, &AssessedSbom, as_of: DateTime<Utc>)` is new in 0.4 (#420). Until #445 it took `(&results, &NormalizedSbom, sbom_digest, Option<DateTime<Utc>>)`: build an `AssessedSbom` from the SBOM and its bytes, and pass `Utc::now()` where you passed `None`.
   - **Rule catalogue:** new `reports::generate_rule_catalog_json` and `reports::RULE_CATALOG_JSON_SCHEMA` (#435).
   - **sbomqs:** `reports::sbomqs_compat::SBOMQS_PARITY_TARGET` is `"v2.1.2"` (#431).
-
-<!-- WP 1.20 -->
+- **Types changed for speed (#447):**
+  - `Violation::remediation` and `Violation::field` are `Option<Cow<'static, str>>`, not `Option<String>`. Read them with `.as_deref()` as before; build one with `Some(text.into())`.
+  - `Violation::standard_refs` and `PassedCheck::standard_refs` are `Cow<'static, [StandardRef]>`, not `Vec<StandardRef>`. Iterate with `.iter()`, build one from a `Vec` with `.into()`, write an empty one as `Cow::Borrowed(&[])`, and change one in place with `.to_mut()`. `registry_standard_refs()` still returns a `Vec`.
+  - `ComplianceRunConfig::check_levels` checks the standards in parallel on rayon's global pool (`RAYON_NUM_THREADS` sizes it) and judges each at `judged_at()`. Results come back in the order of the levels, and every output is byte-identical to a one-by-one run.
 
 ### Configuration types
 
