@@ -235,12 +235,13 @@ fn write_compliance_output(
 }
 
 /// `result` as the deprecated `--json-schema v1` layout prints it: the
-/// result's own serialization without the passed checks, which that layout
-/// predates. A passed check simply does not appear there (it used to be an
-/// Info violation).
+/// result's own serialization without the passed checks and the checks not
+/// evaluated, which that layout predates. A passed check simply does not
+/// appear there (it used to be an Info violation).
 fn v1_result(result: &ComplianceResult) -> ComplianceResult {
     let mut v1 = result.clone();
     v1.passed.clear();
+    v1.evaluated.clear();
     v1
 }
 
@@ -350,17 +351,21 @@ fn passed_checks_line(result: &ComplianceResult) -> Option<String> {
 }
 
 /// Render a compliance result as plain text, one finding per three lines:
-/// the finding, its message, and a `fix:` line with the remediation for the
-/// SBOM's format. A finding `--pqc-mode deadline` dates adds a `deadline:`
-/// line with the date and its source before the `fix:` line.
+/// the finding (its severity, rule id, category, requirement and element),
+/// its message, and a `fix:` line with the remediation for the SBOM's
+/// format. Before the `fix:` line, a finding that read a value adds an
+/// `observed:` line with the value and the field it was read from, and a
+/// finding `--pqc-mode deadline` dates adds a `deadline:` line with the date
+/// and its source. The checks the standard did not evaluate follow the
+/// findings, under `Not evaluated:`, one line per reason.
 ///
-/// Requirement, element, message and the N/A reason can carry SBOM-supplied
-/// text (component names, versions, purls), so each passes through
-/// [`sanitize_line`]: a crafted name must not be able to start a new line
-/// (CI runners such as GitHub Actions parse a line beginning with `::error`
-/// as a workflow command) or smuggle terminal escape or bidi sequences. The
-/// remediation is sanitized too: a deserialized violation carries whatever
-/// text its payload held.
+/// Requirement, element, message, observed value and the N/A reason can
+/// carry SBOM-supplied text (component names, versions, purls), so each
+/// passes through [`sanitize_line`]: a crafted name must not be able to start
+/// a new line (CI runners such as GitHub Actions parse a line beginning with
+/// `::error` as a workflow command) or smuggle terminal escape or bidi
+/// sequences. The remediation, field and reasons are sanitized too: a
+/// deserialized result carries whatever text its payload held.
 fn format_compliance_text(result: &ComplianceResult) -> String {
     let mut lines = Vec::new();
     lines.push(format!("Compliance ({})", result.level.name()));
@@ -390,7 +395,6 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
 
     if result.violations.is_empty() {
         lines.push("No violations found.".to_string());
-        return lines.join("\n");
     }
 
     for v in &result.violations {
@@ -401,13 +405,25 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
         };
         let element = v.element.as_deref().unwrap_or("-");
         lines.push(format!(
-            "[{}] {} | {} | {}",
+            "[{}] {} | {} | {} | {}",
             severity,
+            v.rule_id,
             v.category.name(),
             sanitize_line(&v.requirement),
             sanitize_line(element)
         ));
         lines.push(format!("  {}", sanitize_line(&v.message)));
+        if let Some(observed) = &v.observed {
+            let field = v
+                .field
+                .as_deref()
+                .map(|field| format!(" in {}", sanitize_line(field)))
+                .unwrap_or_default();
+            lines.push(format!(
+                "  observed: \"{}\"{field}",
+                sanitize_line(observed)
+            ));
+        }
         if let Some(deadline) = &v.deadline {
             lines.push(format!(
                 "  deadline: {} ({})",
@@ -421,7 +437,38 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
         ));
     }
 
+    if let Some(section) = not_evaluated_lines(result) {
+        lines.push(String::new());
+        lines.extend(section);
+    }
+
     lines.join("\n")
+}
+
+/// The `Not evaluated:` section of a result that skipped checks: one line
+/// per reason, naming its rules in report order, so the four hardware
+/// checks a software-only SBOM skips share a line.
+fn not_evaluated_lines(result: &ComplianceResult) -> Option<Vec<String>> {
+    if result.evaluated.is_empty() {
+        return None;
+    }
+    let mut by_reason: Vec<(&str, Vec<&str>)> = Vec::new();
+    for entry in &result.evaluated {
+        match by_reason
+            .iter_mut()
+            .find(|(reason, _)| *reason == entry.reason)
+        {
+            Some((_, rules)) => rules.push(entry.rule_id),
+            None => by_reason.push((&entry.reason, vec![entry.rule_id])),
+        }
+    }
+    let mut lines = vec!["Not evaluated:".to_string()];
+    lines.extend(
+        by_reason
+            .into_iter()
+            .map(|(reason, rules)| format!("  {}: {}", rules.join(", "), sanitize_line(reason))),
+    );
+    Some(lines)
 }
 
 /// Run the engine's NtiaMinimum check with `compliance`'s inputs and print a
@@ -486,6 +533,95 @@ mod tests {
         assert!(!format_compliance_text(&none).contains("passed"));
         let one = none.with_passed(vec![pass("XMSS")]);
         assert!(format_compliance_text(&one).contains("\n1 check passed\n"));
+    }
+
+    fn text_of(level: ComplianceLevel, sbom: &str) -> String {
+        let sbom = crate::parse_sbom_str(sbom).expect("fixture parses");
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        let result = crate::quality::ComplianceChecker::new(level)
+            .with_as_of(as_of)
+            .check(&sbom);
+        format_compliance_text(&result)
+    }
+
+    const SPDX_MINIMAL: &str = include_str!("../../tests/fixtures/spdx/minimal.spdx.json");
+
+    /// Each finding line names its rule, so a text finding matches its SARIF
+    /// alert and JSON entry; a finding that read a value says what and where.
+    #[test]
+    fn text_names_the_rule_and_the_observed_value() {
+        let text = text_of(ComplianceLevel::FdaMedicalDevice, SPDX_MINIMAL);
+        assert!(
+            text.lines()
+                .any(|l| l.starts_with("[ERROR] SBOM-FDA-HASH | Integrity Information | ")),
+            "{text}"
+        );
+        let lines: Vec<&str> = text.lines().collect();
+        let observed = lines
+            .iter()
+            .position(|l| *l == "  observed: \"SHA-256:abc123def456...\" in packages[].checksums[]")
+            .unwrap_or_else(|| panic!("no observed line in:\n{text}"));
+        assert!(lines[observed + 1].starts_with("  fix: "), "{text}");
+        assert!(!text.contains("Not evaluated:"), "{text}");
+    }
+
+    /// The checks a standard skipped follow the findings, one line per
+    /// reason naming its rules.
+    #[test]
+    fn text_lists_the_checks_not_evaluated() {
+        let text = text_of(ComplianceLevel::Cisa2026, SPDX_MINIMAL);
+        assert!(
+            text.ends_with(
+                "\n\nNot evaluated:\n  \
+                 SBOM-CISA2026-SIGNATURE: SPDX 2.x has no field for an in-document signature\n  \
+                 SBOM-CISA2026-GENERATION-CONTEXT: SPDX 2.x has no field for the lifecycle phase\n  \
+                 SBOM-CISA2026-COVERAGE: SPDX 2.x cannot declare the completeness of its inventory"
+            ),
+            "{text}"
+        );
+
+        let text = text_of(
+            ComplianceLevel::CraPhase2,
+            include_str!("../../tests/fixtures/cra/cra-compliant.cdx.json"),
+        );
+        assert!(
+            text.contains(
+                "\n  SBOM-CRA-PRE-8-RQ-02-PRODUCER, SBOM-CRA-PRE-8-RQ-02-IDENTIFIER, \
+                 SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION, SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE: \
+                 the SBOM lists no device, firmware or device-driver component"
+            ),
+            "{text}"
+        );
+        assert!(
+            text.contains("\n  SBOM-CRA-ANNEX-IV, SBOM-CRA-ANNEX-VIII: the check depends on"),
+            "{text}"
+        );
+    }
+
+    /// The text report cleans what a deserialized result carries, like any
+    /// other SBOM text: an observed value cannot start a line.
+    #[test]
+    fn text_cleans_an_observed_value() {
+        let violation: crate::quality::Violation = serde_json::from_value(serde_json::json!({
+            "severity": "Error", "category": "SupplierInfo", "message": "m", "element": null,
+            "requirement": "r", "rule_id": "SBOM-NTIA-SUPPLIER",
+            "field": "components[].supplier.name", "observed": "x\n::error::forged\u{1b}[31m"
+        }))
+        .expect("violation deserializes");
+        let result = ComplianceResult::new(ComplianceLevel::NtiaMinimum, vec![violation]);
+        let text = format_compliance_text(&result);
+        assert!(
+            text.contains(
+                "\n  observed: \"x\\n::error::forged[31m\" in components[].supplier.name\n"
+            ),
+            "{text}"
+        );
+        assert!(
+            !text.lines().any(|l| l.trim_start().starts_with("::")),
+            "{text}"
+        );
     }
 
     #[test]
