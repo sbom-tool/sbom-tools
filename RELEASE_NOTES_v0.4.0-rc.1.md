@@ -35,6 +35,16 @@ What changes for you:
 
 > **Please read [Upgrade notes](#upgrade-notes) below, and the [migration guide](https://github.com/sbom-tool/sbom-tools/blob/v0.4.0-rc.1/docs/MIGRATING-0.4.md).** Usage errors exit `3`, `-o json` changes shape, rule ids are split and renamed, verdicts move in both directions, scores use a new formula, SARIF alerts and OSCAL UUIDs are re-keyed, the ABI version is `2`, and the Rust result types are `#[non_exhaustive]`.
 
+## Security
+
+- **Injection through SBOM text in human-readable output** (the security advisory published with v0.4.0). A crafted component name could:
+  - run GitHub Actions workflow commands from `validate`'s default output, forging annotations or hiding log lines;
+  - send terminal escapes and bidi overrides to a terminal or log viewer;
+  - inject Markdown or HTML into the reports, the `cra-docs` dossier and OSCAL markup fields.
+
+  SBOM text is now neutralized in every human-readable output. (#395, #413, #418, #420)
+- **Dependency advisories:** rustls, rustls-webpki and webpki-root-certs (RUSTSEC-2026-0346 to -0349, -0382, -0383, #403), tokio (RUSTSEC-2026-0386, #404), and anyhow in the Dagger CI tooling (RUSTSEC-2026-0190, #426).
+
 ## What's New
 
 ### Output for tools
@@ -100,13 +110,6 @@ What changes for you:
 
 ## Bug Fixes
 
-- **Security: injection through SBOM text in human-readable output** (the security advisory published with v0.4.0). A crafted component name could:
-  - run GitHub Actions workflow commands from `validate`'s default output, forging annotations or hiding log lines;
-  - send terminal escapes and bidi overrides to a terminal or log viewer;
-  - inject Markdown or HTML into the reports, the `cra-docs` dossier and OSCAL markup fields.
-
-  SBOM text is now neutralized in every human-readable output. (#395, #413, #418, #420)
-- **Security: dependency advisories.** rustls, rustls-webpki and webpki-root-certs (RUSTSEC-2026-0346 to -0349, -0382, -0383, #403), tokio (RUSTSEC-2026-0386, #404), and anyhow in the Dagger CI tooling (RUSTSEC-2026-0190, #426).
 - **Placeholder identifiers counted.** Empty, `NOASSERTION` or scheme-less purls and CPEs satisfied identifier rules, and components that shared one collapsed into one. (#397)
 - **An SBOM with no packages passed.** It now fails every inventory standard with an inventory finding. (#397)
 - **Package rules applied to non-packages, and SPDX packages escaped them.** Files, services and crypto assets drew package findings under EO 14028, SSDF, BSI and CRA. SPDX packages with purpose `SOURCE`, `ARCHIVE` or `FILE` were exempt. (#398)
