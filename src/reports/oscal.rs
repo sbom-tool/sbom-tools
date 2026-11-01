@@ -387,6 +387,21 @@ fn standard_result(
     if let Some(score) = result.score() {
         props.extend(prop("score", &score.to_string()));
     }
+    // What the run's inputs kept out of the findings, when anything: the
+    // findings its rule settings turned off and the components the package
+    // rules left out for their excluded scope.
+    if result.suppressed_count() > 0 {
+        props.extend(prop(
+            "suppressed-count",
+            &result.suppressed_count().to_string(),
+        ));
+    }
+    if result.excluded_components > 0 {
+        props.extend(prop(
+            "excluded-components",
+            &result.excluded_components.to_string(),
+        ));
+    }
 
     // The violations, then the passed checks. A standard that did not apply
     // reports neither: the applicability props above carry that verdict

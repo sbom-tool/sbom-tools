@@ -53,8 +53,9 @@ const fn build_long_version() -> &'static str {
 #[command(after_help = "EXIT CODES:
     0  Success / gate passed
     1  Gate failed: --fail-on-change, --min-score, --fail-on-noncompliant,
-       validate errors (or N/A under --require-applicable), query with no
-       matches, vex status/filter --actionable-only, verify audit-hashes gate
+       validate errors or --fail-on findings (or N/A under
+       --require-applicable), query with no matches, vex status/filter
+       --actionable-only, verify audit-hashes gate
     2  Vulnerabilities introduced (diff/view --fail-on-vuln); compliance
        warnings (validate --fail-on-warning)
     3  Usage error (unknown flag or value, missing argument) or operational
@@ -389,8 +390,9 @@ struct ComplianceRunArgs {
     /// RULE=off|info|warning|error, e.g. --rule SBOM-NTIA-SUPPLIER=warning
     /// (repeatable; `sbom-tools rules` lists the rule ids). The verdict, the
     /// counts, the score and the exit code follow the severities it sets;
-    /// each finding keeps its rule's own severity as `default_severity`.
-    /// `off` drops the rule's findings and counts them under `suppressed`.
+    /// each finding keeps the severity its check gave it as
+    /// `default_severity`. `off` drops the rule's findings and counts them
+    /// under `suppressed`.
     /// Wins over the config file's `compliance.rules` for its rule
     #[arg(
         long = "rule",

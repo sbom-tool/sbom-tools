@@ -403,6 +403,125 @@ fn json_shows_the_default_severity_and_what_off_dropped() {
     }
 }
 
+fn vendored_schema(path: &str) -> Value {
+    let text = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join(path))
+        .expect("vendored schema readable");
+    serde_json::from_str(&text).expect("schema is JSON")
+}
+
+/// SARIF and OSCAL carry the settings too: a result's level follows the
+/// set severity and its properties name the check's and the setting's
+/// source; the run (SARIF) or the result (OSCAL) counts what `off`
+/// dropped and the components left out.
+#[test]
+fn sarif_and_oscal_carry_the_settings_and_the_counts() {
+    let scoped = fixture(SCOPED_JSON);
+    let scoped = scoped.to_str().expect("utf-8 path");
+    let output_of = |format: &str, extra: &[&str]| {
+        let mut all = vec!["validate", scoped, "--as-of", AS_OF, "-o", format];
+        all.extend_from_slice(extra);
+        let output = run_cli(&all);
+        json(&output)
+    };
+
+    let sarif = output_of(
+        "sarif",
+        &[
+            "--include-excluded-scope",
+            "--rule",
+            "SBOM-NTIA-SUPPLIER=warning",
+            "--rule",
+            "SBOM-NTIA-VERSION=off",
+        ],
+    );
+    if let Err(errors) = json_schema::validate(
+        &vendored_schema("tests/fixtures/schemas/sarif/2.1.0/sarif-schema-2.1.0.json"),
+        &sarif,
+    ) {
+        panic!("SARIF schema violations:\n{}", errors.join("\n"));
+    }
+    let run = &sarif["runs"][0];
+    assert_eq!(run["properties"]["suppressed"], 1);
+    let results = run["results"].as_array().expect("results");
+    assert!(results.iter().all(|r| r["ruleId"] != "SBOM-NTIA-VERSION"));
+    let suppliers: Vec<&Value> = results
+        .iter()
+        .filter(|r| r["ruleId"] == "SBOM-NTIA-SUPPLIER")
+        .collect();
+    assert_eq!(suppliers.len(), 2);
+    for r in suppliers {
+        assert_eq!(r["level"], "warning");
+        assert_eq!(r["properties"]["defaultSeverity"], "Error");
+        assert_eq!(r["properties"]["severitySource"], "cli");
+    }
+    let excluded = output_of("sarif", &[]);
+    assert_eq!(excluded["runs"][0]["properties"]["excludedComponents"], 2);
+
+    let oscal = output_of(
+        "oscal-json",
+        &[
+            "--rule",
+            "SBOM-NTIA-AUTHOR=info",
+            "--rule",
+            "SBOM-NTIA-VERSION=off",
+        ],
+    );
+    if let Err(errors) = json_schema::validate(
+        &vendored_schema("tests/fixtures/schemas/oscal/1.2.3/oscal_assessment-results_schema.json"),
+        &oscal,
+    ) {
+        panic!("OSCAL schema violations:\n{}", errors.join("\n"));
+    }
+    let result = &oscal["assessment-results"]["results"][0];
+    let prop = |props: &Value, name: &str| -> Option<String> {
+        props
+            .as_array()?
+            .iter()
+            .find(|p| p["name"] == name)
+            .and_then(|p| p["value"].as_str().map(str::to_string))
+    };
+    assert_eq!(
+        prop(&result["props"], "excluded-components").as_deref(),
+        Some("2")
+    );
+    // Nothing of SBOM-NTIA-VERSION is left to drop once the excluded
+    // components are out.
+    assert_eq!(prop(&result["props"], "suppressed-count"), None);
+
+    let with_findings = output_of(
+        "oscal-json",
+        &[
+            "--include-excluded-scope",
+            "--rule",
+            "SBOM-NTIA-SUPPLIER=info",
+            "--rule",
+            "SBOM-NTIA-VERSION=off",
+        ],
+    );
+    let result = &with_findings["assessment-results"]["results"][0];
+    assert_eq!(
+        prop(&result["props"], "suppressed-count").as_deref(),
+        Some("1")
+    );
+    let observations = result["observations"].as_array().expect("observations");
+    let supplier = observations
+        .iter()
+        .find(|o| prop(&o["props"], "rule-id").as_deref() == Some("SBOM-NTIA-SUPPLIER"))
+        .expect("a supplier observation");
+    assert_eq!(
+        prop(&supplier["props"], "severity").as_deref(),
+        Some("info")
+    );
+    assert_eq!(
+        prop(&supplier["props"], "default-severity").as_deref(),
+        Some("error")
+    );
+    assert_eq!(
+        prop(&supplier["props"], "severity-source").as_deref(),
+        Some("cli")
+    );
+}
+
 /// The exit code follows the severities a setting sets: errors made
 /// warnings exit 0, or 2 under `--fail-on-warning`; warnings made errors
 /// exit 1.

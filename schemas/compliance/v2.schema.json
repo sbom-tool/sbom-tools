@@ -50,7 +50,7 @@
       "description": "What `score` is computed from. Present exactly when `applicable` is true.",
       "required": ["checked", "failed"],
       "properties": {
-        "checked": {"$ref": "#/$defs/count", "description": "Elements the standard checked: the document, plus the components in its scope (cryptographic assets for cnsa2 and pqc, ML models, datasets and components that look like ML models for ai-act and bsi-ai, none for eucc, package-scoped components for the others). At least 1."},
+        "checked": {"$ref": "#/$defs/count", "description": "Elements the standard checked: the document, plus the components in its scope (cryptographic assets for cnsa2 and pqc, ML models, datasets and components that look like ML models for ai-act and bsi-ai, none for eucc, package-scoped components for the others, less those left out for their excluded scope). At least 1."},
         "failed": {"$ref": "#/$defs/count", "description": "Checks the errors and warnings failed: one per finding about one subject, and one per failing item for an aggregate finding (one with `counts`). Info findings fail none."}
       }
     },

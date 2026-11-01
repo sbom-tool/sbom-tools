@@ -47,10 +47,12 @@ standards use each one, its references and its remediation; see
 | `compliant` | boolean | No error-severity violation. Stays `true` for a standard that did not apply, so read `applicable` first: N/A is not a pass. |
 | `score` | integer or null | 0–100: 50–100 when `compliant`, 0–49 when not (see [Score](#score)). `null` exactly when `applicable` is `false`. |
 | `score_basis` | object | `checked` and `failed`, the numbers `score` is computed from (see [Score](#score)). Present exactly when `applicable` is `true`. |
-| `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. |
+| `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. `suppressed`: the findings the run's [rule settings](#rule-settings) turned off, which no other count includes; absent when none. |
 | `violations` | array | The findings, described below. |
 | `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
 | `evaluated` | array | The checks of the standard that did not run on this SBOM, each `{rule_id, status, reason}`, described [below](#checks-not-evaluated). Absent when every check ran. |
+| `suppressed` | array | The rules whose findings the [rule settings](#rule-settings) turned off, by rule id: `{rule_id, findings, source}`, where `source` is `config` or `cli`. Absent when no finding was turned off. |
+| `excluded_components` | integer | The components the package rules left out because their scope is excluded (see [Components whose scope is excluded](#components-whose-scope-is-excluded)). Absent when none, under `--include-excluded-scope`, and for a standard without package rules. |
 | `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for `cra` and `cra-phase1` once a product class is pinned by `--cra-product-class` or the sidecar. Never for `oss-steward`: an open-source steward (Art. 24) follows no conformity-assessment procedure. |
 
 A standard that does not apply reports no violation: its verdict is
@@ -60,8 +62,10 @@ A standard that does not apply reports no violation: its verdict is
 
 These inputs besides the SBOM can change a verdict. Every command that checks
 compliance (`validate`, `quality`, `view` and `diff` with their TUIs,
-`cra-docs`) takes them the same way and hands each standard only the ones it
-reads, so the same SBOM with the same inputs gets the same verdict everywhere.
+`cra-docs`, and `timeline` for its compliance trend) takes them the same way
+and hands each standard only the ones it reads, so the same SBOM with the
+same inputs gets the same verdict everywhere. `diff-multi` and `matrix` take
+them too.
 
 | Input | Flag | Standards that read it |
 |---|---|---|
@@ -71,6 +75,15 @@ reads, so the same SBOM with the same inputs gets the same verdict everywhere.
 | PQC mode | `--pqc-mode`: `readiness` (the default) or `deadline` | `cnsa2`, `pqc` (and the NIST PQC check of `quality --profile cbom`). See [PQC deadline mode](#pqc-deadline-mode). |
 | PQC deadline profile | `--pqc-profile`, with `--pqc-mode deadline`: `nist` (the default) or `federal` | `pqc`. |
 | CNSA 2.0 equipment category | `--cnsa-category`, with `--pqc-mode deadline`; the strictest when unset | `cnsa2`. |
+| Rule settings | `--rule RULE=SETTING`, over the config file's `compliance.rules` | Every standard whose checks report the rule. See [Rule settings](#rule-settings). |
+| Components whose scope is excluded | Left out of the package rules unless `--include-excluded-scope` | Every standard with package rules: all but `cnsa2`, `pqc`, `eucc`, `ai-act` and `bsi-ai`. See [Components whose scope is excluded](#components-whose-scope-is-excluded). |
+
+The config file's `compliance` section holds defaults for these flags:
+`cra_product_class`, `pqc_mode`, `pqc_profile`, `cnsa_category`, `rules`
+and `include_excluded_scope` (and `cra_sidecar` for the commands that judge
+one SBOM). A flag wins over its key. As on the command line, `pqc_profile`
+and `cnsa_category` need `pqc_mode: deadline`; a run that `--pqc-mode
+readiness` puts in readiness mode ignores them.
 
 A standard named twice is checked once, at its first position, with a
 warning on stderr: `--standard cra,cra-phase2` names CRA Phase 2 twice
@@ -94,8 +107,11 @@ score = (compliant ? 50 : 0) + floor(50 × checked / (checked + failed))
   cryptographic assets, `ai-act` and `bsi-ai` the ML models and datasets (and
   the components that look like ML models), and `eucc` only the document.
   Every other standard checks the package-scoped components: all components
-  but files, cryptographic assets and services.
-- `failed` counts the checks the errors and warnings failed. A finding about
+  but files, cryptographic assets and services, less the ones it left out
+  for their excluded scope (see
+  [Components whose scope is excluded](#components-whose-scope-is-excluded)).
+- `failed` counts the checks the errors and warnings failed, at the
+  severities the run's [rule settings](#rule-settings) set. A finding about
   one subject, the document or one component, failed one check. An aggregate
   finding (one with `counts`) failed one check per item it reports as
   failing, and at least one: `counts.affected`, or `counts.total -
@@ -153,7 +169,9 @@ identity.
 |---|---|---|
 | `finding_id` | string | Opaque, stable id of the finding (see [Finding identity](#finding-identity)). |
 | `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, or `<standard>\|<rule_id>:<finding_detail>\|<subject>`: the readable form of the id. |
-| `severity` | string | `Error`, `Warning` or `Info`. |
+| `severity` | string | `Error`, `Warning` or `Info`: the severity the verdict, the counts, the score and the exit code read. When the run's [rule settings](#rule-settings) set the rule, the one they set. |
+| `default_severity` | string | When the rule settings set the finding's rule: the severity the check gave it (the rule's registry default, or the one the check calibrated by product class, CRA phase or PQC deadline). Present exactly when `severity_source` is. |
+| `severity_source` | string | Where the setting comes from: `config` (the config file's `compliance.rules`) or `cli` (`--rule`). Present exactly when `default_severity` is. |
 | `category` | string | e.g. `DocumentMetadata`, `ComponentIdentification`, `SupplierInfo`. |
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
 | `element` | string or null | Human-readable label of the offending element (usually a component name). Not unique. |
@@ -237,6 +255,87 @@ command that checks compliance: `quality --profile cbom` applies the mode
 and the profile to its embedded NIST PQC check, and the compliance tabs of
 `view` and `diff` show the verdicts `validate` reports for them. `cra-docs`
 takes them too, though its CRA check reads none.
+
+## Rule settings
+
+A rule setting gives one rule's findings another severity for a run, or
+turns the rule off: `--rule RULE=SETTING`, repeatable, where `SETTING` is
+`off`, `info`, `warning` or `error`. `sbom-tools rules` lists the rule ids;
+an id is read in any case.
+
+```sh
+sbom-tools validate sbom.json --standard ntia,cra \
+  --rule SBOM-NTIA-SUPPLIER=warning --rule SBOM-CRA-ART-13-15-PRODUCT=off -o json |
+  jq -c '.results[] | {standard, compliant, counts, suppressed}'
+```
+
+The config file sets them for every run under `compliance.rules`:
+
+```yaml
+compliance:
+  rules:
+    SBOM-NTIA-SUPPLIER: warning
+    SBOM-CRA-ART-13-15-PRODUCT: off
+```
+
+- **Effective severities.** The settings are applied after the checks, so
+  the verdict (`compliant`), the counts, the score and the exit code follow
+  the severities they set. A supplier error made a warning no longer makes
+  the SBOM non-compliant; a warning made an error does.
+- **Nothing hidden.** Each finding of a set rule keeps the severity its
+  check gave it in `default_severity`, with `severity_source`. The findings
+  of a rule that is `off` leave `violations`, and each result counts them
+  per rule under `suppressed` and in `counts.suppressed`, next to the
+  checks that did not run, which `evaluated` lists (see
+  [Checks not evaluated](#checks-not-evaluated)). The text report adds a
+  `severity:` line to each such finding and a `Suppressed by settings:`
+  section after `Not evaluated:`; SARIF and OSCAL carry the same data (see
+  below). An overridden finding keeps its `field` and `observed`.
+- **Precedence.** A `--rule` flag wins over the config file for its own
+  rule; the file's other settings stay. Setting a rule twice on the command
+  line keeps the last.
+- **Scope.** A setting reaches every standard whose checks report its
+  rule. Each standard reports the rules of its own family, so
+  `SBOM-CRA-COMPONENT-VERSION`, for one, reaches `cra-phase1`, `cra` and
+  `oss-steward`, while `ntia` (`SBOM-NTIA-VERSION`) and the quality
+  profiles (`SBOM-QUALITY-VERSION`) have version rules of their own. Every
+  command that checks compliance applies the settings, the TUIs included.
+- **Errors and warnings.** An unknown rule id or setting is a usage error
+  (exit `3`), on the command line and in the config file, and the message
+  names the closest rule id. So is a pass-only rule such as `SBOM-PQC-009`,
+  whose passed checks have no severity. A setting that no selected standard
+  reports, such as `SBOM-CRA-ART-24` in an `ntia` run, changes nothing, and
+  the run warns about it on stderr.
+
+`validate --fail-on RULE` (repeatable; config key `compliance.fail_on`)
+fails the run with exit `1` when it reports any finding of the rule,
+whatever its severity, info included. It reads the effective severities and
+the findings that remain: a rule that is `off` reports none, so it can
+never trip, and the run warns about that, as about a `--fail-on` rule no
+selected standard reports. It ranks with the error gate: a run with a
+`--fail-on` finding exits `1` even under `--fail-on-warning`, whose `2` is
+for the other warnings.
+
+## Components whose scope is excluded
+
+CycloneDX marks a component the product does not need at runtime, such as
+a test or development dependency, with `scope: excluded`. SPDX says it on
+the relationships instead: SPDX 2.3 `DEV_DEPENDENCY_OF`,
+`BUILD_DEPENDENCY_OF`, `TEST_DEPENDENCY_OF` and the `*_TOOL_OF` types, and
+SPDX 3.0 `LifecycleScopedRelationship`s of scope `design`, `development`,
+`build` or `test`. An SPDX component counts as excluded when only such
+relationships bring it in, directly or through other such components; one
+the product also depends on at runtime does not.
+
+The package rules of every standard leave these components out: version,
+supplier, license, hash, identifier and dependency-graph membership, and
+the inventory and coverage counts built on them. Each result says how many
+it left out in `excluded_components`, and the text report in an `Excluded:`
+line. `--include-excluded-scope` (config key
+`compliance.include_excluded_scope`) judges them like any other component.
+The rules that cover every component, such as the component name, and the
+crypto, EUCC and AI profiles, which have no package rules, judge them
+either way. The primary component is never left out.
 
 ## Passed checks
 
@@ -367,6 +466,12 @@ why. `-o sarif` carries the same list in the run properties (see
 [SARIF](#sarif)), and the text report lists it after the findings (see
 [Text report](#text-report)).
 
+`evaluated` and `suppressed` sit side by side and say different things. A
+rule in `evaluated` did not run on the SBOM, so nobody knows what it would
+have found. A rule in `suppressed` ran and found something, and the run's
+[rule settings](#rule-settings) turned its findings off. A suppressed rule
+is never listed in `evaluated`.
+
 ## Finding identity
 
 The finding key names what a finding is about, not how it is worded:
@@ -484,6 +589,13 @@ the merged component does not depend on the order of the entries:
 - When the entries give a single-valued field two different real values, the
   value that sorts first (by its JSON form) is kept, and the field is
   recorded as a conflict.
+- The scope is the one of the entry the product needs most at runtime:
+  `required`, then no scope (which CycloneDX reads as `required`), then
+  `optional`, then `excluded`. An entry marked `excluded` never hides one
+  the product needs, so the merged component stays judged by the package
+  rules (see
+  [Components whose scope is excluded](#components-whose-scope-is-excluded)).
+  Scopes that differ in effect are a conflict.
 
 What counts as a real value is what every check counts as one.
 
@@ -537,8 +649,10 @@ promises:
 that it is deprecated: a bare result object for one standard, an array of them
 for several, each with `is_compliant`, `level` (e.g. `NtiaMinimum`),
 `error_count`/`warning_count`/`info_count`, `applicability`, `violations`
-(without `finding_id`/`finding_key`), and `conformity_summary` and the
-[checks not evaluated](#checks-not-evaluated) (`evaluated`) when present.
+(without `finding_id`/`finding_key`), and `conformity_summary`, the
+[checks not evaluated](#checks-not-evaluated) (`evaluated`), the rules the
+[rule settings](#rule-settings) turned off (`suppressed`) and
+`excluded_components` when present.
 The v1 layout keeps that shape and predates passed checks, so they do not
 appear in it at all: before v0.4.0 they were Info violations
 (`SBOM-PQC-009`, `SBOM-PQC-010`), and a v1 consumer now sees fewer Info
@@ -559,7 +673,8 @@ violations and a lower `info_count`. The not-applicable markers
 `--summary` is a separate compact format (the verdict and counts per standard,
 with `standard` holding the display name) and keeps its shape. Its `info`
 count, like `counts.info`, counts Info violations only, so passed checks are
-not in it.
+not in it. It adds `suppressed` and `excluded_components` only when they are
+not zero.
 
 ## OSCAL assessment results
 
@@ -577,9 +692,9 @@ sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T0
 | Where | What |
 |---|---|
 | `metadata.oscal-version` | `1.2.3`. |
-| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `passed-count`, `score` (see [Score](#score)), and `not-applicable-reason` when the standard did not apply. |
+| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `passed-count`, `score` (see [Score](#score)), `not-applicable-reason` when the standard did not apply, and `suppressed-count` and `excluded-components` when they are not zero. |
 | `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, then one `satisfied` finding per [passed check](#passed-checks), each targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up and no finding. |
-| `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`; then one per passed check, typed `control-objective`, with the same properties but `severity`. |
+| `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id`, when the SBOM gives a label, `sbom-element`, and, when a rule setting set the rule, `default-severity` and `severity-source`; then one per passed check, typed `control-objective`, with the same properties but `severity`. |
 | `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
 | `results[].local-definitions.components[]` | The components the result's observations name, titled by name and version, with OSCAL's `version` property, `component-id` (the canonical id: `component_id` in `-o json`) and `component-type` (the SBOM's own type). |
 | `back-matter.resources[0]` | The SBOM document: `type` `artifact`, `sha256` (of the SBOM bytes as read), `format`, `spec-version`, and the serial number (CycloneDX) or document namespace (SPDX) in `document-ids`. When that id is a URI (`urn:uuid:…`, `https://…`), it is also the resource's `rlinks[0].href`, with the SHA-256 in `hashes`. |
@@ -654,15 +769,15 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
 | `runs[0].tool.driver.rules[]` | Exactly the rules of the standards checked: the rules each standard's checks can report, one per check and each once, in `--standard` order and in the order of each standard's list. `sbom-tools rules --standard <std>` prints the same list (see [Rule catalogue](#rule-catalogue)). `diff` and `view` check the SBOM against CRA Phase 2, so they list its rules after their own; `quality` lists the rules of its profile's standard, then the `SBOM-QUALITY-REC-*` rules of the recommendations it reports. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
-| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score)) and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. `notEvaluated` (in each `standards[]` entry for several standards) lists the [checks not evaluated](#checks-not-evaluated) as `{ruleId, reason}`; it is absent when every check ran. |
+| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score)) and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. `notEvaluated` (in each `standards[]` entry for several standards) lists the [checks not evaluated](#checks-not-evaluated) as `{ruleId, reason}`; it is absent when every check ran. `suppressed` and `excludedComponents`, when not zero, count the findings the rule settings turned off and the components left out for their excluded scope (per standard in `standards[]`). |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
 | `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
-| `results[].level` | `error`, `warning` or `note`, from the violation's severity; `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. |
+| `results[].level` | `error`, `warning` or `note`, from the violation's severity (the one a [rule setting](#rule-settings) sets, if any); `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. A rule that is `off` reports no result. |
 | `results[].message.text` | The violation's message. |
 | `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
 | `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
 | `results[].partialFingerprints` | `sbomToolsFinding/v1`: the full SHA-256 of the `finding_key` (64 hex digits). `primaryLocationLineHash`: its first 16 hex digits and `:1`. |
-| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, `affected` and `total` when the violation counts items, `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding, and `field` and `observed` as in `-o json` (see [Field and observed value](#field-and-observed-value)). |
+| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, `affected` and `total` when the violation counts items, `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding, `field` and `observed` as in `-o json` (see [Field and observed value](#field-and-observed-value)), and `defaultSeverity` and `severitySource` when a [rule setting](#rule-settings) set the rule. |
 
 Both fingerprints depend on the finding identity alone, never on a line
 number or the message, so moving, reformatting or reordering the SBOM keeps
@@ -814,13 +929,21 @@ Without `-o`, `validate` prints a text report, one block per finding:
 The first line names the severity, the rule (the `rule_id` of `-o json`,
 the `ruleId` of `-o sarif`), the category, the requirement and the element.
 The message follows, then an `observed:` line when the finding read a value,
-a `deadline:` line when [deadline mode](#pqc-deadline-mode) dates it, and the
-`fix:` line. After the findings, the checks the standard did not evaluate
-follow, one line per reason:
+a `deadline:` line when [deadline mode](#pqc-deadline-mode) dates it, a
+`severity:` line when a [rule setting](#rule-settings) set its rule
+(`severity: WARN from --rule (default ERROR)`), and the `fix:` line. Under
+the status, an `Excluded:` line counts the
+[components left out for their excluded scope](#components-whose-scope-is-excluded).
+After the findings, the checks the standard did not evaluate follow, one
+line per reason, and then the rules the settings turned off, one line per
+rule:
 
 ```text
 Not evaluated:
   SBOM-CISA2026-SIGNATURE: SPDX 2.x cannot carry a document signature
+
+Suppressed by settings:
+  SBOM-NTIA-VERSION: 2 findings turned off by --rule
 ```
 
 SBOM text in every line is cleaned, the observed value included, as
@@ -832,9 +955,12 @@ text layout may change in any release; scripts should read `-o json`.
 | Code | `validate` | Other commands |
 |---|---|---|
 | `0` | Compliant: no errors, and no warnings with `--fail-on-warning`. A standard that does not apply also exits `0`, unless `--require-applicable`. | Success |
-| `1` | Compliance errors, or, under `--require-applicable`, a standard that does not apply (with several standards, any one of them). | Gate failed |
+| `1` | Compliance errors, a finding of a `--fail-on` rule at any severity, or, under `--require-applicable`, a standard that does not apply (with several standards, any one of them). | Gate failed |
 | `2` | Compliance warnings, only with `--fail-on-warning`. | Vulnerabilities introduced (`--fail-on-vuln`) |
-| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument, `--pqc-profile` or `--cnsa-category` without `--pqc-mode deadline`) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same; for `rules`, also an unknown standard or rule id |
+| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument, `--pqc-profile` or `--cnsa-category` without `--pqc-mode deadline`, an unknown `--rule` or `--fail-on` rule id or setting) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same; for `rules`, also an unknown standard or rule id |
+
+The gate codes read the severities the [rule settings](#rule-settings) set,
+and a finding of a rule that is `off` counts toward none of them.
 
 Codes `4`–`7` belong to other gates (VEX gaps, license policy, KEV, ML
 regression); the README lists them all. Usage errors exit `3` in every command.

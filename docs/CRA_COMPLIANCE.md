@@ -43,11 +43,14 @@ that scales severity for vendor-hash, EOL, cycles, DoC, EUCC, PSIRT,
 and module-certificate checks of `CraPhase1` and `CraPhase2`.
 
 Every command that checks compliance (`validate`, `quality`, `view` and
-`diff` with their TUIs, `cra-docs`) hands each profile the same inputs:
-the CRA sidecar reaches the CRA, OSS-steward, EUCC and EU AI Act profiles,
-the product class reaches the two CRA phases only, and the PQC flags
-(`--pqc-mode`, `--pqc-profile`, `--cnsa-category`) reach the CNSA 2.0 and
-NIST PQC profiles only. The Article 24
+`diff` with their TUIs, `cra-docs`, and the compliance trend of `timeline`)
+hands each profile the same inputs: the CRA sidecar reaches the CRA,
+OSS-steward, EUCC and EU AI Act profiles, the product class reaches the two
+CRA phases only, and the PQC flags (`--pqc-mode`, `--pqc-profile`,
+`--cnsa-category`) reach the CNSA 2.0 and NIST PQC profiles only. Rule
+settings (`--rule`, `compliance.rules`) reach every profile that reports
+the rule, and every profile with package rules leaves components whose
+scope is excluded out of them unless `--include-excluded-scope`. The Article 24
 steward profile gets the sidecar without its `productClass` and
 `conformityAssessmentRoute`: the class picks a manufacturer's
 conformity-assessment procedure (Art. 32), which a steward does not
@@ -585,6 +588,10 @@ sbom-tools validate sbom.json --standard cra --as-of 2027-01-01
 sbom-tools view sbom.json --cra-product-class important-class-2 --as-of 2027-01-01
 sbom-tools diff old.json new.json --cra-product-class important-class-2 --as-of 2027-01-01
 
+# Relax one rule for this run, or gate on one rule whatever its severity
+sbom-tools validate sbom.json --standard cra --rule SBOM-CRA-ART-13-2=info
+sbom-tools validate sbom.json --standard cra --fail-on SBOM-CRA-PRE-7-RQ-07-RE
+
 # SARIF output for CI (with helpUri populated)
 sbom-tools validate sbom.json --standard cra -o sarif -O compliance.sarif
 
@@ -671,8 +678,9 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 - `ComplianceChecker::class_severity()` in `src/quality/compliance/mod.rs` —
   P3.2 calibration table.
 - `ComplianceRunConfig::checker()` in `src/quality/compliance/run_config.rs` —
-  which of a run's inputs (`--as-of`, CRA sidecar, product class) each
-  profile gets; every command and TUI builds its checkers there.
+  which of a run's inputs (`--as-of`, CRA sidecar, product class, PQC
+  flags, rule settings, excluded scope) each profile gets; every command and
+  TUI builds its checkers there.
 - `cli::run_cra_docs` in `src/cli/cra_docs.rs` — Annex V DoC + Annex VII tech-doc dossier
   generator.
 - `AttestationRuleFamily::classify()` in `src/model/attestation.rs` —
