@@ -205,7 +205,9 @@ pub fn escape_html_attr(s: &str) -> String {
 /// by unescaped pipe characters. This function also handles newlines
 /// and backticks that could break formatting, removes control characters and
 /// bidi controls, and escapes a leading `:` so a line of the report printed
-/// to a CI log cannot start a workflow command. A backslash is escaped too:
+/// to a CI log cannot start a workflow command. `<` and `>` are escaped so a
+/// cell cannot open an HTML tag or an autolink: GitHub and most other
+/// renderers show raw HTML in a table cell. A backslash is escaped too:
 /// otherwise `\|` in the input would come out as `\\|`, an escaped backslash
 /// followed by a live pipe.
 ///
@@ -217,6 +219,7 @@ pub fn escape_html_attr(s: &str) -> String {
 /// assert_eq!(escape_markdown_table("a | b"), "a \\| b");
 /// assert_eq!(escape_markdown_table("line1\nline2"), "line1 line2");
 /// assert_eq!(escape_markdown_table("`code`"), "\\`code\\`");
+/// assert_eq!(escape_markdown_table("<img src=x>"), "\\<img src=x\\>");
 /// ```
 #[must_use]
 pub fn escape_markdown_table(s: &str) -> String {
@@ -230,6 +233,8 @@ pub fn escape_markdown_table(s: &str) -> String {
             '`' => result.push_str("\\`"),
             '[' => result.push_str("\\["),
             ']' => result.push_str("\\]"),
+            '<' => result.push_str("\\<"),
+            '>' => result.push_str("\\>"),
             c if is_line_break(c) => result.push(' '),
             c if is_stripped(c) => {}
             _ => result.push(c),
@@ -446,6 +451,16 @@ mod tests {
             escape_markdown_table("```\ncode block\n```"),
             "\\`\\`\\` code block \\`\\`\\`"
         );
+
+        // HTML and autolink injection: renderers show raw HTML in a cell
+        assert_eq!(
+            escape_markdown_table("<img src=x onerror=alert(1)>"),
+            "\\<img src=x onerror=alert(1)\\>"
+        );
+        assert_eq!(
+            escape_markdown_table("<https://malware.example>"),
+            "\\<https://malware.example\\>"
+        );
     }
 
     #[test]
@@ -478,6 +493,10 @@ mod tests {
             escape_markdown_list(bypass),
             "\\\\\\<img src=x onerror=alert(1)\\>"
         );
+        assert_eq!(
+            escape_markdown_table(bypass),
+            "\\\\\\<img src=x onerror=alert(1)\\>"
+        );
         assert_eq!(escape_markdown_table("a\\|b"), "a\\\\\\|b");
         assert_eq!(escape_markdown_inline("\\*em\\*"), "\\\\\\*em\\\\\\*");
         // A plain backslash, as in a Windows path, renders as itself.
@@ -491,7 +510,10 @@ mod tests {
             escape_markdown_table,
         ] {
             for backslashes in 1..=3 {
-                let input = format!("{}[x](javascript:alert(1))", "\\".repeat(backslashes));
+                let input = format!(
+                    "{0}[x](javascript:alert(1)) {0}<img src=x>",
+                    "\\".repeat(backslashes)
+                );
                 let out = escaper(&input);
                 // Every special character is preceded by an odd run of
                 // backslashes, so none of them is live.

@@ -1815,6 +1815,77 @@ fn assert_fix_line_per_finding(label: &str, text: &str, markers: &[&str], offset
     }
 }
 
+/// SBOM text cannot open an HTML tag or an autolink in the Markdown and HTML
+/// reports. The Markdown tables of `view` and `diff` used to print `<` as is,
+/// and GitHub renders raw HTML in a table cell; a backslash in the text must
+/// not cancel the escape either.
+#[test]
+fn markdown_and_html_reports_cannot_open_a_tag() {
+    use serde_json::json;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let html = "<img src=x onerror=alert(1)> \\<b>bold</b> <https://e.example>";
+    let doc = |suffix: &str, added: bool| {
+        let mut components = vec![json!({"type": "library", "bom-ref": "c-html", "name": html,
+            "version": format!("1.0{suffix}"), "purl": format!("pkg:npm/html@1.0{suffix}"),
+            "supplier": {"name": html}, "licenses": [{"license": {"name": html}}]})];
+        if added {
+            components.push(json!({"type": "library", "bom-ref": "c-new",
+                                   "name": format!("{html} added"), "version": html}));
+        }
+        json!({"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+               "metadata": {"timestamp": "2026-01-01T00:00:00Z"},
+               "components": components})
+    };
+    let write = |file: &str, value: serde_json::Value| {
+        let path = dir.path().join(file);
+        std::fs::write(&path, value.to_string()).expect("write fixture");
+        path
+    };
+    let (old, new) = (
+        write("old.cdx.json", doc("", false)),
+        write("new.cdx.json", doc(".1", true)),
+    );
+    let (old, new) = (old.to_str().expect("utf-8"), new.to_str().expect("utf-8"));
+
+    for (args, markdown) in [
+        (vec!["view", new, "-o", "markdown"], true),
+        (vec!["diff", old, new, "-o", "markdown"], true),
+        (vec!["view", new, "-o", "html"], false),
+        (vec!["diff", old, new, "-o", "html"], false),
+    ] {
+        let output = base_command()
+            .args(&args)
+            .output()
+            .expect("command should run");
+        let out = stdout(&output);
+        let label = format!("{} -o {}", args[0], args[args.len() - 1]);
+        assert!(
+            out.contains("img src=x"),
+            "{label}: the text must still be shown:\n{out}"
+        );
+        if !markdown {
+            assert!(!out.contains("<img"), "{label}: a live tag:\n{out}");
+            continue;
+        }
+        // The reports emit no HTML of their own, so every `<` comes from the
+        // SBOM and must follow an odd run of backslashes.
+        for (at, _) in out.match_indices('<') {
+            let (before, after) = out.split_at(at);
+            let run = before.chars().rev().take_while(|&c| c == '\\').count();
+            assert_eq!(
+                run % 2,
+                1,
+                "{label}: a live `<` in the line {:?}",
+                format!(
+                    "{}{}",
+                    before.rsplit('\n').next().unwrap_or(""),
+                    after.split('\n').next().unwrap_or("")
+                )
+            );
+        }
+    }
+}
+
 /// `validate` gives every violation a remediation in JSON and a `fix:` line
 /// in text, phrased for the input format: SPDX documents get SPDX field
 /// paths, never CycloneDX ones.
