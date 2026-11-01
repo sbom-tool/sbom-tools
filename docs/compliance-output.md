@@ -211,14 +211,29 @@ Under `pqc`, NIST IR 8547 (final, October 2026) sets the schedule:
 | SHA-1 outside a signature (`SBOM-PQC-005`, `-PROTO-002`; Table 8, note 4) | Warning through 2030 (deprecated now) | Error from 2031 | |
 | A symmetric key of 112 to 127 bits (`SBOM-PQC-KEY-001`; §4.1.3) | Info through 2030 | Error from 2031 | |
 | A hash function at 112 bits of collision strength: SHA-224, SHA-512/224 or SHA3-224 (`SBOM-PQC-HASH-001`; Table 8, §4.1.3) | Info through 2030 | Error from 2031 | |
+| A quantum-vulnerable signature computed over such a digest, such as `SHA224withRSA` or `ecdsa-with-SHA224` (`SBOM-PQC-001`, `-CERT-001`, `-PROTO-002`; Table 8, §4.1.3) | Info through 2030 | Error from 2031 | |
+| A SHA-2 hash that states no digest size, which could be SHA-224 (`SBOM-PQC-HASH-001`) | Warning at any date, with the deadline 2030-12-31 | | |
 
 In readiness mode `SBOM-PQC-HASH-001` is an error, as a 112-bit key is.
 It reads the hash algorithm assets of a CBOM, by family and parameter
-set, OID or name. A keyed use is not judged: HMAC, HKDF or PBKDF2 built
-on one of these hashes, or an asset declared a MAC, KDF or DRBG. The 112
-bits of Table 8 are collision strength, which those uses do not rely on.
-The hash values that identify a component are not cryptographic assets,
-so no PQC rule reads them.
+set, OID or name. A SHA-2 asset that states no digest size could be
+SHA-224, so it gets a warning in both modes. A keyed use is not judged:
+HMAC, HKDF or PBKDF2 built on one of these hashes, or an asset declared a
+MAC, KDF or DRBG. The 112 bits of Table 8 are collision strength, which
+those uses do not rely on. The hash values that identify a component are
+not cryptographic assets, so no PQC rule reads them.
+
+A signature relies on the collision resistance of its digest. So in
+deadline mode a quantum-vulnerable signature over one of these digests
+takes the digest's deadline, 2030-12-31, which is never later than its
+scheme's under either profile, at the more severe of the two severities.
+It keeps the rule of its scheme, so it is still one finding. Its message
+names the digest, and its `deadline_source` is the digest's schedule,
+`NIST IR 8547 §4.1.3 and Table 8`. The digest is read from the name
+(`SHA224withRSA`, `ecdsa-with-SHA224`), the family string or the
+signature OID (`sha224WithRSAEncryption`). Key establishment keeps its
+scheme's schedule, and readiness mode is unchanged: the scheme is an
+error already.
 
 `--pqc-profile federal` applies the deadlines of federal high value assets
 and high impact systems instead (EO 14412 §4(b), OMB M-26-15): post-quantum
