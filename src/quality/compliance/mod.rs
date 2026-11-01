@@ -67,6 +67,7 @@ pub(crate) use shared::has_known_producer;
 pub(crate) use shared::plausible_digest;
 // The `cra-docs` dossier names the manufacturer the Art. 13(16) check
 // accepts.
+#[cfg(feature = "cli")]
 pub(crate) use shared::manufacturer_name;
 use shared::{
     ValueState, creator_identified, digest_problems, document_signed, future_timestamp_violation,
