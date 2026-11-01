@@ -189,6 +189,16 @@ of the deadline.
 | `CRA Annex VIII: <Module> certificate reference`            | Annex VIII (Module B+C/H/EUCC) | —             | `Certification` external ref (the notified-body or certification-body certificate; an `Attestation` ref does not count) |
 | `CRA prEN 40000-1-3 [PRE-8-RQ-02]: Hardware component inventory` | Annex I Part II   | PRE-8-RQ-02         | producer + identifier + firmware version on hardware    |
 
+The generic checks that the CRA profiles share with the other standards —
+the SBOM creator (`SBOM-CRA-CREATOR`), a document identifier
+(`SBOM-CRA-SERIAL`), component names (`SBOM-CRA-COMPONENT-NAME`), a spec
+version sbom-tools reads (`SBOM-CRA-SPEC-VERSION`,
+`SBOM-CRA-SPEC-VERSION-UNKNOWN`) and element identifiers
+(`SBOM-CRA-ELEMENT-ID`) — cite Annex I Part II (1), the clause that asks for
+an SBOM of the product's components in a machine-readable format. They cited
+no clause before v0.4.0, so their findings carried no reference and no
+`help_uri`.
+
 External-reference types. The `Attestation`, `Certification`,
 `RiskAssessment`, `VulnerabilityAssertion` and `ExploitabilityStatement`
 references these checks read come from CycloneDX
@@ -224,7 +234,11 @@ Annex V DoC, Annex VIII certificate, Article 14 channels, hardware
 [PRE-8-RQ-02], vendor-hash carry-through). The steward profile takes no
 product class either: its results carry no `conformity_summary`, and
 `SBOM-CRA-CYCLES` stays a Warning whatever the class (before v0.4.0 a
-sidecar `productClass` reached it).
+sidecar `productClass` reached it). `sbom-tools rules --standard
+oss-steward` lists the 14 rules the steward profile checks. The
+vulnerability-handling gate (`SBOM-CRA-ART-24`) cites Art. 24, with the
+EUR-Lex URL of the other CRA references; before v0.4.0 it cited nothing, so
+its findings had no reference and no `help_uri`.
 
 ## CRA-P3.2 product-class severity calibration
 
@@ -423,6 +437,10 @@ sbom-tools validate sbom.json --standard cra --cra-product-class important-class
 # Article 24 steward profile
 sbom-tools validate sbom.json --standard oss-steward
 
+# The rules each CRA profile checks, and one rule in full
+sbom-tools rules --standard cra-phase1,cra,oss-steward
+sbom-tools rules explain SBOM-CRA-ART-24
+
 # Pin the evaluation clock (Art. 14 deadline, SBOM age, EUCC / attestation
 # expiry) so CI runs are reproducible
 sbom-tools validate sbom.json --standard cra --as-of 2027-01-01
@@ -501,6 +519,13 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 - `rule_meta()` in `src/quality/compliance/registry.rs` (via `Violation::registry_standard_refs()`) —
   string → `(StandardKind, id)` mapping. Drives SARIF
   `properties.standardIds`.
+- `rules_for_level()` in `src/quality/compliance/registry.rs` — the rules
+  each profile's checks can report (Phase 1, Phase 2 and the steward have
+  lists of their own). Drives SARIF `rules[]` and `sbom-tools rules
+  --standard`; the rule matrices prove each list.
+- `rule_catalog()` in `src/quality/compliance/catalog.rs` — the catalogue
+  `sbom-tools rules` prints: each rule's standards, references with URLs,
+  remediation and per-format field advice.
 - `StandardKind::canonical_help_uri()` in `src/quality/compliance/mod.rs` —
   `(StandardKind, id)` → URL. Drives SARIF `helpUri` (a rule links the
   first of its references that has a URL) and `properties.standardHelpUris`.

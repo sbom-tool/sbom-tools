@@ -1,12 +1,13 @@
 //! Registry-driven per-rule matrix for `ComplianceLevel::Minimum` (no test
 //! previously instantiated the Minimum profile's rules one by one).
 //!
-//! Minimum has no dedicated SARIF slice in the registry: it runs on the
-//! generic checker path, and every check it runs is an `SBOM-QUALITY-*` rule
-//! of its own. The universe is therefore declared locally (derived from the
-//! Minimum-level match arms in src/quality/compliance/generic.rs) and the
-//! matrix sweep enforces that no fixture ever emits an id outside it — if a
-//! new Minimum-level check site lands, this file fails and must be extended.
+//! Minimum runs on the generic checker path, and every check it runs is an
+//! `SBOM-QUALITY-*` rule of its own. The universe is declared locally
+//! (derived from the Minimum-level match arms in
+//! src/quality/compliance/generic.rs); `run_matrix` requires it to equal the
+//! registry's list for the level (`rules_for_level`), and the matrix sweep
+//! enforces that no fixture ever emits an id outside it — if a new
+//! Minimum-level check site lands, this file fails and must be extended.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;

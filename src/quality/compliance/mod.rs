@@ -18,6 +18,7 @@ use std::borrow::Cow;
 pub(crate) mod ai_shared;
 mod bsi;
 mod bsi_sbom_for_ai;
+mod catalog;
 mod cisa2026;
 mod context;
 mod cra;
@@ -35,6 +36,11 @@ mod selector;
 mod shared;
 mod ssdf;
 
+pub(crate) use catalog::rule_family_help_uri;
+pub use catalog::{
+    RuleAdvice, RuleCatalogEntry, RuleCatalogFilter, RuleFormatAdvice, RuleReference, rule_catalog,
+    rule_catalog_entry,
+};
 use context::{ComplianceContext, Findings, checker_for};
 pub(crate) use finding::compose_finding_key;
 pub use finding::{
@@ -42,10 +48,10 @@ pub use finding::{
     finding_key, finding_subject, standard_key,
 };
 pub use registry::{
-    CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
-    EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice,
-    NTIA_SARIF_RULE_IDS, PASS_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS,
-    RemediationFormat, RuleKind, RuleMeta, SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta,
+    CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS,
+    FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice, NTIA_SARIF_RULE_IDS, PASS_RULE_IDS,
+    PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, RemediationFormat, RuleKind, RuleMeta,
+    SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta, rules_for_level,
 };
 use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
 pub use run_config::ComplianceRunConfig;

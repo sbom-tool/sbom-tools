@@ -1,9 +1,10 @@
 //! Registry-driven per-rule matrix for `ComplianceLevel::BsiSbomForAi`
 //! (BSI/G7 "SBOM for AI — Minimum Elements" readiness).
 //!
-//! BSI-AI shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue; its
-//! universe is that slice's `SBOM-BSIAI-*` ids, one per minimum element the
-//! profile checks, grouped below by the document's clusters (Metadata,
+//! The universe is every registered `SBOM-BSIAI-*` rule but the fallback,
+//! which `run_matrix` requires to be the level's rule list
+//! (`rules_for_level`): one per minimum element the profile checks,
+//! grouped below by the document's clusters (Metadata,
 //! System-Level, Models, Datasets, Infrastructure, Security).
 //!
 //! Three elements have no SBOM field today (system data flow, AI security
@@ -20,17 +21,19 @@ use rule_matrix::{
     ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry, SPDX23_HAS_NO_AI_PROFILE,
     SbomFixture, check_in, render_violations, run_matrix,
 };
-use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
+use sbom_tools::quality::{
+    ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
+};
 use std::collections::BTreeMap;
 
 const LEVEL: ComplianceLevel = ComplianceLevel::BsiSbomForAi;
 
-/// The BSI-AI rules of the shared CRA-family SARIF catalogue.
+/// The registered BSI-AI rules but the fallback rule, which no check emits.
 fn bsi_ai_universe() -> Vec<&'static str> {
-    COMPLIANCE_SARIF_RULE_IDS
+    all_rule_ids()
         .iter()
         .copied()
-        .filter(|id| id.starts_with("SBOM-BSIAI-"))
+        .filter(|id| id.starts_with("SBOM-BSIAI-") && *id != generic_rule_id_for_level(LEVEL))
         .collect()
 }
 

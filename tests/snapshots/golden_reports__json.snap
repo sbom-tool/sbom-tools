@@ -1,6 +1,5 @@
 ---
 source: tests/golden_reports.rs
-assertion_line: 144
 expression: "render(&JsonReporter::new())"
 ---
 {
@@ -49,7 +48,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-CREATOR",
-          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -229,7 +236,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-SERIAL",
-          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Error",
@@ -660,7 +675,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -671,7 +694,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -682,7 +713,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -693,7 +732,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -704,7 +751,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -715,7 +770,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -726,7 +789,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -737,7 +808,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -748,7 +827,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -974,7 +1061,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "Document creator identification",
           "rule_id": "SBOM-CRA-CREATOR",
           "sarif_rule_id": "SBOM-CRA-CREATOR",
-          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",
@@ -1154,7 +1249,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "Document unique identification",
           "rule_id": "SBOM-CRA-SERIAL",
           "sarif_rule_id": "SBOM-CRA-SERIAL",
-          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…)."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…).",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Error",
@@ -1585,7 +1688,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1596,7 +1707,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1607,7 +1726,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1618,7 +1745,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1629,7 +1764,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1640,7 +1783,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1651,7 +1802,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1662,7 +1821,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Info",
@@ -1673,7 +1840,15 @@ expression: "render(&JsonReporter::new())"
           "requirement": "CycloneDX: bom-ref for dependency tracking",
           "rule_id": "SBOM-CRA-ELEMENT-ID",
           "sarif_rule_id": "SBOM-CRA-ELEMENT-ID",
-          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name."
+          "standard_refs": [
+            {
+              "standard": "CraAnnex",
+              "id": "Annex I Part II (1)",
+              "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            }
+          ],
+          "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
           "severity": "Warning",

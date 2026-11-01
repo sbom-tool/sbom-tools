@@ -4,7 +4,8 @@ The compliance engine pins its checks and citations to specific editions of
 the underlying standards. This file records which edition each profile
 targets, verified against the primary source on the date shown, plus the
 items expected to move. Update this file whenever a checker is rebased onto
-a new edition.
+a new edition. `sbom-tools rules --standard <std>` lists the rules each
+profile checks, with their references.
 
 Last full verification: **2026-07-12** (primary sources fetched directly).
 Rows added after that date carry their own edition dates: the CISA 2026,

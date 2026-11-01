@@ -39,7 +39,15 @@
 //!    by every fixture in a matrix, in every encoding it runs in, must map
 //!    (via its registry SARIF identity) into the standard's declared rule
 //!    universe — a new check site that emits a new rule id forces the matrix
-//!    to be extended instead of silently escaping it.
+//!    to be extended instead of silently escaping it. The universe must be
+//!    the level's rule list (`rules_for_level`), so the matrix proves that
+//!    list: every listed rule fires in a case (or is skipped with a reason),
+//!    and no case emits a rule outside it.
+//!
+//! 5. **An every-level sweep**: each fixture, in every encoding it runs in,
+//!    is also checked at every other compliance level, and what each level
+//!    reports must lie in that level's rule list. Every level's list is thus
+//!    held against the fixtures of every matrix, not only its own.
 
 // Each per-standard matrix binary uses a subset of the DSL (mirrors the
 // existing tests/common/ffi_helpers.rs posture).
@@ -60,9 +68,9 @@ use sbom_tools::model::{CraSidecarMetadata, EolInfo, EolStatus, NormalizedSbom};
 use sbom_tools::parsers::{FormatDetector, parse_sbom_str};
 use sbom_tools::quality::{
     ComplianceLevel, ComplianceResult, PassedCheck, RuleKind, Violation, ViolationSeverity,
-    rule_kind, rule_meta,
+    rule_kind, rule_meta, rules_for_level,
 };
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Filler SHA-256 digest (64 hex chars) for conforming components.
 pub const SHA256_FILLER: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -1455,6 +1463,8 @@ impl RuleEntry {
 
 /// Run a per-standard rule matrix:
 ///
+/// 0. membership — `universe` must be the level's rule list
+///    (`rules_for_level`), which the steps below prove;
 /// 1. exhaustiveness — the rows must cover `universe` exactly (every rule id
 ///    tested or explicitly skipped, no duplicates, no strays);
 /// 2. per rule and per encoding — each firing fixture surfaces the row's id
@@ -1467,7 +1477,9 @@ impl RuleEntry {
 ///    load-bearing;
 /// 3. sweep — every violation and every passed check any fixture emits, in
 ///    any encoding, maps into `universe`, and every Info violation is a rule
-///    classified in tests/common/info_classification.rs.
+///    classified in tests/common/info_classification.rs;
+/// 4. every-level sweep — every other level, run over the same parsed
+///    fixture, reports only rules of its own list.
 ///
 /// The registry default severity is what the SARIF rule catalogue
 /// advertises, so a finding row needs a firing case at it (WP 1.2 finding
@@ -1483,6 +1495,15 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
         universe.len(),
         universe_set.len(),
         "[{level:?}] rule universe contains duplicates"
+    );
+    // The matrix proves the level's rule list (`rules_for_level`, the
+    // standard membership `sbom-tools rules` and SARIF rules[] show), so
+    // it must cover that list exactly.
+    let listed: BTreeSet<&str> = rules_for_level(level).iter().copied().collect();
+    assert_eq!(
+        universe_set, listed,
+        "[{level:?}] the matrix universe must be the level's rule list \
+         (left = universe, right = rules_for_level)"
     );
 
     let mut covered: BTreeSet<&str> = BTreeSet::new();
@@ -1520,8 +1541,10 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
     );
 
     // Every case in every encoding: the failures are collected, so one run
-    // shows each mismatch.
+    // shows each mismatch. A rule outside another level's list is reported
+    // once per (level, rule), naming the first fixture that showed it.
     let mut failures: Vec<String> = Vec::new();
+    let mut strays: BTreeMap<String, String> = BTreeMap::new();
     for entry in entries {
         match &entry.coverage {
             RuleCoverage::Tested { firing, .. } => check_finding_row(level, entry, firing),
@@ -1541,6 +1564,7 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
                         outcome,
                         difference,
                         &mut failures,
+                        &mut strays,
                     ),
                     Plan::Omit(reason) => check_omission_load_bearing(
                         level,
@@ -1554,6 +1578,7 @@ pub fn run_matrix(level: ComplianceLevel, universe: &[&str], entries: &[RuleEntr
             }
         }
     }
+    failures.extend(strays.into_values());
     assert!(
         failures.is_empty(),
         "[{level:?}] {count} matrix failure(s):\n\n{all}",
@@ -1632,7 +1657,8 @@ fn check_passing_row(level: ComplianceLevel, entry: &RuleEntry, passing: &[Passi
 }
 
 /// Run one case in one encoding: check its outcome, then sweep everything
-/// the result reports into the universe and the Info classification.
+/// the result reports into the universe and the Info classification, and
+/// what every other level reports for the same SBOM into that level's list.
 #[allow(clippy::too_many_arguments)]
 fn run_case(
     level: ComplianceLevel,
@@ -1643,6 +1669,7 @@ fn run_case(
     outcome: Outcome,
     difference: Option<&'static str>,
     failures: &mut Vec<String>,
+    strays: &mut BTreeMap<String, String>,
 ) {
     let id = entry.id;
     let label = case.label;
@@ -1680,6 +1707,47 @@ fn run_case(
         ));
     }
     sweep(level, universe, entry, label, encoding, &result, failures);
+    for &other in ComplianceLevel::all() {
+        if other != level {
+            let other_result = check_sbom(other, case.fixture, &sbom);
+            level_sweep(other, level, entry, label, encoding, &other_result, strays);
+        }
+    }
+}
+
+/// Every-level sweep: what `checked` reports for a fixture of the `level`
+/// matrix must lie in `checked`'s rule list (`rules_for_level`).
+fn level_sweep(
+    checked: ComplianceLevel,
+    level: ComplianceLevel,
+    entry: &RuleEntry,
+    label: &str,
+    encoding: Encoding,
+    result: &ComplianceResult,
+    strays: &mut BTreeMap<String, String>,
+) {
+    let listed = rules_for_level(checked);
+    let emitted = result
+        .violations
+        .iter()
+        .map(|v| (v.rule_id, v.sarif_rule_id()))
+        .chain(result.passed.iter().map(|p| (p.rule_id, p.sarif_rule_id())));
+    for (rule, sarif) in emitted {
+        if !listed.contains(&sarif) {
+            strays
+                .entry(format!("{checked:?} {sarif}"))
+                .or_insert_with(|| {
+                    format!(
+                        "[{checked:?}] reported {rule} (sarif {sarif}) for the fixture of {id} \
+                         ({label}) in the {level:?} matrix, in {enc}; the rule is not in \
+                         rules_for_level({checked:?}) — add it to that level's rule list in \
+                         src/quality/compliance/registry.rs",
+                        id = entry.id,
+                        enc = encoding.name(),
+                    )
+                });
+        }
+    }
 }
 
 /// An omission must be load-bearing: a case that renders in the omitted

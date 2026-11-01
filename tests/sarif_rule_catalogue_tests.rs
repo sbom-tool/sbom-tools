@@ -8,7 +8,10 @@ mod clock;
 
 use clock::checker;
 use sbom_tools::model::{Component, DocumentMetadata, NormalizedSbom};
-use sbom_tools::quality::{CNSA2_SARIF_RULE_IDS, ComplianceLevel, PQC_SARIF_RULE_IDS};
+use sbom_tools::quality::{
+    CNSA2_SARIF_RULE_IDS, ComplianceLevel, ComplianceResult, PQC_SARIF_RULE_IDS, Violation,
+    generic_rule_id_for_level, rules_for_level,
+};
 use sbom_tools::reports::{generate_compliance_sarif, generate_multi_compliance_sarif};
 use std::collections::HashSet;
 
@@ -315,5 +318,144 @@ fn every_declared_rule_carries_descriptions_and_help() {
             let name = rule["name"].as_str().expect("rule name");
             assert!(names.insert(name), "[{label}] two rules are named {name}");
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// rules[] holds exactly the rules of the standards checked
+// ---------------------------------------------------------------------------
+
+/// The ids `rules[]` declares, in order.
+fn declared_ids(sarif: &str) -> Vec<String> {
+    let json: serde_json::Value = serde_json::from_str(sarif).expect("valid JSON");
+    json["runs"][0]["tool"]["driver"]["rules"]
+        .as_array()
+        .expect("rules array")
+        .iter()
+        .map(|r| r["id"].as_str().expect("rule id").to_string())
+        .collect()
+}
+
+/// `result` with one more violation built outside the checkers, one the
+/// registry does not know: the SARIF writer files it under the standard's
+/// fallback rule.
+fn with_unregistered_violation(mut result: ComplianceResult) -> ComplianceResult {
+    let violation: Violation = serde_json::from_value(serde_json::json!({
+        "severity": "Warning",
+        "category": "DocumentMetadata",
+        "message": "finding from an external source",
+        "element": null,
+        "requirement": "external requirement",
+        "rule_id": "SBOM-EXTERNAL-UNREGISTERED",
+    }))
+    .expect("an external violation deserializes");
+    result.violations.push(violation);
+    result
+}
+
+/// Every standard's SARIF declares exactly the rules its checks can report,
+/// in the order of its list, whatever fired: `--standard bsi -o sarif` used
+/// to declare the whole CRA-family catalogue (107 rules, about 16 of them
+/// BSI's). The fallback rule is declared only when a finding needs it.
+#[test]
+fn each_standards_sarif_declares_exactly_its_rules() {
+    for sbom in [violating_sbom(), NormalizedSbom::default()] {
+        for level in ComplianceLevel::all() {
+            let result = checker(*level).check(&sbom);
+            let declared = declared_ids(&generate_compliance_sarif(&result).expect("sarif"));
+            assert_eq!(
+                declared,
+                rules_for_level(*level),
+                "[{level:?}] rules[] must be the level's rule list"
+            );
+
+            let with_fallback = with_unregistered_violation(result);
+            let declared = declared_ids(&generate_compliance_sarif(&with_fallback).expect("sarif"));
+            let mut expected: Vec<&str> = rules_for_level(*level).to_vec();
+            expected.push(generic_rule_id_for_level(*level));
+            assert_eq!(
+                declared, expected,
+                "[{level:?}] a finding without a registered rule adds the fallback rule"
+            );
+        }
+    }
+}
+
+/// A run of several standards declares their lists in `--standard` order,
+/// each rule once.
+#[test]
+fn multi_standard_sarif_declares_each_standards_rules_once_in_order() {
+    let sbom = violating_sbom();
+    let levels = [
+        ComplianceLevel::CraPhase2,
+        ComplianceLevel::BsiTr03183_2,
+        ComplianceLevel::CraPhase1,
+        ComplianceLevel::NtiaMinimum,
+    ];
+    let results: Vec<_> = levels.iter().map(|l| checker(*l).check(&sbom)).collect();
+    let declared = declared_ids(&generate_multi_compliance_sarif(&results).expect("sarif"));
+    let mut expected: Vec<&str> = Vec::new();
+    for level in levels {
+        for id in rules_for_level(level) {
+            if !expected.contains(id) {
+                expected.push(id);
+            }
+        }
+    }
+    assert_eq!(declared, expected);
+}
+
+/// `diff` and `view` check the SBOM against CRA Phase 2, so their SARIF
+/// declares their own rules and the CRA Phase 2 rules, no other standard's.
+#[test]
+fn diff_and_view_sarif_declare_the_cra_phase2_rules() {
+    use sbom_tools::reports::{ReportConfig, ReportGenerator, SarifReporter};
+    let sbom = violating_sbom();
+    let mut config = ReportConfig::all();
+    config.view_cra_compliance = Some(checker(ComplianceLevel::CraPhase2).check(&sbom));
+    let reporter = SarifReporter::new();
+    let view = declared_ids(
+        &reporter
+            .generate_view_report(&sbom, &config)
+            .expect("sarif"),
+    );
+    let mut expected = vec!["SBOM-VIEW-001"];
+    expected.extend(rules_for_level(ComplianceLevel::CraPhase2));
+    assert_eq!(view, expected);
+
+    let empty = NormalizedSbom::default();
+    config.new_cra_compliance = Some(checker(ComplianceLevel::CraPhase2).check(&empty));
+    let diff_result = sbom_tools::DiffEngine::new()
+        .diff(&sbom, &empty)
+        .expect("diff");
+    let diff = declared_ids(
+        &reporter
+            .generate_diff_report(&diff_result, &sbom, &empty, &config)
+            .expect("sarif"),
+    );
+    let tool_rules: Vec<&String> = diff
+        .iter()
+        .take_while(|id| id.starts_with("SBOM-TOOLS-") || id.starts_with("SBOM-EOL-"))
+        .collect();
+    assert_eq!(tool_rules.len(), 10, "{diff:?}");
+    assert_eq!(
+        diff[tool_rules.len()..],
+        *rules_for_level(ComplianceLevel::CraPhase2)
+    );
+}
+
+/// `quality -o sarif` declares the rules of the profile's compliance level,
+/// then the recommendation rules it reports.
+#[test]
+fn quality_sarif_declares_its_profiles_rules() {
+    use sbom_tools::quality::{QualityScorer, ScoringProfile};
+    use sbom_tools::reports::generate_quality_sarif;
+    let report = QualityScorer::new(ScoringProfile::Standard).score(&violating_sbom());
+    let declared =
+        declared_ids(&generate_quality_sarif(&report, "test.cdx.json", "standard").expect("sarif"));
+    let listed = rules_for_level(ComplianceLevel::Standard);
+    assert_eq!(declared[..listed.len()], *listed);
+    for id in &declared[listed.len()..] {
+        assert!(id.starts_with("SBOM-QUALITY-REC-"), "{id}");
     }
 }

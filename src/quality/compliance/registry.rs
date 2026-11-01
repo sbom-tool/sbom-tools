@@ -2,7 +2,7 @@
 //! IDs, harmonised-standard cross-references, and remediation text, keyed
 //! by the stable internal `Violation::rule_id`.
 
-use super::{StandardKind, ViolationSeverity};
+use super::{ComplianceLevel, StandardKind, ViolationSeverity};
 use crate::model::{DocumentMetadata, SbomFormat};
 
 /// Static metadata attached to a compliance rule. The `rule_id` on every
@@ -1677,7 +1677,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraStewardVulnerabilityHandling",
             short_description: "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)",
             default_severity: ViolationSeverity::Error,
-            refs: &[],
+            refs: &[(CRA, "Art. 24")],
             remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
@@ -1909,13 +1909,16 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         },
         // The generic path's checks under the CRA profiles, one id each so
         // that two of them on one subject never share a finding key. They
-        // reported as SBOM-CRA-GENERAL until v0.4.0.
+        // reported as SBOM-CRA-GENERAL until v0.4.0. Each cites Annex I
+        // Part II (1), the clause that asks for an SBOM of the product's
+        // components in a machine-readable format: these checks test that
+        // the SBOM is well formed.
         "SBOM-CRA-CREATOR" => RuleMeta {
             sarif_id: "SBOM-CRA-CREATOR",
             name: "CraSbomCreator",
             short_description: "CRA readiness: SBOM creator identified (person, organization or tool)",
             default_severity: ViolationSeverity::Error,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_CREATOR,
             advice: Some(&ADVICE_CREATORS),
         },
@@ -1924,7 +1927,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraDocumentIdentifier",
             short_description: "CRA readiness: SBOM carries a unique document identifier",
             default_severity: ViolationSeverity::Warning,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_SERIAL,
             advice: Some(&ADVICE_SERIAL),
         },
@@ -1933,7 +1936,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentName",
             short_description: "CRA readiness: Every component has a name",
             default_severity: ViolationSeverity::Error,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_COMPONENT_NAME,
             advice: Some(&ADVICE_NAME),
         },
@@ -1942,7 +1945,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraSpecVersion",
             short_description: "CRA readiness: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)",
             default_severity: ViolationSeverity::Warning,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_SPEC_VERSION,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
@@ -1951,7 +1954,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraSpecVersionUnknown",
             short_description: "CRA readiness: SPDX document declares a valid SPDX version",
             default_severity: ViolationSeverity::Warning,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_SPEC_VERSION_UNKNOWN,
             advice: Some(&ADVICE_SPEC_VERSION),
         },
@@ -1960,7 +1963,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraElementIdentifier",
             short_description: "CRA readiness: Every element has its own well-formed identifier",
             default_severity: ViolationSeverity::Info,
-            refs: &[],
+            refs: &[(ANNEX, "Annex I Part II (1)")],
             remediation: REMEDIATION_ELEMENT_ID,
             advice: Some(&ADVICE_ELEMENT_ID),
         },
@@ -4356,21 +4359,312 @@ pub(crate) fn lookup_static_rule_id(rule_id: &str) -> Option<&'static str> {
 }
 
 // ---------------------------------------------------------------------------
-// Per-standard SARIF rule catalogues.
+// Standard membership: the rules each compliance level reports.
 //
-// Each slice lists, in display order, the externally-visible SARIF rule ids a
-// standard's report declares as reportingDescriptors: one per check the
-// standard runs. Every id must be a registry key whose `sarif_id` equals the
-// key itself (a self-descriptor); the `sarif_rule_slices_are_self_descriptors`
-// test enforces this. The SARIF generator (src/reports/sarif.rs) renders
-// these through `rule_meta`, so name / shortDescription /
-// defaultConfiguration.level can no longer drift from the registry.
+// Each slice lists, in display order, every rule the level's checks can
+// emit, and nothing else: one per check the standard runs. `rules_for_level`
+// maps a level to its slice. The lists are derived from the check sites
+// (generic.rs, cra.rs and the per-standard modules) and proven by the rule
+// matrices: tests/common/rule_matrix.rs requires each level's matrix to cover
+// exactly its list, and runs every matrix fixture at every level, failing on
+// a rule outside that level's list. A rule a new check emits must join the
+// list of every level whose checks emit it.
+//
+// A slice is a level's SARIF rule catalogue: a run declares the slices of the
+// standards it checked as reportingDescriptors (src/reports/sarif/rules.rs).
+// Every id must be a registry key whose `sarif_id` equals the key itself (a
+// self-descriptor); the `sarif_rule_slices_are_self_descriptors` test
+// enforces this. The SARIF generator renders these through `rule_meta`, so
+// name / shortDescription / defaultConfiguration.level can no longer drift
+// from the registry.
 //
 // The `SBOM-<FAMILY>-GENERAL` fallback rules are in no slice: no check emits
 // one. The SARIF generator files a finding without a registered rule under
 // its family's fallback (`generic_rule_id_for_level` in mod.rs) and declares
 // that rule when it does.
 // ---------------------------------------------------------------------------
+
+/// The rules `level`'s checks can report, in display order: what `sbom-tools
+/// rules --standard` lists and what a SARIF run that checks `level` declares
+/// in `rules[]`. The family fallback rule (`generic_rule_id_for_level`) is not
+/// listed: no check emits it.
+#[must_use]
+pub const fn rules_for_level(level: ComplianceLevel) -> &'static [&'static str] {
+    match level {
+        ComplianceLevel::Minimum => MINIMUM_SARIF_RULE_IDS,
+        ComplianceLevel::Standard => STANDARD_SARIF_RULE_IDS,
+        ComplianceLevel::NtiaMinimum => NTIA_SARIF_RULE_IDS,
+        ComplianceLevel::CraPhase1 => CRA_PHASE1_SARIF_RULE_IDS,
+        ComplianceLevel::CraPhase2 => CRA_PHASE2_SARIF_RULE_IDS,
+        ComplianceLevel::FdaMedicalDevice => FDA_SARIF_RULE_IDS,
+        ComplianceLevel::NistSsdf => SSDF_SARIF_RULE_IDS,
+        ComplianceLevel::Eo14028 => EO14028_SARIF_RULE_IDS,
+        ComplianceLevel::Cnsa2 => CNSA2_SARIF_RULE_IDS,
+        ComplianceLevel::NistPqc => PQC_SARIF_RULE_IDS,
+        ComplianceLevel::BsiTr03183_2 => BSI_SARIF_RULE_IDS,
+        ComplianceLevel::CraOssSteward => CRA_OSS_STEWARD_SARIF_RULE_IDS,
+        ComplianceLevel::EuccSubstantial => EUCC_SARIF_RULE_IDS,
+        ComplianceLevel::EuAiAct => AIACT_SARIF_RULE_IDS,
+        ComplianceLevel::BsiSbomForAi => BSIAI_SARIF_RULE_IDS,
+        ComplianceLevel::Cisa2026 => CISA2026_SARIF_RULE_IDS,
+        ComplianceLevel::PciDss632 => PCIDSS_SARIF_RULE_IDS,
+        ComplianceLevel::Fsct => FSCT_SARIF_RULE_IDS,
+        ComplianceLevel::Comprehensive => COMPREHENSIVE_SARIF_RULE_IDS,
+    }
+}
+
+/// The Minimum quality profile's rules (generic.rs): the document creator, a
+/// component inventory, component names and the format checks.
+const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
+];
+
+/// The Standard quality profile's rules (generic.rs): Minimum's, plus the
+/// serial number, component versions (an NTIA rule), unique identifiers and
+/// licenses.
+const STANDARD_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
+];
+
+/// The Comprehensive quality profile's rules (generic.rs): Standard's, plus
+/// the NTIA timestamp, supplier and dependency rules and component hashes.
+const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-QUALITY-CREATOR",
+    "SBOM-NTIA-TIMESTAMP",
+    "SBOM-QUALITY-SERIAL",
+    "SBOM-QUALITY-INVENTORY",
+    "SBOM-QUALITY-NAME",
+    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-IDENTIFIER",
+    "SBOM-NTIA-SUPPLIER",
+    "SBOM-QUALITY-LICENSE",
+    "SBOM-QUALITY-HASH",
+    "SBOM-NTIA-DEPENDENCY",
+    "SBOM-QUALITY-SPEC-VERSION",
+    "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
+    "SBOM-QUALITY-ELEMENT-ID",
+];
+
+/// CRA Phase 1 rules (generic.rs and cra.rs): the document, component,
+/// dependency and format checks, the CRA gap checks, Art. 14 readiness, the
+/// class-pinned conformity checks and the hardware checks. The Phase 2-only
+/// checks (CVD policy, lifecycle evidence, the Annex V DoC reference, the
+/// Art. 13(2) risk assessment and the vulnerability severity and remediation
+/// checks) are not listed.
+const CRA_PHASE1_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-CRA-SBOM-FRESHNESS",
+    "SBOM-CRA-MACHINE-READABLE",
+    "SBOM-CRA-ART-13-17-CONTACT",
+    "SBOM-CRA-VULN-METADATA-PROFILE",
+    "SBOM-CRA-ART-13-5",
+    "SBOM-CRA-ART-13-5-PROFILE",
+    "SBOM-CRA-ART-13-8",
+    "SBOM-CRA-ART-13-8-EOL",
+    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
+    "SBOM-CRA-ART-13-15-PRODUCT",
+    "SBOM-CRA-COMPONENT-VERSION",
+    "SBOM-CRA-ART-13-16",
+    "SBOM-CRA-ART-13-16-EMAIL",
+    "SBOM-CRA-COMPONENT-SUPPLIER",
+    "SBOM-CRA-VULN-STATEMENT",
+    "SBOM-CRA-ANNEX-I-IDENTIFIER",
+    "SBOM-CRA-ANNEX-I-TRACEABILITY",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+    "SBOM-CRA-ANNEX-I-INTEGRITY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+    "SBOM-CRA-CYCLES",
+    "SBOM-CRA-ANNEX-I-PRIMARY",
+    "SBOM-CRA-ANNEX-I-CONTROLS",
+    "SBOM-CRA-INVENTORY",
+    "SBOM-CRA-DOC-INTEGRITY",
+    "SBOM-CRA-ART-14-PSIRT",
+    "SBOM-CRA-ART-14-EARLY-WARNING",
+    "SBOM-CRA-ART-14-NOTIFICATION",
+    "SBOM-CRA-ART-14-ENISA",
+    "SBOM-CRA-ANNEX-IV",
+    "SBOM-CRA-ANNEX-VIII",
+    "SBOM-CRA-CREATOR",
+    "SBOM-CRA-SERIAL",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+    "SBOM-CRA-PRE-7-RQ-07-RE",
+];
+
+/// CRA Phase 2 rules: Phase 1's, plus the full-application checks — the
+/// vulnerability severity and remediation checks (Annex I Part II (4)), the
+/// CVD policy (Annex I Part II (5)), lifecycle evidence (Annex II (7)), the
+/// EU Declaration of Conformity reference (Annex V) and the risk assessment
+/// (Art. 13(2)).
+const CRA_PHASE2_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-CRA-SBOM-FRESHNESS",
+    "SBOM-CRA-MACHINE-READABLE",
+    "SBOM-CRA-ART-13-17-CONTACT",
+    "SBOM-CRA-VULN-METADATA",
+    "SBOM-CRA-VULN-METADATA-REMEDIATION",
+    "SBOM-CRA-VULN-METADATA-PROFILE",
+    "SBOM-CRA-ART-13-5",
+    "SBOM-CRA-ART-13-5-PROFILE",
+    "SBOM-CRA-CVD-POLICY",
+    "SBOM-CRA-ART-13-8",
+    "SBOM-CRA-ART-13-8-EOL",
+    "SBOM-CRA-LIFECYCLE",
+    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
+    "SBOM-CRA-ART-13-15-PRODUCT",
+    "SBOM-CRA-COMPONENT-VERSION",
+    "SBOM-CRA-ART-13-16",
+    "SBOM-CRA-ART-13-16-EMAIL",
+    "SBOM-CRA-COMPONENT-SUPPLIER",
+    "SBOM-CRA-VULN-STATEMENT",
+    "SBOM-CRA-ANNEX-I-IDENTIFIER",
+    "SBOM-CRA-ANNEX-I-TRACEABILITY",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
+    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
+    "SBOM-CRA-ANNEX-I-INTEGRITY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+    "SBOM-CRA-CYCLES",
+    "SBOM-CRA-ANNEX-I-PRIMARY",
+    "SBOM-CRA-ANNEX-I-CONTROLS",
+    "SBOM-CRA-INVENTORY",
+    "SBOM-CRA-DOC-INTEGRITY",
+    "SBOM-CRA-ANNEX-V",
+    "SBOM-CRA-ART-13-2",
+    "SBOM-CRA-ART-14-PSIRT",
+    "SBOM-CRA-ART-14-EARLY-WARNING",
+    "SBOM-CRA-ART-14-NOTIFICATION",
+    "SBOM-CRA-ART-14-ENISA",
+    "SBOM-CRA-ANNEX-IV",
+    "SBOM-CRA-ANNEX-VIII",
+    "SBOM-CRA-CREATOR",
+    "SBOM-CRA-SERIAL",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
+    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+    "SBOM-CRA-PRE-7-RQ-07-RE",
+];
+
+/// CRA Art. 24 open-source steward rules (`check_cra_oss_steward` in cra.rs):
+/// the component, dependency and format checks plus the two steward floors.
+/// The steward runs no document-metadata, gap, Art. 14 or hardware check.
+const CRA_OSS_STEWARD_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-CRA-CVD-POLICY",
+    "SBOM-CRA-COMPONENT-VERSION",
+    "SBOM-CRA-ANNEX-I-IDENTIFIER",
+    "SBOM-CRA-ANNEX-I-INTEGRITY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY",
+    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
+    "SBOM-CRA-CYCLES",
+    "SBOM-CRA-INVENTORY",
+    "SBOM-CRA-ART-24",
+    "SBOM-CRA-ART-24-SUPPLIER",
+    "SBOM-CRA-COMPONENT-NAME",
+    "SBOM-CRA-SPEC-VERSION",
+    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
+    "SBOM-CRA-ELEMENT-ID",
+];
+
+/// BSI TR-03183-2 rules: every `SBOM-BSI-TR-03183-2-*` rule but the fallback.
+const BSI_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-BSI-TR-03183-2-4",
+    "SBOM-BSI-TR-03183-2-5-1",
+    "SBOM-BSI-TR-03183-2-5-1-CONTACT",
+    "SBOM-BSI-TR-03183-2-5-2",
+    "SBOM-BSI-TR-03183-2-5-3",
+    "SBOM-BSI-TR-03183-2-VERSION",
+    "SBOM-BSI-TR-03183-2-INVENTORY",
+    "SBOM-BSI-TR-03183-2-LICENSE",
+    "SBOM-BSI-TR-03183-2-LICENSE-SPDX",
+    "SBOM-BSI-TR-03183-2-CREATOR",
+    "SBOM-BSI-TR-03183-2-5-4",
+    "SBOM-BSI-TR-03183-2-5-4-MISSING",
+    "SBOM-BSI-TR-03183-2-5-5",
+    "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+    "SBOM-BSI-TR-03183-2-5-2-4",
+    "SBOM-BSI-TR-03183-2-3-1",
+];
+
+/// EUCC Substantial rules: every `SBOM-EUCC-*` rule but the fallback.
+const EUCC_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-EUCC-PP",
+    "SBOM-EUCC-TOE",
+    "SBOM-EUCC-ITSEF",
+    "SBOM-EUCC-VALIDITY",
+    "SBOM-EUCC-CERTREF",
+];
+
+/// EU AI Act Annex IV readiness rules: every `SBOM-AIACT-*` rule but the
+/// fallback.
+const AIACT_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
+    "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
+    "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
+    "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
+    "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
+    "SBOM-AIACT-ANNEX-IV-2G-METRICS",
+    "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
+    "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
+    "SBOM-AIACT-UNTYPED-ML",
+];
+
+/// BSI/G7 SBOM-for-AI readiness rules: every `SBOM-BSIAI-*` rule but the
+/// fallback.
+const BSIAI_SARIF_RULE_IDS: &[&str] = &[
+    "SBOM-BSIAI-META-AUTHOR",
+    "SBOM-BSIAI-META-FORMAT",
+    "SBOM-BSIAI-META-TIMESTAMP",
+    "SBOM-BSIAI-META-TOOL",
+    "SBOM-BSIAI-META-SIGNATURE",
+    "SBOM-BSIAI-SYS-PRIMARY",
+    "SBOM-BSIAI-SYS-PRODUCER",
+    "SBOM-BSIAI-SYS-DATAFLOW",
+    "SBOM-BSIAI-MODEL-NAME",
+    "SBOM-BSIAI-MODEL-VERSION",
+    "SBOM-BSIAI-MODEL-IDENTIFIER",
+    "SBOM-BSIAI-MODEL-HASH",
+    "SBOM-BSIAI-MODEL-HASH-ALGO",
+    "SBOM-BSIAI-MODEL-CARD",
+    "SBOM-BSIAI-MODEL-ARCHITECTURE",
+    "SBOM-BSIAI-MODEL-DATASETS",
+    "SBOM-BSIAI-MODEL-LIMITATIONS",
+    "SBOM-BSIAI-MODEL-LICENSE",
+    "SBOM-BSIAI-DATASET-NAME",
+    "SBOM-BSIAI-DATASET-IDENTIFIER",
+    "SBOM-BSIAI-DATASET-HASH",
+    "SBOM-BSIAI-DATASET-LICENSE",
+    "SBOM-BSIAI-DATASET-SENSITIVITY",
+    "SBOM-BSIAI-DATASET-PROVENANCE",
+    "SBOM-BSIAI-INFRA-RUNTIME",
+    "SBOM-BSIAI-SEC-CONTROLS",
+    "SBOM-BSIAI-SEC-EXPLOITABILITY",
+    "SBOM-BSIAI-UNTYPED-ML",
+];
 
 /// NTIA Minimum Elements SARIF rule catalogue.
 pub const NTIA_SARIF_RULE_IDS: &[&str] = &[
@@ -4440,122 +4734,10 @@ pub const EO14028_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-EO14028-INVENTORY",
 ];
 
-/// Shared CRA / EUCC / BSI TR-03183-2 / EU AI Act / BSI-G7 SBOM-for-AI SARIF
-/// rule catalogue (the default for CRA-family and readiness profiles).
-pub const COMPLIANCE_SARIF_RULE_IDS: &[&str] = &[
-    "SBOM-CRA-SBOM-FRESHNESS",
-    "SBOM-CRA-MACHINE-READABLE",
-    "SBOM-CRA-ART-13-17-CONTACT",
-    "SBOM-CRA-VULN-METADATA",
-    "SBOM-CRA-VULN-METADATA-REMEDIATION",
-    "SBOM-CRA-VULN-METADATA-PROFILE",
-    "SBOM-CRA-ART-13-5",
-    "SBOM-CRA-ART-13-5-PROFILE",
-    "SBOM-CRA-CVD-POLICY",
-    "SBOM-CRA-ART-13-8",
-    "SBOM-CRA-ART-13-8-EOL",
-    "SBOM-CRA-LIFECYCLE",
-    "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
-    "SBOM-CRA-ART-13-15-PRODUCT",
-    "SBOM-CRA-COMPONENT-VERSION",
-    "SBOM-CRA-ART-13-16",
-    "SBOM-CRA-ART-13-16-EMAIL",
-    "SBOM-CRA-COMPONENT-SUPPLIER",
-    "SBOM-CRA-VULN-STATEMENT",
-    "SBOM-CRA-ANNEX-I-IDENTIFIER",
-    "SBOM-CRA-ANNEX-I-TRACEABILITY",
-    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
-    "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
-    "SBOM-CRA-ANNEX-I-INTEGRITY",
-    "SBOM-CRA-ANNEX-I-DEPENDENCY",
-    "SBOM-CRA-ANNEX-I-DEPENDENCY-ROOTS",
-    "SBOM-CRA-ANNEX-I-PRIMARY",
-    "SBOM-CRA-ANNEX-I-CONTROLS",
-    "SBOM-CRA-INVENTORY",
-    "SBOM-CRA-DOC-INTEGRITY",
-    "SBOM-CRA-ANNEX-V",
-    "SBOM-CRA-ART-13-2",
-    "SBOM-CRA-ART-14-PSIRT",
-    "SBOM-CRA-ART-14-EARLY-WARNING",
-    "SBOM-CRA-ART-14-NOTIFICATION",
-    "SBOM-CRA-ART-14-ENISA",
-    "SBOM-CRA-ART-24",
-    "SBOM-CRA-ANNEX-IV",
-    "SBOM-CRA-CREATOR",
-    "SBOM-CRA-SERIAL",
-    "SBOM-CRA-COMPONENT-NAME",
-    "SBOM-CRA-SPEC-VERSION",
-    "SBOM-CRA-SPEC-VERSION-UNKNOWN",
-    "SBOM-CRA-ELEMENT-ID",
-    "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
-    "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
-    "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
-    "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
-    "SBOM-CRA-PRE-7-RQ-07-RE",
-    "SBOM-EUCC-PP",
-    "SBOM-EUCC-TOE",
-    "SBOM-EUCC-ITSEF",
-    "SBOM-EUCC-VALIDITY",
-    "SBOM-EUCC-CERTREF",
-    "SBOM-BSI-TR-03183-2-4",
-    "SBOM-BSI-TR-03183-2-5-1",
-    "SBOM-BSI-TR-03183-2-5-1-CONTACT",
-    "SBOM-BSI-TR-03183-2-5-2",
-    "SBOM-BSI-TR-03183-2-5-3",
-    "SBOM-BSI-TR-03183-2-VERSION",
-    "SBOM-BSI-TR-03183-2-INVENTORY",
-    "SBOM-BSI-TR-03183-2-LICENSE",
-    "SBOM-BSI-TR-03183-2-LICENSE-SPDX",
-    "SBOM-BSI-TR-03183-2-CREATOR",
-    "SBOM-BSI-TR-03183-2-5-4",
-    "SBOM-BSI-TR-03183-2-5-4-MISSING",
-    "SBOM-BSI-TR-03183-2-5-5",
-    "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
-    "SBOM-BSI-TR-03183-2-5-2-4",
-    "SBOM-BSI-TR-03183-2-3-1",
-    "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
-    "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
-    "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
-    "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
-    "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
-    "SBOM-AIACT-ANNEX-IV-2G-METRICS",
-    "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
-    "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
-    "SBOM-AIACT-UNTYPED-ML",
-    "SBOM-BSIAI-META-AUTHOR",
-    "SBOM-BSIAI-META-FORMAT",
-    "SBOM-BSIAI-META-TIMESTAMP",
-    "SBOM-BSIAI-META-TOOL",
-    "SBOM-BSIAI-META-SIGNATURE",
-    "SBOM-BSIAI-SYS-PRIMARY",
-    "SBOM-BSIAI-SYS-PRODUCER",
-    "SBOM-BSIAI-SYS-DATAFLOW",
-    "SBOM-BSIAI-MODEL-NAME",
-    "SBOM-BSIAI-MODEL-VERSION",
-    "SBOM-BSIAI-MODEL-IDENTIFIER",
-    "SBOM-BSIAI-MODEL-HASH",
-    "SBOM-BSIAI-MODEL-HASH-ALGO",
-    "SBOM-BSIAI-MODEL-CARD",
-    "SBOM-BSIAI-MODEL-ARCHITECTURE",
-    "SBOM-BSIAI-MODEL-DATASETS",
-    "SBOM-BSIAI-MODEL-LIMITATIONS",
-    "SBOM-BSIAI-MODEL-LICENSE",
-    "SBOM-BSIAI-DATASET-NAME",
-    "SBOM-BSIAI-DATASET-IDENTIFIER",
-    "SBOM-BSIAI-DATASET-HASH",
-    "SBOM-BSIAI-DATASET-LICENSE",
-    "SBOM-BSIAI-DATASET-SENSITIVITY",
-    "SBOM-BSIAI-DATASET-PROVENANCE",
-    "SBOM-BSIAI-INFRA-RUNTIME",
-    "SBOM-BSIAI-SEC-CONTROLS",
-    "SBOM-BSIAI-SEC-EXPLOITABILITY",
-    "SBOM-BSIAI-UNTYPED-ML",
-];
-
 /// NSA CNSA 2.0 SARIF rule catalogue: every `SBOM-CNSA2-*` self-descriptor
 /// in the registry. The `cnsa2_and_pqc_slices_cover_their_rule_families`
 /// test keeps this slice in lockstep with the registry, so a CNSA 2.0 run
-/// declares its own rule family instead of the CRA-family catalogue.
+/// declares every rule of its family.
 pub const CNSA2_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CNSA2-000",
     "SBOM-CNSA2-ALG-001",
@@ -4975,23 +5157,15 @@ mod tests {
         );
     }
 
-    /// Every id in a per-standard SARIF slice must be a self-descriptor:
-    /// a registry key whose `sarif_id` is the key itself. The SARIF
-    /// generator relies on this to render descriptors without aliasing.
+    /// Every id in a level's rule list must be a self-descriptor: a registry
+    /// key whose `sarif_id` is the key itself. The SARIF generator relies on
+    /// this to render descriptors without aliasing.
     #[test]
     fn sarif_rule_slices_are_self_descriptors() {
-        for (label, slice) in [
-            ("ntia", NTIA_SARIF_RULE_IDS),
-            ("fda", FDA_SARIF_RULE_IDS),
-            ("ssdf", SSDF_SARIF_RULE_IDS),
-            ("eo14028", EO14028_SARIF_RULE_IDS),
-            ("compliance", COMPLIANCE_SARIF_RULE_IDS),
-            ("cnsa2", CNSA2_SARIF_RULE_IDS),
-            ("pqc", PQC_SARIF_RULE_IDS),
-            ("cisa2026", CISA2026_SARIF_RULE_IDS),
-            ("pci-dss", PCIDSS_SARIF_RULE_IDS),
-            ("fsct", FSCT_SARIF_RULE_IDS),
-        ] {
+        for level in ComplianceLevel::all() {
+            let label = format!("{level:?}");
+            let slice = rules_for_level(*level);
+            assert!(!slice.is_empty(), "[{label}] lists no rule");
             let mut seen = std::collections::BTreeSet::new();
             for id in slice {
                 assert!(seen.insert(*id), "[{label}] duplicate slice id {id}");
@@ -5063,26 +5237,81 @@ mod tests {
         }
     }
 
-    /// No slice declares a fallback rule: no check emits one, so a standard's
+    /// The BSI TR-03183-2, EUCC and AI readiness lists enumerate their whole
+    /// rule family but its fallback rule, as the tests above do for the
+    /// other single-family standards.
+    #[test]
+    fn single_family_lists_cover_their_rule_families() {
+        for (prefix, level) in [
+            ("SBOM-BSI-TR-03183-2-", ComplianceLevel::BsiTr03183_2),
+            ("SBOM-EUCC-", ComplianceLevel::EuccSubstantial),
+            ("SBOM-AIACT-", ComplianceLevel::EuAiAct),
+            ("SBOM-BSIAI-", ComplianceLevel::BsiSbomForAi),
+            ("SBOM-SSDF-", ComplianceLevel::NistSsdf),
+            ("SBOM-EO14028-", ComplianceLevel::Eo14028),
+        ] {
+            let expected: std::collections::BTreeSet<&str> = all_rule_ids()
+                .iter()
+                .copied()
+                .filter(|id| id.starts_with(prefix) && !is_fallback(id))
+                .collect();
+            let actual: std::collections::BTreeSet<&str> =
+                rules_for_level(level).iter().copied().collect();
+            assert_eq!(
+                actual, expected,
+                "{prefix}* rule list drifted from the registry"
+            );
+        }
+    }
+
+    /// No list names a fallback rule: no check emits one, so a standard's
     /// catalogue lists the checks it runs and nothing else.
     #[test]
     fn no_slice_lists_a_fallback_rule() {
-        for slice in [
-            NTIA_SARIF_RULE_IDS,
-            FDA_SARIF_RULE_IDS,
-            SSDF_SARIF_RULE_IDS,
-            EO14028_SARIF_RULE_IDS,
-            COMPLIANCE_SARIF_RULE_IDS,
-            CNSA2_SARIF_RULE_IDS,
-            PQC_SARIF_RULE_IDS,
-            CISA2026_SARIF_RULE_IDS,
-            PCIDSS_SARIF_RULE_IDS,
-            FSCT_SARIF_RULE_IDS,
-        ] {
-            for id in slice {
-                assert!(!is_fallback(id), "slice lists the fallback rule {id}");
+        for level in ComplianceLevel::all() {
+            for id in rules_for_level(*level) {
+                assert!(!is_fallback(id), "{level:?} lists the fallback rule {id}");
             }
         }
+    }
+
+    /// Every rule a check emits belongs to some standard: each registered
+    /// rule but the fallback rules is in at least one level's list, so
+    /// `sbom-tools rules` and the SARIF catalogue name a standard for it.
+    #[test]
+    fn every_check_rule_belongs_to_a_standard() {
+        let listed: std::collections::BTreeSet<&str> = ComplianceLevel::all()
+            .iter()
+            .flat_map(|level| rules_for_level(*level).iter().copied())
+            .collect();
+        let orphans: Vec<&str> = all_rule_ids()
+            .iter()
+            .copied()
+            .filter(|id| !is_fallback(id) && !listed.contains(id))
+            .collect();
+        assert!(
+            orphans.is_empty(),
+            "rules in no level's list (add each to rules_for_level's table): {orphans:?}"
+        );
+    }
+
+    /// Every rule a standard reports cites the clause it implements, so its
+    /// findings carry standard references and a help URI. Two groups have
+    /// none: the fallback rules, which no check emits, and the quality
+    /// profiles' `SBOM-QUALITY-*` rules, which sbom-tools defines itself (their
+    /// SARIF help links the tool's documentation).
+    #[test]
+    fn every_standard_rule_cites_a_reference() {
+        let missing: Vec<&str> = all_rule_ids()
+            .iter()
+            .copied()
+            .filter(|id| !is_fallback(id) && !id.starts_with("SBOM-QUALITY-"))
+            .filter(|id| rule_meta(id).is_some_and(|meta| meta.refs.is_empty()))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "rules without a standard reference: {missing:?}"
+        );
     }
 
     /// Every check is its own SARIF rule: each key's `sarif_id` is the key,

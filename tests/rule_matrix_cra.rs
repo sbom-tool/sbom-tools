@@ -3,16 +3,16 @@
 //! three had a per-rule matrix (the Error-level hardware rule
 //! SBOM-CRA-PRE-8-RQ-02 was never asserted).
 //!
-//! The CRA profiles have no dedicated SARIF slice: they share the CRA-family
-//! `COMPLIANCE_SARIF_RULE_IDS` catalogue with BSI, EUCC and the AI profiles,
-//! and emit three CRA ids the slice does not enumerate (`SBOM-CRA-CYCLES`,
-//! `SBOM-CRA-ANNEX-VIII`, `SBOM-CRA-ART-24-SUPPLIER`). Each universe below
-//! is therefore declared locally, from the check sites in generic.rs and
-//! cra.rs; `cra_universes_cover_the_cra_slice` ties them back to the slice.
-//! Every check is a rule of its own (until v0.4.0 most CRA findings shared
-//! the `SBOM-CRA-ANNEX-I` and `SBOM-CRA-GENERAL` SARIF rules), so every row
-//! names the rule one check reports. At Phase 1 no check emits
-//! `SBOM-CRA-LIFECYCLE` or `SBOM-CRA-VULN-METADATA`; those rows are skipped.
+//! Each universe below is declared locally, from the check sites in
+//! generic.rs and cra.rs; `run_matrix` requires it to equal the registry's
+//! list for the level (`rules_for_level`), and
+//! `cra_universes_cover_the_cra_family` ties the three to the `SBOM-CRA-*`
+//! rule family. Every check is a rule of its own (until v0.4.0 most CRA
+//! findings shared the `SBOM-CRA-ANNEX-I` and `SBOM-CRA-GENERAL` SARIF
+//! rules), so every row names the rule one check reports. The Phase 2-only
+//! checks (`SBOM-CRA-LIFECYCLE`, `SBOM-CRA-VULN-METADATA` and the others the
+//! Phase 2 universe adds) are in no Phase 1 row: no Phase 1 check emits
+//! them.
 //!
 //! The manufacturer fixtures carry a CRA sidecar with the Art. 14 reporting
 //! channels (the only place they can be declared); the pinned clock is past
@@ -37,7 +37,9 @@ use sbom_tools::model::{
     ConformityRoute, ControlAssertion, CraProductClass, CraSidecarMetadata, EolStatus,
 };
 use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
+use sbom_tools::quality::{
+    ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
+};
 use std::collections::BTreeSet;
 
 const PHASE1: ComplianceLevel = ComplianceLevel::CraPhase1;
@@ -51,13 +53,11 @@ const PHASE1_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-17-CONTACT",
-    "SBOM-CRA-VULN-METADATA",
     "SBOM-CRA-VULN-METADATA-PROFILE",
     "SBOM-CRA-ART-13-5",
     "SBOM-CRA-ART-13-5-PROFILE",
     "SBOM-CRA-ART-13-8",
     "SBOM-CRA-ART-13-8-EOL",
-    "SBOM-CRA-LIFECYCLE",
     "SBOM-CRA-LIFECYCLE-APPROACHING-EOL",
     "SBOM-CRA-ART-13-15-PRODUCT",
     "SBOM-CRA-COMPONENT-VERSION",
@@ -96,8 +96,10 @@ const PHASE1_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-CYCLES",
 ];
 
-/// Phase 2 adds the full-application checks: CVD policy (Annex I Part II
-/// (5)) and the EU Declaration of Conformity reference (Annex V).
+/// Phase 2 adds the full-application checks: vulnerability severity and
+/// remediation (Annex I Part II (4)), CVD policy (Annex I Part II (5)),
+/// lifecycle evidence (Annex II (7)), the EU Declaration of Conformity
+/// reference (Annex V) and the risk assessment (Art. 13(2)).
 const PHASE2_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
@@ -169,14 +171,6 @@ const STEWARD_RULE_UNIVERSE: &[&str] = &[
     "SBOM-CRA-ELEMENT-ID",
     "SBOM-CRA-ART-24-SUPPLIER",
     "SBOM-CRA-CYCLES",
-];
-
-/// The CRA ids the shared slice does not enumerate (documented as
-/// slice-less in tests/rule_matrix_registry.rs).
-const SLICELESS_CRA_IDS: &[&str] = &[
-    "SBOM-CRA-CYCLES",
-    "SBOM-CRA-ANNEX-VIII",
-    "SBOM-CRA-ART-24-SUPPLIER",
 ];
 
 /// RFC 3339 timestamp `days` before the pinned test clock.
@@ -1235,19 +1229,6 @@ fn cra_oss_steward_conforming_fixture_is_compliant_with_zero_violations() {
 fn cra_phase1_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let mut entries = manufacturer_rows();
     entries.extend([
-        RuleEntry::skipped(
-            "SBOM-CRA-VULN-METADATA",
-            "at Phase 1 no check emits SBOM-CRA-VULN-METADATA: the severity and \
-             remediation checks run only at Phase 2, and the one Phase 1 site, the \
-             SPDX 3.0 Security-profile note, reports SBOM-CRA-VULN-METADATA-PROFILE \
-             (its own row)",
-        ),
-        RuleEntry::skipped(
-            "SBOM-CRA-LIFECYCLE",
-            "at Phase 1 no check emits SBOM-CRA-LIFECYCLE: the lifecycle-evidence \
-             check runs only at Phase 2, and the approaching-EOL note reports \
-             SBOM-CRA-LIFECYCLE-APPROACHING-EOL (its own row)",
-        ),
         // A direct dependency without a supplier warns at Phase 1; a
         // transitive one is an Info under a key of its own.
         RuleEntry::tested(
@@ -1868,15 +1849,15 @@ fn steward_profile_runs_no_document_metadata_check() {
     }
 }
 
-/// The CRA universes are tied back to the shared slice: together they cover
-/// every `SBOM-CRA-*` id the slice enumerates, and the only ids they add are
-/// the documented slice-less ones.
+/// The CRA universes cover the CRA rule family: together they hold every
+/// `SBOM-CRA-*` rule but the fallback rule, which no check emits, and each
+/// universe holds only CRA rules.
 #[test]
-fn cra_universes_cover_the_cra_slice() {
-    let slice: BTreeSet<&str> = COMPLIANCE_SARIF_RULE_IDS
+fn cra_universes_cover_the_cra_family() {
+    let family: BTreeSet<&str> = all_rule_ids()
         .iter()
         .copied()
-        .filter(|id| id.starts_with("SBOM-CRA-"))
+        .filter(|id| id.starts_with("SBOM-CRA-") && *id != generic_rule_id_for_level(PHASE2))
         .collect();
     let universes: BTreeSet<&str> = PHASE1_RULE_UNIVERSE
         .iter()
@@ -1884,19 +1865,9 @@ fn cra_universes_cover_the_cra_slice() {
         .chain(STEWARD_RULE_UNIVERSE)
         .copied()
         .collect();
-    let sliceless: BTreeSet<&str> = SLICELESS_CRA_IDS.iter().copied().collect();
     assert_eq!(
-        universes
-            .difference(&slice)
-            .copied()
-            .collect::<BTreeSet<_>>(),
-        sliceless,
-        "CRA universe ids outside the shared slice must be exactly the slice-less ones"
-    );
-    assert!(
-        slice.is_subset(&universes),
-        "every SBOM-CRA-* id of the shared slice must sit in a CRA universe; missing: {:?}",
-        slice.difference(&universes).collect::<Vec<_>>()
+        universes, family,
+        "the CRA universes must hold exactly the SBOM-CRA-* rules but the fallback"
     );
 }
 

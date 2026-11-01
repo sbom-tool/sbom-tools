@@ -2,9 +2,10 @@
 //! (BSI TR-03183-2 v2.1.0). The Error-level §5.2.1 timestamp (5-2) and
 //! §5.2.2 dependency (5-5) rules were previously never asserted.
 //!
-//! BSI shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue, so its
-//! universe is that slice's `SBOM-BSI-TR-03183-2-*` ids: a BSI rule added to
-//! the slice cannot land without a row here. Every id gets a firing fixture
+//! The universe is every registered `SBOM-BSI-TR-03183-2-*` rule but the
+//! fallback, which `run_matrix` requires to be the level's rule list
+//! (`rules_for_level`): a BSI rule added to the registry cannot land
+//! without a row here. Every id gets a firing fixture
 //! and a silent fixture (rendered in each of the four encodings and run
 //! through the real parser), or an explicit skip-with-reason. §4 admits SPDX
 //! from 3.0.1 only, so every SPDX 2.3 rendering also fails SBOM-BSI-TR-03183-2-4.
@@ -17,16 +18,20 @@ use rule_matrix::{
     SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
     SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, run_matrix,
 };
-use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
+use sbom_tools::quality::{
+    ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
+};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::BsiTr03183_2;
 
-/// The BSI rules of the shared CRA-family SARIF catalogue.
+/// The registered BSI rules but the fallback rule, which no check emits.
 fn bsi_universe() -> Vec<&'static str> {
-    COMPLIANCE_SARIF_RULE_IDS
+    all_rule_ids()
         .iter()
         .copied()
-        .filter(|id| id.starts_with("SBOM-BSI-TR-03183-2-"))
+        .filter(|id| {
+            id.starts_with("SBOM-BSI-TR-03183-2-") && *id != generic_rule_id_for_level(LEVEL)
+        })
         .collect()
 }
 
