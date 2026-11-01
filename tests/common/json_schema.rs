@@ -378,6 +378,8 @@ fn matches_format(format: &str, s: &str) -> bool {
     match format {
         // RFC 3339 §5.6 date-time.
         "date-time" => chrono::DateTime::parse_from_rfc3339(s).is_ok(),
+        // RFC 3339 full-date: YYYY-MM-DD, a real calendar day.
+        "date" => s.len() == 10 && chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").is_ok(),
         // RFC 3986 URI: a scheme, then only URI characters.
         "uri" => uri_scheme(s).is_some_and(is_uri_scheme) && is_uri_text(s),
         // RFC 3986 URI-reference: a URI, or a relative reference whose first

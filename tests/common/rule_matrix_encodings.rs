@@ -840,13 +840,14 @@ impl CryptoAssetFixture {
             crypto.insert("algorithmProperties".into(), props);
         }
         if let Some(sig_ref) = &self.signature_algorithm_ref {
-            crypto.insert(
-                "certificateProperties".into(),
-                serde_json::json!({
-                    "subjectName": format!("CN={}", self.name),
-                    "signatureAlgorithmRef": sig_ref,
-                }),
-            );
+            let mut cert = serde_json::json!({
+                "subjectName": format!("CN={}", self.name),
+                "signatureAlgorithmRef": sig_ref,
+            });
+            if let Some(expiry) = &self.not_valid_after {
+                cert["notValidAfter"] = serde_json::json!(expiry);
+            }
+            crypto.insert("certificateProperties".into(), cert);
         }
         if let Some((material_type, size)) = &self.material {
             let mut mat = serde_json::Map::new();
@@ -1384,6 +1385,7 @@ impl CryptoAssetFixture {
         if let Some(sig_ref) = &self.signature_algorithm_ref {
             x.open("certificateProperties", &[]);
             x.text("subjectName", &format!("CN={}", self.name));
+            x.opt("notValidAfter", self.not_valid_after.as_deref());
             x.text("signatureAlgorithmRef", sig_ref);
             x.close("certificateProperties");
         }

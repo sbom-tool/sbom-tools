@@ -862,6 +862,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         }
     }
 
@@ -1154,6 +1155,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         let document = build(&[result(vec![
             with_severity("info finding", ViolationSeverity::Info),

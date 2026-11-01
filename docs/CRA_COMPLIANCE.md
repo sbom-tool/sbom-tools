@@ -34,8 +34,8 @@ ENISA / industry guidance. Use it to:
 | `CraPhase2`                 | `cra` (default CRA meaning), `cra-phase2`                                                           | Full CRA compliance (regulation fully applies from 2027-12-11)                                                                        |
 | `CraOssSteward`             | `oss-steward`, `cra-oss-steward`, `cra-oss`, `cra-art24`, `art24`                                   | Article 24 lighter profile for open-source software stewards                                                     |
 | `BsiTr03183_2`              | `bsi`, `tr-03183`, `tr03183`, `bsi-tr-03183-2`                                                      | BSI TR-03183-2 (German national CRA-aligned baseline)                                                            |
-| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems)                                             |
-| `NistPqc`                   | `pqc`, `nist-pqc`, `nist_pqc`                                                                       | NIST IR 8547 + FIPS 203/204/205 (PQC migration)                                                                  |
+| `Cnsa2`                     | `cnsa2`, `cnsa-2`, `cnsa_2`, `cnsa2.0`                                                              | NSA CNSA 2.0 (post-quantum mandate for US national-security systems; `--pqc-mode deadline` applies its 2025–2033 timeline) |
+| `NistPqc`                   | `pqc`, `nist-pqc`, `nist_pqc`                                                                       | NIST IR 8547 (final, Oct 2026) + FIPS 203/204/205 (PQC migration; `--pqc-mode deadline` applies its 2030/2035 milestones) |
 
 The `--cra-product-class` flag (or sidecar `productClass`) drives the
 [CRA-P3.2 calibration table](#cra-p32-product-class-severity-calibration)

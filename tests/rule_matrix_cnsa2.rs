@@ -8,17 +8,45 @@
 //! skip-with-reason; exhaustiveness is enforced against the registry slice. Each row breaks one asset of the approved baseline, so a
 //! crypto-vocabulary change that moves a verdict touches exactly the row
 //! that pins it.
+//!
+//! Rows whose findings `--pqc-mode deadline` dates add cases in that mode
+//! ([`DeadlineFixture`]): a CNSA 1.0 algorithm or TLS 1.2 is an Info until
+//! its equipment category is to prefer CNSA 2.0, a Warning until it is to
+//! use CNSA 2.0 exclusively, and an Error after; anything outside CNSA 1.0
+//! stays an Error.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
 
 use rule_matrix::{
-    CBOM_IS_CYCLONEDX, CryptoAssetFixture, Encoding, RuleEntry, SbomFixture,
+    CBOM_IS_CYCLONEDX, CryptoAssetFixture, DeadlineFixture, Encoding, RuleEntry, SbomFixture,
     assert_no_violations_in, run_matrix,
 };
-use sbom_tools::quality::{CNSA2_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
+use sbom_tools::quality::{
+    CNSA2_SARIF_RULE_IDS, CnsaCategory, ComplianceLevel, ViolationSeverity as Sev,
+};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Cnsa2;
+
+/// Deadline-mode instants: the shared test clock, after the strictest
+/// category's 2025 preference date and before its 2030 exclusive-use date,
+/// and a date past the latter.
+const BEFORE_2031: &str = rule_matrix::clock::AS_OF;
+const IN_2031: &str = "2031-06-01T00:00:00Z";
+
+/// An ECDH key agreement over `curve`.
+fn ecdh(curve: &str) -> CryptoAssetFixture {
+    CryptoAssetFixture::algorithm("algo-ecdh", "ECDH")
+        .primitive("key-agree")
+        .curve(curve)
+}
+
+/// An ECDSA signature over P-384, a CNSA 1.0 algorithm.
+fn ecdsa_p384() -> CryptoAssetFixture {
+    CryptoAssetFixture::algorithm("algo-ecdsa", "ECDSA")
+        .primitive("signature")
+        .curve("secp384r1")
+}
 
 /// A CBOM of CNSA 2.0 allowlisted assets only: AES-256, SHA-384,
 /// ML-KEM-1024 and ML-DSA-87 (both declaring quantum level 5), a
@@ -271,6 +299,40 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .primitive("signature"),
                 );
             }),
+        )
+        // Deadline mode: CNSA 1.0's ECDH over P-384 keeps its place until
+        // the category is to use CNSA 2.0 exclusively; P-256 never had one.
+        .with_departing_firing(
+            "deadline mode, strictest category: ECDH over P-384 after the 2025 preference date",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_assets.push(ecdh("secp384r1"));
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_departing_firing(
+            "deadline mode, niche equipment: ECDH over P-384 before the 2030 preference date",
+            Sev::Info,
+            broken(|s| {
+                s.crypto_assets.push(ecdh("secp384r1"));
+                s.deadline = Some(DeadlineFixture::cnsa(CnsaCategory::Niche, BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode, strictest category: ECDH over P-384 after the 2030 exclusive-use date",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_assets.push(ecdh("secp384r1"));
+                s.deadline = Some(DeadlineFixture::nist(IN_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode keeps ECDH over P-256, which is not CNSA 1.0, an error",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_assets.push(ecdh("secp256r1"));
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
         ),
         // An allowlisted family declared below Level 5 (symmetric and hash
         // primitives are exempt: Grover, not Shor).
@@ -353,6 +415,36 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.crypto_mut("leaf-cert").signature_algorithm_ref = Some("ecdsa-p384".to_string());
             }),
             base(),
+        )
+        // Deadline mode judges a CNSA 1.0 signature on the later of the
+        // evaluation date and the certificate's notValidAfter.
+        .with_departing_firing(
+            "deadline mode, strictest category: signed with ECDSA over P-384",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_assets.push(ecdsa_p384());
+                s.crypto_mut("leaf-cert").signature_algorithm_ref = Some("algo-ecdsa".to_string());
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_departing_firing(
+            "deadline mode: an unresolved ecdsa-p384 reference names its curve",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_mut("leaf-cert").signature_algorithm_ref = Some("ecdsa-p384".to_string());
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode: valid past 2030, judged on its notValidAfter",
+            Sev::Error,
+            broken(|s| {
+                s.crypto_assets.push(ecdsa_p384());
+                *s.crypto_mut("leaf-cert") =
+                    CryptoAssetFixture::certificate("leaf-cert", "algo-ecdsa")
+                        .valid_until("2031-06-30T00:00:00Z");
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
         ),
         RuleEntry::tested(
             "SBOM-CNSA2-CERT-UNKNOWN",
@@ -386,6 +478,35 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "TLS without a version",
             Sev::Error,
             broken(|s| s.crypto_mut("tls13").protocol_mut().version = None),
+        )
+        // Deadline mode: TLS 1.2 is CNSA 1.0 (RFC 9151), SSL is not.
+        .with_departing_firing(
+            "deadline mode, strictest category: TLS 1.2",
+            Sev::Warning,
+            broken(|s| {
+                s.crypto_mut("tls13").protocol_mut().version = Some("1.2".to_string());
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_departing_firing(
+            "deadline mode, networking equipment: TLS 1.2 before the 2026 preference date ends",
+            Sev::Info,
+            broken(|s| {
+                s.crypto_mut("tls13").protocol_mut().version = Some("1.2".to_string());
+                s.deadline = Some(DeadlineFixture::cnsa(CnsaCategory::Networking, BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode keeps SSL an error",
+            Sev::Error,
+            broken(|s| {
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "ssl", Some("3.0")),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
         ),
         RuleEntry::tested(
             "SBOM-CNSA2-PROTO-002",
@@ -460,6 +581,37 @@ fn cnsa2_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                         .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
                         .tls_signature_schemes(&["mldsa87", "0x0905"]),
                 );
+            }),
+        )
+        // Deadline mode: secp384r1 is CNSA 1.0's ECDH group; x25519 never was.
+        .with_departing_firing(
+            "deadline mode, strictest category: TLS 1.3 suite offering secp384r1",
+            Sev::Warning,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["MLKEM1024", "secp384r1"]),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
+            }),
+        )
+        .with_firing(
+            "deadline mode keeps a suite offering x25519 an error",
+            Sev::Error,
+            broken(|s| {
+                s.spec_version = "1.7".to_string();
+                replace(
+                    s,
+                    "tls13",
+                    CryptoAssetFixture::protocol("tls13", "tls", Some("1.3"))
+                        .cipher_suite("TLS_AES_256_GCM_SHA384", &["algo-aes256", "algo-sha384"])
+                        .tls_groups(&["MLKEM1024", "secp384r1", "x25519"]),
+                );
+                s.deadline = Some(DeadlineFixture::nist(BEFORE_2031));
             }),
         ),
         // Opaque references, or a protocol declaring nothing evaluable,

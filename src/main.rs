@@ -355,10 +355,45 @@ struct ComplianceRunArgs {
 
     /// Pin the evaluation clock (RFC 3339, e.g. 2027-01-01T00:00:00Z or
     /// 2027-01-01). Deadline-sensitive checks (CRA Art. 14 readiness, SBOM
-    /// age, EUCC certificate expiry) and the quality score evaluate against
-    /// this instant instead of the wall clock — reproducible CI runs.
+    /// age, EUCC certificate expiry, PQC deadlines) and the quality score
+    /// evaluate against this instant instead of the wall clock — reproducible
+    /// CI runs.
     #[arg(long, value_name = "DATETIME")]
     as_of: Option<String>,
+
+    /// How the CNSA 2.0 and NIST PQC checks judge quantum-vulnerable
+    /// cryptography: readiness (default) makes every such algorithm an
+    /// error; deadline judges each by its migration deadline at --as-of
+    /// (NIST IR 8547: info until it is deprecated after 2030, warning until
+    /// it is disallowed after 2035, error after; the CNSA 2.0 timeline for
+    /// cnsa2) and records the deadline on the finding
+    #[arg(long, value_enum, value_name = "MODE")]
+    pqc_mode: Option<sbom_tools::quality::PqcMode>,
+
+    /// With --pqc-mode deadline, whose deadlines the NIST PQC check applies:
+    /// nist (default, NIST IR 8547) or federal (also EO 14412 / OMB M-26-15
+    /// for high value assets and high impact systems: PQC key establishment
+    /// by 2030-12-31, PQC signatures by 2031-12-31, TLS 1.3 by 2030-01-02)
+    #[arg(long, value_enum, value_name = "PROFILE")]
+    pqc_profile: Option<sbom_tools::quality::PqcProfile>,
+
+    /// With --pqc-mode deadline, the CNSA 2.0 equipment category whose
+    /// timeline the CNSA 2.0 check applies (when CNSA 2.0 is to be preferred,
+    /// and when it is to be used exclusively). Unset: the strictest,
+    /// software-signing (2025, 2030)
+    #[arg(long, value_enum, value_name = "CATEGORY")]
+    cnsa_category: Option<sbom_tools::quality::CnsaCategory>,
+}
+
+impl ComplianceRunArgs {
+    /// The PQC inputs of the run, as the handlers take them.
+    fn pqc(&self) -> cli::PqcOptions {
+        cli::PqcOptions {
+            mode: self.pqc_mode.unwrap_or_default(),
+            profile: self.pqc_profile,
+            cnsa_category: self.cnsa_category,
+        }
+    }
 }
 
 /// The CRA sidecar flag of the commands that judge one SBOM. (`diff` judges
@@ -621,7 +656,8 @@ struct ViewArgs {
     2  Compliance warnings found (only with --fail-on-warning)
     3  Usage error (unknown flag or standard, invalid flag value, missing
        argument) or operational error (unsupported output format, invalid
-       --as-of / --cra-product-class / --cra-sidecar, broken config file, I/O)
+       --as-of / --cra-product-class / --cra-sidecar, --pqc-profile or
+       --cnsa-category without --pqc-mode deadline, broken config file, I/O)
 
     The gate codes (0/1/2) only apply to runs that completed a
     validation — a nonzero exit is only a compliance verdict when the
@@ -642,7 +678,8 @@ EXAMPLES:
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
     sbom-tools validate app.cdx.json --standard ntia -o oscal-json # OSCAL assessment results
     sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate
-    sbom-tools validate ai.cdx.json --standard ai-act --require-applicable")]
+    sbom-tools validate ai.cdx.json --standard ai-act --require-applicable
+    sbom-tools validate cbom.json --standard pqc --pqc-mode deadline --as-of 2031-06-01  # PQC migration deadlines")]
 struct ValidateArgs {
     /// Path to the SBOM file
     sbom: PathBuf,
@@ -2131,12 +2168,14 @@ fn run() -> Result<()> {
             }
             // The compliance inputs both SBOMs share, parsed like every other
             // compliance command's (config-file fallback for the class).
+            let pqc = args.compliance.pqc();
             let compliance = cli::compliance_run_config(
                 args.compliance
                     .cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone())
                     .as_deref(),
                 args.compliance.as_of.as_deref(),
+                pqc,
             )?;
 
             let config = DiffConfig {
@@ -2289,6 +2328,9 @@ fn run() -> Result<()> {
                     .cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone()),
                 as_of: args.compliance.as_of,
+                pqc_mode: args.compliance.pqc_mode,
+                pqc_profile: args.compliance.pqc_profile,
+                cnsa_category: args.compliance.cnsa_category,
             };
             let exit_code = cli::run_view(config)?;
             if exit_code != 0 {
@@ -2327,6 +2369,7 @@ fn run() -> Result<()> {
                     cli::VALIDATE_OUTPUT_FORMATS,
                 ),
             );
+            let pqc = args.compliance.pqc();
             let exit_code = cli::run_validate(
                 args.sbom,
                 standards,
@@ -2350,6 +2393,7 @@ fn run() -> Result<()> {
                 args.sarif_max_results
                     .or(app.output.sarif_max_results)
                     .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
+                pqc,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2618,6 +2662,7 @@ fn run() -> Result<()> {
                 args.profile
             };
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
+            let pqc = args.compliance.pqc();
             let exit_code = cli::run_quality(
                 args.sbom,
                 profile,
@@ -2645,6 +2690,7 @@ fn run() -> Result<()> {
                 args.sarif_max_results
                     .or(app.output.sarif_max_results)
                     .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
+                pqc,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -3089,18 +3135,22 @@ fn run() -> Result<()> {
         // section supplies the sidecar path and product class when the CLI
         // flags are absent, so the dossier agrees with the validate verdict
         // produced under the same config.
-        Commands::CraDocs(args) => cli::run_cra_docs_with_force(
-            args.sbom,
-            args.output,
-            args.cra_sidecar
-                .cra_sidecar
-                .or_else(|| app.compliance.cra_sidecar.clone()),
-            args.compliance
-                .cra_product_class
-                .or_else(|| app.compliance.cra_product_class.clone()),
-            args.compliance.as_of.as_deref(),
-            args.force,
-        ),
+        Commands::CraDocs(args) => {
+            let pqc = args.compliance.pqc();
+            cli::run_cra_docs_with_force(
+                args.sbom,
+                args.output,
+                args.cra_sidecar
+                    .cra_sidecar
+                    .or_else(|| app.compliance.cra_sidecar.clone()),
+                args.compliance
+                    .cra_product_class
+                    .or_else(|| app.compliance.cra_product_class.clone()),
+                args.compliance.as_of.as_deref(),
+                args.force,
+                pqc,
+            )
+        }
 
         Commands::CraStandardsWatch(args) => cli::run_cra_standards_watch(
             cli::WatchOutputFormat::parse(args.format.as_str())?,

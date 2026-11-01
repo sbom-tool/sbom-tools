@@ -45,6 +45,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -65,6 +66,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -85,6 +87,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -103,6 +106,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
             Some(until) if until <= self.now() => {
@@ -121,6 +125,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
             Some(until) if until <= self.now() + chrono::Duration::days(180) => {
@@ -139,6 +144,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
             Some(_) => {}
@@ -189,6 +195,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }

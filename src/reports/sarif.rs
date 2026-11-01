@@ -1243,6 +1243,8 @@ fn compliance_results_to_sarif(
                     component_id: v.component_id.clone(),
                     affected: v.counts.map(|c| c.affected),
                     total: v.counts.map(|c| c.total),
+                    deadline: v.deadline.as_ref().map(|d| d.date.to_string()),
+                    deadline_source: v.deadline.as_ref().map(|d| d.source.clone()),
                     ..SarifResultProperties::default()
                 },
             )
@@ -1583,6 +1585,14 @@ struct SarifResultProperties {
     /// `Violation::counts.total` (the message's denominator).
     #[serde(skip_serializing_if = "Option::is_none")]
     total: Option<usize>,
+    /// The migration milestone (`YYYY-MM-DD`) a crypto finding is judged
+    /// against under `--pqc-mode deadline` — mirrors `Violation::deadline`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deadline: Option<String>,
+    /// The schedule that sets [`Self::deadline`], e.g. `NIST IR 8547 Table
+    /// 4`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    deadline_source: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -1924,6 +1934,7 @@ mod passed_check_tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             }],
         );
         let sarif = generate_compliance_sarif_with(&result, &SarifOptions::new().with_passes(true))

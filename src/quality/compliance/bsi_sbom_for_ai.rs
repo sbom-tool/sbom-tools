@@ -106,6 +106,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -129,6 +130,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -150,6 +152,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -172,6 +175,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -191,6 +195,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -230,6 +235,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -258,6 +264,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -277,6 +284,7 @@ impl ComplianceChecker {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 
@@ -623,6 +631,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -645,6 +654,7 @@ impl ComplianceChecker {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
         violations.push(Violation {
             severity: ViolationSeverity::Info,
@@ -660,6 +670,7 @@ impl ComplianceChecker {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         });
     }
 }
@@ -730,6 +741,7 @@ fn push_model_finding(
         standard_refs: Vec::new(),
         remediation: None,
         finding_detail: None,
+        deadline: None,
     });
 }
 

@@ -208,6 +208,7 @@ mod tests {
             standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
             remediation: None,
             finding_detail: None,
+            deadline: None,
         }
     }
 
@@ -259,6 +260,7 @@ mod tests {
                     .remediation_for(crate::quality::RemediationFormat::CycloneDx),
             ),
             finding_detail: None,
+            deadline: None,
         }
     }
 

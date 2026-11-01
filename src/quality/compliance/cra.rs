@@ -230,6 +230,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         } else if let Some(future) = future_timestamp_violation(
             sbom,
@@ -256,6 +257,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             } else if age_days > 30 {
                 violations.push(Violation {
@@ -272,6 +274,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -311,6 +314,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -348,6 +352,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -418,6 +423,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -449,6 +455,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -557,6 +564,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -591,6 +599,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -624,6 +633,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -669,6 +679,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -694,6 +705,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -728,6 +740,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -761,6 +774,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -809,6 +823,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: Some(id.clone()),
+                    deadline: None,
                 });
             }
         }
@@ -883,6 +898,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -936,6 +952,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -1003,6 +1020,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1025,6 +1043,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1047,6 +1066,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1084,6 +1104,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -1139,6 +1160,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -1163,6 +1185,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -1183,6 +1206,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -1210,6 +1234,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -1281,6 +1306,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1307,6 +1333,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 

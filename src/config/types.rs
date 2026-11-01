@@ -440,6 +440,15 @@ pub struct ViewConfig {
     /// CRA section) and the quality score judge this instant instead of the
     /// wall clock, as `validate --as-of` does.
     pub as_of: Option<String>,
+    /// How the compliance tab's CNSA 2.0 and NIST PQC checks judge
+    /// quantum-vulnerable cryptography (`--pqc-mode`; readiness when `None`),
+    /// as `validate --pqc-mode` does.
+    pub pqc_mode: Option<crate::quality::PqcMode>,
+    /// `--pqc-profile`: whose deadlines deadline mode applies under NIST PQC.
+    pub pqc_profile: Option<crate::quality::PqcProfile>,
+    /// `--cnsa-category`: the CNSA 2.0 equipment category deadline mode
+    /// applies.
+    pub cnsa_category: Option<crate::quality::CnsaCategory>,
 }
 
 /// Configuration for multi-diff operations

@@ -1,16 +1,17 @@
 //! One compliance run, every entry point: `validate`, the `view` TUI and the
 //! `diff` TUI report identical results for the same SBOM, CRA sidecar,
-//! product class and `--as-of`. Each path builds its run the way its command
-//! does, and each is compared through the `-o json` envelope `validate`
-//! writes.
+//! product class, `--as-of` and PQC flags. Each path builds its run the way
+//! its command does, and each is compared through the `-o json` envelope
+//! `validate` writes.
 
-use super::{ValidateJsonSchema, compliance_run_config, run_validate};
+use super::{PqcOptions, ValidateJsonSchema, compliance_run_config, run_validate};
 use crate::config::{DiffConfigBuilder, EnrichmentConfig, OutputConfig, ViewConfig};
 use crate::diff::DiffResult;
 use crate::model::{BomProfile, CraProductClass};
 use crate::pipeline::parse_sbom_with_context;
 use crate::quality::{
-    ComplianceLevel, ComplianceResult, StandardSelector, Violation, ViolationSeverity,
+    CnsaCategory, ComplianceLevel, ComplianceResult, PqcMode, PqcProfile, StandardSelector,
+    Violation, ViolationSeverity,
 };
 use crate::reports::{ReportFormat, generate_compliance_json};
 use crate::tui::{App, ViewApp};
@@ -57,7 +58,7 @@ fn validate_levels() -> Vec<ComplianceLevel> {
 }
 
 /// `validate -o json` for every standard, with the sidecar auto-discovered.
-fn validate_envelope(sbom: &Path, out: &Path) -> String {
+fn validate_envelope(sbom: &Path, out: &Path, as_of: &str, pqc: PqcOptions) -> String {
     run_validate(
         sbom.to_path_buf(),
         StandardSelector::value_variants().to_vec(),
@@ -67,16 +68,42 @@ fn validate_envelope(sbom: &Path, out: &Path) -> String {
         false,
         None,
         Some(PRODUCT_CLASS.to_string()),
-        Some(AS_OF),
+        Some(as_of),
         false,
         ValidateJsonSchema::V2,
         None,
         None,
         false,
         crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+        pqc,
     )
     .expect("validate runs");
     std::fs::read_to_string(out).expect("validate wrote the envelope")
+}
+
+/// The `view` command's flags for `sbom`: a TUI, the product class, `as_of`
+/// and `pqc`.
+fn view_config(sbom: &Path, as_of: &str, pqc: PqcOptions) -> ViewConfig {
+    ViewConfig {
+        sbom_path: sbom.to_path_buf(),
+        output: OutputConfig {
+            format: ReportFormat::Tui,
+            ..OutputConfig::default()
+        },
+        validate_ntia: false,
+        min_severity: None,
+        vulnerable_only: false,
+        ecosystem_filter: None,
+        fail_on_vuln: false,
+        bom_profile: None,
+        enrichment: EnrichmentConfig::default(),
+        cra_sidecar_path: None,
+        cra_product_class: Some(PRODUCT_CLASS.to_string()),
+        as_of: Some(as_of.to_string()),
+        pqc_mode: Some(pqc.mode),
+        pqc_profile: pqc.profile,
+        cnsa_category: pqc.cnsa_category,
+    }
 }
 
 /// The envelope `validate` would write for `results` (a TUI's results for
@@ -114,30 +141,19 @@ fn rules<'a>(result: &'a ComplianceResult, prefix: &str) -> Vec<&'a Violation> {
 fn validate_and_both_tuis_judge_one_run_alike() {
     let dir = tempfile::tempdir().expect("tempdir");
     let sbom_path = fixture(dir.path());
-    let validate_json = validate_envelope(&sbom_path, &dir.path().join("validate.json"));
+    let validate_json = validate_envelope(
+        &sbom_path,
+        &dir.path().join("validate.json"),
+        AS_OF,
+        PqcOptions::default(),
+    );
 
     let (sbom, raw) = parse_sbom_with_context(&sbom_path, false)
         .expect("fixture parses")
         .into_parts();
 
     // `view`: the run `run_view` builds from its flags.
-    let view_config = ViewConfig {
-        sbom_path: sbom_path.clone(),
-        output: OutputConfig {
-            format: ReportFormat::Tui,
-            ..OutputConfig::default()
-        },
-        validate_ntia: false,
-        min_severity: None,
-        vulnerable_only: false,
-        ecosystem_filter: None,
-        fail_on_vuln: false,
-        bom_profile: None,
-        enrichment: EnrichmentConfig::default(),
-        cra_sidecar_path: None,
-        cra_product_class: Some(PRODUCT_CLASS.to_string()),
-        as_of: Some(AS_OF.to_string()),
-    };
+    let view_config = view_config(&sbom_path, AS_OF, PqcOptions::default());
     let view_run = super::view::compliance_run(&view_config).expect("view run resolves");
     let mut view = ViewApp::new_with_compliance(sbom.clone(), &raw, BomProfile::Sbom, view_run);
     view.ensure_compliance_results();
@@ -154,7 +170,8 @@ fn validate_and_both_tuis_judge_one_run_alike() {
         .old_path(sbom_path.clone())
         .new_path(sbom_path.clone())
         .compliance(
-            compliance_run_config(Some(PRODUCT_CLASS), Some(AS_OF)).expect("diff inputs parse"),
+            compliance_run_config(Some(PRODUCT_CLASS), Some(AS_OF), PqcOptions::default())
+                .expect("diff inputs parse"),
         )
         .build()
         .expect("diff config");
@@ -223,5 +240,109 @@ fn validate_and_both_tuis_judge_one_run_alike() {
         .len(),
         1,
         "FDA does not read the CRA sidecar"
+    );
+}
+
+/// `--pqc-mode deadline` reaches every entry point: the calendar CBOM, in
+/// 2031 under the federal profile and the networking-equipment CNSA 2.0
+/// timeline, reads the same through `validate`, the `view` TUI and the
+/// `diff` TUI.
+#[test]
+fn deadline_mode_reaches_validate_and_both_tuis() {
+    const IN_2031: &str = "2031-06-01";
+    let pqc = PqcOptions {
+        mode: PqcMode::Deadline,
+        profile: Some(PqcProfile::Federal),
+        cnsa_category: Some(CnsaCategory::Networking),
+    };
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sbom_path = dir.path().join("cbom.cdx.json");
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/cyclonedx/cbom-pqc-calendar.cdx.json"
+        ),
+        &sbom_path,
+    )
+    .expect("fixture copies");
+    let validate_json =
+        validate_envelope(&sbom_path, &dir.path().join("validate.json"), IN_2031, pqc);
+    let (sbom, raw) = parse_sbom_with_context(&sbom_path, false)
+        .expect("fixture parses")
+        .into_parts();
+
+    let view_run = super::view::compliance_run(&view_config(&sbom_path, IN_2031, pqc))
+        .expect("view run resolves");
+    let mut view = ViewApp::new_with_compliance(sbom.clone(), &raw, BomProfile::Sbom, view_run);
+    view.ensure_compliance_results();
+    let view_results = view.compliance_results.clone().expect("view results");
+    assert_eq!(
+        envelope_of(&view_results),
+        validate_json,
+        "the view TUI must judge deadline mode as validate does"
+    );
+
+    let diff_config = DiffConfigBuilder::new()
+        .old_path(sbom_path.clone())
+        .new_path(sbom_path.clone())
+        .compliance(
+            compliance_run_config(Some(PRODUCT_CLASS), Some(IN_2031), pqc)
+                .expect("diff inputs parse"),
+        )
+        .build()
+        .expect("diff config");
+    let new_run = crate::pipeline::side_compliance(&diff_config.compliance, &diff_config.paths.new)
+        .expect("new run resolves");
+    let old_run = crate::pipeline::side_compliance(&diff_config.compliance, &diff_config.paths.old)
+        .expect("old run resolves");
+    let mut diff = App::new_diff_with_compliance(
+        DiffResult::new(),
+        sbom.clone(),
+        sbom,
+        &raw,
+        &raw,
+        old_run,
+        new_run,
+    );
+    diff.ensure_compliance_results();
+    assert_eq!(
+        envelope_of(
+            &diff
+                .data
+                .new_compliance_results
+                .clone()
+                .expect("diff results")
+        ),
+        validate_json,
+        "the diff TUI must judge deadline mode as validate does"
+    );
+
+    // Every PQC input took effect, so the comparison is not vacuous.
+    let pqc_result = result(&view_results, ComplianceLevel::NistPqc);
+    assert!(
+        rules(pqc_result, "SBOM-PQC-PROTO-003")
+            .iter()
+            .all(|v| v.severity == ViolationSeverity::Error),
+        "the federal TLS 1.3 deadline (2030-01-02) has passed"
+    );
+    assert!(!rules(pqc_result, "SBOM-PQC-PROTO-003").is_empty());
+    let cnsa_sources: Vec<&str> = result(&view_results, ComplianceLevel::Cnsa2)
+        .violations
+        .iter()
+        .filter_map(|v| v.deadline.as_ref().map(|d| d.source.as_str()))
+        .collect();
+    assert!(
+        !cnsa_sources.is_empty()
+            && cnsa_sources
+                .iter()
+                .all(|s| *s == "CNSA 2.0 timeline: traditional networking equipment"),
+        "{cnsa_sources:?}"
+    );
+    assert!(
+        result(&view_results, ComplianceLevel::CraPhase2)
+            .violations
+            .iter()
+            .all(|v| v.deadline.is_none()),
+        "no other standard reads the PQC inputs"
     );
 }

@@ -284,7 +284,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "NistPqc",
-              "id": "IR 8547 ipd",
+              "id": "IR 8547",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             },
             {
@@ -293,7 +293,7 @@ source: tests/compliance_snapshots.rs
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
           ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
           "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
@@ -310,7 +310,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "NistPqc",
-              "id": "IR 8547 ipd",
+              "id": "IR 8547",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             },
             {
@@ -319,7 +319,7 @@ source: tests/compliance_snapshots.rs
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
           ],
-          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 ipd (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+          "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
           "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
         },
         {
@@ -473,7 +473,7 @@ source: tests/compliance_snapshots.rs
             },
             {
               "standard": "NistPqc",
-              "id": "IR 8547 ipd",
+              "id": "IR 8547",
               "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
             }
           ]

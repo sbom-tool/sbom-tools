@@ -88,10 +88,75 @@ identity.
 | `component_id` | string | Canonical id of the offending component. Absent for document-level and aggregate findings. |
 | `finding_detail` | string | What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite (see [Uniqueness](#finding-identity)). Absent when the rule reports at most one finding per subject. |
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
+| `deadline` | string | `YYYY-MM-DD`. Under `--pqc-mode deadline`, the migration milestone a `cnsa2` or `pqc` finding is judged against: the last day before its severity rises, or, for an error, the last day the algorithm was allowed (see [PQC deadline mode](#pqc-deadline-mode)). Absent in readiness mode and for a finding no schedule dates. |
+| `deadline_source` | string | The schedule that sets `deadline`, e.g. `NIST IR 8547 Table 4`. Present exactly when `deadline` is. |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
 | `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Every check is its own SARIF rule, so this equals `rule_id` (until v0.4.0 several `rule_id`s shared one). |
 | `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
+
+## PQC deadline mode
+
+`cnsa2` and `pqc` judge quantum-vulnerable cryptography in one of two modes,
+set with `--pqc-mode`:
+
+- `readiness` (the default) is today's strict view: every quantum-vulnerable
+  algorithm is an error, whatever the date.
+- `deadline` judges each finding by its migration schedule at `--as-of` (or
+  today) and records the deadline on it. The severity rises as the
+  milestones pass.
+
+```sh
+sbom-tools validate cbom.json --standard pqc --pqc-mode deadline --as-of 2031-06-01 -o json |
+  jq -c '.results[].violations[] | {rule_id, severity, deadline, deadline_source}'
+```
+
+Under `pqc`, NIST IR 8547 (final, October 2026) sets the schedule:
+
+| Finding | Until | Then | After |
+|---|---|---|---|
+| A quantum-vulnerable scheme of Table 2 or 4 (ECDSA, EdDSA, RSA, finite-field and elliptic-curve DH and MQV) at 112 bits of classical security or more, or of unknown strength (`SBOM-PQC-001`, `-CERT-001`, `-PROTO-002`) | Info through 2030 (deprecated after 2030) | Warning through 2035 (disallowed after 2035) | Error from 2036 |
+| SHA-1 outside a signature (`SBOM-PQC-005`, `-PROTO-002`; Table 8, note 4) | Warning through 2030 (deprecated now) | Error from 2031 | |
+| A symmetric key of 112 to 127 bits (`SBOM-PQC-KEY-001`; §4.1.3) | Info through 2030 | Error from 2031 | |
+
+`--pqc-profile federal` applies the deadlines of federal high value assets
+and high impact systems instead (EO 14412 §4(b), OMB M-26-15): post-quantum
+key establishment by 2030-12-31 and post-quantum signatures by 2031-12-31,
+each a warning until its deadline and an error after. When the SBOM does
+not say whether an algorithm signs or establishes keys (RSA without a
+`primitive`), the earlier deadline applies. The profile also reports TLS 1.2
+under `SBOM-PQC-PROTO-003`, since agencies support TLS 1.3 by 2030-01-02
+(EO 14306, OMB M-26-15): a warning until then, an error after. The default
+profile, `nist`, sets no TLS deadline.
+
+Under `cnsa2`, NSA's CNSA 2.0 timeline sets the schedule for what CNSA 1.0
+still allows: ECDH or ECDSA over P-384, RSA or DH of 3072 bits or more, and
+TLS 1.2 (`SBOM-CNSA2-ALG-006`, `-CERT-001`, `-PROTO-001`, `-PROTO-002`).
+Such a finding is info until its equipment category is to support and
+prefer CNSA 2.0, a warning until the category is to use CNSA 2.0
+exclusively, and an error after. `--cnsa-category` picks the category;
+without it the strictest applies, software and firmware signing:
+
+| `--cnsa-category` | Supported and preferred by | Exclusive use by |
+|---|---|---|
+| `software-signing` (the default timeline) | 2025 | 2030 |
+| `web-cloud` (web browsers, servers and cloud services) | 2025 | 2033 |
+| `networking` (traditional networking equipment, such as VPNs and routers) | 2026 | 2030 |
+| `operating-systems` | 2027 | 2033 |
+| `niche` (constrained devices, large PKI systems) | 2030 | 2033 |
+| `custom-legacy` (custom applications and legacy equipment) | — (warning until updated or replaced) | 2033 |
+
+A year is read as its last day: "by 2030" and "after 2030" both turn on
+2030-12-31. A certificate is judged on the later of the evaluation date and
+its `notValidAfter`, since it keeps its signature until it expires.
+
+A finding no schedule dates keeps its readiness severity, carries no
+deadline, and says why in its message: an algorithm already disallowed with
+no transition (MD5, DES, RSA below 2048 bits, SHA-1 signatures), one IR 8547
+does not list (DSA, SM2), one that is not CNSA 1.0 either, ECB mode, and
+every finding about evidence the checks cannot read (an unidentified
+algorithm, a missing `nistQuantumSecurityLevel`, an empty inventory).
+`--pqc-profile` and `--cnsa-category` need `--pqc-mode deadline`.
 
 ## Passed checks
 
@@ -353,7 +418,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
 | `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
 | `results[].partialFingerprints` | `sbomToolsFinding/v1`: the full SHA-256 of the `finding_key` (64 hex digits). `primaryLocationLineHash`: its first 16 hex digits and `:1`. |
-| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, and `affected` and `total` when the violation counts items. |
+| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, `affected` and `total` when the violation counts items, and `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding. |
 
 Both fingerprints depend on the finding identity alone, never on a line
 number or the message, so moving, reformatting or reordering the SBOM keeps

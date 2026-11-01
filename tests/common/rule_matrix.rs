@@ -8,7 +8,8 @@
 //!    the same normalization path a production `validate` run does — not a
 //!    hand-built `NormalizedSbom` that may drift from what parsers actually
 //!    produce. A fixture can also carry a CRA sidecar, attached to the
-//!    checker like `--cra-sidecar`.
+//!    checker like `--cra-sidecar`, and a PQC deadline mode
+//!    ([`DeadlineFixture`]), set like `--pqc-mode deadline --as-of`.
 //!
 //! 2. **A format axis** ([`Encoding`], tests/common/rule_matrix_encodings.rs):
 //!    one fixture renders as CycloneDX JSON, CycloneDX XML, SPDX 2.3 JSON and
@@ -67,8 +68,8 @@ pub use encodings::{Encoding, Rendered};
 use sbom_tools::model::{CraSidecarMetadata, EolInfo, EolStatus, NormalizedSbom};
 use sbom_tools::parsers::{FormatDetector, parse_sbom_str};
 use sbom_tools::quality::{
-    ComplianceLevel, ComplianceResult, PassedCheck, RuleKind, Violation, ViolationSeverity,
-    rule_kind, rule_meta, rules_for_level,
+    CnsaCategory, ComplianceLevel, ComplianceResult, PassedCheck, PqcMode, PqcProfile, RuleKind,
+    Violation, ViolationSeverity, rule_kind, rule_meta, rules_for_level,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -403,6 +404,8 @@ pub struct CryptoAssetFixture {
     pub algorithm: Option<AlgorithmFixture>,
     /// `certificateProperties.signatureAlgorithmRef`.
     pub signature_algorithm_ref: Option<String>,
+    /// `certificateProperties.notValidAfter` (RFC 3339).
+    pub not_valid_after: Option<String>,
     /// `relatedCryptoMaterialProperties` as `(type, size in bits)`.
     pub material: Option<(String, Option<u32>)>,
     pub protocol: Option<ProtocolFixture>,
@@ -417,6 +420,7 @@ impl CryptoAssetFixture {
             oid: None,
             algorithm: None,
             signature_algorithm_ref: None,
+            not_valid_after: None,
             material: None,
             protocol: None,
         }
@@ -484,6 +488,13 @@ impl CryptoAssetFixture {
         self.protocol
             .as_mut()
             .unwrap_or_else(|| panic!("crypto asset {bom_ref:?} is not a protocol"))
+    }
+
+    /// Set a certificate's `notValidAfter` (RFC 3339).
+    #[must_use]
+    pub fn valid_until(mut self, not_valid_after: &str) -> Self {
+        self.not_valid_after = Some(not_valid_after.to_string());
+        self
     }
 
     /// Set the component name (defaults to the bom-ref).
@@ -679,6 +690,51 @@ pub struct SbomFixture {
     /// CRA sidecar metadata, attached to the checker by [`check`] the way
     /// `validate --cra-sidecar` attaches it.
     pub sidecar: Option<CraSidecarMetadata>,
+    /// The PQC deadline mode the checker judges by, the way `validate
+    /// --pqc-mode deadline` (with `--pqc-profile`, `--cnsa-category` and
+    /// `--as-of`) sets it; `None` keeps the readiness default at the pinned
+    /// test clock.
+    pub deadline: Option<DeadlineFixture>,
+}
+
+/// `validate --pqc-mode deadline` for a [`SbomFixture`]: the NIST PQC
+/// profile, the CNSA 2.0 category and the instant judged at.
+#[derive(Debug, Clone, Copy)]
+pub struct DeadlineFixture {
+    pub profile: PqcProfile,
+    pub cnsa_category: Option<CnsaCategory>,
+    /// RFC 3339 evaluation instant (`--as-of`).
+    pub as_of: &'static str,
+}
+
+impl DeadlineFixture {
+    /// Deadline mode under NIST IR 8547 at `as_of`, the strictest CNSA 2.0
+    /// category.
+    pub const fn nist(as_of: &'static str) -> Self {
+        Self {
+            profile: PqcProfile::Nist,
+            cnsa_category: None,
+            as_of,
+        }
+    }
+
+    /// Deadline mode with the federal deadlines at `as_of`.
+    pub const fn federal(as_of: &'static str) -> Self {
+        Self {
+            profile: PqcProfile::Federal,
+            cnsa_category: None,
+            as_of,
+        }
+    }
+
+    /// Deadline mode under the CNSA 2.0 timeline of `category` at `as_of`.
+    pub const fn cnsa(category: CnsaCategory, as_of: &'static str) -> Self {
+        Self {
+            profile: PqcProfile::Nist,
+            cnsa_category: Some(category),
+            as_of,
+        }
+    }
 }
 
 impl Default for SbomFixture {
@@ -706,6 +762,7 @@ impl Default for SbomFixture {
             signature: None,
             undeclared_spdx3_profiles: Vec::new(),
             sidecar: None,
+            deadline: None,
         }
     }
 }
@@ -828,6 +885,18 @@ fn check_sbom(
     let mut checker = clock::checker(level);
     if let Some(sidecar) = &fixture.sidecar {
         checker = checker.with_sidecar(sidecar.clone());
+    }
+    if let Some(deadline) = &fixture.deadline {
+        let as_of = chrono::DateTime::parse_from_rfc3339(deadline.as_of)
+            .expect("DeadlineFixture::as_of is RFC 3339")
+            .with_timezone(&chrono::Utc);
+        checker = checker
+            .with_as_of(as_of)
+            .with_pqc_mode(PqcMode::Deadline)
+            .with_pqc_profile(deadline.profile);
+        if let Some(category) = deadline.cnsa_category {
+            checker = checker.with_cnsa_category(category);
+        }
     }
     checker.check(sbom)
 }

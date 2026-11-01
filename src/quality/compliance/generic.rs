@@ -107,6 +107,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -135,6 +136,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -151,6 +153,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -176,6 +179,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: Some(email.clone()),
+                        deadline: None,
                     });
                 }
             }
@@ -200,6 +204,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -215,6 +220,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -255,6 +261,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -270,6 +277,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -288,6 +296,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -314,6 +323,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -351,6 +361,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -377,6 +388,7 @@ impl ComplianceChecker {
                             standard_refs: Vec::new(),
                             remediation: None,
                             finding_detail: None,
+                            deadline: None,
                         });
             }
         }
@@ -412,6 +424,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -426,6 +439,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -447,6 +461,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -483,6 +498,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -506,6 +522,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -524,6 +541,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -542,6 +560,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -570,6 +589,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -605,6 +625,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -637,6 +658,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
     }
@@ -734,6 +756,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -795,6 +818,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -873,6 +897,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -940,6 +965,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -962,6 +988,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
 
@@ -1018,6 +1045,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
@@ -1061,6 +1089,7 @@ impl ComplianceChecker {
                             standard_refs: Vec::new(),
                             remediation: None,
                             finding_detail: None,
+                            deadline: None,
                         });
                     }
                 }
@@ -1085,6 +1114,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -1146,6 +1176,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             } else if has_multiple_components {
                 // Edges exist — check the graph is more than a token gesture.
@@ -1192,6 +1223,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
 
@@ -1232,6 +1264,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: None,
+                        deadline: None,
                     });
                 }
             }
@@ -1263,6 +1296,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -1298,6 +1332,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -1343,6 +1378,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -1378,6 +1414,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: Some(vuln.id.clone()),
+                    deadline: None,
                 });
             }
 
@@ -1411,6 +1448,7 @@ impl ComplianceChecker {
                         standard_refs: Vec::new(),
                         remediation: None,
                         finding_detail: Some(vuln.id.clone()),
+                        deadline: None,
                     });
             }
         }
@@ -1456,6 +1494,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
             // A version newer than any this tool reads (CycloneDX 2.0 is
@@ -1476,6 +1515,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
             _ => {}
@@ -1498,6 +1538,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }
@@ -1531,6 +1572,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1548,6 +1590,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             });
         }
 
@@ -1583,6 +1626,7 @@ impl ComplianceChecker {
                     standard_refs: Vec::new(),
                     remediation: None,
                     finding_detail: None,
+                    deadline: None,
                 });
             }
         }

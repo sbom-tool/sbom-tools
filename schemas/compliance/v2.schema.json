@@ -82,6 +82,8 @@
         "component_id": {"type": "string", "description": "Canonical id of the offending component; absent for document-level and aggregate findings."},
         "finding_detail": {"type": "string", "description": "What tells this finding apart from the rule's other findings on the same subject: a value from the SBOM, such as the vulnerability id or the cipher suite, numbered (`#2`, `#3`, …) where the SBOM lists the entry twice. Absent when the rule reports at most one finding per subject."},
         "counts": {"$ref": "#/$defs/violation_counts"},
+        "deadline": {"type": "string", "format": "date", "description": "Under --pqc-mode deadline, the migration milestone a cnsa2 or pqc finding is judged against: the last day before its severity rises, or for an error the last day the algorithm was allowed. Absent in readiness mode and for a finding no schedule dates; present exactly when `deadline_source` is."},
+        "deadline_source": {"type": "string", "minLength": 1, "description": "The schedule that sets `deadline`, e.g. `NIST IR 8547 Table 4`. Present exactly when `deadline` is."},
         "requirement": {"type": "string"},
         "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key."},
         "sarif_rule_id": {"type": "string", "minLength": 1, "description": "Rule id the SARIF output reports for this violation."},

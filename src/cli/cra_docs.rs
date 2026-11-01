@@ -47,12 +47,14 @@ pub fn run_cra_docs(
         cra_product_class,
         None,
         false,
+        super::PqcOptions::default(),
     )
 }
 
-/// [`run_cra_docs`] with an explicit overwrite decision and evaluation
-/// clock (`--as-of`, judged like `validate --as-of`; the wall clock when
-/// `None`).
+/// [`run_cra_docs`] with an explicit overwrite decision, evaluation clock
+/// (`--as-of`, judged like `validate --as-of`; the wall clock when `None`)
+/// and the shared PQC flags (`pqc`), which the dossier's CRA check does not
+/// read but which are held to the rules every command applies.
 ///
 /// The generated dossier is a *starting point* the operator completes by
 /// hand (`_TBD_` placeholders), so a re-run must not silently clobber those
@@ -66,6 +68,7 @@ pub fn run_cra_docs_with_force(
     cra_product_class: Option<String>,
     as_of: Option<&str>,
     force: bool,
+    pqc: super::PqcOptions,
 ) -> Result<()> {
     if !force {
         let existing: Vec<String> = DOSSIER_FILES
@@ -92,6 +95,7 @@ pub fn run_cra_docs_with_force(
         cra_sidecar_path.as_deref(),
         cra_product_class.as_deref(),
         as_of,
+        pqc,
     )?;
 
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
@@ -655,8 +659,16 @@ mod tests {
         );
 
         // --force overwrites.
-        run_cra_docs_with_force(sbom_path, out.clone(), None, None, None, true)
-            .expect("forced rerun succeeds");
+        run_cra_docs_with_force(
+            sbom_path,
+            out.clone(),
+            None,
+            None,
+            None,
+            true,
+            crate::cli::PqcOptions::default(),
+        )
+        .expect("forced rerun succeeds");
         assert_ne!(std::fs::read_to_string(&doc).unwrap(), "HAND-EDITED");
     }
 

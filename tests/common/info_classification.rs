@@ -197,6 +197,39 @@ pub const INFO_FINDINGS: &[(&str, &str)] = &[
         "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
         "advice: training data involves personal data; document the GDPR interaction (Warning for a high-risk system)",
     ),
+    // ── PQC deadline mode (`--pqc-mode deadline`; Error in readiness) ────
+    (
+        "SBOM-PQC-001",
+        "advice: a quantum-vulnerable algorithm to migrate; Info only under --pqc-mode deadline before NIST IR 8547 deprecates it after 2030",
+    ),
+    (
+        "SBOM-PQC-CERT-001",
+        "advice: a certificate signed with a quantum-vulnerable algorithm; Info only under --pqc-mode deadline while it expires before NIST IR 8547's 2030 deprecation",
+    ),
+    (
+        "SBOM-PQC-PROTO-002",
+        "advice: a protocol that negotiates quantum-vulnerable algorithms; Info only under --pqc-mode deadline before NIST IR 8547 deprecates them after 2030",
+    ),
+    (
+        "SBOM-PQC-KEY-001",
+        "advice: a 112-bit symmetric key; Info only under --pqc-mode deadline before NIST IR 8547 §4.1.3 disallows the 112-bit level after 2030",
+    ),
+    (
+        "SBOM-CNSA2-ALG-006",
+        "advice: a CNSA 1.0 algorithm to migrate; Info only under --pqc-mode deadline before its CNSA 2.0 category is to support and prefer CNSA 2.0",
+    ),
+    (
+        "SBOM-CNSA2-CERT-001",
+        "advice: a certificate signed with a CNSA 1.0 algorithm; Info only under --pqc-mode deadline before its CNSA 2.0 category is to support and prefer CNSA 2.0",
+    ),
+    (
+        "SBOM-CNSA2-PROTO-001",
+        "advice: TLS 1.2, which CNSA 1.0 allows; Info only under --pqc-mode deadline before its CNSA 2.0 category is to support and prefer CNSA 2.0",
+    ),
+    (
+        "SBOM-CNSA2-PROTO-002",
+        "advice: a protocol that offers CNSA 1.0 algorithms; Info only under --pqc-mode deadline before its CNSA 2.0 category is to support and prefer CNSA 2.0",
+    ),
     // ── BSI/G7 SBOM-for-AI readiness ─────────────────────────────────────
     ("SBOM-BSIAI-META-SIGNATURE", "gap: no document signature"),
     (

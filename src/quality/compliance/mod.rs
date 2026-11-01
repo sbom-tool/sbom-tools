@@ -30,6 +30,7 @@ mod finding;
 mod fsct;
 mod generic;
 mod pci_dss;
+mod pqc_calendar;
 mod registry;
 mod run_config;
 mod selector;
@@ -47,6 +48,8 @@ pub use finding::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,
     finding_key, finding_subject, standard_key,
 };
+use pqc_calendar::Calendar;
+pub use pqc_calendar::{CnsaCategory, Deadline, PqcMode, PqcProfile};
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS,
     FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice, NTIA_SARIF_RULE_IDS, PASS_RULE_IDS,
@@ -580,6 +583,15 @@ pub struct Violation {
     /// Serialized as `counts`, omitted when `None`; old payloads without the
     /// field deserialize to `None`.
     pub counts: Option<ViolationCounts>,
+    /// When the algorithm a crypto finding is about must be replaced: the
+    /// milestone [`PqcMode::Deadline`] judged it against and the schedule
+    /// that sets it. `None` in readiness mode (the default), for a finding
+    /// no schedule dates, and for every finding outside CNSA 2.0 and NIST
+    /// PQC.
+    ///
+    /// Serialized as `deadline` (`YYYY-MM-DD`) and `deadline_source`, both
+    /// omitted when `None`; old payloads without them deserialize to `None`.
+    pub deadline: Option<Deadline>,
     /// Standard/requirement being violated
     pub requirement: String,
     /// Stable internal rule key, set at the check site, indexing into
@@ -652,6 +664,10 @@ struct ViolationPayload {
     finding_detail: Option<String>,
     #[serde(default)]
     counts: Option<ViolationCounts>,
+    #[serde(default)]
+    deadline: Option<chrono::NaiveDate>,
+    #[serde(default)]
+    deadline_source: Option<String>,
     requirement: String,
     #[serde(default)]
     rule_id: Option<String>,
@@ -675,6 +691,11 @@ impl<'de> Deserialize<'de> for Violation {
             component_id: payload.component_id,
             finding_detail: payload.finding_detail,
             counts: payload.counts,
+            // A deadline is its date and its source together.
+            deadline: payload
+                .deadline
+                .zip(payload.deadline_source)
+                .map(|(date, source)| Deadline { date, source }),
             requirement: payload.requirement,
             // Unknown ids (from newer/older registries) collapse to the
             // generic default rather than failing deserialization; the
@@ -698,9 +719,11 @@ impl Serialize for Violation {
     /// order; `standard_refs` is skipped when empty, and `component_id` /
     /// `finding_detail` / `counts` are skipped when `None`, as their
     /// serde-derive `skip_serializing_if = "Option::is_none"` equivalents
-    /// would be. `remediation` is always written (see
-    /// [`Violation::remediation_guidance`]), followed by the derived
-    /// `help_uri`, which is skipped when no standard reference has a URL.
+    /// would be. A `deadline` is written as two fields, `deadline` and
+    /// `deadline_source`, both skipped when `None`. `remediation` is always
+    /// written (see [`Violation::remediation_guidance`]), followed by the
+    /// derived `help_uri`, which is skipped when no standard reference has a
+    /// URL.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -717,6 +740,7 @@ impl Serialize for Violation {
                 + usize::from(has_component_id)
                 + usize::from(has_finding_detail)
                 + usize::from(has_counts)
+                + 2 * usize::from(self.deadline.is_some())
                 + usize::from(help_uri.is_some()),
         )?;
         state.serialize_field("severity", &self.severity)?;
@@ -737,6 +761,13 @@ impl Serialize for Violation {
             state.serialize_field("counts", &self.counts)?;
         } else {
             state.skip_field("counts")?;
+        }
+        if let Some(deadline) = &self.deadline {
+            state.serialize_field("deadline", &deadline.date)?;
+            state.serialize_field("deadline_source", &deadline.source)?;
+        } else {
+            state.skip_field("deadline")?;
+            state.skip_field("deadline_source")?;
         }
         state.serialize_field("requirement", &self.requirement)?;
         state.serialize_field("rule_id", self.rule_id)?;
@@ -1364,6 +1395,15 @@ pub struct ComplianceChecker {
     /// tests) so deadline-sensitive checks (Art. 14 readiness, SBOM age,
     /// EUCC certificate expiry) are reproducible across runs.
     as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// How CNSA 2.0 and NIST PQC judge quantum-vulnerable cryptography
+    /// (CLI `--pqc-mode`); readiness unless set.
+    pqc_mode: PqcMode,
+    /// Whose deadlines deadline mode applies under NIST PQC (CLI
+    /// `--pqc-profile`).
+    pqc_profile: PqcProfile,
+    /// The CNSA 2.0 equipment category deadline mode applies (CLI
+    /// `--cnsa-category`); `None` means the strictest.
+    cnsa_category: Option<CnsaCategory>,
 }
 
 impl ComplianceChecker {
@@ -1375,6 +1415,9 @@ impl ComplianceChecker {
             sidecar: None,
             product_class: None,
             as_of: None,
+            pqc_mode: PqcMode::Readiness,
+            pqc_profile: PqcProfile::Nist,
+            cnsa_category: None,
         }
     }
 
@@ -1391,6 +1434,54 @@ impl ComplianceChecker {
     /// The evaluation instant: the pinned `as_of` clock, or the wall clock.
     pub(crate) fn now(&self) -> chrono::DateTime<chrono::Utc> {
         self.as_of.unwrap_or_else(chrono::Utc::now)
+    }
+
+    /// Judge quantum-vulnerable cryptography under CNSA 2.0 and NIST PQC by
+    /// `mode` (CLI `--pqc-mode`). [`PqcMode::Readiness`], the default,
+    /// reports every quantum-vulnerable algorithm as an Error;
+    /// [`PqcMode::Deadline`] judges each by its migration deadline at the
+    /// evaluation instant (see [`Self::with_as_of`]) and records the
+    /// deadline on the finding ([`Violation::deadline`]).
+    #[must_use]
+    pub const fn with_pqc_mode(mut self, mode: PqcMode) -> Self {
+        self.pqc_mode = mode;
+        self
+    }
+
+    /// The deadlines [`PqcMode::Deadline`] applies under NIST PQC (CLI
+    /// `--pqc-profile`): NIST IR 8547's, the default, or with
+    /// [`PqcProfile::Federal`] the federal ones of EO 14412 and OMB
+    /// M-26-15 as well. Readiness mode ignores it.
+    #[must_use]
+    pub const fn with_pqc_profile(mut self, profile: PqcProfile) -> Self {
+        self.pqc_profile = profile;
+        self
+    }
+
+    /// The CNSA 2.0 equipment category whose timeline [`PqcMode::Deadline`]
+    /// applies under CNSA 2.0 (CLI `--cnsa-category`). Unset, the strictest
+    /// applies. Readiness mode ignores it.
+    #[must_use]
+    pub const fn with_cnsa_category(mut self, category: CnsaCategory) -> Self {
+        self.cnsa_category = Some(category);
+        self
+    }
+
+    /// How CNSA 2.0 and NIST PQC judge quantum-vulnerable cryptography.
+    #[must_use]
+    pub const fn pqc_mode(&self) -> PqcMode {
+        self.pqc_mode
+    }
+
+    /// The calendar the crypto checks judge by: `None` in readiness mode.
+    pub(crate) fn pqc_calendar(&self) -> Option<Calendar> {
+        (self.pqc_mode == PqcMode::Deadline).then(|| {
+            Calendar::new(
+                self.pqc_profile,
+                self.cnsa_category,
+                self.now().date_naive(),
+            )
+        })
     }
 
     /// Attach CRA sidecar metadata to supplement SBOM-level fields.
@@ -2654,6 +2745,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         let errors_only = ComplianceResult::new(
             ComplianceLevel::NtiaMinimum,
@@ -2842,6 +2934,7 @@ mod tests {
                 .collect(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         let json = serde_json::to_value(&hardware).expect("violation serializes");
         assert!(
@@ -2921,6 +3014,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         let guidance = unstamped("SBOM-CRA-COMPONENT-SUPPLIER")
             .remediation_guidance()
@@ -3111,6 +3205,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             },
             Violation {
                 severity: ViolationSeverity::Warning,
@@ -3124,6 +3219,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             },
             Violation {
                 severity: ViolationSeverity::Info,
@@ -3137,6 +3233,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                deadline: None,
             },
         ];
 
@@ -4253,6 +4350,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         v.registry_standard_refs()
     }
@@ -4304,6 +4402,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            deadline: None,
         };
         let guidance = v.remediation_guidance();
         assert!(

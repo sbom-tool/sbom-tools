@@ -100,25 +100,52 @@ pub(crate) fn load_cra_sidecar(
     }
 }
 
+/// How the CNSA 2.0 and NIST PQC checks of a run judge quantum-vulnerable
+/// cryptography: the shared `--pqc-mode`, `--pqc-profile` and
+/// `--cnsa-category` flags.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PqcOptions {
+    /// `--pqc-mode`; readiness unless set.
+    pub mode: crate::quality::PqcMode,
+    /// `--pqc-profile`, when given.
+    pub profile: Option<crate::quality::PqcProfile>,
+    /// `--cnsa-category`, when given.
+    pub cnsa_category: Option<crate::quality::CnsaCategory>,
+}
+
 /// The compliance inputs of a run, parsed strictly from the flags every
-/// compliance-checking command shares: `--cra-product-class` and `--as-of`.
-/// `diff` judges both of its SBOMs with these; the commands that judge one
-/// SBOM add its CRA sidecar with [`compliance_run_config_for`].
+/// compliance-checking command shares: `--cra-product-class`, `--as-of` and
+/// the PQC flags (`pqc`). `diff` judges both of its SBOMs with these; the
+/// commands that judge one SBOM add its CRA sidecar with
+/// [`compliance_run_config_for`].
 ///
 /// # Errors
 ///
-/// An unknown product class or an unparseable `--as-of` (usage errors,
-/// exit 3).
+/// An unknown product class, an unparseable `--as-of`, or `--pqc-profile` or
+/// `--cnsa-category` without `--pqc-mode deadline`, which only that mode
+/// reads (usage errors, exit 3).
 pub fn compliance_run_config(
     cra_product_class: Option<&str>,
     as_of: Option<&str>,
+    pqc: PqcOptions,
 ) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
-    let mut config = crate::quality::ComplianceRunConfig::new();
+    anyhow::ensure!(
+        pqc.mode == crate::quality::PqcMode::Deadline
+            || (pqc.profile.is_none() && pqc.cnsa_category.is_none()),
+        "--pqc-profile and --cnsa-category apply only with --pqc-mode deadline"
+    );
+    let mut config = crate::quality::ComplianceRunConfig::new().with_pqc_mode(pqc.mode);
     if let Some(as_of) = as_of.map(parse_as_of).transpose()? {
         config = config.with_as_of(as_of);
     }
     if let Some(class) = parse_cra_product_class(cra_product_class)? {
         config = config.with_product_class(class);
+    }
+    if let Some(profile) = pqc.profile {
+        config = config.with_pqc_profile(profile);
+    }
+    if let Some(category) = pqc.cnsa_category {
+        config = config.with_cnsa_category(category);
     }
     Ok(config)
 }
@@ -135,8 +162,9 @@ pub(crate) fn compliance_run_config_for(
     explicit_sidecar: Option<&std::path::Path>,
     cra_product_class: Option<&str>,
     as_of: Option<&str>,
+    pqc: PqcOptions,
 ) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
-    let mut config = compliance_run_config(cra_product_class, as_of)?;
+    let mut config = compliance_run_config(cra_product_class, as_of, pqc)?;
     if let Some(sidecar) = load_cra_sidecar(explicit_sidecar, sbom_path)? {
         config = config.with_sidecar(sidecar);
     }
