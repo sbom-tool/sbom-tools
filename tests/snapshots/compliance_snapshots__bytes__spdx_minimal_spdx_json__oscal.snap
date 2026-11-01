@@ -332,7 +332,7 @@ source: tests/compliance_snapshots.rs
         "description": "Validation results for CISA Framing Software Component Transparency (3rd ed.), derived only from the supplied SBOM.",
         "findings": [
           {
-            "description": "Overall verdict for CISA Framing Software Component Transparency (3rd ed.): 3 error(s), 2 warning(s), 1 informational finding(s).",
+            "description": "Overall verdict for CISA Framing Software Component Transparency (3rd ed.): 3 error(s), 3 warning(s), 1 informational finding(s).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -378,7 +378,7 @@ source: tests/compliance_snapshots.rs
             "uuid": "9a81d228-93d3-5baa-ac60-1aa69e65c72b"
           },
           {
-            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express",
             "related-observations": [
               {
                 "observation-uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
@@ -412,10 +412,27 @@ source: tests/compliance_snapshots.rs
             "uuid": "088e6bb5-7411-5892-8d36-fdb8b0ec1edb"
           },
           {
-            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
             "related-observations": [
               {
                 "observation-uuid": "62f16653-5544-579d-a7df-15016613a890"
+              }
+            ],
+            "target": {
+              "status": {
+                "state": "not-satisfied"
+              },
+              "target-id": "sbom-fsct-hash-primary-sha2",
+              "type": "objective-id"
+            },
+            "title": "SBOM-FSCT-HASH-PRIMARY-SHA2",
+            "uuid": "e05493c3-b5d5-5193-9dd8-d4b7a7a015ec"
+          },
+          {
+            "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "related-observations": [
+              {
+                "observation-uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
               }
             ],
             "target": {
@@ -426,13 +443,13 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-COMPLETENESS",
-            "uuid": "e05493c3-b5d5-5193-9dd8-d4b7a7a015ec"
+            "uuid": "87da1475-e021-5c68-9347-7b11987afaca"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
             "related-observations": [
               {
-                "observation-uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
+                "observation-uuid": "84b5bc40-7d1a-5dff-8c02-99ef53c57d1e"
               }
             ],
             "target": {
@@ -443,9 +460,39 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-DYNAMIC-DEPS",
-            "uuid": "87da1475-e021-5c68-9347-7b11987afaca"
+            "uuid": "16d7bd9a-1a83-5845-897e-ffd7b8acf3fb"
           }
         ],
+        "local-definitions": {
+          "components": [
+            {
+              "description": "A component listed in the assessed SBOM.",
+              "props": [
+                {
+                  "name": "version",
+                  "value": "4.17.21"
+                },
+                {
+                  "name": "component-id",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "pkg:npm/lodash@4.17.21"
+                },
+                {
+                  "name": "component-type",
+                  "ns": "https://sbom.tools/ns/oscal",
+                  "value": "library"
+                }
+              ],
+              "status": {
+                "remarks": "The SBOM does not state the component's operational status.",
+                "state": "other"
+              },
+              "title": "lodash 4.17.21",
+              "type": "software",
+              "uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5"
+            }
+          ]
+        },
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -531,7 +578,7 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
-            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express",
             "methods": [
               "EXAMINE"
             ],
@@ -613,6 +660,57 @@ source: tests/compliance_snapshots.rs
           },
           {
             "collected": "2026-10-12T00:00:00Z",
+            "description": "\\[CISA FSCT 3e §2.2.2.5\\] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
+            "methods": [
+              "EXAMINE"
+            ],
+            "props": [
+              {
+                "name": "severity",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "warning"
+              },
+              {
+                "name": "standard-reference",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)"
+              },
+              {
+                "name": "rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-FSCT-HASH-PRIMARY-SHA2"
+              },
+              {
+                "name": "sarif-rule-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM-FSCT-HASH-PRIMARY-SHA2"
+              },
+              {
+                "name": "sbom-element",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "lodash"
+              }
+            ],
+            "subjects": [
+              {
+                "subject-uuid": "43a9a74e-5c5a-5508-9705-f3e0c17d84a8",
+                "title": "test-app (SPDX 2.3 SBOM)",
+                "type": "resource"
+              },
+              {
+                "subject-uuid": "1dba761d-d7ef-5034-8c82-3b07ded59fa5",
+                "title": "lodash 4.17.21",
+                "type": "component"
+              }
+            ],
+            "title": "SBOM-FSCT-HASH-PRIMARY-SHA2",
+            "types": [
+              "discovery"
+            ],
+            "uuid": "62f16653-5544-579d-a7df-15016613a890"
+          },
+          {
+            "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
             "methods": [
               "EXAMINE"
@@ -650,7 +748,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "62f16653-5544-579d-a7df-15016613a890"
+            "uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
@@ -691,7 +789,7 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
+            "uuid": "84b5bc40-7d1a-5dff-8c02-99ef53c57d1e"
           }
         ],
         "props": [
@@ -723,7 +821,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "warning-count",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "2"
+            "value": "3"
           },
           {
             "name": "info-count",
@@ -738,7 +836,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "16"
+            "value": "14"
           }
         ],
         "reviewed-controls": {
@@ -751,9 +849,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CISA Framing Software Component Transparency (3rd ed.)",
-        "uuid": "84b5bc40-7d1a-5dff-8c02-99ef53c57d1e"
+        "uuid": "e3bcdb09-cd61-55d4-8ca1-298daaccc06d"
       }
     ],
-    "uuid": "16d7bd9a-1a83-5845-897e-ffd7b8acf3fb"
+    "uuid": "3dbe43ee-ff39-59d1-928e-78b9e361dbd8"
   }
 }

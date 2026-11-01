@@ -18,7 +18,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-NTIA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-NTIA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
-[CraPhase1] compliant · E0 W7 I8
+[CraPhase1] compliant · E0 W6 I8
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
   I SBOM-CRA-ART-13-5  - (1/3)
@@ -27,14 +27,13 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
   W SBOM-CRA-ART-14-ENISA  -
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
-[CraPhase2] compliant · E0 W11 I9
+[CraPhase2] compliant · E0 W10 I9
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/3)
@@ -45,7 +44,6 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -55,13 +53,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (1/2)
-[FdaMedicalDevice] NON-COMPLIANT · E2 W2 I3
+[FdaMedicalDevice] NON-COMPLIANT · E2 W1 I3
   E SBOM-FDA-HASH  pkg:generic/example/assistant@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-FDA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-FDA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-FDA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -

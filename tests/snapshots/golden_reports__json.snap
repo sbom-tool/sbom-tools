@@ -78,7 +78,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Identify the manufacturer as an organization creator of the SBOM (Art. 13(16)); manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.manufacturer (name, contact[].email).",
+          "remediation": "Identify the manufacturer (Art. 13(16)): as the manufacturer or supplier of the product component, or as an organization creator of the SBOM; placeholders such as NOASSERTION do not count. manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.component.manufacturer (CycloneDX 1.6+) or metadata.supplier, or metadata.manufacturer for the organization that created the SBOM (name, contact[].email).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {
@@ -1091,7 +1091,7 @@ expression: "render(&JsonReporter::new())"
               "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             }
           ],
-          "remediation": "Identify the manufacturer as an organization creator of the SBOM (Art. 13(16)); manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.manufacturer (name, contact[].email).",
+          "remediation": "Identify the manufacturer (Art. 13(16)): as the manufacturer or supplier of the product component, or as an organization creator of the SBOM; placeholders such as NOASSERTION do not count. manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.component.manufacturer (CycloneDX 1.6+) or metadata.supplier, or metadata.manufacturer for the organization that created the SBOM (name, contact[].email).",
           "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
         },
         {

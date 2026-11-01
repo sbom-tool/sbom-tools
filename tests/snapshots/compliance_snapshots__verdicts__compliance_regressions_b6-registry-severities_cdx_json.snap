@@ -20,7 +20,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-IDENTIFIER  libfoo
   I SBOM-NTIA-ELEMENT-ID  libfoo
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
-[CraPhase1] NON-COMPLIANT · E2 W8 I5
+[CraPhase1] NON-COMPLIANT · E2 W7 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  libfoo
   E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
@@ -28,7 +28,6 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ELEMENT-ID  libfoo
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/2)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -36,7 +35,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
-[CraPhase2] NON-COMPLIANT · E3 W9 I7
+[CraPhase2] NON-COMPLIANT · E3 W8 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  libfoo
   E SBOM-CRA-CREATOR  -
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
@@ -47,7 +46,6 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/2)
@@ -56,14 +54,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
-[FdaMedicalDevice] NON-COMPLIANT · E3 W3 I2
+[FdaMedicalDevice] NON-COMPLIANT · E3 W2 I2
   E SBOM-FDA-CREATOR  -
   E SBOM-FDA-HASH  pkg:generic/example/gateway@3.1.0
   E SBOM-FDA-IDENTIFIER  libfoo
   I SBOM-FDA-ELEMENT-ID  libfoo
   I SBOM-FDA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W4 I2
   E SBOM-SSDF-PS1  -
@@ -145,7 +142,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/example/gateway@3.1.0
 
 with auto-discovered CRA sidecar:
-[CraPhase1 + sidecar] NON-COMPLIANT · E2 W9 I5
+[CraPhase1 + sidecar] NON-COMPLIANT · E2 W8 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  libfoo
   E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
@@ -154,7 +151,6 @@ with auto-discovered CRA sidecar:
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-VIII  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/2)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -162,7 +158,7 @@ with auto-discovered CRA sidecar:
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
-[CraPhase2 + sidecar] NON-COMPLIANT · E3 W11 I6
+[CraPhase2 + sidecar] NON-COMPLIANT · E3 W10 I6
   E SBOM-CRA-ANNEX-I-IDENTIFIER  libfoo
   E SBOM-CRA-CREATOR  -
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
@@ -174,7 +170,6 @@ with auto-discovered CRA sidecar:
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-V  -
   W SBOM-CRA-ANNEX-VIII  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/2)

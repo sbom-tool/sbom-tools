@@ -99,10 +99,10 @@ source: tests/compliance_snapshots.rs
           "finding_key": "bsi|SBOM-BSI-TR-03183-2-5-4|document",
           "severity": "Error",
           "category": "IntegrityInfo",
-          "message": "[BSI TR-03183-2 §5.2.2] 1/3 component(s) carry hashes but none is SHA-512 (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app",
+          "message": "[BSI TR-03183-2 §5.2.2] 2/3 component(s) carry hashes but none is a valid SHA-512 digest (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app, lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
           "element": null,
           "counts": {
-            "affected": 1,
+            "affected": 2,
             "total": 3
           },
           "requirement": "BSI TR-03183-2 §5.2.2: Hash of the deployable component (SHA-512)",
@@ -260,10 +260,10 @@ source: tests/compliance_snapshots.rs
           "finding_key": "eo14028|SBOM-EO14028-INTEGRITY|document",
           "severity": "Warning",
           "category": "IntegrityInfo",
-          "message": "1/3 components missing cryptographic hashes",
+          "message": "2/3 components missing cryptographic hashes; hashes that do not count: lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
           "element": null,
           "counts": {
-            "affected": 1,
+            "affected": 2,
             "total": 3
           },
           "requirement": "EO 14028 §4(e) practice: Component integrity verification",
