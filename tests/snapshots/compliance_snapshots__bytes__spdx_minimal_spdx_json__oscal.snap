@@ -31,6 +31,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "2.3"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "minimal.spdx.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "2"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "rlinks": [
@@ -68,19 +93,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "ntiaminimum-compliance",
+              "target-id": "ntia-compliance",
               "type": "objective-id"
             },
             "title": "NTIA Minimum Elements compliance roll-up",
-            "uuid": "3c3df829-a3d5-5750-8b73-88b74a85c7b3"
+            "uuid": "e917f8f5-c48b-50f4-adf4-b13d404a99d3"
           },
           {
             "description": "Component 'lodash' missing supplier/manufacturer",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "65034028-3201-5dc3-ac61-1bf9fd8d60ee"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f863b422f8675d3b"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "94bda1bf-e912-5580-a3da-1b4cbd975d31"
+              }
+            ],
+            "remarks": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -89,15 +133,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-SUPPLIER",
-            "uuid": "d0fcd556-a251-5a8b-b9b9-67accd9363e1"
+            "uuid": "220b0c10-fcef-5706-a9b1-e2da8509b1c7"
           },
           {
             "description": "Component 'express' missing supplier/manufacturer",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c2e6d62f-5e44-5ec6-b930-22a928ba89f9"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:3ac7f51e13b33edf"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a57b846e-175d-508c-818e-13d6d413e845"
+              }
+            ],
+            "remarks": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. SPDX 2.x: set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -106,7 +169,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-SUPPLIER",
-            "uuid": "e610869d-32e4-5ff7-9328-b8f317b34495"
+            "uuid": "b24b40e6-0c08-5a73-be4b-eca342e74eb3"
           }
         ],
         "local-definitions": {
@@ -169,6 +232,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lodash' missing supplier/manufacturer",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -179,7 +249,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Supplier information"
               },
@@ -197,6 +267,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/lodash@4.17.21"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].supplier"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -215,11 +301,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "65034028-3201-5dc3-ac61-1bf9fd8d60ee"
+            "uuid": "94bda1bf-e912-5580-a3da-1b4cbd975d31"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'express' missing supplier/manufacturer",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -230,7 +323,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Supplier information"
               },
@@ -248,6 +341,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "express"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/express@4.18.2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].supplier"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -266,14 +375,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c2e6d62f-5e44-5ec6-b930-22a928ba89f9"
+            "uuid": "a57b846e-175d-508c-818e-13d6d413e845"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "NtiaMinimum"
+            "value": "ntia"
           },
           {
             "name": "standard-name",
@@ -326,7 +435,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — NTIA Minimum Elements",
-        "uuid": "de5f0b7a-088e-56dc-83ee-deebbaa6788e"
+        "uuid": "7b205af8-3e0f-533c-860f-7aaa457562b0"
       },
       {
         "description": "Validation results for CISA Framing Software Component Transparency (3rd ed.), derived only from the supplied SBOM.",
@@ -341,15 +450,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "CISA Framing Software Component Transparency (3rd ed.) compliance roll-up",
-            "uuid": "534f4ee5-128b-5e78-99b2-0d0397a593c0"
+            "uuid": "43f81c8c-ee04-57c3-88be-e3d2bdaa8834"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:7b4c886ebbfb65d0"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-DIRECT-DEPS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "6e96ebeb-3b90-5be8-8d35-f63a6521ce35"
+              }
+            ],
+            "remarks": "Identify all static, direct dependencies of the Primary Component (or carry an explicit completeness declaration covering their absence), and indicate when the dependency list is incomplete. 'All' is not verifiable from the document alone — the check uses dependency edges from the primary plus the completeness declaration as its evidence. SPDX 2.x: add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -358,15 +486,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-DIRECT-DEPS",
-            "uuid": "7d719f46-acf1-57f6-8eed-af19b5972fa9"
+            "uuid": "5c3f65f4-28ac-5305-bd3c-1c7cad0a1e04"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:d012930a8be22ac4"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-SUPPLIER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "23c1a8b9-40ee-587f-999b-d942968a00f8"
+              }
+            ],
+            "remarks": "Declare the Supplier Name for all components: the upstream supplier's legal-entity name (commercial) or project name (OSS); the domain URL / PURL namespace or an explicit 'unknown' are permitted last resorts. Silent absence fails; an explicit 'unknown' declaration satisfies the letter of the clause. SPDX 2.x: set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\"; a NOASSERTION value is read as absent, so write an unknown supplier as \"Organization: unknown\".",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -375,15 +522,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-SUPPLIER",
-            "uuid": "9a81d228-93d3-5baa-ac60-1aa69e65c72b"
+            "uuid": "afc795fa-a5c1-543c-9d31-be1f9847399d"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2.5\\] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:36df4e88c1e15649"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-HASH|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "1808822c-b6e3-57c6-9e80-d7e7fbb67410"
+              }
+            ],
+            "remarks": "Provide a hash (with its algorithm, for reproducibility) for any component whose hash was provided or can be generated; otherwise indicate it as unknown. Accepted at this tier: MD5, SHA1, and SHA2 families — MD5/SHA1 are no longer recommended and are formally discontinued in 2030. Only author-provided hashes count; tool-enriched hashes are not author evidence. SPDX 2.x: add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -392,15 +558,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-HASH",
-            "uuid": "f09ea2c7-5be5-5d7d-a2f8-1f93627d9091"
+            "uuid": "a156e4e0-1edc-5093-bc2b-794d5f557dfe"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:df83bce274c1f9fd"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-IDENTIFIER-MULTI|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "2d893bc4-13a0-5457-9066-7af78b4a484b"
+              }
+            ],
+            "remarks": "List as many globally unique identifiers as are available for the component. Heuristic: the \\>=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone. SPDX 2.x: add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -409,15 +594,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-IDENTIFIER-MULTI",
-            "uuid": "088e6bb5-7411-5892-8d36-fdb8b0ec1edb"
+            "uuid": "99544646-5d31-5342-ab19-438e9834303a"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2.5\\] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "62f16653-5544-579d-a7df-15016613a890"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:0982d91d387a30f1"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-HASH-PRIMARY-SHA2|pkg:npm/lodash@4.17.21"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "4dc90dbc-6460-5663-8644-cae05c829c3f"
+              }
+            ],
+            "remarks": "Provide at least one hash of the Primary Component, and use the cryptographically secure SHA-2 family (SHA-256 and higher) for hashed components; wherever less-secure hashes (MD5/SHA1) appear, add an additional cryptographically secure hash. SPDX 2.x: add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -426,15 +630,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-HASH-PRIMARY-SHA2",
-            "uuid": "e05493c3-b5d5-5193-9dd8-d4b7a7a015ec"
+            "uuid": "fd3a5cee-4d8a-5341-be1e-e0551dc0df30"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:bb72efb8c507e7b7"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-COMPLETENESS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bd8d55f8-97b6-5086-abc7-58eebab8e2c5"
+              }
+            ],
+            "remarks": "Record a relationship-completeness assertion (Unknown/None/Partial/Known) — mapped to the document-level completeness declaration. Warning, not Error: the document labels the attribute supplemental and optional, with Unknown as the open-world default. SPDX 2.x: no field records completeness.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -443,15 +666,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-COMPLETENESS",
-            "uuid": "87da1475-e021-5c68-9347-7b11987afaca"
+            "uuid": "88902638-67be-5e1b-8c52-92a1647210f4"
           },
           {
             "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "84b5bc40-7d1a-5dff-8c02-99ef53c57d1e"
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:d2ef39d647919153"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "fsct|SBOM-FSCT-DYNAMIC-DEPS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "1be0f533-8f3c-5de3-a890-ea414358971c"
+              }
+            ],
+            "remarks": "Make efforts to uniquely and unambiguously identify dependencies that are dynamic and/or remote. The check runs on SPDX input only (CycloneDX's parsed model cannot express the signal); absence surfaces as an informational readiness note, never a failure. SPDX 2.x: add relationships\\[\\] entries of type DYNAMIC\\_LINK, RUNTIME\\_DEPENDENCY\\_OF or PROVIDED\\_DEPENDENCY\\_OF.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -460,7 +702,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-FSCT-DYNAMIC-DEPS",
-            "uuid": "16d7bd9a-1a83-5845-897e-ffd7b8acf3fb"
+            "uuid": "dae2c347-9cef-5008-bb41-dd16d9d0623d"
           }
         ],
         "local-definitions": {
@@ -497,6 +739,18 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2/§2.3.3\\] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2"
+              },
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.3.3"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -507,7 +761,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)"
               },
@@ -520,6 +774,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-DIRECT-DEPS"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "relationships[]"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.3.3"
               }
             ],
             "subjects": [
@@ -533,11 +804,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "ed5d063e-d06c-5ab6-bd8e-dfb2c7df4ee9"
+            "uuid": "6e96ebeb-3b90-5be8-8d35-f63a6521ce35"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.3\\] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.3"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -548,7 +826,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)"
               },
@@ -561,6 +839,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-SUPPLIER"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].supplier"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.3"
               }
             ],
             "subjects": [
@@ -574,11 +873,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "e878837f-d1c9-5f2c-9e12-fc234802afa3"
+            "uuid": "23c1a8b9-40ee-587f-999b-d942968a00f8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.5\\] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.5"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -589,7 +895,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)"
               },
@@ -602,6 +908,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-HASH"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].checksums[]"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.5"
               }
             ],
             "subjects": [
@@ -615,11 +942,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "e3660acb-753a-5863-8587-4f7cd5086109"
+            "uuid": "1808822c-b6e3-57c6-9e80-d7e7fbb67410"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.4\\] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -630,7 +964,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)"
               },
@@ -643,6 +977,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-IDENTIFIER-MULTI"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].externalRefs[]"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.4"
               }
             ],
             "subjects": [
@@ -656,11 +1011,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "533d84eb-ca2d-54b2-b5dc-13d171b41cb8"
+            "uuid": "2d893bc4-13a0-5457-9066-7af78b4a484b"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.5\\] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.5"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -671,7 +1033,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)"
               },
@@ -689,6 +1051,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/lodash@4.17.21"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "packages[].checksums[]"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.5"
               }
             ],
             "subjects": [
@@ -707,11 +1085,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "62f16653-5544-579d-a7df-15016613a890"
+            "uuid": "4dc90dbc-6460-5663-8644-cae05c829c3f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2.6.4\\] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.6.4"
+              },
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.3.3"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -722,7 +1112,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2.6.4: Relationship completeness (supplemental, optional)"
               },
@@ -735,6 +1125,18 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-COMPLETENESS"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.6.4"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.3.3"
               }
             ],
             "subjects": [
@@ -748,11 +1150,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "3881b69c-21d7-50c6-9c95-4b66c16edda7"
+            "uuid": "bd8d55f8-97b6-5086-abc7-58eebab8e2c5"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA FSCT 3e §2.2.2/§2.2.2.6\\] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC\\_LINK / RUNTIME\\_DEPENDENCY\\_OF / PROVIDED\\_DEPENDENCY\\_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2"
+              },
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
+                "rel": "reference",
+                "text": "CISA FSCT 3e: §2.2.2.6"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -763,7 +1177,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)"
               },
@@ -776,6 +1190,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-FSCT-DYNAMIC-DEPS"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "relationships[]"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2"
+              },
+              {
+                "class": "CisaFsct",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.2.6"
               }
             ],
             "subjects": [
@@ -789,14 +1220,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "84b5bc40-7d1a-5dff-8c02-99ef53c57d1e"
+            "uuid": "1be0f533-8f3c-5de3-a890-ea414358971c"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "Fsct"
+            "value": "fsct"
           },
           {
             "name": "standard-name",
@@ -837,6 +1268,18 @@ source: tests/compliance_snapshots.rs
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "12"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "sbom-tools reads the SBOM type from CycloneDX metadata.lifecycles only, not from an SPDX document",
+            "value": "SBOM-FSCT-SBOM-TYPE"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "SPDX 2.x cannot carry a document signature",
+            "value": "SBOM-FSCT-SIGNATURE"
           }
         ],
         "reviewed-controls": {
@@ -849,9 +1292,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CISA Framing Software Component Transparency (3rd ed.)",
-        "uuid": "e3bcdb09-cd61-55d4-8ca1-298daaccc06d"
+        "uuid": "371a3ced-f51b-5837-b5fb-49ad06225a79"
       }
     ],
-    "uuid": "3dbe43ee-ff39-59d1-928e-78b9e361dbd8"
+    "uuid": "1e54ad83-0e1f-51a9-8332-02b83221d15e"
   }
 }

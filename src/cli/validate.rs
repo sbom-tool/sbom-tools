@@ -3,13 +3,16 @@
 //! Implements the `validate` subcommand for validating SBOMs against compliance standards.
 
 use crate::model::NormalizedSbom;
-use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
+use crate::pipeline::{
+    OutputTarget, exit_codes, is_stdin_path, parse_sbom_with_context, write_output,
+};
 use crate::quality::{
     ComplianceLevel, ComplianceResult, ComplianceRunConfig, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
 use crate::reports::{
-    ReportFormat, SarifOptions, generate_compliance_json, generate_compliance_sarif_with,
+    AssessedSbom, ReportFormat, SarifOptions, generate_compliance_json_at,
+    generate_compliance_sarif_with,
 };
 use anyhow::Result;
 use std::path::PathBuf;
@@ -104,6 +107,13 @@ pub fn run_validate(
         pqc,
         rules,
     )?;
+    // One instant for the whole run: `--as-of`, else the wall clock now, to
+    // the second. Every standard is judged at it, and the machine outputs
+    // state it (`as_of` in -o json, the OSCAL timestamps).
+    let judged_at = compliance
+        .as_of()
+        .unwrap_or_else(|| chrono::SubsecRound::trunc_subsecs(chrono::Utc::now(), 0));
+    let compliance = compliance.with_as_of(judged_at);
     anyhow::ensure!(
         !standards.is_empty(),
         "no compliance standard selected; pass --standard (valid values: {})",
@@ -116,29 +126,35 @@ pub fn run_validate(
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
     let results = compliance.check_levels(&levels, parsed.sbom());
 
-    // Inputs that make machine output reproducible: OSCAL derives its UUIDs
-    // from the SBOM digest and stamps the --as-of instant. It also describes
-    // the SBOM document and the components its findings are about.
+    // Inputs that make machine output reproducible: -o json, SARIF and
+    // OSCAL describe the SBOM (its SHA-256, format, file name and how it was
+    // read) and state the instant it was judged at; OSCAL derives its UUIDs
+    // from both, and also describes the components its findings are about.
     // SARIF results point at the SBOM lines of their components, and list
     // the passed checks only under --sarif-include-passes.
+    let mut assessed = AssessedSbom::new(parsed.sbom(), parsed.raw_content().as_bytes());
+    if !is_stdin_path(&sbom_path) {
+        assessed = assessed.with_file_name(&sbom_path);
+    }
     let mut sarif = SarifOptions::new()
         .with_passes(sarif_include_passes)
         .with_max_results(sarif_max_results);
     if !summary && output == ReportFormat::Sarif {
-        sarif = sarif.with_artifact(super::sarif_artifact(
-            &sbom_path,
-            sarif_base.as_deref(),
-            parsed.sbom(),
-            parsed.raw_content(),
-        )?);
+        sarif = sarif
+            .with_artifact(super::sarif_artifact(
+                &sbom_path,
+                sarif_base.as_deref(),
+                parsed.sbom(),
+                parsed.raw_content(),
+            )?)
+            .with_subject(&assessed, judged_at);
         if let Some(category) = sarif_category {
             sarif = sarif.with_category(category);
         }
     }
     let provenance = OutputProvenance {
-        sbom: parsed.sbom(),
-        sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
-        as_of: compliance.as_of(),
+        assessed,
+        judged_at,
         sarif,
     };
 
@@ -249,23 +265,14 @@ fn selected_levels(standards: &[StandardSelector]) -> Vec<ComplianceLevel> {
 
 /// What a machine-readable report needs to know about the run itself.
 struct OutputProvenance<'a> {
-    /// The validated SBOM.
-    sbom: &'a NormalizedSbom,
-    /// Lowercase hex SHA-256 of the SBOM bytes as read.
-    sbom_digest: String,
-    /// The pinned evaluation instant (`--as-of`), if any.
-    as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// The validated SBOM, with the SHA-256 of the bytes read and the name
+    /// of its file.
+    assessed: AssessedSbom<'a>,
+    /// The instant every standard was judged at.
+    judged_at: chrono::DateTime<chrono::Utc>,
     /// How `-o sarif` renders the results: the SBOM file they point into,
     /// their category and whether passed checks are listed.
     sarif: SarifOptions,
-}
-
-fn sha256_hex(bytes: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
-    Sha256::digest(bytes)
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
 }
 
 fn write_compliance_output(
@@ -279,16 +286,19 @@ fn write_compliance_output(
 
     let content = match output {
         ReportFormat::Json => match json_schema {
-            ValidateJsonSchema::V2 => generate_compliance_json(std::slice::from_ref(result))?,
+            ValidateJsonSchema::V2 => generate_compliance_json_at(
+                std::slice::from_ref(result),
+                &provenance.assessed,
+                provenance.judged_at,
+            )?,
             ValidateJsonSchema::V1 => serde_json::to_string_pretty(&v1_result(result))
                 .map_err(|e| anyhow::anyhow!("Failed to serialize compliance JSON: {e}"))?,
         },
         ReportFormat::Sarif => generate_compliance_sarif_with(result, &provenance.sarif)?,
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             std::slice::from_ref(result),
-            provenance.sbom,
-            &provenance.sbom_digest,
-            provenance.as_of,
+            &provenance.assessed,
+            provenance.judged_at,
         )?,
         _ => format_compliance_text(result),
     };
@@ -376,7 +386,9 @@ fn write_multi_compliance_output(
 
     let content = match output {
         ReportFormat::Json => match json_schema {
-            ValidateJsonSchema::V2 => generate_compliance_json(results)?,
+            ValidateJsonSchema::V2 => {
+                generate_compliance_json_at(results, &provenance.assessed, provenance.judged_at)?
+            }
             ValidateJsonSchema::V1 => {
                 let v1: Vec<ComplianceResult> = results.iter().map(v1_result).collect();
                 serde_json::to_string_pretty(&v1)
@@ -388,9 +400,8 @@ fn write_multi_compliance_output(
         }
         ReportFormat::OscalJson => crate::reports::oscal::generate_assessment_results_at(
             results,
-            provenance.sbom,
-            &provenance.sbom_digest,
-            provenance.as_of,
+            &provenance.assessed,
+            provenance.judged_at,
         )?,
         _ => {
             let mut parts = Vec::new();
