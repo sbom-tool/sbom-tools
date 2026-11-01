@@ -360,6 +360,10 @@ const HASHES_AT_112_BITS: [&str; 3] = [
     "crypto/algorithm/sha3-224",
 ];
 
+/// Where a CycloneDX CBOM states the digest size SBOM-PQC-HASH-001 reads.
+const DIGEST_SIZE_FIELD: &str =
+    "components[].cryptoProperties.algorithmProperties.parameterSetIdentifier";
+
 /// `pqc` used to judge none of SHA-224, SHA-512/224 and SHA3-224. Readiness
 /// mode now reports each as an Error, as it does a 112-bit key, and
 /// deadline mode dates each by §4.1.3: Info through 2030-12-31, Error from
@@ -383,6 +387,16 @@ fn the_112_bit_hash_functions_are_disallowed_after_2030() {
         .map(|v| v.rule_id)
         .collect();
     assert!(judged.is_empty(), "nothing else is reported: {judged:?}");
+    // Each finding names the field that states the digest size, and the
+    // algorithm it read (SHA-512/224 reads as a 224-bit SHA-2).
+    for (id, algorithm) in HASHES_AT_112_BITS
+        .into_iter()
+        .zip(["SHA-224", "SHA-224", "SHA3-224"])
+    {
+        let v = finding(&strict, "SBOM-PQC-HASH-001", id);
+        assert_eq!(v.field.as_deref(), Some(DIGEST_SIZE_FIELD), "{id}");
+        assert_eq!(v.observed.as_deref(), Some(algorithm), "{id}");
+    }
 
     let source = "NIST IR 8547 §4.1.3 and Table 8";
     for (as_of, severity, status) in [
@@ -563,6 +577,10 @@ fn a_signature_over_a_112_bit_digest_takes_the_digest_deadline() {
             .contains("digest size not stated; SHA-224 would be disallowed after 2030"),
         "{}",
         warning.message
+    );
+    assert_eq!(
+        (warning.field.as_deref(), warning.observed.as_deref()),
+        (Some(DIGEST_SIZE_FIELD), Some("SHA-2"))
     );
     // No signature becomes a hash finding of its own.
     let hash_findings: Vec<&str> = strict
