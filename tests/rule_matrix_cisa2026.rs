@@ -17,9 +17,9 @@ mod rule_matrix;
 
 use rule_matrix::clock::{AS_OF, checker};
 use rule_matrix::{
-    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry,
-    SPDX_VERSION_CASE, SPDX3_SBOM_TYPE_NOT_READ, SbomFixture, assert_no_violations_in, check,
-    render_violations, run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER,
+    Outcome, RuleEntry, SPDX_VERSION_CASE, SPDX3_SBOM_TYPE_NOT_READ, SbomFixture,
+    assert_no_violations_in, check, render_violations, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -264,7 +264,14 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.component_mut("libalpha").hashes.clear()),
             base(),
-        ),
+        )
+        // The value must be an ASCII-hex digest of its algorithm's length
+        // (the shared plausible-digest check every hash rule uses).
+        .with_implausible_digests(Sev::Error, &IMPLAUSIBLE_SHA256_DIGESTS, |alg, value| {
+            broken(|s| {
+                s.component_mut("libalpha").hashes = vec![(alg.to_string(), value.to_string())];
+            })
+        }),
         RuleEntry::tested(
             "SBOM-CISA2026-HASH-ALGO",
             Sev::Warning,

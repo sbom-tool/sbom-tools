@@ -108,11 +108,18 @@ const CONCLUDED_LICENSE_GAP: (&str, &str) = (
      (the parser reads it as no more than a licence, as it reads every CycloneDX licence)",
 );
 
+const DESCRIBED_GAP: (&str, &str) = (
+    "described",
+    "a second described product: a CycloneDX document describes one component, \
+     metadata.component",
+);
+
 const CYCLONEDX_JSON_GAPS: &[(&str, &str)] = &[
     SPDX_VERSION_GAP,
     PROFILES_GAP,
     DYNAMIC_LINKS_GAP,
     CONCLUDED_LICENSE_GAP,
+    DESCRIBED_GAP,
 ];
 
 const CYCLONEDX_XML_GAPS: &[(&str, &str)] = &[
@@ -125,6 +132,7 @@ const CYCLONEDX_XML_GAPS: &[(&str, &str)] = &[
     PROFILES_GAP,
     DYNAMIC_LINKS_GAP,
     CONCLUDED_LICENSE_GAP,
+    DESCRIBED_GAP,
 ];
 
 const SPDX_SPEC_VERSION_GAP: (&str, &str) = (
@@ -147,6 +155,11 @@ const SPDX_PROPERTIES_GAP: (&str, &str) = (
 const SPDX_REF_HASHES_GAP: (&str, &str) = (
     "component.hashed_external_refs.hashes",
     "SPDX external references carry no hash of the referenced document",
+);
+const SPDX_SUPPLIER_GAP: (&str, &str) = (
+    "supplier",
+    "SPDX documents have no supplier of their own: the described package's supplier (the \
+     primary's) carries it",
 );
 
 const SPDX23_GAPS: &[(&str, &str)] = &[
@@ -175,6 +188,12 @@ const SPDX23_GAPS: &[(&str, &str)] = &[
     ),
     SPDX_PROPERTIES_GAP,
     SPDX_REF_HASHES_GAP,
+    SPDX_SUPPLIER_GAP,
+    (
+        "component.manufacturer",
+        "SPDX 2.3 has no manufacturer field (PackageOriginator, the closest, is read as the \
+         package author)",
+    ),
     ("component.model_card", "SPDX 2.3 has no AI profile"),
     ("component.dataset", "SPDX 2.3 has no dataset profile"),
 ];
@@ -220,6 +239,12 @@ const SPDX3_GAPS: &[(&str, &str)] = &[
     ),
     SPDX_PROPERTIES_GAP,
     SPDX_REF_HASHES_GAP,
+    SPDX_SUPPLIER_GAP,
+    (
+        "component.manufacturer",
+        "SPDX 3 has no manufacturer property (originatedBy, the closest, is read only as a \
+         dataset's governance owner)",
+    ),
     (
         "component.external_refs",
         "a CycloneDX reference type with no SPDX 3.0.1 externalRefType term (bom, …)",
@@ -432,6 +457,9 @@ fn cdx_lifecycle_json(lifecycle: &str) -> serde_json::Value {
 impl SbomFixture {
     fn cyclonedx_json(&self, drops: &mut Drops) -> String {
         self.drop_neutral_fields(drops);
+        if !self.described.is_empty() {
+            drops.drop_field("described");
+        }
         let mut doc = serde_json::Map::new();
         doc.insert("bomFormat".into(), serde_json::json!("CycloneDX"));
         doc.insert("specVersion".into(), serde_json::json!(self.spec_version));
@@ -484,6 +512,9 @@ impl SbomFixture {
                 m.insert("contact".into(), serde_json::json!([{ "email": email }]));
             }
             metadata.insert("manufacturer".into(), serde_json::Value::Object(m));
+        }
+        if let Some(supplier) = &self.supplier {
+            metadata.insert("supplier".into(), serde_json::json!({ "name": supplier }));
         }
         let acknowledgement = self.has_license_acknowledgement();
         if let Some(primary) = &self.primary {
@@ -609,6 +640,12 @@ impl ComponentFixture {
         }
         if let Some(supplier) = &self.supplier {
             obj.insert("supplier".into(), serde_json::json!({ "name": supplier }));
+        }
+        if let Some(manufacturer) = &self.manufacturer {
+            obj.insert(
+                "manufacturer".into(),
+                serde_json::json!({ "name": manufacturer }),
+            );
         }
         if let Some(description) = &self.description {
             obj.insert("description".into(), serde_json::json!(description));
@@ -978,6 +1015,9 @@ impl SbomFixture {
         if self.spec_version.is_empty() {
             drops.drop_field("spec_version");
         }
+        if !self.described.is_empty() {
+            drops.drop_field("described");
+        }
         let mut x = Xml::new();
         let xmlns = format!("http://cyclonedx.org/schema/bom/{}", self.spec_version);
         let version = self.doc_version.map(|v| v.to_string());
@@ -995,7 +1035,8 @@ impl SbomFixture {
             || !self.tools.is_empty()
             || !self.authors.is_empty()
             || self.primary.is_some()
-            || self.manufacturer.is_some();
+            || self.manufacturer.is_some()
+            || self.supplier.is_some();
         if has_metadata {
             x.open("metadata", &[]);
             x.opt("timestamp", self.timestamp.as_deref());
@@ -1045,6 +1086,11 @@ impl SbomFixture {
                     x.close("contact");
                 }
                 x.close("manufacturer");
+            }
+            if let Some(supplier) = &self.supplier {
+                x.open("supplier", &[]);
+                x.text("name", supplier);
+                x.close("supplier");
             }
             x.close("metadata");
         }
@@ -1154,6 +1200,11 @@ impl ComponentFixture {
             x.open("supplier", &[]);
             x.text("name", supplier);
             x.close("supplier");
+        }
+        if let Some(manufacturer) = &self.manufacturer {
+            x.open("manufacturer", &[]);
+            x.text("name", manufacturer);
+            x.close("manufacturer");
         }
         x.text("name", &self.name);
         x.opt("version", self.version.as_deref());
@@ -1497,6 +1548,9 @@ impl SbomFixture {
         if !self.undeclared_spdx3_profiles.is_empty() {
             drops.drop_field("undeclared_spdx3_profiles");
         }
+        if self.supplier.is_some() {
+            drops.drop_field("supplier");
+        }
 
         let id = |bom_ref: &str| self.element_id(Encoding::Spdx23Json, bom_ref);
         let mut creators = Vec::new();
@@ -1544,6 +1598,13 @@ impl SbomFixture {
                 "SPDXRef-DOCUMENT".to_string(),
                 "DESCRIBES",
                 id(&primary.bom_ref),
+            ));
+        }
+        for described in &self.described {
+            relationships.push(rel(
+                "SPDXRef-DOCUMENT".to_string(),
+                "DESCRIBES",
+                id(described),
             ));
         }
         for c in self.all_components() {
@@ -1610,6 +1671,9 @@ impl ComponentFixture {
                 format!("Organization: {supplier}")
             };
             pkg.insert("supplier".into(), serde_json::json!(value));
+        }
+        if self.manufacturer.is_some() {
+            drops.drop_field("component.manufacturer");
         }
         pkg.insert("downloadLocation".into(), serde_json::json!("NOASSERTION"));
         pkg.insert("filesAnalyzed".into(), serde_json::json!(false));
@@ -1890,6 +1954,9 @@ fn spdx3_email_identifier(email: &str) -> serde_json::Value {
 impl SbomFixture {
     fn spdx3_json_ld(&self, drops: &mut Drops) -> String {
         self.drop_neutral_fields(drops);
+        if self.supplier.is_some() {
+            drops.drop_field("supplier");
+        }
         let id = |bom_ref: &str| self.element_id(Encoding::Spdx3JsonLd, bom_ref);
         let mut g = Spdx3Graph::new();
 
@@ -2093,7 +2160,12 @@ impl SbomFixture {
         let mut sbom_node = serde_json::json!({
             "type": "software_Sbom",
             "spdxId": sbom,
-            "rootElement": self.primary.iter().map(|p| id(&p.bom_ref)).collect::<Vec<_>>(),
+            "rootElement": self
+                .primary
+                .iter()
+                .map(|p| id(&p.bom_ref))
+                .chain(self.described.iter().map(|r| id(r)))
+                .collect::<Vec<_>>(),
             "element": g.ids.clone(),
         });
         if !self.lifecycles.is_empty() {
@@ -2194,6 +2266,9 @@ impl ComponentFixture {
                 g.organization(supplier)
             };
             pkg["suppliedBy"] = serde_json::json!(agent);
+        }
+        if self.manufacturer.is_some() {
+            drops.drop_field("component.manufacturer");
         }
         if !self.hashes.is_empty() {
             let hashes: Vec<_> = self

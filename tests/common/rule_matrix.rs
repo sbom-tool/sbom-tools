@@ -82,6 +82,40 @@ pub const SHA512_FILLER: &str = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715d
 /// Filler MD5 digest (32 hex chars) for weak-hash cases.
 pub const MD5_FILLER: &str = "d41d8cd98f00b204e9800998ecf8427e";
 
+/// SHA-256 values no hash rule counts, as `(case label, algorithm, value)`:
+/// an empty value, one that is not hexadecimal (a `sha256:` prefix on the
+/// filler), and one of the wrong length (an MD5-sized value). Every hash
+/// rule counts only plausible digests.
+pub const IMPLAUSIBLE_SHA256_DIGESTS: [(&str, &str, &str); 3] = [
+    ("empty SHA-256 digest", "SHA-256", ""),
+    (
+        "SHA-256 digest that is not hexadecimal",
+        "SHA-256",
+        "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ),
+    (
+        "SHA-256 digest of the wrong length",
+        "SHA-256",
+        "d41d8cd98f00b204e9800998ecf8427e",
+    ),
+];
+
+/// SHA-512 values no hash rule counts, as for
+/// [`IMPLAUSIBLE_SHA256_DIGESTS`]; the wrong-length one is SHA-256-sized.
+pub const IMPLAUSIBLE_SHA512_DIGESTS: [(&str, &str, &str); 3] = [
+    ("empty SHA-512 digest", "SHA-512", ""),
+    (
+        "SHA-512 digest that is not hexadecimal",
+        "SHA-512",
+        "not-a-digest-cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce",
+    ),
+    (
+        "SHA-512 digest of the wrong length",
+        "SHA-512",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ),
+];
+
 // ── Encoding omissions and differences shared by several matrices ─────────
 
 /// A case about a CycloneDX specVersion runs in CycloneDX only.
@@ -137,6 +171,9 @@ pub struct ComponentFixture {
     pub cpe: Option<String>,
     /// `supplier.name`.
     pub supplier: Option<String>,
+    /// `manufacturer.name` (CycloneDX 1.6+; SPDX has no manufacturer
+    /// field).
+    pub manufacturer: Option<String>,
     /// `description`.
     pub description: Option<String>,
     /// `copyright` (SPDX `copyrightText`).
@@ -185,6 +222,7 @@ impl ComponentFixture {
             purl: Some(format!("pkg:npm/{name}@1.2.3")),
             cpe: None,
             supplier: Some("Acme Components Ltd".to_string()),
+            manufacturer: None,
             description: None,
             copyright: None,
             hashes: vec![("SHA-256".to_string(), SHA256_FILLER.to_string())],
@@ -600,10 +638,18 @@ pub struct SbomFixture {
     /// `metadata.manufacturer` `(name, contact email)` →
     /// `CreatorType::Organization`.
     pub manufacturer: Option<(String, Option<String>)>,
+    /// `metadata.supplier.name`, the supplier of the described product
+    /// (SPDX keeps the supplier on the described package instead).
+    pub supplier: Option<String>,
     /// `metadata.component` → `document.name` + primary component (joins
     /// `sbom.components` like any other component).
     pub primary: Option<ComponentFixture>,
     pub components: Vec<ComponentFixture>,
+    /// bom-refs of listed components the document also describes, beside
+    /// the primary: SPDX 2.3 `DESCRIBES` relationships and SPDX 3 Sbom
+    /// `rootElement`s (an SPDX document can describe several sibling
+    /// products; a CycloneDX document describes one).
+    pub described: Vec<String>,
     /// Cryptographic assets, rendered into `components[]` after
     /// [`Self::components`].
     pub crypto_assets: Vec<CryptoAssetFixture>,
@@ -647,8 +693,10 @@ impl Default for SbomFixture {
             tools: Vec::new(),
             authors: Vec::new(),
             manufacturer: None,
+            supplier: None,
             primary: None,
             components: Vec::new(),
+            described: Vec::new(),
             crypto_assets: Vec::new(),
             dependencies: Vec::new(),
             dynamic_links: Vec::new(),
@@ -1133,6 +1181,29 @@ impl RuleEntry {
             departs_from_registry_default: true,
             fixture,
         });
+        self
+    }
+
+    /// One firing case at `severity` per digest no hash rule counts (see
+    /// [`IMPLAUSIBLE_SHA256_DIGESTS`]): `with_digest(algorithm, value)`
+    /// builds the case's fixture. A severity other than the registry's
+    /// default is a declared departure.
+    #[must_use]
+    pub fn with_implausible_digests(
+        mut self,
+        severity: ViolationSeverity,
+        digests: &[(&'static str, &'static str, &'static str)],
+        with_digest: impl Fn(&str, &str) -> SbomFixture,
+    ) -> Self {
+        let departs = rule_meta(self.id).is_some_and(|m| m.default_severity != severity);
+        for (label, algorithm, value) in digests {
+            self.push_firing(FiringCase {
+                label,
+                severity,
+                departs_from_registry_default: departs,
+                fixture: with_digest(algorithm, value),
+            });
+        }
         self
     }
 

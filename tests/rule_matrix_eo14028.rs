@@ -11,8 +11,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
-    assert_no_violations_in, run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, RuleEntry,
+    SPDX_VERSION_CASE, SbomFixture, assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, EO14028_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -50,6 +50,23 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     mutate(&mut fixture);
     fixture
 }
+
+/// Name the product: `acme-app` as the primary component, carrying `refs`
+/// as (type, URL), depending on libbeta, with libalpha (and its advisories
+/// reference) left out of the dependency graph. Once the document names its
+/// product, only the product's references are its disclosure evidence.
+fn with_product(s: &mut SbomFixture, refs: &[(&str, &str)]) {
+    let mut product = ComponentFixture::conforming("acme-app");
+    product.component_type = "application".to_string();
+    product.external_refs = refs
+        .iter()
+        .map(|(ref_type, url)| ((*ref_type).to_string(), (*url).to_string()))
+        .collect();
+    s.primary = Some(product);
+    s.dependencies = vec![("ref-acme-app".to_string(), vec!["ref-libbeta".to_string()])];
+}
+
+const ADVISORIES: (&str, &str) = ("advisories", "https://acme.example/security/advisories");
 
 /// The conforming EO 14028 fixture must pass with a clean verdict in every
 /// encoding — no test previously observed `is_compliant == true` for this
@@ -146,17 +163,66 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").version = None),
             base(),
         ),
+        // Only plausible digests count.
         RuleEntry::tested(
             "SBOM-EO14028-INTEGRITY",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").hashes.clear()),
             base(),
+        )
+        .with_implausible_digests(
+            Sev::Warning,
+            &IMPLAUSIBLE_SHA256_DIGESTS,
+            |alg, value| {
+                broken(|s| {
+                    s.component_mut("libalpha").hashes = vec![(alg.to_string(), value.to_string())];
+                })
+            },
         ),
+        // Without a named product, the graph roots carry the vendor's
+        // disclosure evidence (libalpha above). Once the document names its
+        // product, a dependency's advisories no longer count, even when the
+        // dependency is in no relationship; a support link is no disclosure
+        // program in any format (before v0.4.0 the CycloneDX parser made
+        // the product's support link its disclosure URL).
         RuleEntry::tested(
             "SBOM-EO14028-DISCLOSURE",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").external_refs.clear()),
             base(),
+        )
+        .with_firing(
+            "advisories reference on an orphan dependency of the named product",
+            Sev::Warning,
+            broken(|s| with_product(s, &[])),
+        )
+        .with_firing(
+            "support reference only on the named product",
+            Sev::Warning,
+            broken(|s| {
+                with_product(s, &[("support", "https://acme.example/support")]);
+                s.component_mut("libalpha").external_refs.clear();
+            }),
+        )
+        .with_silent(
+            "advisories reference on the named product",
+            broken(|s| {
+                with_product(s, &[ADVISORIES]);
+                s.component_mut("libalpha").external_refs.clear();
+            }),
+        )
+        .with_silent(
+            "advisories reference on a second described product",
+            broken(|s| {
+                with_product(s, &[]);
+                s.described = vec!["ref-libalpha".to_string()];
+            }),
+        )
+        .case_only(
+            "advisories reference on a second described product",
+            Encoding::SPDX,
+            "a second described product: only SPDX documents describe several sibling \
+             products (CycloneDX describes metadata.component alone)",
         ),
         RuleEntry::tested(
             "SBOM-EO14028-SUPPLIER",

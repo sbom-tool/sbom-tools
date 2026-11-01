@@ -14,8 +14,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, Encoding, Outcome, RuleEntry, SHA256_FILLER, SHA512_FILLER,
-    SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
+    ComponentFixture, Encoding, IMPLAUSIBLE_SHA512_DIGESTS, Outcome, RuleEntry, SHA256_FILLER,
+    SHA512_FILLER, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX23_HAS_NO_COMPLETENESS,
     SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{
@@ -193,7 +193,15 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     vec![("SHA-256".to_string(), SHA256_FILLER.to_string())];
             }),
             base(),
-        ),
+        )
+        // The SHA-512 must be a plausible digest: an empty, non-hex or
+        // wrong-length value is a present field that fails, not an
+        // omission (§3.2.1).
+        .with_implausible_digests(Sev::Error, &IMPLAUSIBLE_SHA512_DIGESTS, |alg, value| {
+            broken(|s| {
+                s.component_mut("libalpha").hashes = vec![(alg.to_string(), value.to_string())];
+            })
+        }),
         // No hash at all is a Warning (§3.2.1 allows omission when the
         // information cannot exist for the component).
         RuleEntry::tested(

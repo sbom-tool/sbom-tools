@@ -20,8 +20,8 @@ mod rule_matrix;
 
 use rule_matrix::clock::checker;
 use rule_matrix::{
-    ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry, SHA256_FILLER,
-    SPDX23_HAS_NO_COMPLETENESS, SbomFixture, run_matrix,
+    ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER, Outcome, RuleEntry,
+    SHA256_FILLER, SPDX23_HAS_NO_COMPLETENESS, SbomFixture, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -245,7 +245,13 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.component_mut("liba").hashes.clear()),
             base(),
-        ),
+        )
+        // Only plausible digests count.
+        .with_implausible_digests(Sev::Error, &IMPLAUSIBLE_SHA256_DIGESTS, |alg, value| {
+            broken(|s| {
+                s.component_mut("liba").hashes = vec![(alg.to_string(), value.to_string())];
+            })
+        }),
         // §2.2.2.5 Recommended has two sites sharing the id: hashless
         // primary, and components hashed only below SHA-256/SHA-2.
         RuleEntry::tested(
@@ -265,6 +271,17 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| {
                 s.component_mut("liba").hashes = vec![("MD5".to_string(), MD5_FILLER.to_string())];
+            }),
+        )
+        // A primary whose only hash is no plausible digest has none.
+        .with_firing(
+            "primary hashed only with an empty SHA-256 digest",
+            Sev::Warning,
+            broken(|s| {
+                s.primary
+                    .as_mut()
+                    .expect("base fixture has a primary")
+                    .hashes = vec![("SHA-256".to_string(), String::new())];
             }),
         ),
         RuleEntry::tested(
