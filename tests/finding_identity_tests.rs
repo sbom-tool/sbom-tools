@@ -253,9 +253,11 @@ fn repeat_prone_documents_keep_unique_keys() {
     )
     .expect("fixture parses");
     spdx4.document.spec_version = "4.0".to_string();
-    // A component whose canonical id is its bom-ref `document`: under FDA it
-    // lacks a supplier while the document lacks an organization creator, so
-    // SBOM-FDA-SUPPLIER reports on the document and on the component.
+    // A product whose canonical id is its bom-ref `document`: it sits in no
+    // dependency relationship, and most components are orphans, so
+    // SBOM-NTIA-DEPENDENCY reports on the component and on the document.
+    // (Until v0.4.0 SBOM-FDA-SUPPLIER did, before the document-level device
+    // manufacturer got SBOM-FDA-MANUFACTURER.)
     let document_named = parse_sbom_str(
         &serde_json::json!({
             "bomFormat": "CycloneDX",
@@ -263,11 +265,19 @@ fn repeat_prone_documents_keep_unique_keys() {
             "version": 1,
             "metadata": {
                 "timestamp": "2026-10-01T00:00:00Z",
-                "tools": [{"name": "generator", "version": "1.0"}]
+                "tools": [{"name": "generator", "version": "1.0"}],
+                "component": {
+                    "type": "application", "bom-ref": "document", "name": "document",
+                    "version": "1.0"
+                }
             },
             "components": [
-                {"type": "library", "bom-ref": "document", "name": "document", "version": "1.0"}
-            ]
+                {"type": "library", "bom-ref": "libalpha", "name": "libalpha", "version": "1.0"},
+                {"type": "library", "bom-ref": "libbeta", "name": "libbeta", "version": "1.0"},
+                {"type": "library", "bom-ref": "libgamma", "name": "libgamma", "version": "1.0"},
+                {"type": "library", "bom-ref": "libdelta", "name": "libdelta", "version": "1.0"}
+            ],
+            "dependencies": [{"ref": "libalpha", "dependsOn": ["libbeta"]}]
         })
         .to_string(),
     )
@@ -277,7 +287,7 @@ fn repeat_prone_documents_keep_unique_keys() {
     let mut fired: std::collections::BTreeSet<(String, &'static str)> =
         std::collections::BTreeSet::new();
     let mut numbered = 0usize;
-    let mut supplier_subjects = std::collections::BTreeSet::new();
+    let mut dependency_subjects = std::collections::BTreeSet::new();
     for (name, sbom, sidecar) in [
         ("cdx", &cdx, Some(&sidecar)),
         ("spdx-4.0", &spdx4, None),
@@ -293,17 +303,17 @@ fn repeat_prone_documents_keep_unique_keys() {
                         .as_deref()
                         .is_some_and(|d| d.ends_with("#2")),
                 );
-                if name == "document-named" && v.rule_id == "SBOM-FDA-SUPPLIER" {
-                    supplier_subjects.insert(v.component_id.clone());
+                if name == "document-named" && v.rule_id == "SBOM-NTIA-DEPENDENCY" {
+                    dependency_subjects.insert(v.component_id.clone());
                 }
             }
         }
     }
     assert_no_repeats(&repeats);
     assert_eq!(
-        supplier_subjects,
+        dependency_subjects,
         [None, Some("document".to_string())].into_iter().collect(),
-        "SBOM-FDA-SUPPLIER must report on the document and on the component `document`"
+        "SBOM-NTIA-DEPENDENCY must report on the document and on the component `document`"
     );
 
     // The document does trip what it is meant to: several findings of one

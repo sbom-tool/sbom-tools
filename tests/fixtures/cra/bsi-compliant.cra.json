@@ -1,15 +1,15 @@
 {
-  "securityContact": "security@example.com",
-  "vulnerabilityDisclosureUrl": "https://example.com/security",
+  "securityContact": "security@democorp.example",
+  "vulnerabilityDisclosureUrl": "https://democorp.example/security",
   "manufacturerName": "Demo Corp",
-  "manufacturerEmail": "contact@example.com",
+  "manufacturerEmail": "contact@democorp.example",
   "productName": "Demo App",
   "productVersion": "1.0.0",
-  "psirtUrl": "https://example.com/psirt",
-  "earlyWarningContact": "psirt@example.com",
-  "incidentReportContact": "incidents@example.com",
+  "psirtUrl": "https://democorp.example/psirt",
+  "earlyWarningContact": "psirt@democorp.example",
+  "incidentReportContact": "incidents@democorp.example",
   "enisaReportingPlatformId": "EU-MFR-DEMO",
-  "coordinatedDisclosurePolicyUrl": "https://example.com/security/cvd-policy",
-  "riskAssessmentUrl": "https://example.com/docs/risk-assessment-2026.pdf",
+  "coordinatedDisclosurePolicyUrl": "https://democorp.example/security/cvd-policy",
+  "riskAssessmentUrl": "https://democorp.example/docs/risk-assessment-2026.pdf",
   "riskAssessmentMethodology": "ISO/IEC 27005:2022"
 }

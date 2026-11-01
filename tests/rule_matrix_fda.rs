@@ -14,8 +14,8 @@ mod rule_matrix;
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER,
     RuleEntry, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX3_VALID_UNTIL_NOT_READ,
-    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, assert_no_violations_in,
-    assert_spdx_version_unknown, check_in, render_violations, run_matrix,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, VulnAnalysisFixture,
+    assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, FDA_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -61,6 +61,33 @@ fn broken(mutate: impl FnOnce(&mut SbomFixture)) -> SbomFixture {
     fixture
 }
 
+/// The id of [`critical_vulnerability`].
+const CRITICAL_CVE: &str = "CVE-2026-0001";
+
+/// A critical vulnerability of libalpha.
+fn critical_vulnerability() -> (String, String, String) {
+    (
+        CRITICAL_CVE.to_string(),
+        "critical".to_string(),
+        "ref-libalpha".to_string(),
+    )
+}
+
+/// A VEX `not_affected` analysis, naming the CycloneDX `justification`
+/// when one is given.
+fn not_affected(justification: Option<&str>) -> VulnAnalysisFixture {
+    VulnAnalysisFixture {
+        state: Some("not_affected".to_string()),
+        justification: justification.map(str::to_string),
+        ..VulnAnalysisFixture::default()
+    }
+}
+
+/// Only CycloneDX names the document's supplier.
+const CYCLONEDX_DOCUMENT_SUPPLIER: &str = "the document's supplier: CycloneDX \
+     metadata.supplier has no SPDX counterpart (SPDX keeps the supplier on the described \
+     package)";
+
 /// Neither an organization creator nor the device's supplier names the
 /// manufacturer. A person author keeps the creators non-empty (no
 /// FDA-CREATOR) and carries the contact email (no FDA-CONTACT).
@@ -98,9 +125,10 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             base(),
         ),
         // FDA incorporates the NTIA baseline: a missing/invalid source
-        // timestamp (epoch sentinel) must gate.
+        // timestamp (epoch sentinel) must gate, under an FDA id of its own
+        // (SBOM-NTIA-TIMESTAMP until v0.4.0).
         RuleEntry::tested(
-            "SBOM-NTIA-TIMESTAMP",
+            "SBOM-FDA-TIMESTAMP",
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
@@ -126,29 +154,44 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.serial_number = None),
             base(),
         ),
-        // Component-level missing supplier is the gating Error; the
-        // document-level "identify the device manufacturer" site shares the
-        // rule id at Warning. An organization creator, or the device's own
-        // supplier or manufacturer (CycloneDX 1.6+), names the
-        // manufacturer; a placeholder names nobody. Without either, the
-        // device component draws the component-level Error as well.
+        // A component without a supplier, manufacturer or author.
         RuleEntry::tested(
             "SBOM-FDA-SUPPLIER",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").supplier = None),
             base(),
         )
-        .with_departing_firing(
-            "no manufacturer named (document-level site)",
+        .with_firing(
+            "placeholder component supplier (NOASSERTION)",
+            Sev::Error,
+            broken(|s| s.component_mut("libalpha").supplier = Some("NOASSERTION".to_string())),
+        ),
+        // The device manufacturer, a document-level rule of its own
+        // (SBOM-FDA-SUPPLIER until v0.4.0, the id the per-component supplier
+        // element keeps). An organization creator, the product's supplier
+        // (CycloneDX metadata.supplier), or the device's own supplier or
+        // manufacturer (CycloneDX 1.6+) names the manufacturer; a
+        // placeholder names nobody.
+        RuleEntry::tested(
+            "SBOM-FDA-MANUFACTURER",
             Sev::Warning,
             broken(without_manufacturer),
+            base(),
         )
-        .with_departing_firing(
-            "placeholder device supplier (document-level site)",
+        .with_firing(
+            "placeholder device supplier",
             Sev::Warning,
             broken(|s| {
                 without_manufacturer(s);
                 s.primary_mut().supplier = Some("NOASSERTION".to_string());
+            }),
+        )
+        .with_firing(
+            "placeholder product supplier (metadata.supplier)",
+            Sev::Warning,
+            broken(|s| {
+                without_manufacturer(s);
+                s.supplier = Some("N/A".to_string());
             }),
         )
         .with_silent(
@@ -165,11 +208,28 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.primary_mut().manufacturer = Some("Acme Medical Inc".to_string());
             }),
         )
+        .with_silent(
+            "manufacturer named only as the product's supplier (metadata.supplier)",
+            broken(|s| {
+                without_manufacturer(s);
+                s.supplier = Some("Acme Medical Inc".to_string());
+            }),
+        )
+        .case_only(
+            "placeholder product supplier (metadata.supplier)",
+            Encoding::CYCLONEDX,
+            CYCLONEDX_DOCUMENT_SUPPLIER,
+        )
         .case_only(
             "manufacturer named only as the device's manufacturer",
             Encoding::CYCLONEDX,
             "a component manufacturer: CycloneDX 1.6+ component.manufacturer has no SPDX \
-             counterpart the parsers read, so the SPDX device has no producer at all",
+             counterpart the parsers read",
+        )
+        .case_only(
+            "manufacturer named only as the product's supplier (metadata.supplier)",
+            Encoding::CYCLONEDX,
+            CYCLONEDX_DOCUMENT_SUPPLIER,
         ),
         // Missing hash is the gating Error; a weak-only (MD5) hash relaxes
         // to Warning at the same rule id. Only plausible digests count: a
@@ -255,23 +315,38 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             SPDX3_VALID_UNTIL_NOT_READ,
         ),
         // Fires on unresolved critical/high vulnerabilities; medium ones must
-        // stay silent.
+        // stay silent. A justified VEX not_affected statement resolves one,
+        // as under the CRA profiles (until v0.4.0 it still counted); a bare
+        // not_affected claim does not.
         RuleEntry::tested(
             "SBOM-FDA-SECURITY",
             Sev::Warning,
-            broken(|s| {
-                s.vulnerabilities = vec![(
-                    "CVE-2026-0001".to_string(),
-                    "critical".to_string(),
-                    "ref-libalpha".to_string(),
-                )];
-            }),
+            broken(|s| s.vulnerabilities = vec![critical_vulnerability()]),
             broken(|s| {
                 s.vulnerabilities = vec![(
                     "CVE-2026-0002".to_string(),
                     "medium".to_string(),
                     "ref-libalpha".to_string(),
                 )];
+            }),
+        )
+        .with_firing(
+            "critical vulnerability with a bare not_affected statement",
+            Sev::Warning,
+            broken(|s| {
+                s.vulnerabilities = vec![critical_vulnerability()];
+                s.vulnerability_analyses
+                    .push((CRITICAL_CVE.to_string(), not_affected(None)));
+            }),
+        )
+        .with_silent(
+            "critical vulnerability with a justified not_affected statement",
+            broken(|s| {
+                s.vulnerabilities = vec![critical_vulnerability()];
+                s.vulnerability_analyses.push((
+                    CRITICAL_CVE.to_string(),
+                    not_affected(Some("code_not_reachable")),
+                ));
             }),
         )
         .only(Encoding::ALL_BUT_SPDX23, SPDX23_HAS_NO_VULNERABILITIES),
@@ -388,50 +463,6 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     ];
 
     run_matrix(LEVEL, FDA_SARIF_RULE_IDS, &entries);
-}
-
-/// CycloneDX `metadata.supplier`, the supplier of the described device,
-/// names the manufacturer at the document-level SBOM-FDA-SUPPLIER site in
-/// both CycloneDX encodings, as the device's own supplier does. (The
-/// matrix cannot hold it as a silent case: a device without a producer of
-/// its own draws the component-level finding of the same rule.)
-#[test]
-fn fda_document_supplier_names_the_device_manufacturer() {
-    let manufacturer_site = |fixture: &SbomFixture, encoding: Encoding| {
-        let result = check_in(LEVEL, fixture, encoding);
-        let fired = result
-            .violations
-            .iter()
-            .any(|v| v.rule_id == "SBOM-FDA-SUPPLIER" && v.component_id.is_none());
-        (fired, render_violations(&result))
-    };
-    let unnamed = broken(without_manufacturer);
-    let mut named = unnamed.clone();
-    named.supplier = Some("Acme Medical Inc".to_string());
-    for &encoding in Encoding::CYCLONEDX {
-        let (fired, report) = manufacturer_site(&unnamed, encoding);
-        assert!(
-            fired,
-            "{}: no manufacturer named:\n{report}",
-            encoding.name()
-        );
-        let (fired, report) = manufacturer_site(&named, encoding);
-        assert!(
-            !fired,
-            "{}: metadata.supplier names the manufacturer:\n{report}",
-            encoding.name()
-        );
-    }
-    let mut placeholder = unnamed;
-    placeholder.supplier = Some("N/A".to_string());
-    for &encoding in Encoding::CYCLONEDX {
-        let (fired, report) = manufacturer_site(&placeholder, encoding);
-        assert!(
-            fired,
-            "{}: a placeholder names nobody:\n{report}",
-            encoding.name()
-        );
-    }
 }
 
 /// SBOM-FDA-SPEC-VERSION-UNKNOWN reads only SPDX input: its matrix row

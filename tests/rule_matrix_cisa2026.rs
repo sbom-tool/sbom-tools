@@ -320,6 +320,26 @@ fn cisa2026_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.component_mut("libalpha").licenses.clear()),
             base(),
+        )
+        // The licence test every standard shares: a placeholder is no
+        // licence information (until v0.4.0 any value passed here), while
+        // NOASSERTION is the element's explicit unknown, which only this
+        // standard accepts.
+        .with_firing(
+            "placeholder licence (TBD)",
+            Sev::Error,
+            broken(|s| s.component_mut("libalpha").licenses = vec!["TBD".to_string()]),
+        )
+        .with_silent(
+            "NOASSERTION licence (the explicit unknown)",
+            broken(|s| s.component_mut("libalpha").licenses = vec!["NOASSERTION".to_string()]),
+        )
+        .case_differs(
+            "NOASSERTION licence (the explicit unknown)",
+            &[Encoding::Spdx23Json],
+            Outcome::Fires(Sev::Error),
+            "SPDX 2.3.1 Annex L.2.2 asks for a licence field that differs from NOASSERTION, and \
+             the SPDX parser drops a NOASSERTION licence",
         ),
         RuleEntry::tested(
             "SBOM-CISA2026-DEPENDENCY",

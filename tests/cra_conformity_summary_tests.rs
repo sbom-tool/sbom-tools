@@ -154,7 +154,7 @@ fn doc_evidence_satisfied_by_attestation_external_ref() {
 fn psirt_evidence_satisfied_by_sidecar() {
     let sidecar = CraSidecarMetadata {
         product_class: Some(CraProductClass::ImportantClass1),
-        psirt_url: Some("https://example.com/psirt".to_string()),
+        psirt_url: Some("https://acme.example/psirt".to_string()),
         ..Default::default()
     };
     let result = checker(ComplianceLevel::CraPhase2)

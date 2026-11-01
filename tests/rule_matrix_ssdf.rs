@@ -210,6 +210,19 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             }),
             base(),
         )
+        // A contact reference that reaches nobody counts nowhere: an
+        // address at a documentation domain (until v0.4.0 it did here).
+        .with_firing(
+            "advisories reference at example.com",
+            Sev::Info,
+            broken(|s| {
+                for (ref_type, url) in &mut s.component_mut("libalpha").external_refs {
+                    if ref_type == "advisories" {
+                        *url = "https://example.com/security/advisories".to_string();
+                    }
+                }
+            }),
+        )
         .with_silent(
             "vulnerability-assertion (VDR) reference instead of advisories",
             broken(|s| {

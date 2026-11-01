@@ -209,6 +209,26 @@ fn eo14028_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.component_mut("libalpha").external_refs.clear();
             }),
         )
+        // A contact that reaches nobody counts nowhere, as for CRA Art.
+        // 13(17) and PCI DSS (until v0.4.0 any value did here).
+        .with_firing(
+            "advisories reference at example.com",
+            Sev::Warning,
+            broken(|s| {
+                s.component_mut("libalpha").external_refs = vec![(
+                    "advisories".to_string(),
+                    "https://example.com/security/advisories".to_string(),
+                )];
+            }),
+        )
+        .with_firing(
+            "placeholder advisories reference (NOASSERTION)",
+            Sev::Warning,
+            broken(|s| {
+                s.component_mut("libalpha").external_refs =
+                    vec![("advisories".to_string(), "NOASSERTION".to_string())];
+            }),
+        )
         .with_silent(
             "advisories reference on the named product",
             broken(|s| {

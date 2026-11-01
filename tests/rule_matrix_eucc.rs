@@ -231,6 +231,24 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     )];
                 }),
             )
+            // The keywords the CRA Annex IV check reads (one test for both;
+            // until v0.4.0 this check did not read commoncriteria).
+            .with_silent(
+                "certification-report reference to a commoncriteria URL",
+                broken(|s| {
+                    s.primary_mut().external_refs = vec![(
+                        "certification-report".to_string(),
+                        "https://www.commoncriteriaportal.org/files/epfiles/acme-hsm-cert.pdf"
+                            .to_string(),
+                    )];
+                }),
+            )
+            .case_differs(
+                "certification-report reference to a commoncriteria URL",
+                &[Encoding::Spdx23Json],
+                Outcome::Fires(Sev::Warning),
+                SPDX23_NO_CERTIFICATE_REFERENCE,
+            )
             .case_differs(
                 "silent",
                 &[Encoding::Spdx23Json],

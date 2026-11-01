@@ -33,28 +33,28 @@
           <url>https://github.com/example/example-app/issues</url>
         </reference>
         <reference type="advisories">
-          <url>https://example.com/security/advisories</url>
+          <url>https://examplecorp.example/security/advisories</url>
         </reference>
         <reference type="security-contact">
-          <url>mailto:security@example.com</url>
+          <url>mailto:security@examplecorp.example</url>
         </reference>
         <reference type="attestation">
-          <url>https://example.com/doc.pdf</url>
+          <url>https://examplecorp.example/doc.pdf</url>
         </reference>
       </externalReferences>
     </component>
     <manufacturer>
       <name>ExampleCorp</name>
       <contact>
-        <email>legal@example.com</email>
+        <email>legal@examplecorp.example</email>
       </contact>
     </manufacturer>
     <supplier>
       <name>ExampleCorp</name>
-      <url>https://example.com</url>
+      <url>https://examplecorp.example</url>
       <contact>
         <name>Security</name>
-        <email>security@example.com</email>
+        <email>security@examplecorp.example</email>
       </contact>
     </supplier>
   </metadata>

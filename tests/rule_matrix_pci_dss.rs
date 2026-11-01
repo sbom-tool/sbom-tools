@@ -269,6 +269,30 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     )];
                 }
             }),
+        )
+        // A contact that reaches nobody is no hook, as for CRA Art. 13(17)
+        // and EO 14028: a placeholder (rejected here before), or an address
+        // at a documentation domain (accepted until v0.4.0).
+        .with_firing(
+            "advisories reference at example.com",
+            Sev::Info,
+            broken(|s| {
+                if let Some(primary) = &mut s.primary {
+                    primary.external_refs = vec![(
+                        "advisories".to_string(),
+                        "https://example.com/security/advisories".to_string(),
+                    )];
+                }
+            }),
+        )
+        .with_firing(
+            "placeholder advisories reference (n/a)",
+            Sev::Info,
+            broken(|s| {
+                if let Some(primary) = &mut s.primary {
+                    primary.external_refs = vec![("advisories".to_string(), "n/a".to_string())];
+                }
+            }),
         ),
         // An embedded entry whose only rating severity is "unknown" (and no
         // CVSS score) is unranked; a "medium" entry is ranked and must stay

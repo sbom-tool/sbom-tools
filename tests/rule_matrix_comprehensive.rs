@@ -3,9 +3,10 @@
 //! diff casualty dropping Comprehensive from the NTIA-timestamp or hash match
 //! arms in generic.rs would have shipped unnoticed).
 //!
-//! Comprehensive runs on the generic checker path and shares the NTIA rule
-//! ids for its gating elements, with an `SBOM-QUALITY-*` rule of its own for
-//! every other check. The universe is declared locally (derived from the
+//! Comprehensive runs on the generic checker path, with an `SBOM-QUALITY-*`
+//! rule of its own for every check (until v0.4.0 its timestamp, version,
+//! supplier and dependency checks reported under `SBOM-NTIA-*` ids). The
+//! universe is declared locally (derived from the
 //! Comprehensive-level match arms in src/quality/compliance/generic.rs);
 //! `run_matrix` requires it to equal the registry's list for the level
 //! (`rules_for_level`), and the matrix sweep enforces that no fixture ever
@@ -24,19 +25,20 @@ use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 const LEVEL: ComplianceLevel = ComplianceLevel::Comprehensive;
 
 /// Every SARIF rule id the Comprehensive profile can emit (generic.rs):
-/// * `SBOM-NTIA-TIMESTAMP` — missing creation timestamp (Error);
-/// * `SBOM-NTIA-VERSION` — missing component version (Error);
-/// * `SBOM-NTIA-SUPPLIER` — missing component supplier (Error);
-/// * `SBOM-NTIA-DEPENDENCY` — dependency-relationship gaps (Error/Warning);
+/// * `SBOM-QUALITY-TIMESTAMP` — missing creation timestamp (Error);
+/// * `SBOM-QUALITY-VERSION` — missing component version (Error);
+/// * `SBOM-QUALITY-SUPPLIER` — missing component supplier (Error);
+/// * `SBOM-QUALITY-DEPENDENCY` — dependency-relationship gaps
+///   (Error/Warning);
 /// * the `SBOM-QUALITY-*` rules of the remaining checks: document creator
 ///   (Error), serial number (Warning), component inventory and name (Error),
 ///   unique identifier (Warning), license (Warning), hashes (Warning), and
 ///   the format-specific checks.
 const COMPREHENSIVE_RULE_UNIVERSE: &[&str] = &[
-    "SBOM-NTIA-TIMESTAMP",
-    "SBOM-NTIA-VERSION",
-    "SBOM-NTIA-SUPPLIER",
-    "SBOM-NTIA-DEPENDENCY",
+    "SBOM-QUALITY-TIMESTAMP",
+    "SBOM-QUALITY-VERSION",
+    "SBOM-QUALITY-SUPPLIER",
+    "SBOM-QUALITY-DEPENDENCY",
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
@@ -93,10 +95,10 @@ fn comprehensive_conforming_fixture_is_compliant_with_zero_violations() {
 #[test]
 fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // Comprehensive shares the NTIA timestamp gate (the match arm the
-        // audit flagged as an easy diff casualty).
+        // Comprehensive gates on the timestamp (the match arm the audit
+        // flagged as an easy diff casualty).
         RuleEntry::tested(
-            "SBOM-NTIA-TIMESTAMP",
+            "SBOM-QUALITY-TIMESTAMP",
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
@@ -107,13 +109,13 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         RuleEntry::tested(
-            "SBOM-NTIA-VERSION",
+            "SBOM-QUALITY-VERSION",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").version = None),
             base(),
         ),
         RuleEntry::tested(
-            "SBOM-NTIA-SUPPLIER",
+            "SBOM-QUALITY-SUPPLIER",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").supplier = None),
             base(),
@@ -121,7 +123,7 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
         // Missing relationships gate as Error; a mostly-disconnected graph
         // (orphan majority) warns at the same rule id.
         RuleEntry::tested(
-            "SBOM-NTIA-DEPENDENCY",
+            "SBOM-QUALITY-DEPENDENCY",
             Sev::Error,
             broken(|s| s.dependencies.clear()),
             base(),
@@ -173,11 +175,30 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").purl = None),
             base(),
         ),
+        // A sentinel or a placeholder names no licence, as in every
+        // standard; a LicenseRef-* id is a licence.
         RuleEntry::tested(
             "SBOM-QUALITY-LICENSE",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").licenses.clear()),
             base(),
+        )
+        .with_firing(
+            "NOASSERTION licence",
+            Sev::Warning,
+            broken(|s| s.component_mut("libalpha").licenses = vec!["NOASSERTION".to_string()]),
+        )
+        .with_firing(
+            "placeholder licence (TBD)",
+            Sev::Warning,
+            broken(|s| s.component_mut("libalpha").licenses = vec!["TBD".to_string()]),
+        )
+        .with_silent(
+            "LicenseRef-* licence",
+            broken(|s| {
+                s.component_mut("libalpha").licenses =
+                    vec!["LicenseRef-acme-proprietary".to_string()];
+            }),
         ),
         // The hash site is Comprehensive-specific (FDA is the only other
         // level in that match arm — the exact list the audit flagged).
