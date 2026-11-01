@@ -1,6 +1,5 @@
 ---
 source: tests/golden_reports.rs
-assertion_line: 151
 expression: "render(&SarifReporter::new())"
 ---
 {
@@ -653,6 +652,24 @@ expression: "render(&SarifReporter::new())"
               }
             },
             {
+              "id": "SBOM-CRA-CYCLES",
+              "name": "CraDependencyCycles",
+              "shortDescription": {
+                "text": "CRA Annex I Part II (1): Dependency graph must be an acyclic inventory — cyclic dependency declarations detected"
+              },
+              "fullDescription": {
+                "text": "CRA Annex I Part II (1): Dependency graph must be an acyclic inventory — cyclic dependency declarations detected. References: CRA Annex I Part II (1)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "help": {
+                "text": "Resolve cyclic dependency declarations so the SBOM's dependency graph is a directed acyclic inventory of the product's components.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Resolve cyclic dependency declarations so the SBOM's dependency graph is a directed acyclic inventory of the product's components.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+              }
+            },
+            {
               "id": "SBOM-CRA-ANNEX-I-PRIMARY",
               "name": "CraPrimaryComponent",
               "shortDescription": {
@@ -833,24 +850,6 @@ expression: "render(&SarifReporter::new())"
               }
             },
             {
-              "id": "SBOM-CRA-ART-24",
-              "name": "CraStewardVulnerabilityHandling",
-              "shortDescription": {
-                "text": "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)"
-              },
-              "fullDescription": {
-                "text": "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
-              "help": {
-                "text": "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.\n\nWhere the fix goes:\n- CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.",
-                "markdown": "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a metadata.component.externalReferences\\[\\] entry of type security-contact (or advisories).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory SECURITY and referenceType advisory (or url) to the described package.\n- **SPDX 3.0:** add an externalRef\\[\\] entry with externalRefType securityAdvisory to the root package."
-              }
-            },
-            {
               "id": "SBOM-CRA-ANNEX-IV",
               "name": "CraEuccCertification",
               "shortDescription": {
@@ -869,21 +868,39 @@ expression: "render(&SarifReporter::new())"
               }
             },
             {
+              "id": "SBOM-CRA-ANNEX-VIII",
+              "name": "CraConformityAssessment",
+              "shortDescription": {
+                "text": "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route"
+              },
+              "fullDescription": {
+                "text": "CRA Annex VIII: Conformity-assessment evidence for the resolved assessment route. References: CRA Annex VIII."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "help": {
+                "text": "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference. The route follows the product class (Art. 32; Annex III class I and II, Annex IV critical), whose product categories Implementing Regulation (EU) 2025/2392 describes.\n\nWhere the fix goes:\n- CycloneDX: add a metadata.component.externalReferences[] entry of type certification-report; an attestation entry does not count.\n- SPDX 2.x: no external reference category names a certificate, so the check cannot be satisfied from the document.\n- SPDX 3.0: add an externalRef[] entry with externalRefType certificationReport to the root package; secureSoftwareAttestation does not count.\n\nReferences:\n- CRA Annex VIII (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Reference the notified-body or certification-body certificate the conformity-assessment route requires — the EU-type examination certificate (Module B+C), the quality-system approval (Module H) or the EUCC certificate — as a certification external reference on the product component. An attestation reference does not count here, since it may be a self-attestation; it still serves as the Annex V Declaration of Conformity reference. The route follows the product class (Art. 32; Annex III class I and II, Annex IV critical), whose product categories Implementing Regulation (EU) 2025/2392 describes.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a metadata.component.externalReferences\\[\\] entry of type certification-report; an attestation entry does not count.\n- **SPDX 2.x:** no external reference category names a certificate, so the check cannot be satisfied from the document.\n- **SPDX 3.0:** add an externalRef\\[\\] entry with externalRefType certificationReport to the root package; secureSoftwareAttestation does not count.\n\n**References**\n\n- [CRA Annex VIII](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+              }
+            },
+            {
               "id": "SBOM-CRA-CREATOR",
               "name": "CraSbomCreator",
               "shortDescription": {
                 "text": "CRA readiness: SBOM creator identified (person, organization or tool)"
               },
               "fullDescription": {
-                "text": "CRA readiness: SBOM creator identified (person, organization or tool)."
+                "text": "CRA readiness: SBOM creator identified (person, organization or tool). References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Identify who created the SBOM: a person, organization or tool.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.",
-                "markdown": "Identify who created the SBOM: a person, organization or tool.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element."
+                "text": "Identify who created the SBOM: a person, organization or tool.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Identify who created the SBOM: a person, organization or tool.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -893,15 +910,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: SBOM carries a unique document identifier"
               },
               "fullDescription": {
-                "text": "CRA readiness: SBOM carries a unique document identifier."
+                "text": "CRA readiness: SBOM carries a unique document identifier. References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give the SBOM a unique document identifier.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.",
-                "markdown": "Give the SBOM a unique document identifier.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId."
+                "text": "Give the SBOM a unique document identifier.\n\nWhere the fix goes:\n- CycloneDX: set serialNumber (urn:uuid:…).\n- SPDX 2.x: set documentNamespace (DocumentNamespace) to a unique URI.\n- SPDX 3.0: give the SpdxDocument a unique spdxId.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Give the SBOM a unique document identifier.\n\n**Where the fix goes**\n\n- **CycloneDX:** set serialNumber (urn:uuid:…).\n- **SPDX 2.x:** set documentNamespace (DocumentNamespace) to a unique URI.\n- **SPDX 3.0:** give the SpdxDocument a unique spdxId.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -911,15 +928,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: Every component has a name"
               },
               "fullDescription": {
-                "text": "CRA readiness: Every component has a name."
+                "text": "CRA readiness: Every component has a name. References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "error"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.",
-                "markdown": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element."
+                "text": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Give every component a name; empty names and placeholders such as NOASSERTION do not count.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -929,15 +946,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)"
               },
               "fullDescription": {
-                "text": "CRA readiness: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0)."
+                "text": "CRA readiness: Spec version sbom-tools reads (CycloneDX 1.4–1.7, SPDX 2.x or 3.0). References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.",
-                "markdown": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x."
+                "text": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Use a spec version sbom-tools reads: CycloneDX 1.4–1.7, SPDX 2.x or 3.0. An older version lacks fields the checks read, and what a newer version adds is not evaluated.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -947,15 +964,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: SPDX document declares a valid SPDX version"
               },
               "fullDescription": {
-                "text": "CRA readiness: SPDX document declares a valid SPDX version."
+                "text": "CRA readiness: SPDX document declares a valid SPDX version. References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.",
-                "markdown": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x."
+                "text": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\nWhere the fix goes:\n- CycloneDX: set specVersion 1.4–1.7.\n- SPDX 2.x: set spdxVersion SPDX-2.x.\n- SPDX 3.0: set creationInfo.specVersion 3.0.x.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Declare a valid SPDX version, 2.x or 3.0, so the document is read as the version it is.\n\n**Where the fix goes**\n\n- **CycloneDX:** set specVersion 1.4–1.7.\n- **SPDX 2.x:** set spdxVersion SPDX-2.x.\n- **SPDX 3.0:** set creationInfo.specVersion 3.0.x.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -965,15 +982,15 @@ expression: "render(&SarifReporter::new())"
                 "text": "CRA readiness: Every element has its own well-formed identifier"
               },
               "fullDescription": {
-                "text": "CRA readiness: Every element has its own well-formed identifier."
+                "text": "CRA readiness: Every element has its own well-formed identifier. References: CRA Annex I Part II (1)."
               },
               "defaultConfiguration": {
                 "level": "note"
               },
               "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "help": {
-                "text": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\nWhere the fix goes:\n- CycloneDX: set a bom-ref on every component, one that differs from the component's name.\n- SPDX 2.x: give every element an SPDXID that starts with SPDXRef-.\n- SPDX 3.0: give every element an IRI spdxId.",
-                "markdown": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\n**Where the fix goes**\n\n- **CycloneDX:** set a bom-ref on every component, one that differs from the component's name.\n- **SPDX 2.x:** give every element an SPDXID that starts with SPDXRef-.\n- **SPDX 3.0:** give every element an IRI spdxId."
+                "text": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\nWhere the fix goes:\n- CycloneDX: set a bom-ref on every component, one that differs from the component's name.\n- SPDX 2.x: give every element an SPDXID that starts with SPDXRef-.\n- SPDX 3.0: give every element an IRI spdxId.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "Give every element its own well-formed identifier, the one dependency relationships refer to.\n\n**Where the fix goes**\n\n- **CycloneDX:** set a bom-ref on every component, one that differs from the component's name.\n- **SPDX 2.x:** give every element an SPDXID that starts with SPDXRef-.\n- **SPDX 3.0:** give every element an IRI spdxId.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
               }
             },
             {
@@ -1064,1050 +1081,6 @@ expression: "render(&SarifReporter::new())"
               "help": {
                 "text": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- CRA Annex I Part II (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)\n- prEN 40000-1-3: PRE-7-RQ-07\n- prEN 40000-1-3: PRE-7-RQ-07-RE",
                 "markdown": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [CRA Annex I Part II](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)\n- prEN 40000-1-3: PRE-7-RQ-07\n- prEN 40000-1-3: PRE-7-RQ-07-RE"
-              }
-            },
-            {
-              "id": "SBOM-EUCC-PP",
-              "name": "EuccProtectionProfile",
-              "shortDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Common Criteria Protection Profile reference — sidecar eucc_protection_profile_id"
-              },
-              "fullDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Common Criteria Protection Profile reference — sidecar eucc_protection_profile_id. References: EUCC: Protection Profile."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
-              "help": {
-                "text": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\nReferences:\n- EUCC: Protection Profile (https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng)",
-                "markdown": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\n**References**\n\n- [EUCC: Protection Profile](<https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-EUCC-TOE",
-              "name": "EuccTargetOfEvaluation",
-              "shortDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Target of Evaluation reference — sidecar eucc_target_of_evaluation"
-              },
-              "fullDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Target of Evaluation reference — sidecar eucc_target_of_evaluation. References: EUCC: ToE."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
-              "help": {
-                "text": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\nReferences:\n- EUCC: ToE (https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng)",
-                "markdown": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\n**References**\n\n- [EUCC: ToE](<https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-EUCC-ITSEF",
-              "name": "EuccItsefIdentifier",
-              "shortDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): ITSEF (IT Security Evaluation Facility) identifier — sidecar eucc_itsef_identifier"
-              },
-              "fullDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): ITSEF (IT Security Evaluation Facility) identifier — sidecar eucc_itsef_identifier. References: EUCC: ITSEF."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
-              "help": {
-                "text": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\nReferences:\n- EUCC: ITSEF (https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng)",
-                "markdown": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\n**References**\n\n- [EUCC: ITSEF](<https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-EUCC-VALIDITY",
-              "name": "EuccCertificateValidity",
-              "shortDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): certificate valid-until date present, not expired, not near expiry — sidecar eucc_valid_until"
-              },
-              "fullDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): certificate valid-until date present, not expired, not near expiry — sidecar eucc_valid_until. References: EUCC: Certificate validity."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
-              "help": {
-                "text": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\nReferences:\n- EUCC: Certificate validity (https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng)",
-                "markdown": "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.\n\n**References**\n\n- [EUCC: Certificate validity](<https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-EUCC-CERTREF",
-              "name": "EuccCertificationReference",
-              "shortDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Certification/Attestation external reference to an EUCC certificate (recommended)"
-              },
-              "fullDescription": {
-                "text": "EUCC (Reg. (EU) 2024/482): Certification/Attestation external reference to an EUCC certificate (recommended). References: EUCC: Certification reference."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
-              "help": {
-                "text": "Reference the EUCC certificate from the SBOM itself (recommended alongside the sidecar evidence).\n\nWhere the fix goes:\n- CycloneDX: add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc or common-criteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.\n- SPDX 2.x: no field is recognized as an EUCC certificate reference.\n- SPDX 3.0: add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc or common-criteria.\n\nReferences:\n- EUCC: Certification reference (https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng)",
-                "markdown": "Reference the EUCC certificate from the SBOM itself (recommended alongside the sidecar evidence).\n\n**Where the fix goes**\n\n- **CycloneDX:** add an externalReferences\\[\\] entry of type certification-report (or attestation) whose URL contains eucc or common-criteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.\n- **SPDX 2.x:** no field is recognized as an EUCC certificate reference.\n- **SPDX 3.0:** add an externalRef\\[\\] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc or common-criteria.\n\n**References**\n\n- [EUCC: Certification reference](<https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-4",
-              "name": "BsiTr03183FormatEligibility",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 v[VERSION] §4: Newly generated/updated SBOMs must be CycloneDX 1.6+ or SPDX 3.0.1+"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 v[VERSION] §4: Newly generated/updated SBOMs must be CycloneDX 1.6+ or SPDX 3.0.1+. References: BSI TR-03183-2: §4; BSI TR-03183-2: §7."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Regenerate the SBOM as CycloneDX 1.6+ or SPDX 3.0.1+ in JSON or XML. TR-03183-2 v[VERSION] §4 lists the eligible specifications for newly generated or updated SBOMs; the §7 transitional grace for the v[VERSION] minimums (CycloneDX 1.5 / SPDX 2.2.1) ended 2026-02-20.\n\nReferences:\n- BSI TR-03183-2: §4 (https://bsi.bund.de/dok/TR-03183-en)\n- BSI TR-03183-2: §7 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Regenerate the SBOM as CycloneDX 1.6+ or SPDX 3.0.1+ in JSON or XML. TR-03183-2 v[VERSION] §4 lists the eligible specifications for newly generated or updated SBOMs; the §7 transitional grace for the v[VERSION] minimums (CycloneDX 1.5 / SPDX 2.2.1) ended 2026-02-20.\n\n**References**\n\n- [BSI TR-03183-2: §4](<https://bsi.bund.de/dok/TR-03183-en>)\n- [BSI TR-03183-2: §7](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-1",
-              "name": "BsiTr03183SbomCreator",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: Creator of the SBOM (email, or URL if no email)"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: Creator of the SBOM (email, or URL if no email). References: BSI TR-03183-2: §5.2.1."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email) or metadata.manufacturer (name, contact[].email); metadata.tools entries do not count.\n- SPDX 2.x: add a creationInfo.creators[] entry such as \"Person: Jane Doe (jane@example.com)\" or \"Organization: Example Ltd (sbom@example.com)\"; Tool: entries do not count.\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.\n\nReferences:\n- BSI TR-03183-2: §5.2.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email) or metadata.manufacturer (name, contact\\[\\].email); metadata.tools entries do not count.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry such as \"Person: Jane Doe (jane@example.com)\" or \"Organization: Example Ltd (sbom@example.com)\"; Tool: entries do not count.\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-1-CONTACT",
-              "name": "BsiTr03183SbomCreatorContact",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: SBOM creator must carry an email address or URL"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: SBOM creator must carry an email address or URL. References: BSI TR-03183-2: §5.2.1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[].email, or a metadata.manufacturer contact[].email or url.\n- SPDX 2.x: append the address to the creationInfo.creators[] entry, e.g. \"Person: Jane Doe (jane@example.com)\".\n- SPDX 3.0: agent emails are not read, but a creationInfo.createdBy element whose name includes an email address or URL counts.\n\nReferences:\n- BSI TR-03183-2: §5.2.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\].email, or a metadata.manufacturer contact\\[\\].email or url.\n- **SPDX 2.x:** append the address to the creationInfo.creators\\[\\] entry, e.g. \"Person: Jane Doe (jane@example.com)\".\n- **SPDX 3.0:** agent emails are not read, but a creationInfo.createdBy element whose name includes an email address or URL counts.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-2",
-              "name": "BsiTr03183Timestamp",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: Timestamp of the SBOM data compilation"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.1: Timestamp of the SBOM data compilation. References: BSI TR-03183-2: §5.2.1."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Add the date and time of the SBOM data compilation (UTC 'Zulu' timestamps recommended).\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. [TIMESTAMP]).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- BSI TR-03183-2: §5.2.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Add the date and time of the SBOM data compilation (UTC 'Zulu' timestamps recommended).\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. [TIMESTAMP]).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-3",
-              "name": "BsiTr03183ComponentName",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component name (fallback: actual filename)"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component name (fallback: actual filename). References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Name every component. When the component creator assigned no name, the actual filename MUST be used instead.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Name every component. When the component creator assigned no name, the actual filename MUST be used instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-VERSION",
-              "name": "BsiTr03183ComponentVersion",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component version (fallback: RFC 3339 modification date)"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component version (fallback: RFC 3339 modification date). References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Version every component (SemVer/CalVer recommended). When no version is assigned, the modification date of the file as RFC 3339 date-time MUST be used instead.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Version every component (SemVer/CalVer recommended). When no version is assigned, the modification date of the file as RFC 3339 date-time MUST be used instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-INVENTORY",
-              "name": "BsiTr03183Inventory",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: SBOM lists at least one component"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: SBOM lists at least one component. References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component and list the components in components[].\n- SPDX 2.x: list the packages in packages[] and name the product in documentDescribes.\n- SPDX 3.0: add software_Package elements and set the SpdxDocument's rootElement to the product package.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "List the software components the product is made of. A document with no components, or with only files, snippets or cryptographic assets, is not a software inventory; validate a CBOM with --standard cnsa2 or pqc instead.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component and list the components in components\\[\\].\n- **SPDX 2.x:** list the packages in packages\\[\\] and name the product in documentDescribes.\n- **SPDX 3.0:** add software\\_Package elements and set the SpdxDocument's rootElement to the product package.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-LICENSE",
-              "name": "BsiTr03183DistributionLicence",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Distribution licence(s) per component"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Distribution licence(s) per component. References: BSI TR-03183-2: §5.2.2; BSI TR-03183-2: §6.1."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1).\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)\n- BSI TR-03183-2: §6.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1).\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)\n- [BSI TR-03183-2: §6.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-LICENSE-SPDX",
-              "name": "BsiTr03183SpdxLicenceNaming",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §6.1: Licences must be named by SPDX identifier/expression"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §6.1: Licences must be named by SPDX identifier/expression. References: BSI TR-03183-2: §6.1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Name licences by SPDX identifier or expression; consult Scancode LicenseDB (LicenseRef-scancode-*) or use LicenseRef-<entity>-* for unlisted licences. Licence text MUST NOT be used as a substitute for an identifier.\n\nReferences:\n- BSI TR-03183-2: §6.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Name licences by SPDX identifier or expression; consult Scancode LicenseDB (LicenseRef-scancode-\\*) or use LicenseRef-\\<entity\\>-\\* for unlisted licences. Licence text MUST NOT be used as a substitute for an identifier.\n\n**References**\n\n- [BSI TR-03183-2: §6.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-CREATOR",
-              "name": "BsiTr03183ComponentCreator",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component creator (email, or URL if no email)"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Component creator (email, or URL if no email). References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-4",
-              "name": "BsiTr03183ComponentHash",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Hash of the deployable component as SHA-512"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Hash of the deployable component as SHA-512. References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist).\n\nWhere the fix goes:\n- CycloneDX: add a components[].hashes[] entry with alg SHA-512.\n- SPDX 2.x: add a packages[].checksums[] entry with algorithm SHA512 (PackageChecksum: SHA512: <value>).\n- SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist).\n\n**Where the fix goes**\n\n- **CycloneDX:** add a components\\[\\].hashes\\[\\] entry with alg SHA-512.\n- **SPDX 2.x:** add a packages\\[\\].checksums\\[\\] entry with algorithm SHA512 (PackageChecksum: SHA512: \\<value\\>).\n- **SPDX 3.0:** add a verifiedUsing\\[\\] Hash entry with algorithm sha512.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-4-MISSING",
-              "name": "BsiTr03183ComponentHashMissing",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2/§3.2.1: Component has no hash of the deployable form"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2/§3.2.1: Component has no hash of the deployable form. References: BSI TR-03183-2: §5.2.2; BSI TR-03183-2: §3.2.1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components).\n\nWhere the fix goes:\n- CycloneDX: add a components[].hashes[] entry with alg SHA-512.\n- SPDX 2.x: add a packages[].checksums[] entry with algorithm SHA512 (PackageChecksum: SHA512: <value>).\n- SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)\n- BSI TR-03183-2: §3.2.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components).\n\n**Where the fix goes**\n\n- **CycloneDX:** add a components\\[\\].hashes\\[\\] entry with alg SHA-512.\n- **SPDX 2.x:** add a packages\\[\\].checksums\\[\\] entry with algorithm SHA512 (PackageChecksum: SHA512: \\<value\\>).\n- **SPDX 3.0:** add a verifiedUsing\\[\\] Hash entry with algorithm sha512.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)\n- [BSI TR-03183-2: §3.2.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-5",
-              "name": "BsiTr03183Dependencies",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Dependencies on other components"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Dependencies on other components. References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Enumerate all direct dependencies of each component.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Enumerate all direct dependencies of each component.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
-              "name": "BsiTr03183DependencyCompleteness",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration must be clearly indicated"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration must be clearly indicated. References: BSI TR-03183-2: §5.2.2."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Clearly indicate the completeness of the dependency enumeration (complete or incomplete).\n\nWhere the fix goes:\n- CycloneDX: set compositions[].aggregate (complete, incomplete, incomplete_first_party_only, …); the first composition is read.\n- SPDX 2.x: no field records completeness.\n- SPDX 3.0: set completeness (complete or incomplete) on the dependsOn Relationship elements.\n\nReferences:\n- BSI TR-03183-2: §5.2.2 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Clearly indicate the completeness of the dependency enumeration (complete or incomplete).\n\n**Where the fix goes**\n\n- **CycloneDX:** set compositions\\[\\].aggregate (complete, incomplete, incomplete\\_first\\_party\\_only, …); the first composition is read.\n- **SPDX 2.x:** no field records completeness.\n- **SPDX 3.0:** set completeness (complete or incomplete) on the dependsOn Relationship elements.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.2](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-5-2-4",
-              "name": "BsiTr03183UniqueIdentifier",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §5.2.4: Other unique identifiers (purl/CPE) — additional tier"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §5.2.4: Other unique identifiers (purl/CPE) — additional tier. References: BSI TR-03183-2: §5.2.4."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- BSI TR-03183-2: §5.2.4 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [BSI TR-03183-2: §5.2.4](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-BSI-TR-03183-2-3-1",
-              "name": "BsiTr03183NoVulnerabilityInfo",
-              "shortDescription": {
-                "text": "BSI TR-03183-2 §3.1: An SBOM must not contain vulnerability information"
-              },
-              "fullDescription": {
-                "text": "BSI TR-03183-2 §3.1: An SBOM must not contain vulnerability information. References: BSI TR-03183-2: §3.1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://bsi.bund.de/dok/TR-03183-en",
-              "help": {
-                "text": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2.\n\nWhere the fix goes:\n- CycloneDX: remove the vulnerabilities[] array.\n- SPDX 2.x: documents in this format carry no vulnerability data, so these entries were attached by enrichment.\n- SPDX 3.0: remove the security_Vulnerability elements and their affects and assessment Relationships.\n\nReferences:\n- BSI TR-03183-2: §3.1 (https://bsi.bund.de/dok/TR-03183-en)",
-                "markdown": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2.\n\n**Where the fix goes**\n\n- **CycloneDX:** remove the vulnerabilities\\[\\] array.\n- **SPDX 2.x:** documents in this format carry no vulnerability data, so these entries were attached by enrichment.\n- **SPDX 3.0:** remove the security\\_Vulnerability elements and their affects and assessment Relationships.\n\n**References**\n\n- [BSI TR-03183-2: §3.1](<https://bsi.bund.de/dok/TR-03183-en>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
-              "name": "AiActModelDescription",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §1: General description of the AI model (description, architecture or model card)"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §1: General description of the AI model (description, architecture or model card). References: EU AI Act: Annex IV §1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Add a general description of the AI model: a description, its architecture family or name, or a model-card reference.\n\nWhere the fix goes:\n- CycloneDX: set components[].description or modelCard.modelParameters.architectureFamily (or modelArchitecture), or add a model-card externalReferences[] entry.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set description or ai_typeOfModel on the ai_AIPackage, or add a documentation externalRef[] entry.\n\nReferences:\n- EU AI Act: Annex IV §1 (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Add a general description of the AI model: a description, its architecture family or name, or a model-card reference.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].description or modelCard.modelParameters.architectureFamily (or modelArchitecture), or add a model-card externalReferences\\[\\] entry.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set description or ai\\_typeOfModel on the ai\\_AIPackage, or add a documentation externalRef\\[\\] entry.\n\n**References**\n\n- [EU AI Act: Annex IV §1](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
-              "name": "AiActIntendedPurpose",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §1: Intended purpose and use-cases of the AI model"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §1: Intended purpose and use-cases of the AI model. References: EU AI Act: Annex IV §1."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Document the intended purpose / use-cases of the AI model.\n\nWhere the fix goes:\n- CycloneDX: set modelCard.considerations.useCases[].\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_informationAboutApplication (or ai_domain) on the ai_AIPackage.\n\nReferences:\n- EU AI Act: Annex IV §1 (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Document the intended purpose / use-cases of the AI model.\n\n**Where the fix goes**\n\n- **CycloneDX:** set modelCard.considerations.useCases\\[\\].\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_informationAboutApplication (or ai\\_domain) on the ai\\_AIPackage.\n\n**References**\n\n- [EU AI Act: Annex IV §1](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
-              "name": "AiActTrainingDatasets",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §2(d): Training datasets referenced"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §2(d): Training datasets referenced. References: EU AI Act: Annex IV §2(d)."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Reference the training datasets used.\n\nWhere the fix goes:\n- CycloneDX: list modelCard.modelParameters.datasets[] entries with a ref to each data component.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: add a trainedOn Relationship from the ai_AIPackage to each dataset_DatasetPackage.\n\nReferences:\n- EU AI Act: Annex IV §2(d) (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Reference the training datasets used.\n\n**Where the fix goes**\n\n- **CycloneDX:** list modelCard.modelParameters.datasets\\[\\] entries with a ref to each data component.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** add a trainedOn Relationship from the ai\\_AIPackage to each dataset\\_DatasetPackage.\n\n**References**\n\n- [EU AI Act: Annex IV §2(d)](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-2D-SENSITIVITY",
-              "name": "AiActDatasetSensitivity",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §2(d): Sensitivity classification of each dataset"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §2(d): Sensitivity classification of each dataset. References: EU AI Act: Annex IV §2(d)."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Declare a sensitivity classification for each dataset (e.g. 'none', 'pii', 'personal').\n\nWhere the fix goes:\n- CycloneDX: set data[].sensitiveData[] on each data component (the first data[] entry is read).\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set dataset_confidentialityLevel on each dataset_DatasetPackage (dataset_hasSensitivePersonalInformation yes also counts).\n\nReferences:\n- EU AI Act: Annex IV §2(d) (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Declare a sensitivity classification for each dataset (e.g. 'none', 'pii', 'personal').\n\n**Where the fix goes**\n\n- **CycloneDX:** set data\\[\\].sensitiveData\\[\\] on each data component (the first data\\[\\] entry is read).\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set dataset\\_confidentialityLevel on each dataset\\_DatasetPackage (dataset\\_hasSensitivePersonalInformation yes also counts).\n\n**References**\n\n- [EU AI Act: Annex IV §2(d)](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-2D-PERSONAL-DATA",
-              "name": "AiActPersonalData",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §2(d): Training data involving personal data (GDPR lawful basis and safeguards)"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §2(d): Training data involving personal data (GDPR lawful basis and safeguards). References: EU AI Act: Annex IV §2(d)."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Where training data involves personal data, document the GDPR lawful basis and data-protection measures alongside the SBOM (AI Act and GDPR apply in parallel).\n\nReferences:\n- EU AI Act: Annex IV §2(d) (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Where training data involves personal data, document the GDPR lawful basis and data-protection measures alongside the SBOM (AI Act and GDPR apply in parallel).\n\n**References**\n\n- [EU AI Act: Annex IV §2(d)](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-2G-METRICS",
-              "name": "AiActValidationMetrics",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §2(g): Validation and testing metrics (accuracy, robustness)"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §2(g): Validation and testing metrics (accuracy, robustness). References: EU AI Act: Annex IV §2(g)."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Record validation/testing metrics (accuracy, robustness).\n\nWhere the fix goes:\n- CycloneDX: add modelCard.quantitativeAnalysis.performanceMetrics[] entries (type, value).\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_metric (or ai_metricDecisionThreshold) on the ai_AIPackage.\n\nReferences:\n- EU AI Act: Annex IV §2(g) (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Record validation/testing metrics (accuracy, robustness).\n\n**Where the fix goes**\n\n- **CycloneDX:** add modelCard.quantitativeAnalysis.performanceMetrics\\[\\] entries (type, value).\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_metric (or ai\\_metricDecisionThreshold) on the ai\\_AIPackage.\n\n**References**\n\n- [EU AI Act: Annex IV §2(g)](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-2C-ENERGY",
-              "name": "AiActComputationalResources",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §2(c): Computational resources and training-energy disclosure"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §2(c): Computational resources and training-energy disclosure. References: EU AI Act: Annex IV §2(c)."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Disclose computational resources / training energy.\n\nWhere the fix goes:\n- CycloneDX: add modelCard.considerations.environmentalConsiderations.energyConsumptions[] entries with activity training and an activityEnergyCost.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_energyConsumption with ai_trainingEnergyConsumption entries (ai_energyQuantity, ai_energyUnit) on the ai_AIPackage.\n\nReferences:\n- EU AI Act: Annex IV §2(c) (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Disclose computational resources / training energy.\n\n**Where the fix goes**\n\n- **CycloneDX:** add modelCard.considerations.environmentalConsiderations.energyConsumptions\\[\\] entries with activity training and an activityEnergyCost.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_energyConsumption with ai\\_trainingEnergyConsumption entries (ai\\_energyQuantity, ai\\_energyUnit) on the ai\\_AIPackage.\n\n**References**\n\n- [EU AI Act: Annex IV §2(c)](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-ANNEX-IV-3-LIMITATIONS",
-              "name": "AiActLimitations",
-              "shortDescription": {
-                "text": "EU AI Act Annex IV §3: Foreseeable limitations and risks of the model"
-              },
-              "fullDescription": {
-                "text": "EU AI Act Annex IV §3: Foreseeable limitations and risks of the model. References: EU AI Act: Annex IV §3."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "State the foreseeable limitations and risks of the model, including ethical and fairness considerations.\n\nWhere the fix goes:\n- CycloneDX: set modelCard.considerations.technicalLimitations[] (or ethicalConsiderations[], or fairnessAssessments[]).\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_limitation on the ai_AIPackage (ai_safetyRiskAssessment, ai_modelExplainability or ai_standardCompliance also count).\n\nReferences:\n- EU AI Act: Annex IV §3 (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "State the foreseeable limitations and risks of the model, including ethical and fairness considerations.\n\n**Where the fix goes**\n\n- **CycloneDX:** set modelCard.considerations.technicalLimitations\\[\\] (or ethicalConsiderations\\[\\], or fairnessAssessments\\[\\]).\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_limitation on the ai\\_AIPackage (ai\\_safetyRiskAssessment, ai\\_modelExplainability or ai\\_standardCompliance also count).\n\n**References**\n\n- [EU AI Act: Annex IV §3](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-AIACT-UNTYPED-ML",
-              "name": "AiActUntypedMlContent",
-              "shortDescription": {
-                "text": "EU AI Act readiness: ML content detected but not typed machine-learning-model"
-              },
-              "fullDescription": {
-                "text": "EU AI Act readiness: ML content detected but not typed machine-learning-model. References: EU AI Act: Annex IV: applicability."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-              "help": {
-                "text": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model and add a modelCard.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: make the element an ai_AIPackage (or set software_primaryPurpose to model).\n\nReferences:\n- EU AI Act: Annex IV: applicability (https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng)",
-                "markdown": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model and add a modelCard.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** make the element an ai\\_AIPackage (or set software\\_primaryPurpose to model).\n\n**References**\n\n- [EU AI Act: Annex IV: applicability](<https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-META-AUTHOR",
-              "name": "BsiSbomForAiAuthor",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM author"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM author. References: BSI/G7 AI-SBOM: Metadata / Author."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.\n- SPDX 2.x: add creationInfo.creators[] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- SPDX 3.0: set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\nReferences:\n- BSI/G7 AI-SBOM: Metadata / Author (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.authors\\[\\] (name, email), metadata.manufacturer or metadata.tools.\n- **SPDX 2.x:** add creationInfo.creators\\[\\] entries such as \"Organization: Example Ltd (sbom@example.com)\" or \"Tool: generator-1.0\".\n- **SPDX 3.0:** set creationInfo.createdBy to a Person or Organization element, or createdUsing to a Tool element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Metadata / Author](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-META-FORMAT",
-              "name": "BsiSbomForAiDataFormat",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: Data-format name and version"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: Data-format name and version. References: BSI/G7 AI-SBOM: Metadata / Data format name + version."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nReferences:\n- BSI/G7 AI-SBOM: Metadata / Data format name + version (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Metadata / Data format name + version](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-META-TIMESTAMP",
-              "name": "BsiSbomForAiTimestamp",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM timestamp"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM timestamp. References: BSI/G7 AI-SBOM: Metadata / Timestamp."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: set metadata.timestamp (RFC 3339, e.g. [TIMESTAMP]).\n- SPDX 2.x: set creationInfo.created (Created).\n- SPDX 3.0: set creationInfo.created on the SpdxDocument.\n\nReferences:\n- BSI/G7 AI-SBOM: Metadata / Timestamp (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.timestamp (RFC 3339, e.g. [TIMESTAMP]).\n- **SPDX 2.x:** set creationInfo.created (Created).\n- **SPDX 3.0:** set creationInfo.created on the SpdxDocument.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Metadata / Timestamp](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-META-TOOL",
-              "name": "BsiSbomForAiGenerationTool",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: Generation tool"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: Generation tool. References: BSI/G7 AI-SBOM: Metadata / Generation tool."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: add metadata.tools with the tool's name and version.\n- SPDX 2.x: add a creationInfo.creators[] entry \"Tool: <name>-<version>\".\n- SPDX 3.0: set creationInfo.createdUsing to a Tool element whose name includes the version.\n\nReferences:\n- BSI/G7 AI-SBOM: Metadata / Generation tool (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** add metadata.tools with the tool's name and version.\n- **SPDX 2.x:** add a creationInfo.creators\\[\\] entry \"Tool: \\<name\\>-\\<version\\>\".\n- **SPDX 3.0:** set creationInfo.createdUsing to a Tool element whose name includes the version.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Metadata / Generation tool](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-META-SIGNATURE",
-              "name": "BsiSbomForAiSignature",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM signature"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Metadata: SBOM signature. References: BSI/G7 AI-SBOM: Metadata / Signature."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.\n- SPDX 2.x: no in-document signature field exists.\n- SPDX 3.0: add a verifiedUsing[] entry of type signature (algorithm, hashValue) to the SpdxDocument.\n\nReferences:\n- BSI/G7 AI-SBOM: Metadata / Signature (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\>.\n- **SPDX 2.x:** no in-document signature field exists.\n- **SPDX 3.0:** add a verifiedUsing\\[\\] entry of type signature (algorithm, hashValue) to the SpdxDocument.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Metadata / Signature](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-SYS-PRIMARY",
-              "name": "BsiSbomForAiPrimarySystem",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Primary AI system identified"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Primary AI system identified. References: BSI/G7 AI-SBOM: System-Level / Primary AI system."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: set metadata.component to the product's component.\n- SPDX 2.x: name the product package in documentDescribes (or add a DESCRIBES relationship from SPDXRef-DOCUMENT).\n- SPDX 3.0: set rootElement on the SpdxDocument to the product package.\n\nReferences:\n- BSI/G7 AI-SBOM: System-Level / Primary AI system (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** set metadata.component to the product's component.\n- **SPDX 2.x:** name the product package in documentDescribes (or add a DESCRIBES relationship from SPDXRef-DOCUMENT).\n- **SPDX 3.0:** set rootElement on the SpdxDocument to the product package.\n\n**References**\n\n- [BSI/G7 AI-SBOM: System-Level / Primary AI system](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-SYS-PRODUCER",
-              "name": "BsiSbomForAiProducer",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Producer of the AI system"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Producer of the AI system. References: BSI/G7 AI-SBOM: System-Level / Producer."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).\n- SPDX 2.x: set packages[].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages[].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.\n\nReferences:\n- BSI/G7 AI-SBOM: System-Level / Producer (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).\n- **SPDX 2.x:** set packages\\[\\].supplier (PackageSupplier), e.g. \"Organization: Example Ltd\", or packages\\[\\].originator (PackageOriginator); a NOASSERTION value is read as absent.\n- **SPDX 3.0:** set suppliedBy on the package to the spdxId of an Organization or Person element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: System-Level / Producer](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-SYS-DATAFLOW",
-              "name": "BsiSbomForAiDataFlow",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Data flow and usage of the AI system"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI System-Level: Data flow and usage of the AI system. References: BSI/G7 AI-SBOM: System-Level / Data flow & usage."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nReferences:\n- BSI/G7 AI-SBOM: System-Level / Data flow & usage (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**References**\n\n- [BSI/G7 AI-SBOM: System-Level / Data flow & usage](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-NAME",
-              "name": "BsiSbomForAiModelName",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model name"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model name. References: BSI/G7 AI-SBOM: Models / Model name."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model name (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model name](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-VERSION",
-              "name": "BsiSbomForAiModelVersion",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model version"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model version. References: BSI/G7 AI-SBOM: Models / Model version."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: set components[].version.\n- SPDX 2.x: set packages[].versionInfo (PackageVersion).\n- SPDX 3.0: set software_packageVersion on the package.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model version (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].version.\n- **SPDX 2.x:** set packages\\[\\].versionInfo (PackageVersion).\n- **SPDX 3.0:** set software\\_packageVersion on the package.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model version](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-IDENTIFIER",
-              "name": "BsiSbomForAiModelIdentifier",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Unique model identifier (PURL, CPE, SWHID or SWID)"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Unique model identifier (PURL, CPE, SWHID or SWID). References: BSI/G7 AI-SBOM: Models / Model identifier."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model identifier (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model identifier](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-HASH",
-              "name": "BsiSbomForAiModelHash",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model-weight hash value"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model-weight hash value. References: BSI/G7 AI-SBOM: Models / Model hash value."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model hash value (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model hash value](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-HASH-ALGO",
-              "name": "BsiSbomForAiModelHashAlgorithm",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model-weight hash uses a NIST-approved algorithm (SHA-256 or stronger)"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model-weight hash uses a NIST-approved algorithm (SHA-256 or stronger). References: BSI/G7 AI-SBOM: Models / Hash algorithm."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Hash algorithm (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Hash algorithm](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-CARD",
-              "name": "BsiSbomForAiModelCard",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model card"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model card. References: BSI/G7 AI-SBOM: Models / Model card."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: add a components[].externalReferences[] entry of type model-card to the model component.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: add a documentation externalRef[] entry linking the model card to the ai_AIPackage.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model card (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** add a components\\[\\].externalReferences\\[\\] entry of type model-card to the model component.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** add a documentation externalRef\\[\\] entry linking the model card to the ai\\_AIPackage.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model card](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-ARCHITECTURE",
-              "name": "BsiSbomForAiModelArchitecture",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model architecture"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model architecture. References: BSI/G7 AI-SBOM: Models / Architecture."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: set modelCard.modelParameters.architectureFamily or modelArchitecture.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_typeOfModel on the ai_AIPackage.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Architecture (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** set modelCard.modelParameters.architectureFamily or modelArchitecture.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_typeOfModel on the ai\\_AIPackage.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Architecture](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-DATASETS",
-              "name": "BsiSbomForAiModelDatasets",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Training datasets referenced"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Training datasets referenced. References: BSI/G7 AI-SBOM: Models / Training datasets."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: list modelCard.modelParameters.datasets[] entries with a ref to each data component, or nest the data components (with their data[] block) under the model.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: add a trainedOn (or contains) Relationship from the ai_AIPackage to each dataset_DatasetPackage.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Training datasets (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** list modelCard.modelParameters.datasets\\[\\] entries with a ref to each data component, or nest the data components (with their data\\[\\] block) under the model.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** add a trainedOn (or contains) Relationship from the ai\\_AIPackage to each dataset\\_DatasetPackage.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Training datasets](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-LIMITATIONS",
-              "name": "BsiSbomForAiModelLimitations",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model limitations"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model limitations. References: BSI/G7 AI-SBOM: Models / Limitations."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: set modelCard.considerations.technicalLimitations[].\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set ai_limitation on the ai_AIPackage.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Limitations (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** set modelCard.considerations.technicalLimitations\\[\\].\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set ai\\_limitation on the ai\\_AIPackage.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Limitations](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-MODEL-LICENSE",
-              "name": "BsiSbomForAiModelLicense",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model license"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Models: Model license. References: BSI/G7 AI-SBOM: Models / Model license."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- BSI/G7 AI-SBOM: Models / Model license (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Models / Model license](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-NAME",
-              "name": "BsiSbomForAiDatasetName",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset name"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset name. References: BSI/G7 AI-SBOM: Datasets / Dataset name."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: set components[].name.\n- SPDX 2.x: set packages[].name (PackageName), or files[].fileName for files.\n- SPDX 3.0: set name on the element.\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Dataset name (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].name.\n- **SPDX 2.x:** set packages\\[\\].name (PackageName), or files\\[\\].fileName for files.\n- **SPDX 3.0:** set name on the element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Dataset name](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-IDENTIFIER",
-              "name": "BsiSbomForAiDatasetIdentifier",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Unique dataset identifier"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Unique dataset identifier. References: BSI/G7 AI-SBOM: Datasets / Dataset identifier."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: set components[].purl (or cpe, or swhid[]).\n- SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Dataset identifier (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].purl (or cpe, or swhid\\[\\]).\n- **SPDX 2.x:** add a packages\\[\\].externalRefs\\[\\] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).\n- **SPDX 3.0:** set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Dataset identifier](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-HASH",
-              "name": "BsiSbomForAiDatasetHash",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset hash value"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset hash value. References: BSI/G7 AI-SBOM: Datasets / Dataset hash value."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Dataset hash value (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.\n- **SPDX 2.x:** add packages\\[\\].checksums\\[\\] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).\n- **SPDX 3.0:** add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Dataset hash value](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-LICENSE",
-              "name": "BsiSbomForAiDatasetLicense",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset license"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Dataset license. References: BSI/G7 AI-SBOM: Datasets / Dataset license."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).\n- SPDX 2.x: set packages[].licenseDeclared (PackageLicenseDeclared) or packages[].licenseConcluded; NOASSERTION and NONE are read as absent.\n- SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Dataset license (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).\n- **SPDX 2.x:** set packages\\[\\].licenseDeclared (PackageLicenseDeclared) or packages\\[\\].licenseConcluded; NOASSERTION and NONE are read as absent.\n- **SPDX 3.0:** add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Dataset license](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-SENSITIVITY",
-              "name": "BsiSbomForAiDatasetSensitivity",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Sensitivity classification"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Sensitivity classification. References: BSI/G7 AI-SBOM: Datasets / Sensitivity classification."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: set data[].sensitiveData[] on each data component (the first data[] entry is read).\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set dataset_confidentialityLevel on each dataset_DatasetPackage (dataset_hasSensitivePersonalInformation yes also counts).\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Sensitivity classification (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** set data\\[\\].sensitiveData\\[\\] on each data component (the first data\\[\\] entry is read).\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set dataset\\_confidentialityLevel on each dataset\\_DatasetPackage (dataset\\_hasSensitivePersonalInformation yes also counts).\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Sensitivity classification](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-DATASET-PROVENANCE",
-              "name": "BsiSbomForAiDatasetProvenance",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Provenance and intended use"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Datasets: Provenance and intended use. References: BSI/G7 AI-SBOM: Datasets / Provenance & intended use."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\nWhere the fix goes:\n- CycloneDX: name data[].governance owners, custodians or stewards (the first data[] entry is read).\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: set dataset_intendedUse, dataset_dataPreprocessing or dataset_anonymizationMethodUsed, or suppliedBy / originatedBy agents, on the dataset_DatasetPackage.\n\nReferences:\n- BSI/G7 AI-SBOM: Datasets / Provenance & intended use (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use.\n\n**Where the fix goes**\n\n- **CycloneDX:** name data\\[\\].governance owners, custodians or stewards (the first data\\[\\] entry is read).\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** set dataset\\_intendedUse, dataset\\_dataPreprocessing or dataset\\_anonymizationMethodUsed, or suppliedBy / originatedBy agents, on the dataset\\_DatasetPackage.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Datasets / Provenance & intended use](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-INFRA-RUNTIME",
-              "name": "BsiSbomForAiRuntime",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Infrastructure: Runtime and framework dependency links"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Infrastructure: Runtime and framework dependency links. References: BSI/G7 AI-SBOM: Infrastructure / Runtime & framework."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nWhere the fix goes:\n- CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.\n- SPDX 2.x: add relationships[] entries such as DEPENDS_ON (or DEPENDENCY_OF, CONTAINS) between the packages.\n- SPDX 3.0: add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\nReferences:\n- BSI/G7 AI-SBOM: Infrastructure / Runtime & framework (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**Where the fix goes**\n\n- **CycloneDX:** add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.\n- **SPDX 2.x:** add relationships\\[\\] entries such as DEPENDS\\_ON (or DEPENDENCY\\_OF, CONTAINS) between the packages.\n- **SPDX 3.0:** add Relationship elements with relationshipType dependsOn (or contains) between the packages.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Infrastructure / Runtime & framework](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-SEC-CONTROLS",
-              "name": "BsiSbomForAiSecurityControls",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Security: AI-specific security controls"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Security: AI-specific security controls. References: BSI/G7 AI-SBOM: Security / AI security controls."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nReferences:\n- BSI/G7 AI-SBOM: Security / AI security controls (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Security / AI security controls](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-SEC-EXPLOITABILITY",
-              "name": "BsiSbomForAiExploitability",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI Security: Exploitability reference"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI Security: Exploitability reference. References: BSI/G7 AI-SBOM: Security / Exploitability reference."
-              },
-              "defaultConfiguration": {
-                "level": "note"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\nReferences:\n- BSI/G7 AI-SBOM: Security / Exploitability reference (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.\n\n**References**\n\n- [BSI/G7 AI-SBOM: Security / Exploitability reference](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
-              }
-            },
-            {
-              "id": "SBOM-BSIAI-UNTYPED-ML",
-              "name": "BsiSbomForAiUntypedMlContent",
-              "shortDescription": {
-                "text": "BSI/G7 SBOM-for-AI readiness: ML content detected but not typed machine-learning-model"
-              },
-              "fullDescription": {
-                "text": "BSI/G7 SBOM-for-AI readiness: ML content detected but not typed machine-learning-model. References: BSI/G7 AI-SBOM: Applicability."
-              },
-              "defaultConfiguration": {
-                "level": "warning"
-              },
-              "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-              "help": {
-                "text": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\nWhere the fix goes:\n- CycloneDX: set components[].type to machine-learning-model and add a modelCard.\n- SPDX 2.x: no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- SPDX 3.0: make the element an ai_AIPackage (or set software_primaryPurpose to model).\n\nReferences:\n- BSI/G7 AI-SBOM: Applicability (https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements)",
-                "markdown": "Components with pkg:huggingface PURLs or model-card references look like ML models; leaving them untyped hides them from every AI-BOM readiness check. Type them as machine-learning models and attach the AI metadata.\n\n**Where the fix goes**\n\n- **CycloneDX:** set components\\[\\].type to machine-learning-model and add a modelCard.\n- **SPDX 2.x:** no AI or dataset profile exists in this format; use CycloneDX 1.5+ or SPDX 3.0.\n- **SPDX 3.0:** make the element an ai\\_AIPackage (or set software\\_primaryPurpose to model).\n\n**References**\n\n- [BSI/G7 AI-SBOM: Applicability](<https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements>)"
               }
             }
           ]
@@ -2843,7 +1816,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-CREATOR",
-          "ruleIndex": 48,
+          "ruleIndex": 49,
           "level": "error",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): SBOM must have creator/tool information (Requirement: Document creator identification) [Element: unknown]"
@@ -2867,7 +1840,13 @@ expression: "render(&SarifReporter::new())"
           },
           "properties": {
             "findingKey": "cra|SBOM-CRA-CREATOR|document",
-            "findingId": "sbomtools:v1:761bc16c60e5f355"
+            "findingId": "sbomtools:v1:761bc16c60e5f355",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ]
           }
         },
         {
@@ -3105,7 +2084,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ANNEX-V",
-          "ruleIndex": 40,
+          "ruleIndex": 41,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex V] Missing reference to the EU Declaration of Conformity (attestation or certification external reference) for product class Default (Requirement: CRA Annex V: EU Declaration of Conformity reference) [Element: unknown]"
@@ -3140,7 +2119,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-SERIAL",
-          "ruleIndex": 49,
+          "ruleIndex": 50,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): SBOM should have a serial number/unique identifier (Requirement: Document unique identification) [Element: unknown]"
@@ -3164,7 +2143,13 @@ expression: "render(&SarifReporter::new())"
           },
           "properties": {
             "findingKey": "cra|SBOM-CRA-SERIAL|document",
-            "findingId": "sbomtools:v1:7ebe5161af763b69"
+            "findingId": "sbomtools:v1:7ebe5161af763b69",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ]
           }
         },
         {
@@ -4019,7 +3004,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'acme-webapp' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: acme-webapp]"
@@ -4050,12 +3035,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|acme-webapp",
             "findingId": "sbomtools:v1:2d17ceaec9d17de6",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "acme-webapp"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'lodash' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: lodash]"
@@ -4086,12 +3077,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/lodash@4.17.21",
             "findingId": "sbomtools:v1:a28f3940a2d724f6",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/lodash@4.17.21"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'express' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: express]"
@@ -4122,12 +3119,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/express@4.18.2",
             "findingId": "sbomtools:v1:abf4cb3d60744c06",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/express@4.18.2"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'dayjs' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: dayjs]"
@@ -4158,12 +3161,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/dayjs@1.11.7",
             "findingId": "sbomtools:v1:ba055699608f5f91",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/dayjs@1.11.7"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'axios' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: axios]"
@@ -4194,12 +3203,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/axios@1.4.0",
             "findingId": "sbomtools:v1:1b68dd97ea26df9e",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/axios@1.4.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'react' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: react]"
@@ -4230,12 +3245,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/react@18.2.0",
             "findingId": "sbomtools:v1:c6a766f8be6d5142",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/react@18.2.0"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'typescript' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: typescript]"
@@ -4266,12 +3287,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/typescript@5.0.4",
             "findingId": "sbomtools:v1:483eee6f197d26e1",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/typescript@5.0.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'zod' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: zod]"
@@ -4302,12 +3329,18 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/zod@3.21.4",
             "findingId": "sbomtools:v1:7eab09d7d84eb05e",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/zod@3.21.4"
           }
         },
         {
           "ruleId": "SBOM-CRA-ELEMENT-ID",
-          "ruleIndex": 53,
+          "ruleIndex": 54,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): Component 'prisma' may be missing bom-ref (Requirement: CycloneDX: bom-ref for dependency tracking) [Element: prisma]"
@@ -4338,6 +3371,12 @@ expression: "render(&SarifReporter::new())"
           "properties": {
             "findingKey": "cra|SBOM-CRA-ELEMENT-ID|pkg:npm/prisma@4.15.0",
             "findingId": "sbomtools:v1:921f2e8e13257ff4",
+            "standardIds": [
+              "CRA-Annex:Annex I Part II (1)"
+            ],
+            "standardHelpUris": [
+              "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+            ],
             "componentId": "pkg:npm/prisma@4.15.0"
           }
         },
@@ -4456,7 +3495,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-DOC-INTEGRITY",
-          "ruleIndex": 39,
+          "ruleIndex": 40,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Annex I Part I (2)(f)] Consider adding document-level integrity metadata (serial number, digital signature, or attestation with hash) (Requirement: CRA Annex I Part I (2)(f): Document signature/integrity) [Element: unknown]"
@@ -4491,7 +3530,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-13-2",
-          "ruleIndex": 41,
+          "ruleIndex": 42,
           "level": "warning",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 13(2)] No documented risk assessment referenced — add an externalReference of type 'risk-assessment' or supply riskAssessmentUrl in the CRA sidecar (Requirement: CRA Art. 13(2): Documented risk assessment) [Element: unknown]"
@@ -4526,7 +3565,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-PSIRT",
-          "ruleIndex": 42,
+          "ruleIndex": 43,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14] PSIRT URL missing — [ART14] (Requirement: CRA Art. 14: PSIRT contact for external vulnerability reports) [Element: unknown]"
@@ -4561,7 +3600,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-EARLY-WARNING",
-          "ruleIndex": 43,
+          "ruleIndex": 44,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(a)] 24-hour early-warning channel missing — document the ENISA/CSIRT contact before 2026-09-11 (Requirement: CRA Art. 14(2)(a): 24-hour early-warning channel) [Element: unknown]"
@@ -4598,7 +3637,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-NOTIFICATION",
-          "ruleIndex": 44,
+          "ruleIndex": 45,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — document this contact before 2026-09-11 (Requirement: CRA Art. 14(2)(b): 72-hour notification channel) [Element: unknown]"
@@ -4635,7 +3674,7 @@ expression: "render(&SarifReporter::new())"
         },
         {
           "ruleId": "SBOM-CRA-ART-14-ENISA",
-          "ruleIndex": 45,
+          "ruleIndex": 46,
           "level": "note",
           "message": {
             "text": "New SBOM - EU CRA Phase 2 (2027): [CRA Art. 14(7)] No record of how the manufacturer reaches the ENISA single reporting platform — Art. 14 notifications go through it from 2026-09-11; set `enisaReportingPlatformId` in the CRA sidecar (Requirement: CRA Art. 14(7): ENISA single reporting platform) [Element: unknown]"

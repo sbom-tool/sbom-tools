@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rules/v1",
+  "title": "RuleCatalogue",
+  "description": "Output of `sbom-tools rules -o json` and `sbom-tools rules explain <RULE_ID> -o json`: what the rule registry records about each compliance rule. Later releases may add fields without changing `schema`, so consumers must ignore fields they do not know. Field reference: docs/compliance-output.md.",
+  "type": "object",
+  "required": ["schema", "tool", "rules"],
+  "properties": {
+    "schema": {"const": "sbom-tools/rules/v1"},
+    "tool": {"$ref": "#/$defs/tool"},
+    "rules": {
+      "type": "array",
+      "description": "Every registered rule in registry order; with --standard, each standard's rules in the order its SARIF run declares them, then the standards' fallback rules; one rule for `rules explain`.",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/rule"}
+    }
+  },
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "sbom-tools"},
+        "version": {"type": "string", "minLength": 1, "description": "The sbom-tools release that produced the document."}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "name", "description", "default_severity", "kind", "fallback", "standards", "references", "remediation", "remediation_summary"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^SBOM-[A-Z0-9-]+$", "description": "The rule id: `rule_id` in `validate -o json`, `ruleId` in SARIF."},
+        "name": {"type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$", "description": "PascalCase name, the SARIF reportingDescriptor name."},
+        "description": {"type": "string", "minLength": 1, "description": "What the check looks for, the SARIF shortDescription."},
+        "default_severity": {"enum": ["Error", "Warning", "Info"], "description": "The severity the rule reports at; a check may escalate or relax it by product class, CRA phase or context."},
+        "kind": {"enum": ["finding", "pass"], "description": "`finding`: the rule reports violations. `pass`: it reports checks the SBOM passed, listed under `passed[]`, never as violations."},
+        "fallback": {"type": "boolean", "description": "Whether this is a SBOM-<FAMILY>-GENERAL fallback rule: no check emits it, and the SARIF writer files a finding without a registered rule under it."},
+        "standards": {
+          "type": "array",
+          "description": "Canonical --standard values of the standards whose reports carry the rule (`minimum`, `standard` and `comprehensive` for the quality profiles); for a fallback rule, the standards it is the fallback of.",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"}
+        },
+        "references": {"type": "array", "description": "The clauses the rule implements, in display order. Empty only for the quality profiles' own rules and some fallback rules.", "items": {"$ref": "#/$defs/reference"}},
+        "help_uri": {"type": "string", "format": "uri", "description": "The rule's documentation link: the URL of the first reference that has one, else the page of the rule's standard."},
+        "remediation": {"type": "string", "minLength": 1, "description": "How to fix a finding, in words that hold for every SBOM format."},
+        "remediation_summary": {"type": "string", "minLength": 1, "description": "The first sentence of `remediation`."},
+        "advice": {"$ref": "#/$defs/advice"}
+      }
+    },
+    "reference": {
+      "type": "object",
+      "required": ["standard", "id", "label"],
+      "properties": {
+        "standard": {"type": "string", "minLength": 1, "description": "Referenced standard, as in a violation's `standard_refs`, e.g. CraArticle, Pren40000_1_3, NtiaMinimum."},
+        "id": {"type": "string", "minLength": 1, "description": "Clause or requirement within that standard, e.g. Art. 24."},
+        "label": {"type": "string", "minLength": 1, "description": "The reference as a reader cites it, e.g. CRA Art. 24."},
+        "help_uri": {"type": "string", "format": "uri", "description": "The standard's canonical URL, when one is known."}
+      }
+    },
+    "advice": {
+      "type": "object",
+      "description": "Where the fix goes in each SBOM format. Absent when the fix is the same in every format.",
+      "required": ["cyclonedx", "spdx2", "spdx3"],
+      "properties": {
+        "cyclonedx": {"$ref": "#/$defs/format_advice"},
+        "spdx2": {"$ref": "#/$defs/format_advice"},
+        "spdx3": {"$ref": "#/$defs/format_advice"}
+      }
+    },
+    "format_advice": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1, "description": "The fix in this format, written to follow the format's name (`CycloneDX: set components[].version.`)."},
+        "field": {"type": "string", "minLength": 1, "description": "The field to set, in the format's own shape, e.g. components[].supplier.name, packages[].supplier, suppliedBy. Absent when the format has no field the check reads."}
+      }
+    }
+  }
+}

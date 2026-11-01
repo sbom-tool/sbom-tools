@@ -1,14 +1,14 @@
 //! Registry-driven per-rule matrix for `ComplianceLevel::Standard`
 //! (audit P3: no test anywhere instantiated the Standard profile).
 //!
-//! Standard has no dedicated SARIF slice in the registry: it runs on the
-//! generic checker path, and every check it runs is a rule of its own (the
-//! NTIA version rule and the `SBOM-QUALITY-*` rules below). The universe is
-//! therefore declared locally
-//! (derived from the Standard-level match arms in
-//! src/quality/compliance/generic.rs) and the matrix sweep enforces that no
-//! fixture ever emits an id outside it — if a new Standard-level check site
-//! lands, this file fails and must be extended.
+//! Standard runs on the generic checker path, and every check it runs is a
+//! rule of its own (the NTIA version rule and the `SBOM-QUALITY-*` rules
+//! below). The universe is declared locally (derived from the
+//! Standard-level match arms in src/quality/compliance/generic.rs);
+//! `run_matrix` requires it to equal the registry's list for the level
+//! (`rules_for_level`), and the matrix sweep enforces that no fixture ever
+//! emits an id outside it — if a new Standard-level check site lands, this
+//! file fails and must be extended.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;

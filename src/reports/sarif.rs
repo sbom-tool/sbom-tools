@@ -432,9 +432,9 @@ impl ReportGenerator for SarifReporter {
             &mut new_keys,
         ));
 
-        // Guarantee every emitted ruleId has a descriptor (the static table
-        // predates rules like SBOM-CRA-CYCLES) and descriptor ids are unique.
-        let rules = rules::complete_rule_catalogue(rules::diff_rules(), &results);
+        // Declare the rules of the standard checked, plus a descriptor for
+        // any emitted ruleId it lacks (a fallback rule), each id once.
+        let rules = rules::complete_rule_catalogue(rules::diff_rules(cra_new.level), &results);
         render_log(
             automation_id(config.sarif.category(), format!("sbom-tools/{DIFF_SCOPE}/")),
             rules,
@@ -494,7 +494,7 @@ impl ReportGenerator for SarifReporter {
         ));
 
         // Same descriptor guarantee as the diff path (see above).
-        let rules = rules::complete_rule_catalogue(rules::view_rules(), &results);
+        let rules = rules::complete_rule_catalogue(rules::view_rules(cra_result.level), &results);
         render_log(
             automation_id(config.sarif.category(), format!("sbom-tools/{VIEW_SCOPE}/")),
             rules,

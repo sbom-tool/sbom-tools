@@ -1,9 +1,10 @@
 //! Registry-driven per-rule matrix for `ComplianceLevel::EuAiAct` (EU AI
 //! Act Annex IV technical-documentation readiness).
 //!
-//! The AI Act shares the CRA-family `COMPLIANCE_SARIF_RULE_IDS` catalogue;
-//! its universe is that slice's `SBOM-AIACT-*` ids, one per Annex IV
-//! element the profile checks. A declared high-risk system (CRA sidecar
+//! The universe is every registered `SBOM-AIACT-*` rule but the fallback,
+//! one per Annex IV element the profile checks, which `run_matrix` requires
+//! to be the level's rule list (`rules_for_level`). A declared high-risk
+//! system (CRA sidecar
 //! `isHighRiskAi`) escalates every documentation gap; those escalations are
 //! the departing firing cases.
 //!
@@ -19,16 +20,18 @@ use rule_matrix::{
     assert_no_violations_in, check_in, render_violations, run_matrix,
 };
 use sbom_tools::model::CraSidecarMetadata;
-use sbom_tools::quality::{COMPLIANCE_SARIF_RULE_IDS, ComplianceLevel, ViolationSeverity as Sev};
+use sbom_tools::quality::{
+    ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
+};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::EuAiAct;
 
-/// The AI Act rules of the shared CRA-family SARIF catalogue.
+/// The registered AI Act rules but the fallback rule, which no check emits.
 fn ai_act_universe() -> Vec<&'static str> {
-    COMPLIANCE_SARIF_RULE_IDS
+    all_rule_ids()
         .iter()
         .copied()
-        .filter(|id| id.starts_with("SBOM-AIACT-"))
+        .filter(|id| id.starts_with("SBOM-AIACT-") && *id != generic_rule_id_for_level(LEVEL))
         .collect()
 }
 

@@ -197,6 +197,8 @@ fn unknown_flag_exits_3_in_every_command() {
         vec!["tailor", sbom],
         vec!["cra-docs", sbom],
         vec!["cra-standards-watch"],
+        vec!["rules"],
+        vec!["rules", "explain", "SBOM-CRA-ART-24"],
         vec!["watch", "--dir", "."],
         vec!["config", "show"],
         vec!["config-schema"],
@@ -228,6 +230,7 @@ fn help_and_version_exit_0_on_stdout() {
         vec!["validate", "--help"],
         vec!["diff", "-h"],
         vec!["vex", "help", "status"],
+        vec!["rules", "explain", "-h"],
     ] {
         let output = run(&args);
         assert_eq!(
@@ -256,6 +259,7 @@ fn missing_arguments_exit_3_even_when_clap_prints_help() {
         vec!["validate"],
         vec!["diff", old.as_str()],
         vec!["query"],
+        vec!["rules", "explain"],
     ] {
         assert_usage_error(&args, &run(&args));
     }

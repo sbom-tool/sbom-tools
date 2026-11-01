@@ -94,6 +94,8 @@ EXAMPLES:
   Quality and compliance:
     sbom-tools quality app.cdx.json --profile security --metrics
     sbom-tools validate app.cdx.json --standard ntia,cra,eo14028
+    sbom-tools rules --standard cra                # What a standard checks
+    sbom-tools rules explain SBOM-CRA-ART-24       # One rule in full
     sbom-tools license-check app.cdx.json --strict
 
   VEX operations:
@@ -726,6 +728,108 @@ struct ValidateArgs {
     compliance: ComplianceRunArgs,
 }
 
+/// Arguments for the `rules` subcommand
+#[derive(Parser)]
+#[command(
+    args_conflicts_with_subcommands = true,
+    after_help = "EXIT CODES:
+    0  Success
+    3  Usage error (unknown flag, standard or rule id, missing argument)
+
+Each rule shows its id, name, default severity, the standards that use it,
+its references (with URLs) and the first sentence of its remediation. With
+--standard, the rules are listed in the order a `validate -o sarif` run of
+those standards declares them in rules[], followed by each standard's
+SBOM-<FAMILY>-GENERAL fallback rule, which a run declares only when it has a
+finding without a registered rule. Without --standard, every rule in the
+registry is listed, the quality profiles' SBOM-QUALITY-* rules included.
+
+JSON OUTPUT:
+    -o json emits the sbom-tools/rules/v1 document (schema:
+    schemas/rules/v1.schema.json); `rules explain <RULE_ID> -o json` emits the
+    same document with one rule.
+
+EXAMPLES:
+    sbom-tools rules                                # Every rule in the registry
+    sbom-tools rules --standard bsi                 # The rules BSI TR-03183-2 checks
+    sbom-tools rules --standard cra,oss-steward -o markdown
+    sbom-tools rules -o json | jq -r '.rules[] | select(.default_severity == \"Error\") | .id'
+    sbom-tools rules explain SBOM-CRA-ART-24        # One rule in full"
+)]
+struct RulesArgs {
+    #[command(subcommand)]
+    action: Option<RulesAction>,
+
+    /// Only the rules of these standards (comma-separated, or the flag
+    /// repeated). Accepts the names and aliases `validate --standard`
+    /// accepts; `cra` means CRA Phase 2
+    #[arg(
+        long,
+        value_name = "STANDARD",
+        value_parser = StandardSelectorParser,
+        value_delimiter = ','
+    )]
+    standard: Vec<StandardSelector>,
+
+    /// Output format
+    #[arg(short, long, value_enum, default_value_t = RulesFormat::Text)]
+    output: RulesFormat,
+}
+
+/// Sub-subcommands for the `rules` command
+#[derive(Subcommand)]
+enum RulesAction {
+    /// Show everything the registry records about one rule
+    Explain(RulesExplainArgs),
+}
+
+/// Arguments for `rules explain`
+#[derive(Parser)]
+#[command(after_help = "EXIT CODES:
+    0  Success
+    3  Usage error (unknown rule id, unknown flag, missing argument)
+
+Shows the rule's description, default severity, what it reports, the
+standards that use it, its references with URLs, its remediation, and where
+the fix goes in CycloneDX, SPDX 2.x and SPDX 3.0.
+
+EXAMPLES:
+    sbom-tools rules explain SBOM-CRA-ART-24
+    sbom-tools rules explain sbom-bsi-tr-03183-2-5-2 -o markdown
+    sbom-tools rules explain SBOM-NTIA-SUPPLIER -o json")]
+struct RulesExplainArgs {
+    /// The rule id, as `validate -o json` reports it in `rule_id` and
+    /// `-o sarif` in `ruleId` (case-insensitive)
+    #[arg(value_name = "RULE_ID", value_parser = cli::parse_rule_id)]
+    rule_id: &'static str,
+
+    /// Output format
+    #[arg(short, long, value_enum, default_value_t = RulesFormat::Text)]
+    output: RulesFormat,
+}
+
+/// Output format of `rules` and `rules explain`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
+enum RulesFormat {
+    /// Human-readable text (default)
+    #[default]
+    Text,
+    /// The sbom-tools/rules/v1 JSON document
+    Json,
+    /// Markdown: a table of rules, or one rule's section
+    Markdown,
+}
+
+impl From<RulesFormat> for cli::RulesOutputFormat {
+    fn from(value: RulesFormat) -> Self {
+        match value {
+            RulesFormat::Text => Self::Text,
+            RulesFormat::Json => Self::Json,
+            RulesFormat::Markdown => Self::Markdown,
+        }
+    }
+}
+
 /// Output formats the multi-SBOM commands actually render.
 ///
 /// `diff-multi`, `timeline` and `matrix` have no summary/markdown/SARIF
@@ -1219,6 +1323,9 @@ enum Commands {
     /// Validate an SBOM against a compliance standard
     Validate(ValidateArgs),
 
+    /// List the compliance rules each standard checks, or explain one rule
+    Rules(RulesArgs),
+
     /// Compare a baseline SBOM against multiple targets (1:N comparison)
     DiffMulti(DiffMultiArgs),
 
@@ -1305,10 +1412,11 @@ enum Commands {
 impl Commands {
     /// Whether this command seeds a per-command config from the loaded
     /// `AppConfig`. Meta commands (config management, shell completions, man
-    /// page, schema generation) don't, so a broken or missing config file must
-    /// never block them — they get a lenient (unvalidated) load instead. Cache
-    /// management is likewise config-independent (it only touches the on-disk
-    /// cache) and must stay usable for recovery even with a broken config.
+    /// page, schema generation, the rule catalogue) don't, so a broken or
+    /// missing config file must never block them — they get a lenient
+    /// (unvalidated) load instead. Cache management is likewise
+    /// config-independent (it only touches the on-disk cache) and must stay
+    /// usable for recovery even with a broken config.
     const fn consumes_config(&self) -> bool {
         // Cache management is config-independent (it only touches the on-disk
         // cache) and must stay usable for recovery even with a broken config.
@@ -1318,7 +1426,11 @@ impl Commands {
         }
         !matches!(
             self,
-            Self::Config { .. } | Self::Completions { .. } | Self::ConfigSchema { .. } | Self::Man
+            Self::Config { .. }
+                | Self::Completions { .. }
+                | Self::ConfigSchema { .. }
+                | Self::Rules(_)
+                | Self::Man
         )
     }
 }
@@ -2995,6 +3107,13 @@ fn run() -> Result<()> {
             args.check_online,
             args.timeout,
         ),
+
+        Commands::Rules(args) => match args.action {
+            Some(RulesAction::Explain(explain)) => {
+                cli::run_rules_explain(explain.rule_id, explain.output.into())
+            }
+            None => cli::run_rules(&args.standard, args.output.into()),
+        },
 
         Commands::Man => {
             let cmd = Cli::command();

@@ -32,21 +32,22 @@ mod compliance;
 mod metrics;
 mod scorer;
 
-pub(crate) use compliance::compose_finding_key;
 pub use compliance::{
-    Applicability, CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
-    ClassCheck, ComplianceChecker, ComplianceLevel, ComplianceResult, ComplianceRunConfig,
-    ConformityAssessmentSummary, ConformityEvidence, CraPhase, EO14028_SARIF_RULE_IDS,
-    FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice, NTIA_SARIF_RULE_IDS,
-    PASS_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, PassedCheck, RemediationFormat,
-    RuleKind, RuleMeta, SSDF_SARIF_RULE_IDS, StandardKind, StandardRef, StandardSelector,
-    Violation, ViolationCategory, ViolationCounts, ViolationSeverity, all_rule_ids,
-    generic_rule_id_for_level, rule_kind, rule_meta,
+    Applicability, CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, ClassCheck, ComplianceChecker,
+    ComplianceLevel, ComplianceResult, ComplianceRunConfig, ConformityAssessmentSummary,
+    ConformityEvidence, CraPhase, EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS,
+    FieldAdvice, FormatAdvice, NTIA_SARIF_RULE_IDS, PASS_RULE_IDS, PCIDSS_SARIF_RULE_IDS,
+    PQC_SARIF_RULE_IDS, PassedCheck, RemediationFormat, RuleAdvice, RuleCatalogEntry,
+    RuleCatalogFilter, RuleFormatAdvice, RuleKind, RuleMeta, RuleReference, SSDF_SARIF_RULE_IDS,
+    StandardKind, StandardRef, StandardSelector, Violation, ViolationCategory, ViolationCounts,
+    ViolationSeverity, all_rule_ids, generic_rule_id_for_level, rule_catalog, rule_catalog_entry,
+    rule_kind, rule_meta, rules_for_level,
 };
 pub use compliance::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,
     finding_key, finding_subject, standard_key,
 };
+pub(crate) use compliance::{compose_finding_key, rule_family_help_uri};
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,
     CryptographyMetrics, DependencyMetrics, HashQualityMetrics, IdentifierMetrics, LicenseMetrics,

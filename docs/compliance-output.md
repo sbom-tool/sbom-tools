@@ -15,7 +15,9 @@ sbom-tools validate sbom.json --standard ntia,cra -o json |
 `-o oscal-json` prints the same results as an OSCAL assessment-results
 document instead; see [OSCAL assessment results](#oscal-assessment-results).
 `-o sarif` prints them as a SARIF 2.1.0 log for code scanning; see
-[SARIF](#sarif).
+[SARIF](#sarif). `sbom-tools rules` describes the rules themselves: which
+standards use each one, its references and its remediation; see
+[Rule catalogue](#rule-catalogue).
 
 ## Envelope
 
@@ -342,7 +344,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `runs[0].invocations[0]` | Present only when the run was capped (see below): `executionSuccessful: true` and one `toolExecutionNotifications` warning saying how many results were omitted. |
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
-| `runs[0].tool.driver.rules[]` | Every rule of every standard checked, one per check and each once, in `--standard` order and registry order within a standard. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
+| `runs[0].tool.driver.rules[]` | Exactly the rules of the standards checked: the rules each standard's checks can report, one per check and each once, in `--standard` order and in the order of each standard's list. `sbom-tools rules --standard <std>` prints the same list (see [Rule catalogue](#rule-catalogue)). `diff` and `view` check the SBOM against CRA Phase 2, so they list its rules after their own; `quality` lists the rules of its profile's standard, then the `SBOM-QUALITY-REC-*` rules of the recommendations it reports. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
 | `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
 | `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
@@ -390,10 +392,104 @@ every check has its own SARIF rule. The first upload after upgrading re-keys
 existing code-scanning alerts. `diff -o sarif` reports into the new SBOM only:
 the old SBOM's CRA findings are no longer results, and removed components
 point at the new SBOM's document line. A run keeps at most 25,000 results
-unless `--sarif-max-results` says otherwise. Releases before v0.4.0 put
-dozens of checks under shared rules (`SBOM-CRA-ANNEX-I`,
+unless `--sarif-max-results` says otherwise. `rules[]` lists only the rules of
+the standards checked: before v0.4.0 the CRA profiles, BSI TR-03183-2, EUCC,
+the AI readiness profiles, the quality profiles, `diff` and `view` all
+declared one shared list of 107 CRA, BSI, EUCC and AI rules, so
+`--standard bsi -o sarif` declared 91 rules BSI never checks. Releases
+before v0.4.0 put dozens of checks under shared rules (`SBOM-CRA-ANNEX-I`,
 `SBOM-QUALITY-GENERAL`), set no `automationDetails`, and gave results no
 location; code scanning drops a result without one.
+
+## Rule catalogue
+
+`sbom-tools rules` lists the rules each standard checks, and
+`sbom-tools rules explain <RULE_ID>` shows one rule in full. Both read the
+rule registry only: no SBOM is needed.
+
+```sh
+sbom-tools rules                                 # every rule in the registry
+sbom-tools rules --standard bsi                  # the rules BSI TR-03183-2 checks
+sbom-tools rules --standard cra,oss-steward -o markdown
+sbom-tools rules explain SBOM-CRA-ART-24 -o json
+```
+
+`--standard` takes the names and aliases `validate --standard` takes,
+comma-separated or with the flag repeated. With it, the rules come in the
+order a `validate -o sarif` run of those standards lists them in `rules[]`,
+followed by each standard's `SBOM-<FAMILY>-GENERAL` fallback rule. Without
+it, every registered rule is listed in registry order, including the quality
+profiles' `SBOM-QUALITY-*` rules. The rule id of `rules explain` is not case
+sensitive. An unknown rule id or standard is a usage error (exit code `3`);
+the message names the closest rule id when one is close.
+
+The text output shows, for each rule, its id, name and default severity, what
+the check looks for, the standards that use it, its references with their
+URLs, and the first sentence of its remediation. `rules explain` adds the
+full remediation and where the fix goes in each SBOM format. `-o markdown`
+writes one table row per rule (or, for `rules explain`, one section).
+
+`-o json` prints the `sbom-tools/rules/v1` document. Its schema is published
+at [`schemas/rules/v1.schema.json`](../schemas/rules/v1.schema.json), and the
+test suite validates the output against it. `rules explain -o json` prints
+the same document with one rule.
+
+```json
+{
+  "schema": "sbom-tools/rules/v1",
+  "tool": { "name": "sbom-tools", "version": "0.4.0" },
+  "rules": [
+    {
+      "id": "SBOM-CRA-ART-24",
+      "name": "CraStewardVulnerabilityHandling",
+      "description": "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)",
+      "default_severity": "Error",
+      "kind": "finding",
+      "fallback": false,
+      "standards": ["oss-steward"],
+      "references": [
+        {
+          "standard": "CraArticle",
+          "id": "Art. 24",
+          "label": "CRA Art. 24",
+          "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+        }
+      ],
+      "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+      "remediation": "Show the open-source steward's vulnerability-handling process (Art. 24): …",
+      "remediation_summary": "Show the open-source steward's vulnerability-handling process (Art. 24): …",
+      "advice": {
+        "cyclonedx": { "text": "add a metadata.component.externalReferences[] entry of type security-contact (or advisories).", "field": "metadata.component.externalReferences[]" },
+        "spdx2": { "text": "…", "field": "packages[].externalRefs[]" },
+        "spdx3": { "text": "…", "field": "externalRef[]" }
+      }
+    }
+  ]
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema` | string | Always `sbom-tools/rules/v1`. |
+| `tool.name`, `tool.version` | string | `sbom-tools` and the release that produced the document. |
+| `rules[].id` | string | The rule id: `rule_id` in `-o json`, `ruleId` in SARIF. |
+| `rules[].name` | string | PascalCase name, the SARIF `reportingDescriptor.name`. |
+| `rules[].description` | string | What the check looks for, the SARIF `shortDescription`. |
+| `rules[].default_severity` | string | `Error`, `Warning` or `Info`: the severity the rule reports at. A check may escalate or relax it by product class, CRA phase or context. |
+| `rules[].kind` | string | `finding`, or `pass` for a rule that reports [passed checks](#passed-checks) only. |
+| `rules[].fallback` | boolean | `true` for a `SBOM-<FAMILY>-GENERAL` fallback rule: no check emits it, and SARIF files a finding without a registered rule under it. |
+| `rules[].standards` | array | The canonical `--standard` values of the standards whose reports carry the rule, `minimum`, `standard` and `comprehensive` for the quality profiles (`quality --profile`). For a fallback rule, the standards it is the fallback of. |
+| `rules[].references` | array | The clauses the rule implements: `standard` and `id` as in a violation's `standard_refs`, `label` as a reader cites it (`CRA Art. 24`), and `help_uri` when the standard has a canonical URL. Empty only for the quality profiles' own rules, which no external standard defines, and some fallback rules. |
+| `rules[].help_uri` | string | The rule's documentation link: the URL of the first reference that has one, else the standard's own page (the SARIF `helpUri`). |
+| `rules[].remediation` | string | How to fix a finding, in words that hold for every SBOM format. |
+| `rules[].remediation_summary` | string | The first sentence of `remediation`. |
+| `rules[].advice` | object | Where the fix goes: `cyclonedx`, `spdx2` and `spdx3`, each with the `text` and, where the format has one, the `field` to set. Absent when the fix is the same in every format. |
+
+The library returns the same entries: `sbom_tools::quality::rule_catalog`
+takes a `RuleCatalogFilter` (all rules, or those of some levels or
+standards), `rule_catalog_entry` looks up one rule, `rules_for_level` gives a
+level's list, and `sbom_tools::reports::generate_rule_catalog_json` writes
+the document.
 
 ## Exit codes
 
@@ -402,7 +498,7 @@ location; code scanning drops a result without one.
 | `0` | Compliant: no errors, and no warnings with `--fail-on-warning`. A standard that does not apply also exits `0`, unless `--require-applicable`. | Success |
 | `1` | Compliance errors, or, under `--require-applicable`, a standard that does not apply (with several standards, any one of them). | Gate failed |
 | `2` | Compliance warnings, only with `--fail-on-warning`. | Vulnerabilities introduced (`--fail-on-vuln`) |
-| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same |
+| `3` | Usage error (unknown flag or standard, invalid flag value, missing argument) or operational error (I/O, parse failure, unsupported output format, invalid `--as-of`, broken sidecar or config file). | Same; for `rules`, also an unknown standard or rule id |
 
 Codes `4`–`7` belong to other gates (VEX gaps, license policy, KEV, ML
 regression); the README lists them all. Usage errors exit `3` in every command.

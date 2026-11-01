@@ -11,9 +11,16 @@
 use super::{SarifConfiguration, SarifLevel, SarifMessage, SarifResult};
 use crate::quality::{
     ComplianceLevel, RemediationFormat, RuleMeta, StandardRef, ViolationSeverity, rule_meta,
+    rules_for_level,
 };
 use crate::reports::escape::{escape_markdown_inline, markdown_link_destination};
 use serde::Serialize;
+
+/// Canonical URL for a SARIF rule, derived from its ID prefix. Returns
+/// `None` for rule families that do not map to a single regulation /
+/// specification (e.g., `SBOM-TOOLS-*` change-tracking rules). Registry
+/// rules prefer the URL of their first standard reference.
+pub(super) use crate::quality::rule_family_help_uri as rule_help_uri;
 
 /// GitHub code scanning truncates longer `fullDescription` texts.
 const MAX_FULL_DESCRIPTION: usize = 1024;
@@ -148,23 +155,23 @@ const DIFF_RULES: &[(&str, &str, &str, SarifLevel, &str, &str)] = &[
 ];
 
 /// The rule catalogue of `diff -o sarif`: the change-tracking and
-/// end-of-life rules, then the CRA-family compliance rules.
-pub(super) fn diff_rules() -> Vec<SarifRule> {
+/// end-of-life rules, then the rules of `compliance`, the standard the new
+/// SBOM was checked against (CRA Phase 2).
+pub(super) fn diff_rules(compliance: ComplianceLevel) -> Vec<SarifRule> {
     let mut rules: Vec<SarifRule> = DIFF_RULES
         .iter()
         .map(|(id, name, short, level, full, help)| {
             SarifRule::tool(id, name, short, *level, full, help)
         })
         .collect();
-    rules.extend(registry_sarif_rules(
-        crate::quality::COMPLIANCE_SARIF_RULE_IDS,
-    ));
+    rules.extend(rules_for_standard(compliance));
     rules
 }
 
 /// The rule catalogue of `view -o sarif`: the vulnerability rule, then the
-/// CRA-family compliance rules.
-pub(super) fn view_rules() -> Vec<SarifRule> {
+/// rules of `compliance`, the standard the SBOM was checked against (CRA
+/// Phase 2).
+pub(super) fn view_rules(compliance: ComplianceLevel) -> Vec<SarifRule> {
     let mut rules = vec![SarifRule::tool(
         "SBOM-VIEW-001",
         "VulnerabilityPresent",
@@ -173,9 +180,7 @@ pub(super) fn view_rules() -> Vec<SarifRule> {
         "A vulnerability affects a component of the SBOM.",
         "Upgrade or patch the affected component, or record in a VEX statement why the vulnerability does not affect the product.",
     )];
-    rules.extend(registry_sarif_rules(
-        crate::quality::COMPLIANCE_SARIF_RULE_IDS,
-    ));
+    rules.extend(rules_for_standard(compliance));
     rules
 }
 
@@ -351,29 +356,12 @@ pub(super) fn aibom_rules() -> Vec<SarifRule> {
 // Registry rules
 // ---------------------------------------------------------------------------
 
-/// The registry rule catalogue a standard's report declares.
+/// The registry rule catalogue a standard's report declares: exactly the
+/// rules the standard's checks can report ([`rules_for_level`]). A run adds
+/// the standard's fallback rule only when it has a finding without a
+/// registered rule ([`complete_rule_catalogue`]).
 pub(super) fn rules_for_standard(level: ComplianceLevel) -> Vec<SarifRule> {
-    use crate::quality::{
-        CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, COMPLIANCE_SARIF_RULE_IDS,
-        EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, NTIA_SARIF_RULE_IDS,
-        PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, SSDF_SARIF_RULE_IDS,
-    };
-    let slice = match level {
-        ComplianceLevel::NtiaMinimum => NTIA_SARIF_RULE_IDS,
-        ComplianceLevel::FdaMedicalDevice => FDA_SARIF_RULE_IDS,
-        ComplianceLevel::NistSsdf => SSDF_SARIF_RULE_IDS,
-        ComplianceLevel::Eo14028 => EO14028_SARIF_RULE_IDS,
-        ComplianceLevel::Cnsa2 => CNSA2_SARIF_RULE_IDS,
-        ComplianceLevel::NistPqc => PQC_SARIF_RULE_IDS,
-        ComplianceLevel::Cisa2026 => CISA2026_SARIF_RULE_IDS,
-        ComplianceLevel::PciDss632 => PCIDSS_SARIF_RULE_IDS,
-        ComplianceLevel::Fsct => FSCT_SARIF_RULE_IDS,
-        // The remaining levels (Minimum/Standard/Comprehensive, the CRA
-        // profiles, BSI TR-03183-2, EUCC, and the AI readiness profiles)
-        // genuinely emit rules from the shared CRA-family catalogue.
-        _ => COMPLIANCE_SARIF_RULE_IDS,
-    };
-    registry_sarif_rules(slice)
+    registry_sarif_rules(rules_for_level(level))
 }
 
 /// Render SARIF reportingDescriptors for a curated slice of registry rule
@@ -429,20 +417,6 @@ fn registry_sarif_rule(id: &str, meta: &RuleMeta) -> SarifRule {
     }
 }
 
-/// A standard reference as a reader would cite it: `CRA Art. 13(7)`,
-/// `CRA Annex I Part II (1)`, `NTIA Minimum Elements`, `prEN 40000-1-3:
-/// PRE-7-RQ-04`. The clause alone when it already names its standard.
-fn reference_label(r: &StandardRef) -> String {
-    use crate::quality::StandardKind;
-    let label = r.standard.label();
-    match r.standard {
-        StandardKind::CraArticle | StandardKind::CraAnnex => format!("CRA {}", r.id),
-        _ if r.id.starts_with(label) => r.id.clone(),
-        _ if label.ends_with(r.id.as_str()) => label.to_string(),
-        _ => format!("{label}: {}", r.id),
-    }
-}
-
 /// The short description as a sentence, followed by the references.
 fn full_description(short: &str, refs: &[StandardRef]) -> String {
     let mut text = short.trim_end_matches('.').to_string();
@@ -452,7 +426,7 @@ fn full_description(short: &str, refs: &[StandardRef]) -> String {
         text.push_str(
             &refs
                 .iter()
-                .map(reference_label)
+                .map(StandardRef::citation)
                 .collect::<Vec<_>>()
                 .join("; "),
         );
@@ -496,7 +470,7 @@ fn registry_help(meta: &RuleMeta, refs: &[StandardRef]) -> SarifHelp {
         text.push_str("\n\nReferences:");
         markdown.push_str("\n\n**References**\n");
         for r in refs {
-            let label = reference_label(r);
+            let label = r.citation();
             match &r.help_uri {
                 Some(uri) => {
                     text.push_str(&format!("\n- {label} ({uri})"));
@@ -572,71 +546,6 @@ pub(super) fn complete_rule_catalogue(
         ));
     }
     rules
-}
-
-/// Canonical URL for a SARIF rule, derived from its ID prefix. Returns
-/// `None` for rule families that do not map to a single regulation /
-/// specification (e.g., `SBOM-TOOLS-*` change-tracking rules). Registry
-/// rules prefer the URL of their first standard reference.
-pub(super) fn rule_help_uri(rule_id: &str) -> Option<&'static str> {
-    // EUCC before any more-generic prefix: these rules cite Implementing
-    // Regulation (EU) 2024/482, not the CRA regulation.
-    if rule_id.starts_with("SBOM-EUCC") {
-        Some("https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng")
-    } else if rule_id.starts_with("SBOM-CRA-") {
-        Some("https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng")
-    } else if rule_id.starts_with("SBOM-BSI-") {
-        // BSI's stable English shortlink for TR-03183 (printed in the
-        // v2.1.0 document imprint).
-        Some("https://bsi.bund.de/dok/TR-03183-en")
-    } else if rule_id.starts_with("SBOM-NIST-SSDF-") || rule_id.starts_with("SBOM-SSDF-") {
-        Some("https://doi.org/10.6028/NIST.SP.800-218")
-    } else if rule_id.starts_with("SBOM-EO14028-") || rule_id.starts_with("SBOM-EO-14028-") {
-        Some("https://www.federalregister.gov/d/2021-10460")
-    } else if rule_id.starts_with("SBOM-FDA-") {
-        // Current edition: "Quality Management System Considerations…"
-        // (final, 2026-02-03); FDA's media id is the stable handle.
-        Some("https://www.fda.gov/media/119933/download")
-    } else if rule_id.starts_with("SBOM-NTIA-") {
-        Some("https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom")
-    } else if rule_id.starts_with("SBOM-PQC-") || rule_id.starts_with("SBOM-NIST-PQC-") {
-        Some("https://csrc.nist.gov/projects/post-quantum-cryptography")
-    } else if rule_id.starts_with("SBOM-QUALITY-") {
-        // Tool-defined quality rules (Minimum / Standard / Comprehensive)
-        // follow no external standard; link the tool's own documentation.
-        Some(concat!(env!("CARGO_PKG_REPOSITORY"), "#validate"))
-    } else if rule_id.starts_with("SBOM-CNSA2-") {
-        Some(
-            "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF",
-        )
-    } else if rule_id.starts_with("SBOM-CSAF-") {
-        Some("https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html")
-    } else if rule_id.starts_with("SBOM-AIBOM-") {
-        Some("https://cyclonedx.org/capabilities/mlbom/")
-    } else if rule_id.starts_with("SBOM-AIACT-") {
-        Some("https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng")
-    } else if rule_id.starts_with("SBOM-BSIAI-") {
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements",
-        )
-    } else if rule_id.starts_with("SBOM-CISA2026-") {
-        // 2026 Minimum Elements for an SBOM — CISA's resource page is the
-        // stable handle (the PDF path under /sites/default/files churns).
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
-        )
-    } else if rule_id.starts_with("SBOM-PCI-") {
-        // PCI DSS v4.0.1 is license-gated; the document library is the
-        // stable public home.
-        Some("https://www.pcisecuritystandards.org/document_library/")
-    } else if rule_id.starts_with("SBOM-FSCT-") {
-        // CISA Framing Software Component Transparency (3rd ed., 2024).
-        Some(
-            "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
-        )
-    } else {
-        None
-    }
 }
 
 #[cfg(test)]
@@ -770,9 +679,9 @@ mod tests {
 
     #[test]
     fn tool_rules_have_help() {
-        for rule in diff_rules()
+        for rule in diff_rules(ComplianceLevel::CraPhase2)
             .into_iter()
-            .chain(view_rules())
+            .chain(view_rules(ComplianceLevel::CraPhase2))
             .chain(aibom_rules())
             .chain(std::iter::once(quality_recommendation_rule(
                 "SBOM-QUALITY-REC-COMPLETENESS",
@@ -809,7 +718,7 @@ mod tests {
                 "prEN 40000-1-3: PRE-7-RQ-04",
             ),
         ] {
-            assert_eq!(reference_label(&StandardRef::new(kind, clause)), label);
+            assert_eq!(StandardRef::new(kind, clause).citation(), label);
         }
     }
 

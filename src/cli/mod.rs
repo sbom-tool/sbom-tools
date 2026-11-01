@@ -16,6 +16,7 @@ mod merge;
 mod multi;
 mod quality;
 mod query;
+mod rules;
 #[cfg(test)]
 mod run_parity_tests;
 mod tailor;
@@ -41,6 +42,7 @@ pub use merge::run_merge;
 pub use multi::{run_diff_multi, run_matrix, run_timeline};
 pub use quality::{QUALITY_OUTPUT_FORMATS, run_quality};
 pub use query::{QueryFilter, run_query};
+pub use rules::{RulesOutputFormat, parse_rule_id, run_rules, run_rules_explain};
 pub use tailor::run_tailor;
 pub use validate::{VALIDATE_OUTPUT_FORMATS, ValidateJsonSchema, run_validate};
 pub use verify::{VerifyAction, run_verify};

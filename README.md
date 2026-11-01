@@ -368,6 +368,10 @@ sbom-tools query "log4j" --version "<2.17.0" fleet/*.json
 # Validate against multiple compliance standards
 sbom-tools validate sbom.json --standard ntia,cra,eo14028
 
+# List the rules a standard checks, or explain one rule
+sbom-tools rules --standard cra
+sbom-tools rules explain SBOM-CRA-ART-24
+
 # Assess quality with CI gate
 sbom-tools quality sbom.json --profile security --min-score 70
 
@@ -522,6 +526,27 @@ structural (signature-present) level. Every pre-existing self-declared
 evidence path stays valid, and documents without `declarations` are
 unaffected. See [`docs/STANDARDS_VERSIONS.md`](docs/STANDARDS_VERSIONS.md)
 for the exact edition, publication date, and citation behind every standard.
+
+### Rules
+
+```sh
+sbom-tools rules --standard bsi                  # What BSI TR-03183-2 checks
+sbom-tools rules explain SBOM-CRA-ART-24         # One rule in full
+sbom-tools rules -o json > rules.json            # The whole catalogue
+```
+
+Lists the compliance rules: every rule in the registry, or those of the
+standards `--standard` names (it takes the names and aliases `validate`
+takes). For each rule it shows the id, name, default severity, the standards
+that use it, its references with URLs, and the first sentence of its
+remediation. `rules explain <RULE_ID>` adds the full remediation and where
+the fix goes in CycloneDX, SPDX 2.x and SPDX 3.0. `-o markdown` writes a
+table, and `-o json` the `sbom-tools/rules/v1` document
+([`schemas/rules/v1.schema.json`](schemas/rules/v1.schema.json)). An unknown
+rule id or standard exits `3`. The rules a standard lists are the ones its
+`-o sarif` run declares in `rules[]`;
+[docs/compliance-output.md](docs/compliance-output.md#rule-catalogue)
+describes every field.
 
 ### Quality
 
@@ -869,7 +894,9 @@ with one run, shaped for GitHub code scanning:
 - **Every check is its own rule.** `ruleId` is the violation's `rule_id` from
   `validate -o json`. Each rule has a description, help text naming where the
   fix goes in each SBOM format, and a `helpUri` to the standard's text where
-  one is known.
+  one is known. `rules[]` lists exactly the rules of the standards checked,
+  the ones `sbom-tools rules --standard <std>` prints; `diff` and `view` list
+  the CRA Phase 2 rules they check against.
 - **Alerts survive edits.** `partialFingerprints` are derived from the
   finding's identity (standard, rule, component; see
   [finding identity](docs/compliance-output.md#finding-identity)), never from
@@ -913,7 +940,10 @@ every check has its own SARIF rule. The first upload after upgrading re-keys
 existing code-scanning alerts. `diff -o sarif` reports into the new SBOM
 only: the old SBOM's CRA findings are no longer results, and removed
 components point at the new SBOM. A run keeps at most 25,000 results unless
-`--sarif-max-results` says otherwise.
+`--sarif-max-results` says otherwise. `rules[]` lists only the rules of the
+standards checked; it used to list one shared catalogue of 107 CRA, BSI,
+EUCC and AI rules for every CRA-family, BSI, EUCC, AI and quality run, and
+for `diff` and `view`.
 
 The field-by-field mapping is in
 [docs/compliance-output.md](docs/compliance-output.md#sarif). Uploading to
@@ -1154,6 +1184,8 @@ cargo bench
 - [CRA compliance reverse-mapping](docs/CRA_COMPLIANCE.md) — every
   CRA / BSI / prEN check sbom-tools surfaces, mapped to its
   regulation, harmonised standard, sidecar field, and canonical URL
+- [Compliance output](docs/compliance-output.md) — the `validate -o json`
+  envelope, SARIF and OSCAL fields, and the `sbom-tools rules` catalogue
 - [TUI keyboard shortcuts](docs/TUI_SHORTCUTS.md) — every binding in the
   diff, multi-comparison, and view TUIs, with the guards that make a key
   mean different things on different tabs. `?` in the app shows the same

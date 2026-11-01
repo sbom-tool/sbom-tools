@@ -3,12 +3,13 @@
 //! diff casualty dropping Comprehensive from the NTIA-timestamp or hash match
 //! arms in generic.rs would have shipped unnoticed).
 //!
-//! Comprehensive has no dedicated SARIF slice in the registry: it runs on the
-//! generic checker path and shares the NTIA rule ids for its gating elements,
-//! with an `SBOM-QUALITY-*` rule of its own for every other check. The
-//! universe is declared locally (derived from the Comprehensive-level match arms in
-//! src/quality/compliance/generic.rs) and the matrix sweep enforces that no
-//! fixture ever emits an id outside it.
+//! Comprehensive runs on the generic checker path and shares the NTIA rule
+//! ids for its gating elements, with an `SBOM-QUALITY-*` rule of its own for
+//! every other check. The universe is declared locally (derived from the
+//! Comprehensive-level match arms in src/quality/compliance/generic.rs);
+//! `run_matrix` requires it to equal the registry's list for the level
+//! (`rules_for_level`), and the matrix sweep enforces that no fixture ever
+//! emits an id outside it.
 
 #[path = "common/rule_matrix.rs"]
 mod rule_matrix;
