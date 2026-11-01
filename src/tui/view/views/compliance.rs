@@ -291,6 +291,18 @@ pub fn render_compliance(frame: &mut Frame, area: Rect, app: &mut ViewApp) {
 // Standard selector with violation counts
 // ---------------------------------------------------------------------------
 
+/// The line a filtered view shows under the standard selector: the
+/// component list is filtered, the verdicts cover the whole SBOM. `None`
+/// when the view lists every component.
+fn filtered_note(app: &ViewApp) -> Option<String> {
+    app.filtered_out().map(|(removed, total)| {
+        format!(
+            " Component list filtered ({} of {total} shown); verdicts cover the whole SBOM ",
+            total - removed
+        )
+    })
+}
+
 /// One tab segment: short label + optional violation count, pre-measured.
 struct StandardTab {
     label: String,
@@ -344,10 +356,15 @@ fn render_standard_selector(frame: &mut Frame, area: Rect, app: &ViewApp) {
         })
         .collect();
 
-    let block = Block::default()
+    let mut block = Block::default()
         .title(" Compliance Standards (\u{2190}/\u{2192} to switch) ")
         .borders(Borders::ALL)
         .border_style(Style::default().fg(scheme.primary));
+    // A filtered view lists part of the SBOM, but the verdicts judge all of
+    // it, as `validate` does: say so in one line.
+    if let Some(note) = filtered_note(app) {
+        block = block.title_bottom(Line::styled(note, Style::default().fg(scheme.warning)));
+    }
     let inner_width = block.inner(area).width as usize;
     frame.render_widget(&block, area);
 
@@ -1560,6 +1577,44 @@ mod tests {
             text.contains("Violations"),
             "the violations list must still render at min size:\n{text}"
         );
+    }
+
+    /// A filtered view says that the verdicts cover the whole SBOM; an
+    /// unfiltered one says nothing.
+    #[test]
+    fn a_filtered_view_says_its_verdicts_cover_the_whole_sbom() {
+        pin_theme();
+        let (whole, profile) = demo_single();
+        let mut shown = whole.clone();
+        let total = shown.component_count();
+        let first = shown
+            .components
+            .keys()
+            .next()
+            .cloned()
+            .expect("a component");
+        shown.components.shift_remove(&first);
+        let mut app = ViewApp::new_filtered(
+            shown,
+            whole.clone(),
+            DEMO_NEW,
+            profile,
+            crate::quality::ComplianceRunConfig::default(),
+        );
+        let text = render_to_text(120, 33, |frame| {
+            render_compliance(frame, Rect::new(0, 0, 120, 33), &mut app);
+        });
+        let note = format!(
+            "Component list filtered ({} of {total} shown); verdicts cover the whole SBOM",
+            total - 1
+        );
+        assert!(text.contains(&note), "missing {note:?}:\n{text}");
+
+        let mut app = ViewApp::new(whole, DEMO_NEW, profile);
+        let text = render_to_text(120, 33, |frame| {
+            render_compliance(frame, Rect::new(0, 0, 120, 33), &mut app);
+        });
+        assert!(!text.contains("Component list filtered"), "{text}");
     }
 
     /// Rendered violation patterns must not contain the doubled space.

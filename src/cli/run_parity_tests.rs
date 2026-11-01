@@ -346,3 +346,114 @@ fn deadline_mode_reaches_validate_and_both_tuis() {
         "no other standard reads the PQC inputs"
     );
 }
+
+/// `validate -o json --json-schema v1` for one standard: the result's own
+/// serialization, the shape the TUI's compliance JSON export writes.
+fn validate_v1(sbom: &Path, out: &Path, standard: StandardSelector) -> String {
+    run_validate(
+        sbom.to_path_buf(),
+        vec![standard],
+        ReportFormat::Json,
+        Some(out.to_path_buf()),
+        false,
+        false,
+        None,
+        Some(PRODUCT_CLASS.to_string()),
+        Some(AS_OF),
+        false,
+        ValidateJsonSchema::V1,
+        None,
+        None,
+        false,
+        crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+        PqcOptions::default(),
+    )
+    .expect("validate runs");
+    std::fs::read_to_string(out).expect("validate wrote the result")
+}
+
+/// `view --vulnerable-only` lists the two vulnerable components of the demo
+/// SBOM, but its compliance tab, the tab's JSON export and the quality score
+/// judge all nine components: what `validate` and `quality` report for the
+/// SBOM. Each path is built the way `run_view` builds it.
+#[test]
+fn a_filtered_view_judges_the_whole_sbom_as_validate_does() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let sbom_path = dir.path().join("app.cdx.json");
+    std::fs::copy(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/demo-new.cdx.json"
+        ),
+        &sbom_path,
+    )
+    .expect("fixture copies");
+    std::fs::write(dir.path().join("app.cra.json"), SIDECAR).expect("sidecar writes");
+    let validate_json = validate_envelope(
+        &sbom_path,
+        &dir.path().join("validate.json"),
+        AS_OF,
+        PqcOptions::default(),
+    );
+
+    let config = ViewConfig {
+        vulnerable_only: true,
+        ..view_config(&sbom_path, AS_OF, PqcOptions::default())
+    };
+    let run = super::view::compliance_run(&config).expect("view run resolves");
+    let mut parsed = parse_sbom_with_context(&sbom_path, false).expect("fixture parses");
+    let whole = super::view::filter_view(&mut parsed, &config).expect("the filters apply");
+    let profile = BomProfile::detect(whole.as_ref().expect("the filter removes components"));
+    let mut view = super::view::view_app(parsed, whole, profile, run.clone());
+    assert_eq!(view.filtered_out(), Some((7, 9)), "two of nine listed");
+
+    view.ensure_compliance_results();
+    let results = view.compliance_results.clone().expect("view results");
+    assert_eq!(
+        envelope_of(&results),
+        validate_json,
+        "a filtered view must report what validate reports for the whole SBOM"
+    );
+
+    // The compliance tab's JSON export, of CRA Phase 2, is the result
+    // `validate --standard cra --json-schema v1` writes.
+    let selected = ComplianceLevel::all()
+        .iter()
+        .position(|level| *level == ComplianceLevel::CraPhase2)
+        .expect("the TUI lists CRA Phase 2");
+    let export = crate::tui::export::export_compliance(
+        crate::tui::export::ExportFormat::Json,
+        &results,
+        selected,
+        dir.path().to_str(),
+        Some("tab-export"),
+    );
+    assert!(export.success, "{}", export.message);
+    let exported = std::fs::read_to_string(&export.path).expect("the export is written");
+    let validated = validate_v1(
+        &sbom_path,
+        &dir.path().join("validate-v1.json"),
+        StandardSelector::Cra,
+    );
+    assert_eq!(
+        exported.trim_end(),
+        validated.trim_end(),
+        "the filtered view's compliance export must equal validate's"
+    );
+
+    // The quality score is the whole SBOM's, as `quality` scores it.
+    let whole_sbom = parse_sbom_with_context(&sbom_path, false)
+        .expect("fixture parses")
+        .into_sbom();
+    let scorer = crate::quality::QualityScorer::new(crate::tui::scoring_profile_for(profile))
+        .with_compliance(run.clone());
+    assert_eq!(
+        view.quality_report.overall_score,
+        scorer.score(&whole_sbom).overall_score
+    );
+
+    // Judging the listed components instead reports otherwise, so the
+    // comparisons above are not vacuous.
+    let listed = run.check_levels(ComplianceLevel::all(), &view.sbom);
+    assert_ne!(envelope_of(&listed), validate_json);
+}

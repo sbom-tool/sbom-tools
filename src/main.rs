@@ -615,15 +615,20 @@ struct ViewArgs {
     #[arg(long)]
     validate_ntia: bool,
 
-    /// Filter by minimum vulnerability severity (critical, high, medium, low)
+    /// Filter by minimum vulnerability severity (critical, high, medium,
+    /// low). Like --vulnerable-only and --ecosystem, it filters the component
+    /// list only: compliance, the quality score and --validate-ntia judge the
+    /// whole SBOM, as validate does
     #[arg(long)]
     severity: Option<String>,
 
-    /// Only show components with vulnerabilities
+    /// Only show components with vulnerabilities (the list only; the
+    /// verdicts judge the whole SBOM)
     #[arg(long)]
     vulnerable_only: bool,
 
-    /// Filter by ecosystem (e.g., npm, cargo, pypi, maven)
+    /// Filter by ecosystem (e.g., npm, cargo, pypi, maven): the list only;
+    /// the verdicts judge the whole SBOM
     #[arg(long)]
     ecosystem: Option<String>,
 

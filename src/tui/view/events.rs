@@ -423,7 +423,7 @@ pub fn handle_key_event(app: &mut ViewApp, key: KeyEvent) {
             let scoring_profile = crate::tui::scoring_profile_for(app.bom_profile);
             let scorer = crate::quality::QualityScorer::new(scoring_profile)
                 .with_compliance(app.compliance_run.clone());
-            app.quality_report = scorer.score(&app.sbom);
+            app.quality_report = scorer.score(app.judged_sbom());
             // The active tab may not exist in the new profile's tab set; reset.
             app.active_tab = ViewTab::Overview;
             app.status_message = Some(format!("Switched to {} mode", app.bom_profile.label()));
