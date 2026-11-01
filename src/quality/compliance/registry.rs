@@ -3458,13 +3458,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // TLS 1.2 against the federal TLS 1.3 deadline, reported only under
         // `--pqc-mode deadline --pqc-profile federal`: EO 14306 and OMB
         // M-26-15 have agencies support TLS 1.3 by 2030-01-02, so the
-        // Warning becomes an Error after it.
+        // Warning becomes an Error after it. The reference is the NIST text
+        // that relays the deadline (IR 8547 §4.2: "agencies are required to
+        // support TLS version 1.3 no later than January 2, 2030"); the order
+        // and the memo, which no standard kind describes, are named in the
+        // description and in each finding's `deadline_source`.
         "SBOM-PQC-PROTO-003" => RuleMeta {
             sarif_id: "SBOM-PQC-PROTO-003",
             name: "PqcFederalTls13",
             short_description: "Federal PQC deadline: TLS 1.3 must be supported by 2030-01-02 (EO 14306, OMB M-26-15)",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::NistPqc, "IR 8547 §4.2"), (K::NistPqc, "OMB M-26-15")],
+            refs: &[(K::NistPqc, "IR 8547 §4.2")],
             remediation: REMEDIATION_PQC_TLS13,
             advice: None,
         },

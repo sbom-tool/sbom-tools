@@ -523,15 +523,15 @@ source: tests/compliance_snapshots.rs
                 "text": "Federal PQC deadline: TLS 1.3 must be supported by 2030-01-02 (EO 14306, OMB M-26-15)"
               },
               "fullDescription": {
-                "text": "Federal PQC deadline: TLS 1.3 must be supported by 2030-01-02 (EO 14306, OMB M-26-15). References: NIST PQC: IR 8547 §4.2; NIST PQC: OMB M-26-15."
+                "text": "Federal PQC deadline: TLS 1.3 must be supported by 2030-01-02 (EO 14306, OMB M-26-15). References: NIST PQC: IR 8547 §4.2."
               },
               "defaultConfiguration": {
                 "level": "warning"
               },
               "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography",
               "help": {
-                "text": "Support TLS 1.3 or a successor version by January 2, 2030, as EO 14306 and OMB M-26-15 require of federal agencies: enable TLS 1.3, which carries the hybrid and post-quantum key exchanges, and record the version the protocol asset negotiates.\n\nReferences:\n- NIST PQC: IR 8547 §4.2 (https://csrc.nist.gov/projects/post-quantum-cryptography)\n- NIST PQC: OMB M-26-15 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
-                "markdown": "Support TLS 1.3 or a successor version by January 2, 2030, as EO 14306 and OMB M-26-15 require of federal agencies: enable TLS 1.3, which carries the hybrid and post-quantum key exchanges, and record the version the protocol asset negotiates.\n\n**References**\n\n- [NIST PQC: IR 8547 §4.2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)\n- [NIST PQC: OMB M-26-15](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
+                "text": "Support TLS 1.3 or a successor version by January 2, 2030, as EO 14306 and OMB M-26-15 require of federal agencies: enable TLS 1.3, which carries the hybrid and post-quantum key exchanges, and record the version the protocol asset negotiates.\n\nReferences:\n- NIST PQC: IR 8547 §4.2 (https://csrc.nist.gov/projects/post-quantum-cryptography)",
+                "markdown": "Support TLS 1.3 or a successor version by January 2, 2030, as EO 14306 and OMB M-26-15 require of federal agencies: enable TLS 1.3, which carries the hybrid and post-quantum key exchanges, and record the version the protocol asset negotiates.\n\n**References**\n\n- [NIST PQC: IR 8547 §4.2](<https://csrc.nist.gov/projects/post-quantum-cryptography>)"
               }
             },
             {
