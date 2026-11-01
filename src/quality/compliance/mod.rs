@@ -641,11 +641,11 @@ pub struct Violation {
     pub field: Option<String>,
     /// The value the check read from the SBOM, where there is one: the
     /// placeholder in a supplier field, a digest that does not count, a
-    /// timestamp in the future, the algorithm a crypto check rejected. It is
-    /// cleaned like other SBOM text in a one-line report (control and bidi
-    /// characters removed, a line break shown as `\n`, a leading `:`
-    /// escaped) and cut to 200 characters, ending in `…` when cut. `None`
-    /// when the field is absent or the check reads no single value.
+    /// timestamp in the future, the algorithm a crypto check rejected. Kept
+    /// as read, like [`Violation::message`] and [`Violation::element`], and
+    /// cut to 200 characters, ending in `…` when cut: a renderer that shows
+    /// it cleans it as it cleans them. `None` when the field is absent or the
+    /// check reads no single value.
     ///
     /// Serialized as `observed`, omitted when `None`; old payloads without
     /// it deserialize to `None`.

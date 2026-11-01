@@ -345,11 +345,11 @@ fn observed_records_the_rejected_algorithm_and_protocol() {
     assert_eq!(tls[0].observed.as_deref(), Some("tls 1.0"));
 }
 
-/// An observed value is SBOM text, so it is cleaned like other SBOM text in
-/// a one-line report and bounded: no control or bidi character, no line
-/// break, no leading `:`, at most 200 characters.
+/// An observed value is SBOM text kept as read, like the message and the
+/// element, and bounded to 200 characters, the cut marked. The outputs that
+/// show it clean it (tests/cli_contract_tests.rs, the TUI detail tests).
 #[test]
-fn observed_is_cleaned_and_bounded() {
+fn observed_is_kept_as_read_and_bounded() {
     let hostile = "lib\n::error::forged\u{1b}[31m\u{7}\u{202e}x";
     let colon = "::warning::forged";
     let long = "é".repeat(300);
@@ -367,21 +367,12 @@ fn observed_is_cleaned_and_bounded() {
         .filter_map(|v| v.observed.as_deref())
         .collect();
     assert_eq!(observed.len(), 3, "{:#?}", result.violations);
-    assert!(
-        observed.contains(&"lib\\n::error::forged[31mx"),
-        "{observed:?}"
-    );
-    assert!(observed.contains(&"\\::warning::forged"), "{observed:?}");
+    assert!(observed.contains(&hostile), "{observed:?}");
+    assert!(observed.contains(&colon), "{observed:?}");
     let cut = format!("{}…", "é".repeat(199));
     assert!(observed.contains(&cut.as_str()), "{observed:?}");
     for value in observed {
         assert!(value.chars().count() <= 200, "{value:?}");
-        assert!(
-            !value.chars().any(|c| c.is_control()
-                || matches!(c, '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}')),
-            "{value:?}"
-        );
-        assert!(!value.trim_start().starts_with(':'), "{value:?}");
     }
 }
 

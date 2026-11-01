@@ -306,12 +306,14 @@ is the same in every format, such as an algorithm choice, names no field.
 | `cnsa2`, `pqc` | The algorithm the check rejected (`RSA-2048`), the protocol and version (`tls 1.0`), the algorithms a protocol offers, or the reference it cannot resolve. |
 | `eucc` | The certificate's valid-until date. |
 
-An observed value is SBOM text, so it is cleaned like other SBOM text in a
-one-line report: a line break shows as `\n`, other control and bidi
-characters are removed, and a leading `:` gets a backslash (`\::warning`). It
-can neither break a terminal nor start a CI workflow command, even when
-`jq -r` prints it on a line of its own. It is cut to 200 characters, ending
-in `…` when cut.
+An observed value is SBOM text. Like `message` and `element`, `-o json` and
+the SARIF properties carry it as read, cut to 200 characters and ending in
+`…` when cut, so treat it as untrusted text: a script that prints it to a CI
+log should neutralize it as sbom-tools does. The text report and the TUI
+clean it where they show it, as the text report cleans the rest of the
+SBOM's text: a line break shows as `\n`, other control and bidi characters
+are removed, and a leading `:` gets a backslash (`\::warning`), so it can
+neither break a terminal nor start a CI workflow command.
 
 ## Checks not evaluated
 
@@ -820,9 +822,9 @@ Not evaluated:
   SBOM-CISA2026-SIGNATURE: SPDX 2.x cannot carry a document signature
 ```
 
-SBOM text in every line is cleaned as described under
-[Field and observed value](#field-and-observed-value). The text layout may
-change in any release; scripts should read `-o json`.
+SBOM text in every line is cleaned, the observed value included, as
+described under [Field and observed value](#field-and-observed-value). The
+text layout may change in any release; scripts should read `-o json`.
 
 ## Exit codes
 

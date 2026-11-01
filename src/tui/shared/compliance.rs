@@ -1,6 +1,7 @@
 //! Shared compliance rendering functions used by both App (diff mode) and `ViewApp` (view mode).
 
 use crate::quality::ViolationSeverity;
+use crate::reports::escape::sanitize_line;
 use crate::tui::shared::text::wrapped_line_count;
 use crate::tui::theme::colors;
 use ratatui::{
@@ -77,18 +78,23 @@ pub fn render_violation_detail_overlay(
 
     // Where the checked field lives in the SBOM's format, and the value the
     // check read there, as the JSON `field` / `observed` and the text
-    // report's `observed:` line show them.
+    // report's `observed:` line show them. The value is SBOM text kept as
+    // read, so it is cleaned here, as in the text report: a crafted value
+    // can neither smuggle a terminal escape nor break the line.
     if let Some(field) = &violation.field {
         lines.push(Line::from(vec![
             Span::styled("Field: ", Style::default().fg(scheme.muted)),
-            Span::styled(field.as_str(), Style::default().fg(scheme.text)),
+            Span::styled(
+                sanitize_line(field).into_owned(),
+                Style::default().fg(scheme.text),
+            ),
         ]));
     }
     if let Some(observed) = &violation.observed {
         lines.push(Line::from(vec![
             Span::styled("Observed: ", Style::default().fg(scheme.muted)),
             Span::styled(
-                format!("\"{observed}\""),
+                format!("\"{}\"", sanitize_line(observed)),
                 Style::default().fg(scheme.warning),
             ),
         ]));
@@ -411,6 +417,17 @@ mod tests {
         });
         assert!(text.contains("Field: components[].supplier.name"), "{text}");
         assert!(text.contains("Observed: \"NOASSERTION\""), "{text}");
+
+        // A crafted value is kept as read and cleaned where it is shown.
+        violation.observed = Some("::warning::forged\u{1b}[31m\u{7}\nnext".to_string());
+        let text = render_to_text(100, 24, |frame| {
+            super::render_violation_detail_overlay(frame, frame.area(), &violation);
+        });
+        assert!(
+            text.contains("Observed: \"\\::warning::forged[31m\\nnext\""),
+            "{text}"
+        );
+        assert!(!text.contains(['\u{1b}', '\u{7}']), "{text}");
     }
 
     #[test]

@@ -286,25 +286,19 @@ pub(crate) const SPEC_VERSION_UNPARSED: &str =
 /// marks a cut included.
 pub(crate) const OBSERVED_MAX_CHARS: usize = 200;
 
-/// `value`, read from the SBOM, as a finding's [`Violation::observed`]:
-/// cleaned like other SBOM text printed on one line ([`sanitize_line`]: a
-/// line break shows as `\n`, other control and bidi characters are removed,
-/// a leading `:` is escaped, so it can neither break a terminal nor start a
-/// CI workflow command) and cut to [`OBSERVED_MAX_CHARS`] characters, ending
-/// in `…` when cut. An empty value stays empty: the field is there, with
-/// nothing in it. Returns `Some`, so an emission site writes
-/// `observed: observed(value)`, or `observed: field.and_then(observed)` for
-/// an optional field.
-///
-/// [`sanitize_line`]: crate::reports::escape::sanitize_line
+/// `value`, read from the SBOM, as a finding's [`Violation::observed`]: the
+/// value as read, cut to [`OBSERVED_MAX_CHARS`] characters and ending in `…`
+/// when cut. An empty value stays empty: the field is there, with nothing in
+/// it. Like the finding's message and element, it is SBOM text kept as read:
+/// JSON and SARIF carry it as it is, and a human-readable output cleans it
+/// where it shows it (the text report and the TUI with `sanitize_line`).
+/// Returns `Some`, so an emission site writes `observed: observed(value)`,
+/// or `observed: field.and_then(observed)` for an optional field.
 pub(crate) fn observed(value: &str) -> Option<String> {
     let mut chars = value.chars();
-    let head: String = chars.by_ref().take(OBSERVED_MAX_CHARS).collect();
-    let mut text = crate::reports::escape::sanitize_line(&head).into_owned();
-    // An escaped line break takes two characters, so the cleaned text can
-    // outgrow the bound too.
-    if chars.next().is_some() || text.chars().count() > OBSERVED_MAX_CHARS {
-        text = text.chars().take(OBSERVED_MAX_CHARS - 1).collect();
+    let mut text: String = chars.by_ref().take(OBSERVED_MAX_CHARS).collect();
+    if chars.next().is_some() {
+        text.pop();
         text.push('…');
     }
     Some(text)
@@ -869,26 +863,20 @@ mod tests {
         );
     }
 
-    /// An observed value is cleaned like a line of SBOM text in a report and
-    /// bounded, the cut marked; an empty value stays empty.
+    /// An observed value is kept as read, like the message, and bounded,
+    /// the cut marked; an empty value stays empty. The outputs that show it
+    /// clean it.
     #[test]
-    fn observed_values_are_cleaned_and_bounded() {
+    fn observed_values_are_kept_as_read_and_bounded() {
         assert_eq!(observed("NOASSERTION").as_deref(), Some("NOASSERTION"));
         assert_eq!(observed("").as_deref(), Some(""));
-        assert_eq!(
-            observed("a\nb\u{1b}[1m\u{7}\u{202e}c").as_deref(),
-            Some("a\\nb[1mc")
-        );
-        assert_eq!(observed("::error::x").as_deref(), Some("\\::error::x"));
+        let hostile = "::warning::x\n\u{1b}[1m\u{7}\u{202e}c";
+        assert_eq!(observed(hostile).as_deref(), Some(hostile));
         let exact = "x".repeat(OBSERVED_MAX_CHARS);
         assert_eq!(observed(&exact), Some(exact.clone()));
         let long = observed(&"é".repeat(OBSERVED_MAX_CHARS + 1)).expect("observed");
         assert_eq!(long.chars().count(), OBSERVED_MAX_CHARS);
-        assert!(long.ends_with('…'), "{long}");
-        // Escapes lengthen the text; the bound holds after them.
-        let breaks = observed(&"\n".repeat(OBSERVED_MAX_CHARS)).expect("observed");
-        assert_eq!(breaks.chars().count(), OBSERVED_MAX_CHARS);
-        assert!(breaks.ends_with('…'), "{breaks}");
+        assert_eq!(long, format!("{}…", "é".repeat(OBSERVED_MAX_CHARS - 1)));
     }
 
     /// The digest a hash finding observes is the first that does not count,

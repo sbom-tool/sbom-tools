@@ -1638,7 +1638,7 @@ struct SarifResultProperties {
     /// `components[].supplier.name` — mirrors `Violation::field`.
     #[serde(skip_serializing_if = "Option::is_none")]
     field: Option<String>,
-    /// The value the check read, cleaned and cut to 200 characters —
+    /// The value the check read, as read and cut to 200 characters —
     /// mirrors `Violation::observed`.
     #[serde(skip_serializing_if = "Option::is_none")]
     observed: Option<String>,

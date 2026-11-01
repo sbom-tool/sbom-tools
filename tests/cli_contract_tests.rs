@@ -1558,6 +1558,52 @@ fn validate_text_output_cannot_forge_ci_annotations() {
     );
 }
 
+/// A value a check read is SBOM text: `-o json` carries it as read, like the
+/// message and the element, and the text report neutralizes it.
+#[test]
+fn observed_values_are_raw_in_json_and_neutralized_in_text() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    // A component whose bom-ref is its name reads as missing a bom-ref, and
+    // the finding observes the bom-ref.
+    let crafted = "::warning::forged\u{1b}[31m\u{7}\nx";
+    let document = serde_json::json!({
+        "bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+        "metadata": {"timestamp": "2026-01-01T00:00:00Z", "authors": [{"name": "Example"}]},
+        "components": [{"type": "library", "bom-ref": crafted, "name": crafted,
+                        "version": "1.0.0", "purl": "pkg:npm/x@1.0.0",
+                        "supplier": {"name": "Example"}}]
+    });
+    let sbom = dir.path().join("crafted.cdx.json");
+    std::fs::write(&sbom, document.to_string()).expect("write fixture");
+    let validate = |extra: &[&str]| {
+        base_command()
+            .arg("validate")
+            .arg(&sbom)
+            .args(["--standard", "ntia", "--as-of", AS_OF])
+            .args(extra)
+            .output()
+            .expect("validate should run")
+    };
+
+    let json: Value = serde_json::from_str(&stdout(&validate(&["-o", "json"])))
+        .expect("validate -o json is JSON");
+    let observed: Vec<&str> = json["results"][0]["violations"]
+        .as_array()
+        .expect("violations")
+        .iter()
+        .filter(|v| v["rule_id"] == "SBOM-NTIA-ELEMENT-ID")
+        .filter_map(|v| v["observed"].as_str())
+        .collect();
+    assert_eq!(observed, [crafted], "{json}");
+
+    let text = stdout(&validate(&[]));
+    assert!(
+        text.contains("\n  observed: \"\\::warning::forged[31m\\nx\" in bom-ref\n"),
+        "{text}"
+    );
+    assert_no_injected_lines(&text);
+}
+
 /// Two SBOMs whose names, versions, suppliers, licenses and vulnerability IDs
 /// try every way SBOM text can break out of its field: a line break followed
 /// by a workflow command, a value that starts with one (a field printed first
