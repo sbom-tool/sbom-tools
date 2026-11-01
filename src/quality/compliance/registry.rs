@@ -256,6 +256,10 @@ const REMEDIATION_CNSA2: &str = "Migrate to the CNSA 2.0 suite: AES-256, SHA-384
 /// NIST PQC protocol remediation.
 const REMEDIATION_PQC_PROTO: &str = "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.";
 
+/// Remediation for a hash function at the 112-bit security level
+/// (SBOM-PQC-HASH-001).
+const REMEDIATION_PQC_HASH: &str = "NIST IR 8547 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of collision strength (Table 8), a security level it disallows after 2030 (§4.1.3): replace them with a hash function of at least 128 bits, such as SHA-256, SHA-384, SHA-512 or SHA3-256. The rule reads the algorithm assets of a CBOM, not the hash values that identify components.";
+
 /// NIST PQC certificate remediation.
 const REMEDIATION_PQC_CERT: &str = "Re-issue the certificate with a NIST-approved post-quantum signature algorithm (FIPS 204 ML-DSA, FIPS 205 SLH-DSA, or SP 800-208 LMS/XMSS/HSS).";
 
@@ -3575,6 +3579,21 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_PQC,
             advice: None,
         },
+        // A hash function asset at the 112-bit security level: IR 8547
+        // Table 8 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of
+        // collision strength, and §4.1.3 disallows that level "in 2030".
+        // An Error in readiness mode, as a 112-bit key is (SBOM-PQC-KEY-001);
+        // `--pqc-mode deadline` makes it Info through 2030 and an Error
+        // after. Keyed uses (HMAC, HKDF, a MAC, KDF or DRBG) are not judged.
+        "SBOM-PQC-HASH-001" => RuleMeta {
+            sarif_id: "SBOM-PQC-HASH-001",
+            name: "PqcHashCollisionStrength",
+            short_description: "NIST IR 8547: hash function at the 112-bit security level (SHA-224, SHA-512/224, SHA3-224), disallowed after 2030",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::NistPqc, "IR 8547 §4.1.3, Table 8")],
+            remediation: REMEDIATION_PQC_HASH,
+            advice: None,
+        },
         // Certificate signed with a broken or quantum-vulnerable algorithm.
         "SBOM-PQC-CERT-001" => RuleMeta {
             sarif_id: "SBOM-PQC-CERT-001",
@@ -4442,6 +4461,7 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-PQC-008",
     "SBOM-PQC-009",
     "SBOM-PQC-KEY-001",
+    "SBOM-PQC-HASH-001",
     "SBOM-PQC-CERT-001",
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",
@@ -5020,6 +5040,7 @@ pub const PQC_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-PQC-012",
     "SBOM-PQC-ALG-UNKNOWN",
     "SBOM-PQC-KEY-001",
+    "SBOM-PQC-HASH-001",
     "SBOM-PQC-CERT-001",
     "SBOM-PQC-CERT-UNKNOWN",
     "SBOM-PQC-PROTO-001",

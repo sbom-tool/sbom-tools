@@ -13,7 +13,9 @@
 //!   Error after. Its symmetric rows apply where the checks judge them:
 //!   SHA-1 is deprecated now and disallowed after 2030 (Table 8, note 4:
 //!   Warning, then Error), and the 112-bit security level is disallowed
-//!   after 2030 (§4.1.3: Info, then Error).
+//!   after 2030 (§4.1.3: Info, then Error), for symmetric keys and for the
+//!   hash functions Table 8 rates at 112 bits of collision strength
+//!   (SHA-224, SHA-512/224, SHA3-224).
 //! - [`PqcProfile::Federal`] adds the deadlines of federal high value
 //!   assets and high impact systems: post-quantum key establishment by
 //!   2030-12-31 and post-quantum signatures by 2031-12-31 (EO 14412
@@ -339,22 +341,15 @@ impl Calendar {
     /// §4.1.3, "NIST has a few symmetric cryptography standards at the
     /// 112-bit security level, which will be disallowed in 2030".
     pub(crate) fn symmetric_112(on: NaiveDate) -> Dated {
-        let source = "NIST IR 8547 §4.1.3";
-        if on <= end_of(NIST_DEPRECATED_AFTER) {
-            Dated::new(
-                ViolationSeverity::Info,
-                end_of(NIST_DEPRECATED_AFTER),
-                source,
-                "the 112-bit security level is disallowed after 2030",
-            )
-        } else {
-            Dated::new(
-                ViolationSeverity::Error,
-                end_of(NIST_DEPRECATED_AFTER),
-                source,
-                "the 112-bit security level is disallowed since 2031",
-            )
-        }
+        security_level_112(on, "NIST IR 8547 §4.1.3")
+    }
+
+    /// A hash function at 112 bits of collision strength, judged on `on`:
+    /// NIST IR 8547 Table 8 gives SHA-224, SHA-512/224 and SHA3-224 a
+    /// collision security strength of "112 bits", the level §4.1.3 says
+    /// "will be disallowed in 2030", as for [`Self::symmetric_112`].
+    pub(crate) fn hash_112(on: NaiveDate) -> Dated {
+        security_level_112(on, "NIST IR 8547 §4.1.3 and Table 8")
     }
 
     /// TLS below 1.3 under [`PqcProfile::Federal`], judged on the
@@ -434,6 +429,26 @@ impl Calendar {
                 ),
             ),
         }
+    }
+}
+
+/// The 112-bit security level, judged on `on`: Info through 2030, Error
+/// after, by the IR 8547 rows `source` names.
+fn security_level_112(on: NaiveDate, source: &str) -> Dated {
+    if on <= end_of(NIST_DEPRECATED_AFTER) {
+        Dated::new(
+            ViolationSeverity::Info,
+            end_of(NIST_DEPRECATED_AFTER),
+            source,
+            "the 112-bit security level is disallowed after 2030",
+        )
+    } else {
+        Dated::new(
+            ViolationSeverity::Error,
+            end_of(NIST_DEPRECATED_AFTER),
+            source,
+            "the 112-bit security level is disallowed since 2031",
+        )
     }
 }
 
@@ -616,6 +631,40 @@ mod tests {
         assert_eq!(after.severity, ViolationSeverity::Error);
         assert_eq!(after.deadline.date, day("2030-12-31"));
         assert_eq!(after.deadline.source, "NIST IR 8547 §4.1.3");
+    }
+
+    /// The 112-bit hash functions of Table 8 follow the 112-bit level of
+    /// §4.1.3: Info through 2030-12-31, Error from 2031-01-01, and the
+    /// deadline is 2030-12-31 throughout.
+    #[test]
+    fn the_112_bit_hash_functions_are_disallowed_after_2030() {
+        let source = "NIST IR 8547 §4.1.3 and Table 8";
+        let cases = [
+            ("2026-10-12", ViolationSeverity::Info, "after 2030"),
+            ("2030-12-31", ViolationSeverity::Info, "after 2030"),
+            ("2031-01-01", ViolationSeverity::Error, "since 2031"),
+        ];
+        for (on, severity, when) in cases {
+            let dated = Calendar::hash_112(day(on));
+            assert_eq!(dated.severity, severity, "{on}");
+            assert_eq!(dated.deadline.date, day("2030-12-31"), "{on}");
+            assert_eq!(dated.deadline.source, source, "{on}");
+            assert_eq!(
+                dated.status,
+                format!("the 112-bit security level is disallowed {when} ({source})"),
+                "{on}"
+            );
+        }
+        // The same ladder as a 112-bit key, under its own source.
+        for on in ["2026-10-12", "2030-12-31", "2031-01-01"] {
+            let hash = Calendar::hash_112(day(on));
+            let key = Calendar::symmetric_112(day(on));
+            assert_eq!(
+                (hash.severity, hash.deadline.date),
+                (key.severity, key.deadline.date),
+                "{on}"
+            );
+        }
     }
 
     /// Each category's two milestones, and the strictest when none is set.

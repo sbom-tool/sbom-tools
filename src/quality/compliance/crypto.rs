@@ -363,6 +363,20 @@ fn resolve_component<'a>(
         .and_then(|id| sbom.components.get(id))
 }
 
+/// The digest size of a SHA-2 or SHA-3 hash in bits, which CNSA 2.0 and
+/// NIST PQC both read: its parameter, or for SHA-2 the truncated output
+/// of a SHA-512/t parameter set ("512/224", "512/256"), as the family
+/// "SHA-512/224" classifies.
+fn digest_bits(cls: &AlgorithmClassification) -> Option<u32> {
+    cls.parameter_bits().or_else(|| {
+        let (base, t) = cls.parameter.as_deref()?.split_once(['/', '-', '_'])?;
+        match (cls.class, base.trim(), t.trim()) {
+            (AlgorithmClass::Sha2, "512", t @ ("224" | "256")) => t.parse().ok(),
+            _ => None,
+        }
+    })
+}
+
 /// Judge a classified algorithm against the CNSA 2.0 exclusive allowlist:
 /// AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, and the SP 800-208
 /// stateful hash-based signatures (LMS/XMSS/HSS). `classical_bits` is the
@@ -423,7 +437,7 @@ fn cnsa2_verdict(cls: &AlgorithmClassification, classical_bits: Option<u32>) -> 
                 }
             }
         }
-        C::Sha2 => match cls.parameter_bits() {
+        C::Sha2 => match digest_bits(cls) {
             Some(384 | 512) => CnsaVerdict::Approved,
             Some(_) => {
                 // Name the digest itself, also when a construction wraps it:
@@ -876,6 +890,23 @@ fn nist_broken(cls: &AlgorithmClassification, signs: bool, on: NaiveDate) -> Cal
             cls.label()
         )),
     }
+}
+
+/// Whether an algorithm asset is a hash function NIST IR 8547 Table 8
+/// gives 112 bits of collision strength: SHA-224, SHA-512/224 or SHA3-224,
+/// used as a hash. Table 8 rates collision strength apart from preimage
+/// strength (224 bits for these), and a keyed construction built on one
+/// (HMAC, HKDF, PBKDF2) or an asset declared a MAC, KDF or DRBG does not
+/// rest on collision resistance, so it is not judged at the 112-bit level.
+fn is_112_bit_hash(cls: &AlgorithmClassification, declared: &Declared) -> bool {
+    let hash = cls.class == AlgorithmClass::Sha2
+        || (cls.class == AlgorithmClass::Sha3 && cls.family.as_deref() == Some("SHA-3"));
+    hash && cls.construction.is_none()
+        && digest_bits(cls) == Some(224)
+        && !matches!(
+            declared.primitive,
+            Some(CryptoPrimitive::Mac | CryptoPrimitive::Kdf | CryptoPrimitive::Drbg)
+        )
 }
 
 /// Whether a classified algorithm is CNSA 1.0 ([`cnsa1_acceptable`]), with
@@ -2026,7 +2057,7 @@ impl ComplianceChecker {
     /// `passed`. Returns whether the asset was judged — classified, or
     /// declared quantum-vulnerable — which is what the PQC-000 inventory gate
     /// counts. Deadline mode (`calendar`) dates the quantum-vulnerable
-    /// algorithms IR 8547 lists and SHA-1.
+    /// algorithms IR 8547 lists, SHA-1 and the 112-bit hash functions.
     fn check_pqc_algorithm(
         comp: &Component,
         cp: &crate::model::CryptoProperties,
@@ -2039,6 +2070,7 @@ impl ComplianceChecker {
         let ql = algo.and_then(|a| a.nist_quantum_security_level);
         // A PQ/T hybrid is judged by its post-quantum part.
         let subject = pqc_subject(&cls);
+        let hash_112 = is_112_bit_hash(&cls, &Declared::of(comp));
 
         // PQC-ALG-UNKNOWN: an algorithm the classifier cannot name used to
         // pass silently whenever it declared a quantum level. It cannot be
@@ -2084,9 +2116,11 @@ impl ComplianceChecker {
         // algorithm regardless of key size, so the classification alone is
         // authoritative — including via OID, elliptic-curve field, or name
         // when algorithmFamily is absent (CycloneDX 1.6). A declared level 0
-        // also fires, unless the asset is already reported as Broken.
+        // also fires, unless the asset is already reported as Broken or as a
+        // 112-bit hash (PQC-HASH-001): such a hash's level 0 is the
+        // collision security category IR 8547 Table 8 gives it, "< 1".
         let classical = cls.class == AlgorithmClass::ClassicalQuantumVulnerable;
-        if classical || (ql == Some(0) && cls.class != AlgorithmClass::Broken) {
+        if classical || (ql == Some(0) && cls.class != AlgorithmClass::Broken && !hash_112) {
             let shown = if cls.family.is_some() {
                 cls.label()
             } else {
@@ -2169,6 +2203,40 @@ impl ComplianceChecker {
                 element: Some(comp.name.clone()),
                 requirement: "SP 800-131A: disallowed".to_string(),
                 rule_id: "SBOM-PQC-005",
+                component_id: Some(comp.canonical_id.value().to_string()),
+                counts: None,
+                standard_refs: Vec::new(),
+                remediation: None,
+                finding_detail: None,
+                severity_override: None,
+                deadline: calendared.deadline,
+                field: None,
+                observed: observed(&cls.label()),
+            });
+        }
+
+        // PQC-HASH-001: a hash function at the 112-bit security level. IR
+        // 8547 Table 8 gives SHA-224, SHA-512/224 and SHA3-224 112 bits of
+        // collision strength, and §4.1.3 disallows that level after 2030;
+        // deadline mode dates it so, as it does a 112-bit key (KEY-001).
+        if hash_112 {
+            let calendared = Calendared::of(
+                calendar.map(|cal| CalendarVerdict::Dated(Calendar::hash_112(cal.today))),
+                None,
+            );
+            violations.push(Violation {
+                severity: calendared.severity,
+                category: ViolationCategory::CryptographyInfo,
+                message: format!(
+                    "'{}' ({}) has 112 bits of collision strength, below post-quantum security \
+                     category 1 (IR 8547 Table 8){}",
+                    comp.name,
+                    cls.label(),
+                    calendared.note
+                ),
+                element: Some(comp.name.clone()),
+                requirement: "IR 8547: 112-bit hash function".to_string(),
+                rule_id: "SBOM-PQC-HASH-001",
                 component_id: Some(comp.canonical_id.value().to_string()),
                 counts: None,
                 standard_refs: Vec::new(),
