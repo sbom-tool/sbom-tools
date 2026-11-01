@@ -623,7 +623,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/ml-kem-768"
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-007",
+            "componentId": "crypto/algorithm/ml-kem-768",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -665,8 +676,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-003",
             "componentId": "crypto/algorithm/ml-kem-768",
-            "observed": "ML-KEM-768"
+            "observed": "ML-KEM-768",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -708,7 +730,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/ml-dsa-65"
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-007",
+            "componentId": "crypto/algorithm/ml-dsa-65",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -750,8 +783,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-004",
             "componentId": "crypto/algorithm/ml-dsa-65",
-            "observed": "ML-DSA-65"
+            "observed": "ML-DSA-65",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -793,8 +837,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-008",
             "componentId": "crypto/algorithm/slh-dsa-shake-256s",
-            "observed": "SLH-DSA-SHAKE-256s"
+            "observed": "SLH-DSA-SHAKE-256s",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -836,8 +891,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-006",
             "componentId": "crypto/algorithm/x25519",
-            "observed": "ECDH"
+            "observed": "ECDH",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -879,7 +945,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/hybrid-kem"
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-007",
+            "componentId": "crypto/algorithm/hybrid-kem",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -921,8 +998,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-003",
             "componentId": "crypto/algorithm/hybrid-kem",
-            "observed": "X25519 + ML-KEM-768"
+            "observed": "X25519 + ML-KEM-768",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -964,8 +1052,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-ALG-006",
             "componentId": "crypto/algorithm/ecdsa-p521",
-            "observed": "ECDSA"
+            "observed": "ECDSA",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -1007,8 +1106,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-PROTO-002",
             "componentId": "crypto/protocol/tls13-pqc",
-            "observed": "X25519 + ML-KEM-768, ML-KEM-768"
+            "observed": "X25519 + ML-KEM-768, ML-KEM-768",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -1050,8 +1160,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CNSA2-PROTO-002",
             "componentId": "crypto/protocol/tls13-pqc",
-            "observed": "ECDH"
+            "observed": "ECDH",
+            "standardRefs": [
+              {
+                "standard": "Cnsa2",
+                "id": "CNSSP 15",
+                "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
+              }
+            ],
+            "remediation": "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.",
+            "helpUri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
           }
         },
         {
@@ -1095,8 +1216,24 @@ source: tests/compliance_snapshots.rs
               "https://csrc.nist.gov/projects/post-quantum-cryptography",
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-PQC-001",
             "componentId": "crypto/algorithm/x25519",
-            "observed": "ECDH"
+            "observed": "ECDH",
+            "standardRefs": [
+              {
+                "standard": "NistPqc",
+                "id": "IR 8547",
+                "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              },
+              {
+                "standard": "NistPqc",
+                "id": "SP 800-131A Rev. 2",
+                "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              }
+            ],
+            "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+            "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
           }
         },
         {
@@ -1140,8 +1277,24 @@ source: tests/compliance_snapshots.rs
               "https://csrc.nist.gov/projects/post-quantum-cryptography",
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-PQC-001",
             "componentId": "crypto/algorithm/ecdsa-p521",
-            "observed": "ECDSA"
+            "observed": "ECDSA",
+            "standardRefs": [
+              {
+                "standard": "NistPqc",
+                "id": "IR 8547",
+                "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              },
+              {
+                "standard": "NistPqc",
+                "id": "SP 800-131A Rev. 2",
+                "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              }
+            ],
+            "remediation": "Migrate quantum-vulnerable algorithms per NIST IR 8547 (Transition to Post-Quantum Cryptography Standards): adopt ML-KEM (FIPS 203), ML-DSA (FIPS 204), SLH-DSA (FIPS 205) or SP 800-208 stateful hash-based signatures, and retire algorithms disallowed by SP 800-131A Rev. 2.",
+            "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
           }
         },
         {
@@ -1183,8 +1336,19 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-PQC-PROTO-002",
             "componentId": "crypto/protocol/tls13-pqc",
-            "observed": "ECDH (quantum-vulnerable)"
+            "observed": "ECDH (quantum-vulnerable)",
+            "standardRefs": [
+              {
+                "standard": "NistPqc",
+                "id": "SP 800-131A / IR 8547",
+                "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
+              }
+            ],
+            "remediation": "Disable SSL and TLS versions below 1.2 (SP 800-52 Rev. 2) and remove broken (SP 800-131A) or quantum-vulnerable (IR 8547) algorithms from negotiated cipher suites and IKEv2 transforms.",
+            "helpUri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
           }
         }
       ],
@@ -1192,16 +1356,18 @@ source: tests/compliance_snapshots.rs
         "applicable": true,
         "standards": [
           {
+            "standard": "cnsa2",
             "profile": "CNSA 2.0",
+            "compliant": false,
             "applicable": true,
-            "overallScore": 30.0,
-            "compliant": false
+            "overallScore": 30.0
           },
           {
+            "standard": "pqc",
             "profile": "NIST PQC Readiness",
+            "compliant": false,
             "applicable": true,
             "overallScore": 42.0,
-            "compliant": false,
             "notEvaluated": [
               {
                 "ruleId": "SBOM-PQC-PROTO-003",

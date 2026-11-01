@@ -31,6 +31,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "1.6"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "cra-compliant.cdx.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "3"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "rlinks": [
@@ -68,19 +93,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "satisfied"
               },
-              "target-id": "craphase2-compliance",
+              "target-id": "cra-compliance",
               "type": "objective-id"
             },
             "title": "EU CRA Phase 2 (2027) compliance roll-up",
-            "uuid": "768c0aae-9fca-576b-8440-09e558d7fc6c"
+            "uuid": "83577d04-4c9d-53fd-a4fd-a9967d66ab57"
           },
           {
             "description": "Component 'lib-a' may be missing bom-ref",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "79b72e2e-477d-53ef-9327-d71461253dfa"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:8d3abdb4f047da6f"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "cfbf96c4-2ca3-5a6d-bf00-748837e9db57"
+              }
+            ],
+            "remarks": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -89,15 +133,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "84e0e1f0-e2a9-5d7f-af01-6867ee1dc3a9"
+            "uuid": "6dd462d9-41b6-5a5d-978b-9f647b54eb7b"
           },
           {
             "description": "Component 'lib-b' may be missing bom-ref",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "fe1fca95-63c6-551c-8d8b-a4b92c375483"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1856ab48d3130417"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "ee6febf4-2acf-5e44-a917-2afee782d584"
+              }
+            ],
+            "remarks": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -106,15 +169,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "ae3280ea-d2cb-5998-8fff-0e7690ea2f6d"
+            "uuid": "46ebad4c-9126-5d97-9ae6-6caa937f0bb5"
           },
           {
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "8fda3873-6eaf-5a5a-9d74-6ceb29ad8adb"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:2423ce73fc79ae3c"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra|SBOM-CRA-SBOM-FRESHNESS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "5aeda544-4c35-5e59-8ba2-bc25b0baf961"
+              }
+            ],
+            "remarks": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -123,15 +205,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-SBOM-FRESHNESS",
-            "uuid": "c81a731c-1094-5399-9904-54df687f9e95"
+            "uuid": "570c3fd9-484d-58d3-972b-30920a51a732"
           },
           {
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "a82ac3de-8a61-58c3-a6e1-83d473837821"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f11e52f4b08d0b48"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra|SBOM-CRA-VULN-STATEMENT|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "87e378ab-e246-5404-9e6a-8827fa50bf8e"
+              }
+            ],
+            "remarks": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities\\[\\] with affects\\[\\].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences\\[\\] entry of type vulnerability-assertion or exploitability-statement.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -140,15 +241,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-VULN-STATEMENT",
-            "uuid": "b88f99ef-98bf-54fa-9cfc-c50d03f11225"
+            "uuid": "ddb25840-a52d-5dc7-ad4b-d175d448b644"
           },
           {
             "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "3a83310e-bd8b-5a35-9b78-0f89e6695a9a"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:1ee40fa737539681"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra|SBOM-CRA-DOC-INTEGRITY|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "5c71b008-cabd-5fbd-8c6b-0c58f2ef1671"
+              }
+            ],
+            "remarks": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\> in XML), or add hashes\\[\\] to a metadata.component.externalReferences\\[\\] entry of type attestation or certification-report.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -157,7 +277,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-DOC-INTEGRITY",
-            "uuid": "d3e10a58-3626-5fa7-b458-4aa9375d8689"
+            "uuid": "ca2e82b1-7c2d-5d53-94fc-6d9c88780aea"
           }
         ],
         "local-definitions": {
@@ -220,6 +340,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lib-a' may be missing bom-ref",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -230,7 +357,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CycloneDX: bom-ref for dependency tracking"
               },
@@ -248,6 +375,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lib-a"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:cargo/lib-a@2.3.4"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bom-ref"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "lib-a"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -266,11 +414,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "79b72e2e-477d-53ef-9327-d71461253dfa"
+            "uuid": "cfbf96c4-2ca3-5a6d-bf00-748837e9db57"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lib-b' may be missing bom-ref",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -281,7 +436,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CycloneDX: bom-ref for dependency tracking"
               },
@@ -299,6 +454,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lib-b"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:cargo/lib-b@0.9.1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bom-ref"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "lib-b"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -317,11 +493,28 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "fe1fca95-63c6-551c-8d8b-a4b92c375483"
+            "uuid": "ee6febf4-2acf-5e44-a917-2afee782d584"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Art. 13(7)"
+              },
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              },
+              {
+                "href": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
+                "rel": "reference",
+                "text": "ENISA SBOM TA: §3.2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -332,7 +525,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness"
               },
@@ -345,6 +538,29 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-SBOM-FRESHNESS"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2026-01-15T09:00:00Z"
+              },
+              {
+                "class": "CraArticle",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Art. 13(7)"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
+              },
+              {
+                "class": "EnisaSbomAdvisory",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§3.2"
               }
             ],
             "subjects": [
@@ -358,11 +574,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "8fda3873-6eaf-5a5a-9d74-6ceb29ad8adb"
+            "uuid": "5aeda544-4c35-5e59-8ba2-bc25b0baf961"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -373,7 +596,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Annex I Part II (1): Documented vulnerability information"
               },
@@ -386,6 +609,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-VULN-STATEMENT"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "vulnerabilities[]"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -399,11 +633,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "a82ac3de-8a61-58c3-a6e1-83d473837821"
+            "uuid": "87e378ab-e246-5404-9e6a-8827fa50bf8e"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part I (2)(f)"
+              },
+              {
+                "href": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
+                "rel": "reference",
+                "text": "ENISA SBOM TA: §2.2.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -414,7 +660,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Annex I Part I (2)(f): Document signature/integrity"
               },
@@ -427,6 +673,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-DOC-INTEGRITY"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "signature"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part I (2)(f)"
+              },
+              {
+                "class": "EnisaSbomAdvisory",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.1"
               }
             ],
             "subjects": [
@@ -440,14 +703,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "3a83310e-bd8b-5a35-9b78-0f89e6695a9a"
+            "uuid": "5c71b008-cabd-5fbd-8c6b-0c58f2ef1671"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "CraPhase2"
+            "value": "cra"
           },
           {
             "name": "standard-name",
@@ -488,6 +751,61 @@ source: tests/compliance_snapshots.rs
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "90"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-PRODUCER"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE"
+          },
+          {
+            "name": "conformity-product-class",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "important-class-1"
+          },
+          {
+            "name": "conformity-route",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "module-a"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+            "value": "EU Declaration of Conformity"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+            "value": "Internal-control technical file"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Public PSIRT URL for receiving external vulnerability reports.",
+            "value": "PSIRT contact (Art. 14)"
           }
         ],
         "reviewed-controls": {
@@ -500,7 +818,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EU CRA Phase 2 (2027)",
-        "uuid": "ea24e0b2-5c2f-5bd4-a43f-f457437ef705"
+        "uuid": "c65d7cc0-5f25-5044-a000-bff030383eab"
       },
       {
         "description": "Validation results for EU CRA Phase 1 (2026), derived only from the supplied SBOM.",
@@ -511,19 +829,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "satisfied"
               },
-              "target-id": "craphase1-compliance",
+              "target-id": "cra-phase1-compliance",
               "type": "objective-id"
             },
             "title": "EU CRA Phase 1 (2026) compliance roll-up",
-            "uuid": "3c9534b8-df98-5249-8703-b54e972c8439"
+            "uuid": "dc5c7306-e26c-58c4-908b-1c0f2754af77"
           },
           {
             "description": "Component 'lib-a' may be missing bom-ref",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "61c13693-49de-5a08-b453-eb22eb6dbd80"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f90a7165f75452f6"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-a@2.3.4"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "642b6e44-dec5-5ed4-9e92-9ed8d94b6542"
+              }
+            ],
+            "remarks": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -532,15 +869,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "6f40c0fd-be6a-55ed-9097-25c109a35271"
+            "uuid": "4f45a16c-baf6-53b3-afe3-647937a942fb"
           },
           {
             "description": "Component 'lib-b' may be missing bom-ref",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "4b5bc060-a8c6-5c88-94fa-729d8c69d920"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:10c544cf70ae7cec"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra-phase1|SBOM-CRA-ELEMENT-ID|pkg:cargo/lib-b@0.9.1"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a4f33a26-00af-581a-b29c-10f12ba49025"
+              }
+            ],
+            "remarks": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -549,15 +905,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-ELEMENT-ID",
-            "uuid": "97901c79-9916-5fa0-881c-fa2af65a88a0"
+            "uuid": "116d79ed-e6e8-59b1-863c-7dbbf1615c53"
           },
           {
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c2e8e5f5-5221-5225-b7e8-c1694d8e659b"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:78fe654fd47ccc0f"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra-phase1|SBOM-CRA-SBOM-FRESHNESS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "922b609d-9c78-52fe-ace0-18e64e42dffe"
+              }
+            ],
+            "remarks": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -566,15 +941,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-SBOM-FRESHNESS",
-            "uuid": "fe719865-4707-5d6d-9f37-2462ba449686"
+            "uuid": "6cad7722-216d-549f-ae1f-fa723e8ae469"
           },
           {
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "08916f03-fcf3-52d3-bfab-d9798d9117fb"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:e48721d2aa6b495f"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra-phase1|SBOM-CRA-VULN-STATEMENT|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "3a36c3d3-8540-55b4-b656-b8e8d95d23b3"
+              }
+            ],
+            "remarks": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities\\[\\] with affects\\[\\].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences\\[\\] entry of type vulnerability-assertion or exploitability-statement.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -583,15 +977,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-VULN-STATEMENT",
-            "uuid": "af571dc9-ec3b-5b18-a144-cadace754c19"
+            "uuid": "d277eba0-792e-51b2-ac62-56e1002bd1d1"
           },
           {
             "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "161749cb-cd88-5967-9be2-afd95ce22e34"
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:79540743f5ac8100"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cra-phase1|SBOM-CRA-DOC-INTEGRITY|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "dd369865-c640-551b-abda-e43fda1d34a3"
+              }
+            ],
+            "remarks": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\> in XML), or add hashes\\[\\] to a metadata.component.externalReferences\\[\\] entry of type attestation or certification-report.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -600,7 +1013,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CRA-DOC-INTEGRITY",
-            "uuid": "d3f11a61-d359-5b6c-b56f-6c1d0145312b"
+            "uuid": "fef3a7b9-a940-5f40-9136-e9115cfb366e"
           }
         ],
         "local-definitions": {
@@ -663,6 +1076,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lib-a' may be missing bom-ref",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -673,7 +1093,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CycloneDX: bom-ref for dependency tracking"
               },
@@ -691,6 +1111,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lib-a"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:cargo/lib-a@2.3.4"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bom-ref"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "lib-a"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -709,11 +1150,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "61c13693-49de-5a08-b453-eb22eb6dbd80"
+            "uuid": "642b6e44-dec5-5ed4-9e92-9ed8d94b6542"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lib-b' may be missing bom-ref",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -724,7 +1172,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CycloneDX: bom-ref for dependency tracking"
               },
@@ -742,6 +1190,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lib-b"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:cargo/lib-b@0.9.1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bom-ref"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "lib-b"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -760,11 +1229,28 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "4b5bc060-a8c6-5c88-94fa-729d8c69d920"
+            "uuid": "a4f33a26-00af-581a-b29c-10f12ba49025"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Art. 13(7) / Annex I Part II (1)\\] SBOM is 269 days old; keep the documented component inventory current when components change",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Art. 13(7)"
+              },
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              },
+              {
+                "href": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
+                "rel": "reference",
+                "text": "ENISA SBOM TA: §3.2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -775,7 +1261,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness"
               },
@@ -788,6 +1274,29 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-SBOM-FRESHNESS"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2026-01-15T09:00:00Z"
+              },
+              {
+                "class": "CraArticle",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Art. 13(7)"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
+              },
+              {
+                "class": "EnisaSbomAdvisory",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§3.2"
               }
             ],
             "subjects": [
@@ -801,11 +1310,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c2e8e5f5-5221-5225-b7e8-c1694d8e659b"
+            "uuid": "922b609d-9c78-52fe-ace0-18e64e42dffe"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Annex I Part II (1)\\] No vulnerability data or vulnerability assertion found; include vulnerability information or a statement of no known vulnerabilities",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part II (1)"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -816,7 +1332,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Annex I Part II (1): Documented vulnerability information"
               },
@@ -829,6 +1345,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-VULN-STATEMENT"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "vulnerabilities[]"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part II (1)"
               }
             ],
             "subjects": [
@@ -842,11 +1369,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "08916f03-fcf3-52d3-bfab-d9798d9117fb"
+            "uuid": "3a36c3d3-8540-55b4-b656-b8e8d95d23b3"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CRA Annex I Part I (2)(f)\\] SBOM carries no integrity protection: sign the document, or reference from the product an attestation or certification that carries its hash (a serial number identifies the document but does not protect it)",
+            "links": [
+              {
+                "href": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+                "rel": "reference",
+                "text": "CRA Annex I Part I (2)(f)"
+              },
+              {
+                "href": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
+                "rel": "reference",
+                "text": "ENISA SBOM TA: §2.2.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -857,7 +1396,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CRA Annex I Part I (2)(f): Document signature/integrity"
               },
@@ -870,6 +1409,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CRA-DOC-INTEGRITY"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "signature"
+              },
+              {
+                "class": "CraAnnex",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Annex I Part I (2)(f)"
+              },
+              {
+                "class": "EnisaSbomAdvisory",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§2.2.1"
               }
             ],
             "subjects": [
@@ -883,14 +1439,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "161749cb-cd88-5967-9be2-afd95ce22e34"
+            "uuid": "dd369865-c640-551b-abda-e43fda1d34a3"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "CraPhase1"
+            "value": "cra-phase1"
           },
           {
             "name": "standard-name",
@@ -931,6 +1487,61 @@ source: tests/compliance_snapshots.rs
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
             "value": "90"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-PRODUCER"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION"
+          },
+          {
+            "name": "not-evaluated",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "the SBOM lists no device, firmware or device-driver component",
+            "value": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE"
+          },
+          {
+            "name": "conformity-product-class",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "important-class-1"
+          },
+          {
+            "name": "conformity-route",
+            "ns": "https://sbom.tools/ns/oscal",
+            "value": "module-a"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+            "value": "EU Declaration of Conformity"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+            "value": "Internal-control technical file"
+          },
+          {
+            "class": "satisfied",
+            "name": "conformity-evidence",
+            "ns": "https://sbom.tools/ns/oscal",
+            "remarks": "Public PSIRT URL for receiving external vulnerability reports.",
+            "value": "PSIRT contact (Art. 14)"
           }
         ],
         "reviewed-controls": {
@@ -943,9 +1554,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EU CRA Phase 1 (2026)",
-        "uuid": "1fa74c3b-16b2-5666-a22b-d37ccd35c6f7"
+        "uuid": "149da59c-6933-5f25-ad74-e1e4d8164b38"
       }
     ],
-    "uuid": "96effa2f-c600-576f-8c09-ba495d76d3f3"
+    "uuid": "a0a42b2f-d691-5fec-b6cf-07f735f458e7"
   }
 }

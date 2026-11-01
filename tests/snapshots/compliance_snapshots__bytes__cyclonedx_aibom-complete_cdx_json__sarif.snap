@@ -725,7 +725,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
-            "field": "signature"
+            "severity": "Info",
+            "ruleId": "SBOM-BSIAI-META-SIGNATURE",
+            "field": "signature",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Metadata / Signature",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig <Signature> element on <bom>.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -761,7 +772,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
-            "field": "components[].supplier.name"
+            "severity": "Warning",
+            "ruleId": "SBOM-BSIAI-SYS-PRODUCER",
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "System-Level / Producer",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -796,7 +818,18 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-BSIAI-SYS-DATAFLOW",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "System-Level / Data flow & usage",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -832,9 +865,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-BSIAI-MODEL-IDENTIFIER",
             "affected": 1,
             "total": 1,
-            "field": "components[].purl"
+            "field": "components[].purl",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Models / Model identifier",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license. CycloneDX: set components[].purl (or cpe, or swhid[]).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -870,9 +914,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSIAI-MODEL-LICENSE",
             "affected": 1,
             "total": 1,
-            "field": "components[].licenses[]"
+            "field": "components[].licenses[]",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Models / Model license",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Models minimum elements for each MachineLearningModel component: name, version, a unique identifier (PURL/CPE/SWHID/SWID), a model-weight hash using a NIST-approved algorithm (SHA-256+), a model card, the architecture, training datasets, limitations, and a license. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -908,9 +963,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-BSIAI-DATASET-IDENTIFIER",
             "affected": 1,
             "total": 1,
-            "field": "components[].purl"
+            "field": "components[].purl",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Datasets / Dataset identifier",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: set components[].purl (or cpe, or swhid[]).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -946,9 +1012,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSIAI-DATASET-HASH",
             "affected": 1,
             "total": 1,
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Datasets / Dataset hash value",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -984,9 +1061,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSIAI-DATASET-LICENSE",
             "affected": 1,
             "total": 1,
-            "field": "components[].licenses[]"
+            "field": "components[].licenses[]",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Datasets / Dataset license",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -1022,9 +1110,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSIAI-DATASET-PROVENANCE",
             "affected": 1,
             "total": 1,
-            "field": "data[].governance"
+            "field": "data[].governance",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Datasets / Provenance & intended use",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI Datasets minimum elements for each Data component: name, a unique identifier, a hash value, a license, a sensitivity classification, and provenance / intended use. CycloneDX: name data[].governance owners, custodians or stewards (the first data[] entry is read).",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -1060,7 +1159,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             ],
-            "field": "dependencies[]"
+            "severity": "Info",
+            "ruleId": "SBOM-BSIAI-INFRA-RUNTIME",
+            "field": "dependencies[]",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Infrastructure / Runtime & framework",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -1095,7 +1205,18 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-BSIAI-SEC-CONTROLS",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Security / AI security controls",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         },
         {
@@ -1130,7 +1251,18 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-BSIAI-SEC-EXPLOITABILITY",
+            "standardRefs": [
+              {
+                "standard": "BsiSbomForAi",
+                "id": "Security / Exploitability reference",
+                "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
+              }
+            ],
+            "remediation": "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.",
+            "helpUri": "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
           }
         }
       ],
@@ -1138,16 +1270,18 @@ source: tests/compliance_snapshots.rs
         "applicable": true,
         "standards": [
           {
+            "standard": "ai-act",
             "profile": "EU AI Act Annex IV Readiness",
+            "compliant": true,
             "applicable": true,
-            "overallScore": 100.0,
-            "compliant": true
+            "overallScore": 100.0
           },
           {
+            "standard": "bsi-ai",
             "profile": "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
+            "compliant": false,
             "applicable": true,
-            "overallScore": 15.0,
-            "compliant": false
+            "overallScore": 15.0
           }
         ]
       }

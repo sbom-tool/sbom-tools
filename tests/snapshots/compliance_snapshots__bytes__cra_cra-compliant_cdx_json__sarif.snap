@@ -983,9 +983,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:cargo/lib-a@2.3.4",
             "field": "bom-ref",
-            "observed": "lib-a"
+            "observed": "lib-a",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1027,9 +1038,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:cargo/lib-b@0.9.1",
             "field": "bom-ref",
-            "observed": "lib-b"
+            "observed": "lib-b",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1069,7 +1091,28 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "observed": "2026-01-15T09:00:00Z"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+            "observed": "2026-01-15T09:00:00Z",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§3.2",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1105,7 +1148,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "vulnerabilities[]"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-VULN-STATEMENT",
+            "field": "vulnerabilities[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1143,7 +1197,23 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "field": "signature"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-DOC-INTEGRITY",
+            "field": "signature",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.2.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1185,9 +1255,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:cargo/lib-a@2.3.4",
             "field": "bom-ref",
-            "observed": "lib-a"
+            "observed": "lib-a",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1229,9 +1310,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:cargo/lib-b@0.9.1",
             "field": "bom-ref",
-            "observed": "lib-b"
+            "observed": "lib-b",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1271,7 +1363,28 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "observed": "2026-01-15T09:00:00Z"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+            "observed": "2026-01-15T09:00:00Z",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§3.2",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1307,7 +1420,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "vulnerabilities[]"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-VULN-STATEMENT",
+            "field": "vulnerabilities[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Include the product's known vulnerabilities in the SBOM, or reference the vulnerability disclosure report (VDR) or VEX that states them (Annex I Part II (1)). CycloneDX: list them in vulnerabilities[] with affects[].ref pointing at the affected components, or reference the published VDR or VEX from an externalReferences[] entry of type vulnerability-assertion or exploitability-statement.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1345,7 +1469,23 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "field": "signature"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-DOC-INTEGRITY",
+            "field": "signature",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.2.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         }
       ],
@@ -1353,10 +1493,11 @@ source: tests/compliance_snapshots.rs
         "applicable": true,
         "standards": [
           {
+            "standard": "cra",
             "profile": "EU CRA Phase 2 (2027)",
+            "compliant": true,
             "applicable": true,
             "overallScore": 90.0,
-            "compliant": true,
             "notEvaluated": [
               {
                 "ruleId": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
@@ -1374,13 +1515,35 @@ source: tests/compliance_snapshots.rs
                 "ruleId": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
                 "reason": "the SBOM lists no device, firmware or device-driver component"
               }
-            ]
+            ],
+            "conformitySummary": {
+              "productClass": "important-class-1",
+              "route": "module-a",
+              "evidence": [
+                {
+                  "label": "EU Declaration of Conformity",
+                  "detail": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+                  "satisfied": true
+                },
+                {
+                  "label": "Internal-control technical file",
+                  "detail": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+                  "satisfied": true
+                },
+                {
+                  "label": "PSIRT contact (Art. 14)",
+                  "detail": "Public PSIRT URL for receiving external vulnerability reports.",
+                  "satisfied": true
+                }
+              ]
+            }
           },
           {
+            "standard": "cra-phase1",
             "profile": "EU CRA Phase 1 (2026)",
+            "compliant": true,
             "applicable": true,
             "overallScore": 90.0,
-            "compliant": true,
             "notEvaluated": [
               {
                 "ruleId": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
@@ -1398,7 +1561,28 @@ source: tests/compliance_snapshots.rs
                 "ruleId": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
                 "reason": "the SBOM lists no device, firmware or device-driver component"
               }
-            ]
+            ],
+            "conformitySummary": {
+              "productClass": "important-class-1",
+              "route": "module-a",
+              "evidence": [
+                {
+                  "label": "EU Declaration of Conformity",
+                  "detail": "Annex V — manufacturer's signed declaration. Provide via Attestation/Certification external ref or sidecar ceMarkingReference.",
+                  "satisfied": true
+                },
+                {
+                  "label": "Internal-control technical file",
+                  "detail": "Module A — manufacturer holds the technical file at their premises. No external attestation required.",
+                  "satisfied": true
+                },
+                {
+                  "label": "PSIRT contact (Art. 14)",
+                  "detail": "Public PSIRT URL for receiving external vulnerability reports.",
+                  "satisfied": true
+                }
+              ]
+            }
           }
         ]
       }
