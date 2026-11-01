@@ -6,6 +6,7 @@ use crate::config::EnrichmentConfig;
 use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
 use crate::quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
 use crate::reports::ReportFormat;
+use crate::reports::escape::sanitize_line;
 use anyhow::Result;
 use std::path::PathBuf;
 
@@ -347,14 +348,7 @@ fn format_quality_report(
     };
 
     // Header
-    lines.push(format!(
-        "SBOM Quality Report: {}",
-        config
-            .sbom_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-    ));
+    lines.push(format!("SBOM Quality Report: {}", report_file_name(config)));
     lines.push(format!("Profile: {}", config.profile));
     lines.push(String::new());
 
@@ -529,6 +523,15 @@ fn format_quality_report(
     lines.join("\n")
 }
 
+/// The SBOM's file name for a text report header. A file name can come from
+/// a pull request like the SBOM itself, so it passes through
+/// [`sanitize_line`]: a crafted name must not start a workflow command or
+/// send a terminal escape.
+fn report_file_name(config: &QualityConfig) -> String {
+    let name = config.sbom_path.file_name().unwrap_or_default();
+    sanitize_line(&name.to_string_lossy()).into_owned()
+}
+
 /// Render the AI-readiness profile as a per-check pass/fail report.
 fn format_ai_readiness_report(
     report: &QualityReport,
@@ -541,14 +544,7 @@ fn format_ai_readiness_report(
     };
     let reset = if use_color { "\x1b[0m" } else { "" };
 
-    lines.push(format!(
-        "SBOM Quality Report: {}",
-        config
-            .sbom_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-    ));
+    lines.push(format!("SBOM Quality Report: {}", report_file_name(config)));
     lines.push(format!("Profile: {}", config.profile));
     lines.push(String::new());
 

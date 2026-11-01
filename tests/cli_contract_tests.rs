@@ -1886,6 +1886,66 @@ fn markdown_and_html_reports_cannot_open_a_tag() {
     }
 }
 
+/// A file name can come from a pull request like the SBOM itself, so every
+/// text output cleans it as it cleans SBOM text. `quality` used to print it
+/// raw in its report header. Unix only: Windows refuses control characters
+/// in file names.
+#[cfg(unix)]
+#[test]
+fn text_outputs_neutralize_the_sbom_file_name() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let hostile = "x\n::error file=main.rs,line=1::FORGED\u{1b}[31m\u{7}\u{202E}";
+    let copy = |fixture: &str, suffix: &str| {
+        let path = dir.path().join(format!("{hostile}{suffix}"));
+        std::fs::copy(fixtures.join(fixture), &path).expect("copy fixture");
+        path.to_str().expect("utf-8").to_string()
+    };
+    let new = copy("demo-new.cdx.json", ".cdx.json");
+    let old = copy("demo-old.cdx.json", "-old.cdx.json");
+    let ai = copy("aibom/Llama-3.2-1B-Instruct.cdx.json", "-ai.cdx.json");
+
+    let runs: Vec<Vec<&str>> = vec![
+        vec!["validate", &new, "--standard", "ntia"],
+        vec!["view", &new, "-o", "summary"],
+        vec!["view", &new, "-o", "table"],
+        vec!["diff", &old, &new, "-o", "summary"],
+        vec!["diff", &old, &new, "-o", "side-by-side"],
+        vec!["quality", &new],
+        vec!["quality", &ai, "--profile", "ai-readiness"],
+        vec!["license-check", &new],
+        vec!["vex", "status", &new],
+        vec!["query", "lodash", &new, "-o", "table"],
+    ];
+    for args in &runs {
+        let label = args
+            .iter()
+            .map(|a| if a.contains("FORGED") { "<sbom>" } else { a })
+            .collect::<Vec<_>>()
+            .join(" ");
+        let output = base_command()
+            .env("RUST_LOG", "info")
+            .args(args)
+            .output()
+            .expect("command should run");
+        let code = output.status.code();
+        assert!(
+            !matches!(code, None | Some(3 | 101)),
+            "{label}: exit {code:?}\n{}",
+            stderr(&output)
+        );
+        let out = stdout(&output);
+        assert_neutralized(&label, "stdout", &out);
+        assert_neutralized(&label, "stderr", &stderr(&output));
+        if args[0] == "quality" {
+            assert!(
+                out.contains("SBOM Quality Report: x\\n::error file=main.rs"),
+                "{label}: the header must show the name, escaped:\n{out}"
+            );
+        }
+    }
+}
+
 /// `validate` gives every violation a remediation in JSON and a `fix:` line
 /// in text, phrased for the input format: SPDX documents get SPDX field
 /// paths, never CycloneDX ones.
