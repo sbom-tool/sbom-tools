@@ -11,7 +11,8 @@
 //! the payload consumable from languages without ordered maps.
 
 use crate::model::{
-    CanonicalId, Component, DependencyEdge, DocumentMetadata, FormatExtensions, NormalizedSbom,
+    CanonicalId, Component, DependencyEdge, DocumentMetadata, DuplicateComponent, FormatExtensions,
+    NormalizedSbom,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -45,6 +46,11 @@ pub struct NormalizedSbomPayload {
     /// (an SPDX document can describe several). Omitted when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub described_root_ids: Vec<CanonicalId>,
+    /// The components the document lists more than once, whose entries
+    /// were merged (see [`NormalizedSbom::duplicate_components`]). Omitted
+    /// when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub duplicate_components: Vec<DuplicateComponent>,
     /// Number of canonical-id collisions resolved during parsing.
     pub collision_count: usize,
 }
@@ -68,6 +74,7 @@ impl NormalizedSbomPayload {
             content_hash: sbom.content_hash,
             primary_component_id: sbom.primary_component_id,
             described_root_ids: sbom.described_root_ids,
+            duplicate_components: sbom.duplicate_components.into_values().collect(),
             collision_count: sbom.collision_count,
         }
     }
@@ -89,6 +96,11 @@ impl NormalizedSbomPayload {
             content_hash: self.content_hash,
             primary_component_id: self.primary_component_id,
             described_root_ids: self.described_root_ids,
+            duplicate_components: self
+                .duplicate_components
+                .into_iter()
+                .map(|record| (record.canonical_id.clone(), record))
+                .collect(),
             collision_count: self.collision_count,
         }
     }
@@ -133,6 +145,33 @@ mod tests {
             json,
             "round trip must be byte-stable"
         );
+    }
+
+    /// A component the document lists twice reaches the payload once, with
+    /// its duplicate record and the collision count; a payload without one
+    /// has no `duplicate_components` key.
+    #[test]
+    fn payload_carries_the_duplicate_records() {
+        let entry = |bom_ref: &str| {
+            Component::new("left-pad".to_string(), bom_ref.to_string())
+                .with_version("1.3.0".to_string())
+                .with_purl("pkg:npm/left-pad@1.3.0".to_string())
+        };
+        let mut sbom = NormalizedSbom::default();
+        sbom.add_component(entry("left-pad-a"));
+        sbom.add_component(entry("left-pad-b"));
+        let json = normalized_sbom_json(&sbom).expect("serialize");
+        let value: serde_json::Value = serde_json::from_str(&json).expect("valid JSON");
+        assert_eq!(value["components"].as_array().map(Vec::len), Some(1));
+        assert_eq!(value["collision_count"], 1);
+        assert_eq!(value["duplicate_components"][0]["entries"], 2);
+        let rebuilt = serde_json::from_str::<NormalizedSbomPayload>(&json)
+            .expect("deserialize")
+            .into_sbom();
+        assert_eq!(rebuilt.duplicate_components, sbom.duplicate_components);
+
+        let json = normalized_sbom_json(&NormalizedSbom::default()).expect("serialize");
+        assert!(!json.contains("duplicate_components"));
     }
 
     #[test]
