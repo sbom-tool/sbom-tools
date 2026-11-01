@@ -1,6 +1,6 @@
 [package]
 name = "sbom-tools-ffi"
-version = "0.3.0"
+version = "0.4.0-rc.1"
 edition = "2024"
 rust-version = "1.88"
 description = "C ABI bindings for sbom-tools (Go, Swift, Python consumers)"
@@ -12,10 +12,11 @@ crate-type = ["cdylib", "staticlib"]
 bench = false
 
 [dependencies]
-# The C ABI only touches model/parsers/diff/quality (see ../../src/ffi.rs), so
-# opt out of the default cli/tui/enrichment stack to keep the static/cdylib lean
-# (no ratatui, crossterm, clap_complete, or reqwest/rustls linked in).
+# The C ABI only touches model/parsers/diff/quality and the compliance and
+# rule-catalogue JSON writers in reports (see ../../src/ffi.rs), so opt out of
+# the default cli/tui/enrichment stack to keep the static/cdylib lean (no
+# ratatui, crossterm, clap_complete, or reqwest/rustls linked in).
 #
 # `version` is required for `cargo publish` (crates.io rejects path deps without
 # one) and is kept in lockstep with the root crate by scripts/release.sh.
-sbom-tools = { path = "../..", version = "=0.3.0", default-features = false, features = ["ffi"] }
+sbom-tools = { path = "../..", version = "=0.4.0-rc.1", default-features = false, features = ["ffi"] }

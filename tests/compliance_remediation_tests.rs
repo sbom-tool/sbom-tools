@@ -3,15 +3,18 @@
 //! Every compliance level runs over an SPDX 2.3, an SPDX 3.0 and a CycloneDX
 //! fixture. Each violation's JSON must carry `remediation` — the rule's
 //! guidance plus, for rules whose fix lives in a format-specific field, the
-//! input format's field path — and `help_uri`, the URL of the first standard
-//! reference that has one. SPDX inputs used to get CycloneDX field advice.
+//! input format's field path — and `help_uri`, the rule's documentation
+//! link: the URL of the first standard reference that has one, else the
+//! page of the rule's family, as the rule catalogue gives it. SPDX inputs
+//! used to get CycloneDX field advice.
 
 use std::path::Path;
 
 use sbom_tools::model::NormalizedSbom;
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, RemediationFormat, rule_meta,
+    ComplianceChecker, ComplianceLevel, ComplianceResult, RemediationFormat, rule_catalog_entry,
+    rule_meta,
 };
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
@@ -61,7 +64,8 @@ fn check_all_levels(sbom: &NormalizedSbom) -> Vec<ComplianceResult> {
 }
 
 /// Every violation's JSON carries the registry remediation for the input
-/// format and the first standard-reference URL as `help_uri`.
+/// format, and the rule catalogue's documentation link as `help_uri`: the
+/// first standard-reference URL when a reference has one.
 #[test]
 fn every_violation_carries_remediation_for_its_format() {
     for (rel, format) in FIXTURES {
@@ -102,13 +106,23 @@ fn every_violation_carries_remediation_for_its_format() {
                         v.rule_id
                     );
                 }
-                let first_uri = v.standard_refs.iter().find_map(|r| r.help_uri.as_deref());
+                let help_uri = value.get("help_uri").and_then(|u| u.as_str());
+                let catalogued = rule_catalog_entry(v.rule_id).and_then(|entry| entry.help_uri);
                 assert_eq!(
-                    value.get("help_uri").and_then(|u| u.as_str()),
-                    first_uri,
-                    "{rel} {}: help_uri must be the first standard-reference URL",
+                    help_uri,
+                    catalogued.as_deref(),
+                    "{rel} {}: help_uri must be the rule catalogue's",
                     v.rule_id
                 );
+                if let Some(first_uri) = v.standard_refs.iter().find_map(|r| r.help_uri.as_deref())
+                {
+                    assert_eq!(
+                        help_uri,
+                        Some(first_uri),
+                        "{rel} {}: help_uri must be the first standard-reference URL",
+                        v.rule_id
+                    );
+                }
             }
         }
         assert!(
@@ -126,7 +140,7 @@ fn spdx_inputs_get_spdx_field_paths() {
             .into_iter()
             .find(|r| r.level == level)
             .and_then(|r| r.violations.into_iter().find(|v| v.rule_id == rule_id))
-            .and_then(|v| v.remediation)
+            .and_then(|v| v.remediation.map(|text| text.into_owned()))
             .unwrap_or_else(|| panic!("{rel}: {level:?} must emit {rule_id}"))
     };
 

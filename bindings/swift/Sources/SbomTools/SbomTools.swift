@@ -241,6 +241,453 @@ public struct QualityReportPayload: Codable, Equatable {
     }
 }
 
+/// The inputs of `SbomTools.validate`: the standards, and the run options
+/// the CLI's shared compliance flags give. `nil` leaves an input out, so its
+/// default applies.
+public struct ValidateOptions: Encodable, Equatable {
+    /// `--standard` names or aliases; `nil` means `["ntia"]`.
+    public var standards: [String]?
+    /// The file the content was read from, which the envelope's subject
+    /// names without its directory, as `validate <FILE>` does; `nil` names
+    /// no file, as for standard input.
+    public var fileName: String?
+    /// The evaluation instant (`--as-of`): an RFC 3339 datetime, an
+    /// offset-less datetime taken as UTC, or a date (midnight UTC).
+    public var asOf: String?
+    /// A CRA sidecar object, with the keys of a `.cra.json` file.
+    public var sidecar: JSONValue?
+    /// The CRA product class (`--cra-product-class`).
+    public var productClass: String?
+    /// `readiness` or `deadline` (`--pqc-mode`).
+    public var pqcMode: String?
+    /// `--pqc-profile`; deadline mode only.
+    public var pqcProfile: String?
+    /// `--cnsa-category`; deadline mode only.
+    public var cnsaCategory: String?
+    /// Rule id to `off`, `info`, `warning` or `error` (`--rule`).
+    public var rules: [String: String]?
+    /// Judge components whose scope is excluded too
+    /// (`--include-excluded-scope`).
+    public var includeExcludedScope: Bool?
+
+    public init(
+        standards: [String]? = nil,
+        fileName: String? = nil,
+        asOf: String? = nil,
+        sidecar: JSONValue? = nil,
+        productClass: String? = nil,
+        pqcMode: String? = nil,
+        pqcProfile: String? = nil,
+        cnsaCategory: String? = nil,
+        rules: [String: String]? = nil,
+        includeExcludedScope: Bool? = nil
+    ) {
+        self.standards = standards
+        self.fileName = fileName
+        self.asOf = asOf
+        self.sidecar = sidecar
+        self.productClass = productClass
+        self.pqcMode = pqcMode
+        self.pqcProfile = pqcProfile
+        self.cnsaCategory = cnsaCategory
+        self.rules = rules
+        self.includeExcludedScope = includeExcludedScope
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case standards
+        case fileName = "file_name"
+        case asOf = "as_of"
+        case sidecar
+        case productClass = "product_class"
+        case pqcMode = "pqc_mode"
+        case pqcProfile = "pqc_profile"
+        case cnsaCategory = "cnsa_category"
+        case rules
+        case includeExcludedScope = "include_excluded_scope"
+    }
+}
+
+/// The inputs of `SbomTools.score(_:options:)`: a `quality --profile` name
+/// and the run options of `ValidateOptions` (all but the standards).
+public struct ScoreOptions: Encodable, Equatable {
+    /// A `quality --profile` name; `nil` means `standard`.
+    public var profile: String?
+    /// The file the content was read from, which the output's `sbom` names
+    /// without its directory, as `quality <FILE>` does; `nil` gives `-`, as
+    /// for standard input.
+    public var fileName: String?
+    public var asOf: String?
+    public var sidecar: JSONValue?
+    public var productClass: String?
+    public var pqcMode: String?
+    public var pqcProfile: String?
+    public var cnsaCategory: String?
+    public var rules: [String: String]?
+    public var includeExcludedScope: Bool?
+
+    public init(
+        profile: String? = nil,
+        fileName: String? = nil,
+        asOf: String? = nil,
+        sidecar: JSONValue? = nil,
+        productClass: String? = nil,
+        pqcMode: String? = nil,
+        pqcProfile: String? = nil,
+        cnsaCategory: String? = nil,
+        rules: [String: String]? = nil,
+        includeExcludedScope: Bool? = nil
+    ) {
+        self.profile = profile
+        self.fileName = fileName
+        self.asOf = asOf
+        self.sidecar = sidecar
+        self.productClass = productClass
+        self.pqcMode = pqcMode
+        self.pqcProfile = pqcProfile
+        self.cnsaCategory = cnsaCategory
+        self.rules = rules
+        self.includeExcludedScope = includeExcludedScope
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case profile
+        case fileName = "file_name"
+        case asOf = "as_of"
+        case sidecar
+        case productClass = "product_class"
+        case pqcMode = "pqc_mode"
+        case pqcProfile = "pqc_profile"
+        case cnsaCategory = "cnsa_category"
+        case rules
+        case includeExcludedScope = "include_excluded_scope"
+    }
+}
+
+/// The tool that wrote a compliance envelope or a rule catalogue.
+public struct ToolInfo: Codable, Equatable {
+    public let name: String
+    public let version: String
+}
+
+/// The `sbom-tools/compliance/v2` envelope `SbomTools.validate` returns, as
+/// `sbom-tools validate -o json` writes it.
+public struct ComplianceEnvelope: Codable, Equatable {
+    public let schema: String
+    public let tool: ToolInfo
+    /// The instant every standard was judged at (RFC 3339, UTC).
+    public let asOf: String
+    /// The SBOM the results judge.
+    public let subject: ComplianceSubject
+    public let results: [ComplianceResultPayload]
+
+    enum CodingKeys: String, CodingKey {
+        case schema
+        case tool
+        case asOf = "as_of"
+        case subject
+        case results
+    }
+}
+
+/// The SBOM a compliance envelope judges, and how its document was read.
+public struct ComplianceSubject: Codable, Equatable {
+    /// Lowercase hex SHA-256 of the content passed in.
+    public let sha256: String
+    public let format: String
+    public let specVersion: String
+    /// `ValidateOptions.fileName` without its directory.
+    public let fileName: String?
+    public let components: Int
+    public let duplicates: DuplicateSummary
+    public let timestampUnparsed: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case sha256
+        case format
+        case specVersion = "spec_version"
+        case fileName = "file_name"
+        case components
+        case duplicates
+        case timestampUnparsed = "timestamp_unparsed"
+    }
+}
+
+/// The components a document lists more than once, whose entries were
+/// merged into one each.
+public struct DuplicateSummary: Codable, Equatable {
+    public let components: Int
+    public let entries: Int
+    public let conflicts: [String]
+}
+
+/// One standard's verdict.
+public struct ComplianceResultPayload: Codable, Equatable {
+    public let standard: String
+    public let name: String
+    public let applicable: Bool
+    public let notApplicableReason: String?
+    public let compliant: Bool
+    public let score: Int?
+    public let scoreBasis: ScoreBasis?
+    public let counts: ComplianceCounts
+    public let violations: [ComplianceViolation]
+    public let passed: [PassedCheckPayload]
+    public let evaluated: [RuleEvaluationPayload]?
+    public let suppressed: [SuppressedRulePayload]?
+    public let excludedComponents: Int?
+    public let conformitySummary: [String: JSONValue]?
+
+    enum CodingKeys: String, CodingKey {
+        case standard
+        case name
+        case applicable
+        case notApplicableReason = "not_applicable_reason"
+        case compliant
+        case score
+        case scoreBasis = "score_basis"
+        case counts
+        case violations
+        case passed
+        case evaluated
+        case suppressed
+        case excludedComponents = "excluded_components"
+        case conformitySummary = "conformity_summary"
+    }
+}
+
+/// What a result's score is computed from.
+public struct ScoreBasis: Codable, Equatable {
+    public let checked: Int
+    public let failed: Int
+}
+
+/// A result's findings by severity, its passed checks and the findings the
+/// rule settings turned off.
+public struct ComplianceCounts: Codable, Equatable {
+    public let error: Int
+    public let warning: Int
+    public let info: Int
+    public let passed: Int
+    public let suppressed: Int?
+}
+
+/// One finding of a standard.
+public struct ComplianceViolation: Codable, Equatable {
+    public let findingID: String
+    public let findingKey: String
+    public let severity: String
+    public let defaultSeverity: String?
+    public let severitySource: String?
+    public let category: String
+    public let message: String
+    public let element: String?
+    public let componentID: String?
+    public let findingDetail: String?
+    public let deadline: String?
+    public let deadlineSource: String?
+    public let field: String?
+    public let observed: String?
+    public let requirement: String
+    public let ruleID: String
+    public let sarifRuleID: String
+    public let standardRefs: [StandardRefPayload]?
+    public let remediation: String?
+    public let helpURI: String?
+
+    enum CodingKeys: String, CodingKey {
+        case findingID = "finding_id"
+        case findingKey = "finding_key"
+        case severity
+        case defaultSeverity = "default_severity"
+        case severitySource = "severity_source"
+        case category
+        case message
+        case element
+        case componentID = "component_id"
+        case findingDetail = "finding_detail"
+        case deadline
+        case deadlineSource = "deadline_source"
+        case field
+        case observed
+        case requirement
+        case ruleID = "rule_id"
+        case sarifRuleID = "sarif_rule_id"
+        case standardRefs = "standard_refs"
+        case remediation
+        case helpURI = "help_uri"
+    }
+}
+
+/// A check the SBOM passed; it is not a violation.
+public struct PassedCheckPayload: Codable, Equatable {
+    public let findingID: String
+    public let findingKey: String
+    public let message: String
+    public let element: String?
+    public let componentID: String?
+    public let requirement: String
+    public let ruleID: String
+    public let standardRefs: [StandardRefPayload]?
+
+    enum CodingKeys: String, CodingKey {
+        case findingID = "finding_id"
+        case findingKey = "finding_key"
+        case message
+        case element
+        case componentID = "component_id"
+        case requirement
+        case ruleID = "rule_id"
+        case standardRefs = "standard_refs"
+    }
+}
+
+/// A clause a finding cites.
+public struct StandardRefPayload: Codable, Equatable {
+    public let standard: String
+    public let id: String
+    public let helpURI: String?
+
+    enum CodingKeys: String, CodingKey {
+        case standard
+        case id
+        case helpURI = "help_uri"
+    }
+}
+
+/// A check the standard did not evaluate, with the reason.
+public struct RuleEvaluationPayload: Codable, Equatable {
+    public let ruleID: String
+    public let status: String
+    public let reason: String
+
+    enum CodingKeys: String, CodingKey {
+        case ruleID = "rule_id"
+        case status
+        case reason
+    }
+}
+
+/// A rule the run's settings turned off.
+public struct SuppressedRulePayload: Codable, Equatable {
+    public let ruleID: String
+    public let findings: Int
+    public let source: String
+
+    enum CodingKeys: String, CodingKey {
+        case ruleID = "rule_id"
+        case findings
+        case source
+    }
+}
+
+/// The `sbom-tools/rules/v1` document `SbomTools.ruleCatalog` returns, as
+/// `sbom-tools rules -o json` prints it.
+public struct RuleCatalog: Codable, Equatable {
+    public let schema: String
+    public let tool: ToolInfo
+    public let rules: [RuleCatalogEntry]
+}
+
+/// Everything the registry records about one rule.
+public struct RuleCatalogEntry: Codable, Equatable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let defaultSeverity: String
+    public let kind: String
+    public let fallback: Bool
+    public let standards: [String]
+    public let references: [RuleReference]
+    public let helpURI: String?
+    public let remediation: String
+    public let remediationSummary: String
+    public let advice: RuleAdvice?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case description
+        case defaultSeverity = "default_severity"
+        case kind
+        case fallback
+        case standards
+        case references
+        case helpURI = "help_uri"
+        case remediation
+        case remediationSummary = "remediation_summary"
+        case advice
+    }
+}
+
+/// A clause a rule implements.
+public struct RuleReference: Codable, Equatable {
+    public let standard: String
+    public let id: String
+    public let label: String
+    public let helpURI: String?
+
+    enum CodingKeys: String, CodingKey {
+        case standard
+        case id
+        case label
+        case helpURI = "help_uri"
+    }
+}
+
+/// Where a rule's fix goes in each SBOM format.
+public struct RuleAdvice: Codable, Equatable {
+    public let cyclonedx: RuleFormatAdvice
+    public let spdx2: RuleFormatAdvice
+    public let spdx3: RuleFormatAdvice
+}
+
+/// A rule's fix in one SBOM format.
+public struct RuleFormatAdvice: Codable, Equatable {
+    public let text: String
+    public let field: String?
+}
+
+/// The document `SbomTools.scoreWithOptions` returns, as
+/// `sbom-tools quality -o json` prints it: the tool and its version, the
+/// SBOM's file name (`-` without `ScoreOptions.fileName`), the profile as
+/// `--profile` names it, whether the profile applied, and the report.
+public struct QualityOutput: Codable, Equatable {
+    public let tool: String
+    public let version: String
+    public let sbom: String
+    public let profile: String
+    public let applicable: Bool
+    public let report: QualityOutputReport
+}
+
+/// The quality report inside a `QualityOutput`. For a profile that did not
+/// apply (ai-readiness on an SBOM without ML components), `overallScore` is
+/// `nil` and `grade` is `N/A`. `compliance` is the profile's compliance
+/// result as the report serializes it; `validate` returns typed results
+/// with finding ids.
+public struct QualityOutputReport: Codable, Equatable {
+    public let scoringEngineVersion: String
+    public let overallScore: Double?
+    public let grade: String
+    public let profile: String
+    public let compliance: [String: JSONValue]
+    public let recommendations: [JSONValue]
+
+    enum CodingKeys: String, CodingKey {
+        case scoringEngineVersion = "scoring_engine_version"
+        case overallScore = "overall_score"
+        case grade
+        case profile
+        case compliance
+        case recommendations
+    }
+}
+
+private struct RuleCatalogFilter: Encodable {
+    let standards: [String]
+}
+
 public struct DeduplicationStats: Equatable {
     public let componentsRemoved: Int
     public let edgesRemoved: Int
@@ -344,6 +791,62 @@ public enum SbomTools {
             edgesRemoved: dedupResult.edgesRemoved
         )
         return (quality, stats)
+    }
+
+    /// Validate raw SBOM content against compliance standards and return the
+    /// `sbom-tools/compliance/v2` envelope: byte for byte what
+    /// `sbom-tools validate - -o json` writes for the same content and options
+    /// (`validate <FILE>` when `options.fileName` names the file). The
+    /// subject's SHA-256 is over exactly the content passed in, and `asOf` is
+    /// `options.asOf`, else the wall clock when the call starts, to the second.
+    public static func validateJSON(_ content: String, options: ValidateOptions = ValidateOptions()) throws -> String {
+        let optionsJSON = try encode(options)
+        return try content.withCString { contentPointer in
+            try optionsJSON.withCString { optionsPointer in
+                try consume(sbom_tools_validate_json(contentPointer, optionsPointer))
+            }
+        }
+    }
+
+    /// Validate raw SBOM content against compliance standards and return the
+    /// decoded envelope.
+    public static func validate(_ content: String, options: ValidateOptions = ValidateOptions()) throws -> ComplianceEnvelope {
+        try decode(ComplianceEnvelope.self, from: validateJSON(content, options: options))
+    }
+
+    /// The `sbom-tools/rules/v1` rule catalogue: every rule, or the rules of
+    /// the given `--standard` names.
+    public static func ruleCatalogJSON(standards: [String] = []) throws -> String {
+        let filterJSON = try encode(RuleCatalogFilter(standards: standards))
+        return try filterJSON.withCString { pointer in
+            try consume(sbom_tools_rule_catalog_json(pointer))
+        }
+    }
+
+    /// The decoded rule catalogue: every rule, or the rules of the given
+    /// `--standard` names.
+    public static func ruleCatalog(standards: [String] = []) throws -> RuleCatalog {
+        try decode(RuleCatalog.self, from: ruleCatalogJSON(standards: standards))
+    }
+
+    /// Score raw SBOM content with a profile and the run options, judged at
+    /// `options.asOf`, and return what `sbom-tools quality - -o json` writes
+    /// for the same content and options (`quality <FILE>` when
+    /// `options.fileName` names the file), byte for byte. `score(_:profile:)`
+    /// keeps its old behaviour for compatibility.
+    public static func scoreWithOptionsJSON(_ content: String, options: ScoreOptions = ScoreOptions()) throws -> String {
+        let optionsJSON = try encode(options)
+        return try content.withCString { contentPointer in
+            try optionsJSON.withCString { optionsPointer in
+                try consume(sbom_tools_score_sbom_with_options_json(contentPointer, optionsPointer))
+            }
+        }
+    }
+
+    /// Score raw SBOM content with a profile and the run options, and return
+    /// the decoded `quality -o json` document.
+    public static func scoreWithOptions(_ content: String, options: ScoreOptions = ScoreOptions()) throws -> QualityOutput {
+        try decode(QualityOutput.self, from: scoreWithOptionsJSON(content, options: options))
     }
 
     public static func decode<T: Decodable>(_ type: T.Type, from json: String) throws -> T {

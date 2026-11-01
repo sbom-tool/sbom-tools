@@ -723,9 +723,12 @@ JSON OUTPUT:
     -o json emits the sbom-tools/compliance/v2 envelope (one object for any
     number of standards; schema: schemas/compliance/v2.schema.json). The
     pre-0.4 layout stays available with --json-schema v1 until v0.5.0.
-    Checks the SBOM passed (e.g. a NIST-approved PQC algorithm) are listed
-    under passed[], never as violations; -o sarif reports them only with
-    --sarif-include-passes.
+    The envelope states the instant every standard was judged at (as_of)
+    and the SBOM it judged (subject: SHA-256, format, file name, and how the
+    document was read). Checks the SBOM passed (e.g. a NIST-approved PQC
+    algorithm) are listed under passed[], never as violations; -o sarif
+    reports them only with --sarif-include-passes. -o sarif and -o
+    oscal-json carry the same fields for every finding and verdict.
 
 EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum
@@ -2148,8 +2151,8 @@ fn main() {
     // 5 = license-check denial, 6 = --fail-on-kev, 7 = diff ML regression).
     if let Err(err) = run() {
         // Mirror the format the default `fn main() -> Result` termination
-        // prints: message plus the "Caused by:" chain.
-        eprintln!("Error: {err:?}");
+        // prints: message plus the "Caused by:" chain, each line cleaned.
+        eprintln!("Error: {}", sbom_tools::cli::error_report(&err));
         std::process::exit(exit_codes::ERROR);
     }
 }

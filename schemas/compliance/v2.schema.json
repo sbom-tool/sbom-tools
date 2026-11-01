@@ -8,6 +8,8 @@
   "properties": {
     "schema": {"const": "sbom-tools/compliance/v2"},
     "tool": {"$ref": "#/$defs/tool"},
+    "as_of": {"type": "string", "format": "date-time", "description": "The instant every standard was judged at: --as-of, else the wall clock when the run started, to the second. RFC 3339 in UTC. `validate` always writes it."},
+    "subject": {"$ref": "#/$defs/subject"},
     "results": {
       "type": "array",
       "description": "One entry per checked standard, in --standard order.",
@@ -17,6 +19,29 @@
   },
   "$defs": {
     "count": {"type": "integer", "minimum": 0},
+    "subject": {
+      "type": "object",
+      "description": "The SBOM the results judge, and how its document was read. `validate` always writes it.",
+      "required": ["sha256", "format", "spec_version", "components", "duplicates", "timestamp_unparsed"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Lowercase hex SHA-256 of the bytes read."},
+        "format": {"enum": ["CycloneDX", "SPDX"]},
+        "spec_version": {"type": "string", "description": "The specification version the document declares, e.g. `1.6`, `2.3`, `3.0.1`."},
+        "file_name": {"type": "string", "minLength": 1, "description": "The SBOM file's name, without its directory. Absent for an SBOM read from standard input, and from the C ABI unless its `file_name` option names the file."},
+        "components": {"$ref": "#/$defs/count", "description": "The components the document lists, after the entries of a component listed more than once were merged into one."},
+        "duplicates": {
+          "type": "object",
+          "description": "The components the document lists more than once, whose entries were merged.",
+          "required": ["components", "entries", "conflicts"],
+          "properties": {
+            "components": {"$ref": "#/$defs/count", "description": "Components listed more than once."},
+            "entries": {"$ref": "#/$defs/count", "description": "Their entries, before the merge."},
+            "conflicts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}, "description": "The fields the entries give two different real values, each once, sorted (e.g. `description`, `licenses.concluded`). The merged component keeps the value that sorts first."}
+          }
+        },
+        "timestamp_unparsed": {"type": "boolean", "description": "Whether the document has a creation timestamp that is no RFC 3339 date-time. The checks then count it as absent and quote it."}
+      }
+    },
     "tool": {
       "type": "object",
       "required": ["name", "version"],
@@ -91,7 +116,7 @@
         "finding_key": {"type": "string", "pattern": "^[^|]+\\|[^|]+\\|", "description": "`<standard>|<rule_id>|<subject>`, or `<standard>|<rule_id>:<finding_detail>|<subject>` with `%`, `|` and `:` in the detail percent-encoded; the subject (everything after the second `|`) is `document` or the component's canonical id, prefixed `component:` when the id itself reads `document` or starts with `edge:` or `component:`."},
         "severity": {"enum": ["Error", "Warning", "Info"], "description": "The severity the verdict, the counts, the score and the exit code read: the one the run's rule settings give the rule, if they set it."},
         "default_severity": {"enum": ["Error", "Warning", "Info"], "description": "When the run's rule settings set the finding's rule (--rule, the config file's compliance.rules): the severity the check gave the finding. Present exactly when `severity_source` is."},
-        "severity_source": {"enum": ["config", "cli"], "description": "Where the setting that gives the finding its `severity` comes from: `config` (the config file) or `cli` (--rule). Present exactly when `default_severity` is."},
+        "severity_source": {"enum": ["config", "cli"], "description": "Where the setting that gives the finding its `severity` comes from: `config` (the config file) or `cli` (set by the invocation: a --rule flag or an ABI option). Present exactly when `default_severity` is."},
         "category": {"type": "string", "minLength": 1, "description": "Violation category, e.g. DocumentMetadata, ComponentIdentification, SupplierInfo."},
         "message": {"type": "string"},
         "element": {"type": ["string", "null"], "description": "Human-readable label of the offending element; not unique."},
@@ -106,8 +131,8 @@
         "rule_id": {"type": "string", "minLength": 1, "description": "Stable internal rule key."},
         "sarif_rule_id": {"type": "string", "minLength": 1, "description": "Rule id the SARIF output reports for this violation."},
         "standard_refs": {"type": "array", "items": {"$ref": "#/$defs/standard_ref"}},
-        "remediation": {"type": "string", "description": "How to fix the violation (populated by a later release)."},
-        "help_uri": {"type": "string", "description": "Documentation link for the rule (populated by a later release)."}
+        "remediation": {"type": "string", "description": "How to fix the violation, phrased for the SBOM's format."},
+        "help_uri": {"type": "string", "description": "The rule's documentation link: the URL of the first standard reference that has one, else the page of the rule's standard, as `sbom-tools rules` gives it."}
       }
     },
     "rule_evaluation": {
@@ -136,7 +161,7 @@
       "properties": {
         "rule_id": {"type": "string", "minLength": 1, "description": "The rule's id."},
         "findings": {"type": "integer", "minimum": 1, "description": "How many of its findings the run dropped."},
-        "source": {"enum": ["config", "cli"], "description": "Where the `off` setting comes from: `config` (the config file) or `cli` (--rule)."}
+        "source": {"enum": ["config", "cli"], "description": "Where the `off` setting comes from: `config` (the config file) or `cli` (set by the invocation: a --rule flag or an ABI option)."}
       }
     },
     "standard_ref": {

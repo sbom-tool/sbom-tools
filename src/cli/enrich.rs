@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 
 use crate::pipeline::exit_codes;
+use crate::reports::escape::sanitize_path;
 
 /// Run the enrich command.
 ///
@@ -45,7 +46,7 @@ pub fn run_enrich(
         Some(path) => {
             std::fs::write(path, &enriched_json)?;
             if !quiet {
-                eprintln!("Enriched SBOM written to {}", path.display());
+                eprintln!("Enriched SBOM written to {}", sanitize_path(path));
             }
         }
         None => {

@@ -1815,6 +1815,205 @@ fn assert_fix_line_per_finding(label: &str, text: &str, markers: &[&str], offset
     }
 }
 
+/// SBOM text cannot open an HTML tag or an autolink in the Markdown and HTML
+/// reports. The Markdown tables of `view` and `diff` used to print `<` as is,
+/// and GitHub renders raw HTML in a table cell; a backslash in the text must
+/// not cancel the escape either.
+#[test]
+fn markdown_and_html_reports_cannot_open_a_tag() {
+    use serde_json::json;
+    let dir = tempfile::tempdir().expect("tempdir");
+    let html = "<img src=x onerror=alert(1)> \\<b>bold</b> <https://e.example>";
+    let doc = |suffix: &str, added: bool| {
+        let mut components = vec![json!({"type": "library", "bom-ref": "c-html", "name": html,
+            "version": format!("1.0{suffix}"), "purl": format!("pkg:npm/html@1.0{suffix}"),
+            "supplier": {"name": html}, "licenses": [{"license": {"name": html}}]})];
+        if added {
+            components.push(json!({"type": "library", "bom-ref": "c-new",
+                                   "name": format!("{html} added"), "version": html}));
+        }
+        json!({"bomFormat": "CycloneDX", "specVersion": "1.6", "version": 1,
+               "metadata": {"timestamp": "2026-01-01T00:00:00Z"},
+               "components": components})
+    };
+    let write = |file: &str, value: serde_json::Value| {
+        let path = dir.path().join(file);
+        std::fs::write(&path, value.to_string()).expect("write fixture");
+        path
+    };
+    let (old, new) = (
+        write("old.cdx.json", doc("", false)),
+        write("new.cdx.json", doc(".1", true)),
+    );
+    let (old, new) = (old.to_str().expect("utf-8"), new.to_str().expect("utf-8"));
+
+    for (args, markdown) in [
+        (vec!["view", new, "-o", "markdown"], true),
+        (vec!["diff", old, new, "-o", "markdown"], true),
+        (vec!["view", new, "-o", "html"], false),
+        (vec!["diff", old, new, "-o", "html"], false),
+    ] {
+        let output = base_command()
+            .args(&args)
+            .output()
+            .expect("command should run");
+        let out = stdout(&output);
+        let label = format!("{} -o {}", args[0], args[args.len() - 1]);
+        assert!(
+            out.contains("img src=x"),
+            "{label}: the text must still be shown:\n{out}"
+        );
+        if !markdown {
+            assert!(!out.contains("<img"), "{label}: a live tag:\n{out}");
+            continue;
+        }
+        // The reports emit no HTML of their own, so every `<` comes from the
+        // SBOM and must follow an odd run of backslashes.
+        for (at, _) in out.match_indices('<') {
+            let (before, after) = out.split_at(at);
+            let run = before.chars().rev().take_while(|&c| c == '\\').count();
+            assert_eq!(
+                run % 2,
+                1,
+                "{label}: a live `<` in the line {:?}",
+                format!(
+                    "{}{}",
+                    before.rsplit('\n').next().unwrap_or(""),
+                    after.split('\n').next().unwrap_or("")
+                )
+            );
+        }
+    }
+}
+
+/// A file name can come from a pull request like the SBOM itself, so every
+/// text output cleans it as it cleans SBOM text. `quality` used to print it
+/// raw in its report header. Unix only: Windows refuses control characters
+/// in file names.
+#[cfg(unix)]
+#[test]
+fn text_outputs_neutralize_the_sbom_file_name() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let hostile = "x\n::error file=main.rs,line=1::FORGED\u{1b}[31m\u{7}\u{202E}";
+    let copy = |fixture: &str, suffix: &str| {
+        let path = dir.path().join(format!("{hostile}{suffix}"));
+        std::fs::copy(fixtures.join(fixture), &path).expect("copy fixture");
+        path.to_str().expect("utf-8").to_string()
+    };
+    let new = copy("demo-new.cdx.json", ".cdx.json");
+    let old = copy("demo-old.cdx.json", "-old.cdx.json");
+    let ai = copy("aibom/Llama-3.2-1B-Instruct.cdx.json", "-ai.cdx.json");
+
+    let runs: Vec<Vec<&str>> = vec![
+        vec!["validate", &new, "--standard", "ntia"],
+        vec!["view", &new, "-o", "summary"],
+        vec!["view", &new, "-o", "table"],
+        vec!["diff", &old, &new, "-o", "summary"],
+        vec!["diff", &old, &new, "-o", "side-by-side"],
+        vec!["quality", &new],
+        vec!["quality", &ai, "--profile", "ai-readiness"],
+        vec!["license-check", &new],
+        vec!["vex", "status", &new],
+        vec!["query", "lodash", &new, "-o", "table"],
+    ];
+    for args in &runs {
+        let label = args
+            .iter()
+            .map(|a| if a.contains("FORGED") { "<sbom>" } else { a })
+            .collect::<Vec<_>>()
+            .join(" ");
+        let output = base_command()
+            .env("RUST_LOG", "info")
+            .args(args)
+            .output()
+            .expect("command should run");
+        let code = output.status.code();
+        assert!(
+            !matches!(code, None | Some(3 | 101)),
+            "{label}: exit {code:?}\n{}",
+            stderr(&output)
+        );
+        let out = stdout(&output);
+        assert_neutralized(&label, "stdout", &out);
+        assert_neutralized(&label, "stderr", &stderr(&output));
+        if args[0] == "quality" {
+            assert!(
+                out.contains("SBOM Quality Report: x\\n::error file=main.rs"),
+                "{label}: the header must show the name, escaped:\n{out}"
+            );
+        }
+    }
+}
+
+#[cfg(unix)]
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(bytes)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
+/// Error messages and status lines quote file names too: a file that fails
+/// to parse or is missing, the sidecar `verify hash` picks up, and the file
+/// `convert` writes. They used to print the name raw on stderr. Unix only, as
+/// above.
+#[cfg(unix)]
+#[test]
+fn error_and_status_messages_neutralize_file_names() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let hostile = "x\n::error file=main.rs,line=1::FORGED\u{1b}[31m\u{7}\u{202E}";
+    let path = |suffix: &str| {
+        dir.path()
+            .join(format!("{hostile}{suffix}"))
+            .to_str()
+            .expect("utf-8")
+            .to_string()
+    };
+    let (good, bad, missing, out) = (
+        path(".cdx.json"),
+        path("-bad.cdx.json"),
+        path("-missing.cdx.json"),
+        path("-out.spdx.json"),
+    );
+    std::fs::copy(fixtures.join("demo-new.cdx.json"), &good).expect("copy fixture");
+    std::fs::write(&bad, "{ not an SBOM").expect("write fixture");
+    let digest = sha256_hex(&std::fs::read(&good).expect("read fixture"));
+    std::fs::write(format!("{good}.sha256"), format!("{digest}\n")).expect("write sidecar");
+
+    for (args, expected) in [
+        (vec!["validate", &bad, "--standard", "ntia"], 3),
+        (vec!["view", &bad, "-o", "summary"], 3),
+        (vec!["quality", &bad], 3),
+        (vec!["diff", &bad, &good, "-o", "summary"], 3),
+        (vec!["license-check", &bad], 3),
+        (vec!["validate", &missing, "--standard", "ntia"], 3),
+        (vec!["verify", "hash", &good], 0),
+        (vec!["convert", &good, "--to", "spdx", "-O", &out], 0),
+    ] {
+        let label = args
+            .iter()
+            .map(|a| if a.contains("FORGED") { "<file>" } else { a })
+            .collect::<Vec<_>>()
+            .join(" ");
+        let output = base_command()
+            .env("RUST_LOG", "info")
+            .args(&args)
+            .output()
+            .expect("command should run");
+        let err = stderr(&output);
+        assert_eq!(output.status.code(), Some(expected), "{label}:\n{err}");
+        assert!(
+            err.contains("FORGED"),
+            "{label}: the name must be shown:\n{err}"
+        );
+        assert_neutralized(&label, "stdout", &stdout(&output));
+        assert_neutralized(&label, "stderr", &err);
+    }
+}
+
 /// `validate` gives every violation a remediation in JSON and a `fix:` line
 /// in text, phrased for the input format: SPDX documents get SPDX field
 /// paths, never CycloneDX ones.

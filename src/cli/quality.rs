@@ -6,8 +6,8 @@ use crate::config::EnrichmentConfig;
 use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
 use crate::quality::{QualityGrade, QualityReport, QualityScorer, ScoringProfile};
 use crate::reports::ReportFormat;
+use crate::reports::escape::sanitize_line;
 use anyhow::Result;
-use serde_json::json;
 use std::path::PathBuf;
 
 /// Output formats the `quality` command has a real renderer for.
@@ -193,7 +193,8 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
 
     // Build output based on format
     let output_text = match config.output {
-        ReportFormat::Json => format_quality_json(&report, &config),
+        // The C ABI's score-with-options call returns this same document.
+        ReportFormat::Json => crate::reports::generate_quality_json(&report, &config.sbom_path)?,
         ReportFormat::Sarif => {
             // SARIF results point at the SBOM lines of their components.
             let artifact = super::sarif_artifact(
@@ -263,36 +264,6 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     }
 
     Ok(exit_codes::SUCCESS)
-}
-
-/// Format quality report as JSON
-fn format_quality_json(report: &QualityReport, config: &QualityConfig) -> String {
-    let not_applicable = report
-        .ai_readiness_metrics
-        .as_ref()
-        .is_some_and(crate::quality::AiReadinessMetrics::is_not_applicable);
-
-    // Serialize the report, then for an N/A AI-readiness result replace the
-    // overall_score/grade so machine consumers don't read a 0.0 / "F" as a real
-    // failing score (the standard 8-category pipeline did not run).
-    let mut report_value = serde_json::to_value(report).unwrap_or_default();
-    if not_applicable && let Some(obj) = report_value.as_object_mut() {
-        obj.insert("overall_score".to_string(), serde_json::Value::Null);
-        obj.insert(
-            "grade".to_string(),
-            serde_json::Value::String("N/A".to_string()),
-        );
-    }
-
-    let output = json!({
-        "tool": "sbom-tools",
-        "version": env!("CARGO_PKG_VERSION"),
-        "sbom": config.sbom_path.file_name().unwrap_or_default().to_string_lossy(),
-        "profile": config.profile.to_string(),
-        "applicable": !not_applicable,
-        "report": report_value,
-    });
-    serde_json::to_string_pretty(&output).unwrap_or_default()
 }
 
 /// Format quality report as SARIF 2.1.0
@@ -377,14 +348,7 @@ fn format_quality_report(
     };
 
     // Header
-    lines.push(format!(
-        "SBOM Quality Report: {}",
-        config
-            .sbom_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-    ));
+    lines.push(format!("SBOM Quality Report: {}", report_file_name(config)));
     lines.push(format!("Profile: {}", config.profile));
     lines.push(String::new());
 
@@ -559,6 +523,15 @@ fn format_quality_report(
     lines.join("\n")
 }
 
+/// The SBOM's file name for a text report header. A file name can come from
+/// a pull request like the SBOM itself, so it passes through
+/// [`sanitize_line`]: a crafted name must not start a workflow command or
+/// send a terminal escape.
+fn report_file_name(config: &QualityConfig) -> String {
+    let name = config.sbom_path.file_name().unwrap_or_default();
+    sanitize_line(&name.to_string_lossy()).into_owned()
+}
+
 /// Render the AI-readiness profile as a per-check pass/fail report.
 fn format_ai_readiness_report(
     report: &QualityReport,
@@ -571,14 +544,7 @@ fn format_ai_readiness_report(
     };
     let reset = if use_color { "\x1b[0m" } else { "" };
 
-    lines.push(format!(
-        "SBOM Quality Report: {}",
-        config
-            .sbom_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-    ));
+    lines.push(format!("SBOM Quality Report: {}", report_file_name(config)));
     lines.push(format!("Profile: {}", config.profile));
     lines.push(String::new());
 
@@ -659,6 +625,7 @@ fn format_ai_readiness_report(
 mod tests {
     use super::*;
     use crate::model::{Component, ComponentType, DocumentMetadata, MlModelInfo, NormalizedSbom};
+    use serde_json::json;
 
     /// Contract test: every documented `--profile` spelling parses to the
     /// right profile through the single shared parser (clap uses the same
@@ -1139,7 +1106,11 @@ mod tests {
     fn test_format_quality_json_ai_readiness_na_is_not_misleading() {
         let sbom = NormalizedSbom::new(DocumentMetadata::default());
         let report = QualityScorer::new(ScoringProfile::AiReadiness).score(&sbom);
-        let out = format_quality_json(&report, &ai_config(ReportFormat::Json, None));
+        let out = crate::reports::generate_quality_json(
+            &report,
+            &ai_config(ReportFormat::Json, None).sbom_path,
+        )
+        .expect("renders");
         let value: serde_json::Value = serde_json::from_str(&out).expect("valid JSON");
         // N/A must not serialize as a real 0.0 / "F" score.
         assert_eq!(value["applicable"], json!(false));

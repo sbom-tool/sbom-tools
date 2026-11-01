@@ -7,6 +7,20 @@ source: tests/compliance_snapshots.rs
     "name": "sbom-tools",
     "version": "[VERSION]"
   },
+  "as_of": "2026-10-12T00:00:00Z",
+  "subject": {
+    "sha256": "53e00feed5e200b15242a7e5c589d0d9b21abc5fb49f73132bf87a91514cbdb0",
+    "format": "CycloneDX",
+    "spec_version": "1.6",
+    "file_name": "aibom-complete.cdx.json",
+    "components": 3,
+    "duplicates": {
+      "components": 0,
+      "entries": 0,
+      "conflicts": []
+    },
+    "timestamp_unparsed": false
+  },
   "results": [
     {
       "standard": "ai-act",

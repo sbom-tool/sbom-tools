@@ -1,5 +1,7 @@
 //! Small shared helpers reused across the compliance checkers.
 
+use std::borrow::Cow;
+
 use super::{Violation, ViolationCategory, ViolationSeverity};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, ExternalRefType, ExternalReference, Hash,
@@ -75,7 +77,7 @@ impl super::ComplianceChecker {
             rule_id,
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             deadline: None,
@@ -163,7 +165,7 @@ pub(crate) fn future_timestamp_violation(
         rule_id,
         component_id: None,
         counts: None,
-        standard_refs: Vec::new(),
+        standard_refs: Cow::Borrowed(&[]),
         remediation: None,
         finding_detail: None,
         severity_override: None,

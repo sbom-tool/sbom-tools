@@ -8,6 +8,7 @@ use anyhow::Result;
 
 use crate::parsers::parse_sbom;
 use crate::pipeline::exit_codes;
+use crate::reports::escape::sanitize_path;
 use crate::verification::{
     ModelVerifyResult, audit_component_hashes, verify_file_hash, verify_model_dir,
 };
@@ -118,7 +119,7 @@ pub fn run_verify(action: VerifyAction, quiet: bool) -> Result<i32> {
                 );
                 if sha_path.exists() {
                     if !quiet {
-                        eprintln!("Using sidecar hash file: {}", sha_path.display());
+                        eprintln!("Using sidecar hash file: {}", sanitize_path(&sha_path));
                     }
                     crate::verification::read_hash_file(&sha_path)?
                 } else {
@@ -272,7 +273,7 @@ pub fn run_verify(action: VerifyAction, quiet: bool) -> Result<i32> {
             match verdict {
                 Ok(()) => {
                     if !quiet && !json {
-                        println!("Receipt valid: {}", file.display());
+                        println!("Receipt valid: {}", sanitize_path(&file));
                     }
                     Ok(exit_codes::SUCCESS)
                 }
@@ -330,7 +331,7 @@ pub fn run_verify(action: VerifyAction, quiet: bool) -> Result<i32> {
             match verdict {
                 Ok(()) => {
                     if !quiet {
-                        println!("Receipt generated: {}", output.display());
+                        println!("Receipt generated: {}", sanitize_path(&output));
                     }
                     Ok(exit_codes::SUCCESS)
                 }

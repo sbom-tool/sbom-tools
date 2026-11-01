@@ -3,7 +3,8 @@ mod common;
 use common::ffi_helpers::{consume_result, into_c_string};
 use sbom_tools::ffi::{
     SbomToolsScoringProfile, sbom_tools_abi_version_json, sbom_tools_detect_format_json,
-    sbom_tools_diff_sboms_json, sbom_tools_parse_sbom_path_json, sbom_tools_score_sbom_json,
+    sbom_tools_diff_sboms_json, sbom_tools_parse_sbom_path_json, sbom_tools_rule_catalog_json,
+    sbom_tools_score_sbom_json, sbom_tools_score_sbom_with_options_json, sbom_tools_validate_json,
 };
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -78,6 +79,32 @@ fn abi_contract_snapshots_are_enforced() {
     assert_required_keys(
         &quality_payload,
         &contract["quality_report_json"]["required_keys"],
+    );
+
+    let options = into_c_string(r#"{"as_of": "2027-01-01"}"#);
+    let raw = into_c_string(
+        &std::fs::read_to_string(fixture_path("demo-new.cdx.json")).expect("fixture readable"),
+    );
+    let envelope = consume_result(sbom_tools_validate_json(raw.as_ptr(), options.as_ptr()))
+        .expect("compliance envelope payload");
+    assert_required_keys(
+        &envelope,
+        &contract["compliance_envelope_json"]["required_keys"],
+    );
+
+    let filter = into_c_string("{}");
+    let catalog = consume_result(sbom_tools_rule_catalog_json(filter.as_ptr()))
+        .expect("rule catalogue payload");
+    assert_required_keys(&catalog, &contract["rule_catalog_json"]["required_keys"]);
+
+    let score_report = consume_result(sbom_tools_score_sbom_with_options_json(
+        raw.as_ptr(),
+        options.as_ptr(),
+    ))
+    .expect("score report payload");
+    assert_required_keys(
+        &score_report,
+        &contract["score_report_json"]["required_keys"],
     );
 }
 

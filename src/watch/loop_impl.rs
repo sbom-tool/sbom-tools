@@ -11,6 +11,7 @@ use crate::cli::{cra_catalogue, probe_cra_standards};
 use crate::diff::DiffEngine;
 use crate::matching::FuzzyMatchConfig;
 use crate::model::NormalizedSbom;
+use crate::reports::escape::{sanitize_line, sanitize_path};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -91,7 +92,7 @@ pub fn run_watch_loop(config: &WatchConfig) -> anyhow::Result<i32> {
                     ),
                     _ => format!("{}", entry.status),
                 };
-                eprintln!("  {} — {}", path.display(), status);
+                eprintln!("  {} — {}", sanitize_path(path), sanitize_line(&status));
             }
         }
         return Ok(exit_codes::SUCCESS);
@@ -319,7 +320,11 @@ fn process_initial(path: &Path, config: &WatchConfig, state: &mut WatchState) {
             entry.last_error = None;
         }
         Err(e) => {
-            tracing::warn!("Failed to parse {}: {e}", path.display());
+            tracing::warn!(
+                "Failed to parse {}: {}",
+                sanitize_path(path),
+                sanitize_line(&e.to_string())
+            );
             entry.status = MonitorStatus::Error;
             entry.last_error = Some(e.to_string());
         }
@@ -414,7 +419,11 @@ fn process_sbom_change(
             state.record_snapshot(&path_buf, snapshot);
         }
         Err(e) => {
-            tracing::warn!("Failed to parse {}: {e}", path.display());
+            tracing::warn!(
+                "Failed to parse {}: {}",
+                sanitize_path(path),
+                sanitize_line(&e.to_string())
+            );
             entry.status = MonitorStatus::Error;
             entry.last_error = Some(e.to_string());
             // Restore previous SBOM so we can diff again next time

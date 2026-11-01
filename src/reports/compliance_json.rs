@@ -11,13 +11,20 @@
 //! [`ComplianceResult`]'s serialization the envelope does not render itself,
 //! with each `<kind>_count` collected under `counts.<kind>`. A field any of
 //! these types gains therefore reaches this envelope without a change here;
-//! the schema tests fail until the schema declares it.
+//! the schema tests fail until the schema declares it, and the audit tests
+//! (`reports::audit`) until SARIF and OSCAL carry it too.
+//!
+//! [`generate_compliance_json_at`] adds what the envelope says about the run:
+//! the instant the verdicts were judged at (`as_of`) and the SBOM they judge
+//! (`subject`).
 
 use super::ReportError;
+use super::audit::{AssessedSbom, instant_text};
 use crate::quality::{
-    Applicability, ComplianceResult, ConformityAssessmentSummary, FindingIdentity, PassedCheck,
-    RuleEvaluation, Violation, finding_id, finding_key, standard_key,
+    Applicability, ComplianceLevel, ComplianceResult, ConformityAssessmentSummary, FindingIdentity,
+    PassedCheck, RuleEvaluation, Violation, finding_id, finding_key, standard_key,
 };
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -45,6 +52,13 @@ const RENDERED_FIELDS: &[&str] = &[
 struct Envelope<'a> {
     schema: &'static str,
     tool: Tool,
+    /// The instant the verdicts were judged at; omitted when the writer is
+    /// not told it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    as_of: Option<String>,
+    /// The SBOM the results judge; omitted when the writer is not given it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    subject: Option<Subject<'a>>,
     results: Vec<EnvelopeResult<'a>>,
 }
 
@@ -52,6 +66,55 @@ struct Envelope<'a> {
 struct Tool {
     name: &'static str,
     version: &'static str,
+}
+
+/// The envelope's `subject`: the SBOM the results judge, and how its
+/// document was read.
+#[derive(Serialize)]
+struct Subject<'a> {
+    /// Lowercase hex SHA-256 of the bytes read.
+    sha256: &'a str,
+    format: String,
+    spec_version: &'a str,
+    /// The file's name, without its directory; omitted for standard input.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    file_name: Option<&'a str>,
+    /// The components, after the duplicate entries were merged.
+    components: usize,
+    duplicates: Duplicates,
+    /// Whether the creation timestamp is there but does not parse.
+    timestamp_unparsed: bool,
+}
+
+/// The components the document lists more than once, whose entries were
+/// merged into one each.
+#[derive(Serialize)]
+struct Duplicates {
+    /// The components listed more than once.
+    components: usize,
+    /// Their entries.
+    entries: usize,
+    /// The fields the entries disagree on, each once, sorted.
+    conflicts: Vec<String>,
+}
+
+impl<'a> Subject<'a> {
+    fn of(assessed: &'a AssessedSbom<'_>) -> Self {
+        let sbom = assessed.sbom();
+        Self {
+            sha256: assessed.sha256(),
+            format: sbom.document.format.to_string(),
+            spec_version: &sbom.document.spec_version,
+            file_name: assessed.file_name(),
+            components: sbom.component_count(),
+            duplicates: Duplicates {
+                components: sbom.duplicate_components.len(),
+                entries: assessed.duplicate_entries(),
+                conflicts: assessed.duplicate_conflicts(),
+            },
+            timestamp_unparsed: sbom.document.created_unparsed.is_some(),
+        }
+    }
 }
 
 /// One standard's verdict.
@@ -67,8 +130,8 @@ struct EnvelopeResult<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     score_basis: Option<ScoreBasis>,
     counts: Counts,
-    violations: Vec<Identified<'a, Violation>>,
-    passed: Vec<Identified<'a, PassedCheck>>,
+    violations: IdentifiedAll<'a, Violation>,
+    passed: IdentifiedAll<'a, PassedCheck>,
     /// The checks the standard did not evaluate, in their own field order;
     /// omitted when it evaluated them all.
     #[serde(skip_serializing_if = "<[_]>::is_empty")]
@@ -126,8 +189,8 @@ struct Identified<'a, F: Serialize> {
 }
 
 impl<'a, F: Serialize + FindingIdentity> Identified<'a, F> {
-    fn new(result: &ComplianceResult, finding: &'a F) -> Self {
-        let finding_key = finding_key(result.level, finding);
+    fn new(level: ComplianceLevel, finding: &'a F) -> Self {
+        let finding_key = finding_key(level, finding);
         Self {
             finding_id: finding_id(&finding_key),
             finding_key,
@@ -136,14 +199,61 @@ impl<'a, F: Serialize + FindingIdentity> Identified<'a, F> {
     }
 }
 
-/// Render `results` as one `sbom-tools/compliance/v2` envelope.
+/// A result's violations or passed checks, each written as an
+/// [`Identified`] built as it is written, so no list of identities is
+/// held.
+struct IdentifiedAll<'a, F> {
+    level: ComplianceLevel,
+    findings: &'a [F],
+}
+
+impl<F: Serialize + FindingIdentity> Serialize for IdentifiedAll<'_, F> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_seq(
+            self.findings
+                .iter()
+                .map(|finding| Identified::new(self.level, finding)),
+        )
+    }
+}
+
+/// Render `results` as one `sbom-tools/compliance/v2` envelope, without the
+/// `as_of` and `subject` that [`generate_compliance_json_at`] adds.
 pub fn generate_compliance_json(results: &[ComplianceResult]) -> Result<String, ReportError> {
+    render(results, None, None)
+}
+
+/// Render `results` as one `sbom-tools/compliance/v2` envelope about
+/// `assessed`, the SBOM they judge, judged at `as_of`. The envelope's
+/// `as_of` states that instant, and its `subject` the SBOM's SHA-256,
+/// format, specification version and file name, and how its document was
+/// read: its components, the duplicate entries merged and whether its
+/// creation timestamp parses. `validate -o json` writes this.
+pub fn generate_compliance_json_at(
+    results: &[ComplianceResult],
+    assessed: &AssessedSbom<'_>,
+    as_of: DateTime<Utc>,
+) -> Result<String, ReportError> {
+    render(
+        results,
+        Some(Subject::of(assessed)),
+        Some(instant_text(as_of)),
+    )
+}
+
+fn render(
+    results: &[ComplianceResult],
+    subject: Option<Subject<'_>>,
+    as_of: Option<String>,
+) -> Result<String, ReportError> {
     let envelope = Envelope {
         schema: COMPLIANCE_JSON_SCHEMA,
         tool: Tool {
             name: "sbom-tools",
             version: env!("CARGO_PKG_VERSION"),
         },
+        as_of,
+        subject,
         results: results
             .iter()
             .map(envelope_result)
@@ -171,13 +281,9 @@ fn passed_through(mut fields: Map<String, Value>) -> (Map<String, Value>, Map<St
 }
 
 fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, ReportError> {
-    let Value::Object(fields) =
-        serde_json::to_value(result).map_err(|e| ReportError::SerializationError(e.to_string()))?
-    else {
-        return Err(ReportError::SerializationError(
-            "a compliance result must serialize to a JSON object".to_string(),
-        ));
-    };
+    let fields = result
+        .serialize(UnrenderedFields)
+        .map_err(|e| ReportError::SerializationError(e.to_string()))?;
     let (other_counts, rest) = passed_through(fields);
 
     let not_applicable_reason = match &result.applicability {
@@ -203,20 +309,167 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
             suppressed: result.suppressed_count(),
             other: other_counts,
         },
-        violations: result
-            .violations
-            .iter()
-            .map(|violation| Identified::new(result, violation))
-            .collect(),
-        passed: result
-            .passed
-            .iter()
-            .map(|pass| Identified::new(result, pass))
-            .collect(),
+        violations: IdentifiedAll {
+            level: result.level,
+            findings: &result.violations,
+        },
+        passed: IdentifiedAll {
+            level: result.level,
+            findings: &result.passed,
+        },
         evaluated: &result.evaluated,
         conformity_summary: result.conformity_summary.as_ref(),
         rest,
     })
+}
+
+/// Serializes a [`ComplianceResult`] into the fields of its serialization
+/// that the envelope does not render itself, as JSON values: what
+/// `serde_json::to_value` gives once [`RENDERED_FIELDS`] are removed. The
+/// rendered fields are skipped unread, so the violations and passed checks
+/// are never turned into values.
+struct UnrenderedFields;
+
+/// [`UnrenderedFields`] collecting a result's fields.
+struct UnrenderedFieldMap(Map<String, Value>);
+
+/// The error for anything but a struct: a compliance result serializes to
+/// a JSON object.
+fn not_an_object() -> serde_json::Error {
+    serde::ser::Error::custom("a compliance result must serialize to a JSON object")
+}
+
+/// `Serializer` methods of [`UnrenderedFields`] for what a compliance result
+/// never serializes as.
+macro_rules! not_an_object {
+    ($($method:ident($($arg:ty),*)),* $(,)?) => {
+        $(fn $method(self, $(_: $arg),*) -> Result<Self::Ok, Self::Error> {
+            Err(not_an_object())
+        })*
+    };
+}
+
+impl serde::Serializer for UnrenderedFields {
+    type Ok = Map<String, Value>;
+    type Error = serde_json::Error;
+    type SerializeSeq = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTuple = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTupleStruct = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeTupleVariant = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeMap = serde::ser::Impossible<Self::Ok, Self::Error>;
+    type SerializeStruct = UnrenderedFieldMap;
+    type SerializeStructVariant = serde::ser::Impossible<Self::Ok, Self::Error>;
+
+    not_an_object!(
+        serialize_bool(bool),
+        serialize_i8(i8),
+        serialize_i16(i16),
+        serialize_i32(i32),
+        serialize_i64(i64),
+        serialize_u8(u8),
+        serialize_u16(u16),
+        serialize_u32(u32),
+        serialize_u64(u64),
+        serialize_f32(f32),
+        serialize_f64(f64),
+        serialize_char(char),
+        serialize_str(&str),
+        serialize_bytes(&[u8]),
+        serialize_none(),
+        serialize_unit(),
+        serialize_unit_struct(&'static str),
+        serialize_unit_variant(&'static str, u32, &'static str),
+    );
+
+    fn serialize_some<T: ?Sized + Serialize>(self, _: &T) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_newtype_struct<T: ?Sized + Serialize>(
+        self,
+        _: &'static str,
+        _: &T,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_newtype_variant<T: ?Sized + Serialize>(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: &T,
+    ) -> Result<Self::Ok, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_seq(self, _: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple(self, _: usize) -> Result<Self::SerializeTuple, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleStruct, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_tuple_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeTupleVariant, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_map(self, _: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
+        Err(not_an_object())
+    }
+
+    fn serialize_struct(
+        self,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStruct, Self::Error> {
+        Ok(UnrenderedFieldMap(Map::new()))
+    }
+
+    fn serialize_struct_variant(
+        self,
+        _: &'static str,
+        _: u32,
+        _: &'static str,
+        _: usize,
+    ) -> Result<Self::SerializeStructVariant, Self::Error> {
+        Err(not_an_object())
+    }
+}
+
+impl serde::ser::SerializeStruct for UnrenderedFieldMap {
+    type Ok = Map<String, Value>;
+    type Error = serde_json::Error;
+
+    fn serialize_field<T: ?Sized + Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T,
+    ) -> Result<(), Self::Error> {
+        if !RENDERED_FIELDS.contains(&key) {
+            self.0.insert(key.to_string(), serde_json::to_value(value)?);
+        }
+        Ok(())
+    }
+
+    fn end(self) -> Result<Self::Ok, Self::Error> {
+        Ok(self.0)
+    }
 }
 
 #[cfg(test)]
@@ -224,6 +477,7 @@ mod tests {
     use super::*;
     use crate::model::{Component, DocumentMetadata, NormalizedSbom};
     use crate::quality::{ComplianceChecker, ComplianceLevel};
+    use std::borrow::Cow;
 
     fn as_of() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
@@ -323,7 +577,7 @@ mod tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
         }])
     }
 
