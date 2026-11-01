@@ -8,7 +8,8 @@
 //! default, is pinned by the verdict snapshots and deadline mode by the
 //! deadline snapshots (tests/compliance_snapshots.rs) and the PQC and
 //! CNSA 2.0 rule matrices; this file holds the properties those pin case by
-//! case.
+//! case. The 112-bit hash functions of Table 8 are pinned on an inline
+//! CBOM ([`HASHES_112`]).
 
 #[path = "common/json_schema.rs"]
 mod json_schema;
@@ -272,6 +273,168 @@ fn ir_8547_ladder_names_the_next_milestone() {
         owned(D2031, "SBOM-PQC-KEY-001", "crypto/key/hmac-key-112"),
         (Sev::Error, Some(date("2030-12-31")), section)
     );
+}
+
+// ============================================================================
+// 112-bit hash functions
+// ============================================================================
+
+/// The three hash functions NIST IR 8547 Table 8 gives 112 bits of
+/// collision strength, each identified another way and each declaring
+/// quantum level 0, beside a 256-bit digest and HMAC over SHA-224, which are
+/// not at that level.
+const HASHES_112: &str = r#"{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "serialNumber": "urn:uuid:0c6f3a52-8e1d-4b7a-9f2e-3d5c7a1b9e40",
+  "version": 1,
+  "metadata": { "timestamp": "2026-10-01T00:00:00Z" },
+  "components": [
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-224",
+      "name": "SHA-224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "algorithmFamily": "SHA-2",
+          "parameterSetIdentifier": "224",
+          "nistQuantumSecurityLevel": 0
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-512-224",
+      "name": "SHA-512/224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": { "primitive": "hash", "nistQuantumSecurityLevel": 0 },
+        "oid": "2.16.840.1.101.3.4.2.5"
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha3-224",
+      "name": "sha3_224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": { "primitive": "hash", "nistQuantumSecurityLevel": 0 }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/sha-256",
+      "name": "SHA-256",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "hash",
+          "algorithmFamily": "SHA-2",
+          "parameterSetIdentifier": "256",
+          "nistQuantumSecurityLevel": 2
+        }
+      }
+    },
+    {
+      "type": "cryptographic-asset",
+      "bom-ref": "crypto/algorithm/hmac-sha-224",
+      "name": "HMAC-SHA-224",
+      "cryptoProperties": {
+        "assetType": "algorithm",
+        "algorithmProperties": {
+          "primitive": "mac",
+          "algorithmFamily": "HMAC",
+          "nistQuantumSecurityLevel": 3
+        }
+      }
+    }
+  ]
+}"#;
+
+const HASHES_AT_112_BITS: [&str; 3] = [
+    "crypto/algorithm/sha-224",
+    "crypto/algorithm/sha-512-224",
+    "crypto/algorithm/sha3-224",
+];
+
+/// `pqc` used to judge none of SHA-224, SHA-512/224 and SHA3-224. Readiness
+/// mode now reports each as an Error, as it does a 112-bit key, and
+/// deadline mode dates each by §4.1.3: Info through 2030-12-31, Error from
+/// 2031-01-01. A declared level 0 is not reported a second time as a
+/// quantum-vulnerable algorithm, and CNSA 2.0 still rejects all three.
+#[test]
+fn the_112_bit_hash_functions_are_disallowed_after_2030() {
+    let sbom = parse_sbom_str(HASHES_112).expect("inline CBOM parses");
+    let strict = readiness(ComplianceLevel::NistPqc, D2026, &sbom);
+    for id in HASHES_AT_112_BITS {
+        assert_eq!(
+            dated(finding(&strict, "SBOM-PQC-HASH-001", id)),
+            (Sev::Error, None, None),
+            "{id}"
+        );
+    }
+    let judged: Vec<&str> = strict
+        .violations
+        .iter()
+        .filter(|v| v.rule_id != "SBOM-PQC-HASH-001")
+        .map(|v| v.rule_id)
+        .collect();
+    assert!(judged.is_empty(), "nothing else is reported: {judged:?}");
+
+    let source = "NIST IR 8547 §4.1.3 and Table 8";
+    for (as_of, severity, status) in [
+        (D2026, Sev::Info, "disallowed after 2030"),
+        ("2030-12-31T23:59:59Z", Sev::Info, "disallowed after 2030"),
+        ("2031-01-01T00:00:00Z", Sev::Error, "disallowed since 2031"),
+    ] {
+        let result = nist(ComplianceLevel::NistPqc, as_of, &sbom);
+        for id in HASHES_AT_112_BITS {
+            let v = finding(&result, "SBOM-PQC-HASH-001", id);
+            assert_eq!(
+                dated(v),
+                (severity, Some(date("2030-12-31")), Some(source)),
+                "{id} @ {as_of}"
+            );
+            assert!(
+                v.message.ends_with(&format!(
+                    "; the 112-bit security level is {status} ({source})"
+                )),
+                "{id} @ {as_of}: {}",
+                v.message
+            );
+        }
+        assert_eq!(
+            result.violations.len(),
+            HASHES_AT_112_BITS.len(),
+            "@ {as_of}"
+        );
+    }
+
+    // CNSA 2.0 approves SHA-384 and SHA-512 only: an Error in either mode,
+    // undated, since none of the three is CNSA 1.0 either.
+    for result in [
+        readiness(ComplianceLevel::Cnsa2, D2026, &sbom),
+        nist(ComplianceLevel::Cnsa2, D2026, &sbom),
+    ] {
+        for id in HASHES_AT_112_BITS {
+            let rejected: Vec<&Violation> = result
+                .violations
+                .iter()
+                .filter(|v| subject(v) == id)
+                .collect();
+            assert!(
+                matches!(
+                    rejected.as_slice(),
+                    [v] if v.severity == Sev::Error
+                        && v.deadline.is_none()
+                        && matches!(v.rule_id, "SBOM-CNSA2-ALG-002" | "SBOM-CNSA2-ALG-008")
+                ),
+                "{id}: {rejected:#?}"
+            );
+        }
+    }
 }
 
 // ============================================================================
