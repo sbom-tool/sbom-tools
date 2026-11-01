@@ -636,6 +636,7 @@ pub fn print_ntia_validation(sbom: &NormalizedSbom, compliance: &ComplianceRunCo
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::borrow::Cow;
 
     #[test]
     fn print_ntia_validation_does_not_panic_on_empty_sbom() {
@@ -653,7 +654,7 @@ mod tests {
             component_id: Some(format!("crypto/algorithm/{name}")),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
         };
         let result = ComplianceResult::new(ComplianceLevel::NistPqc, Vec::new())
             .with_passed(vec![pass("ML-KEM-1024"), pass("ML-DSA-87")]);

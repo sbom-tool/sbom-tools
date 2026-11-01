@@ -1892,6 +1892,7 @@ mod passed_check_tests {
     use super::*;
     use crate::quality::{PassedCheck, StandardKind};
     use serde_json::Value;
+    use std::borrow::Cow;
 
     /// A NIST PQC result with one passed check and no violation.
     fn pqc_with_one_pass() -> ComplianceResult {
@@ -1903,7 +1904,7 @@ mod passed_check_tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: vec![StandardRef::new(StandardKind::NistPqc, "FIPS 203/204/205")],
+            standard_refs: vec![StandardRef::new(StandardKind::NistPqc, "FIPS 203/204/205")].into(),
         }])
     }
 
@@ -1983,7 +1984,7 @@ mod passed_check_tests {
                 rule_id: "SBOM-NTIA-AUTHOR",
                 component_id: None,
                 counts: None,
-                standard_refs: Vec::new(),
+                standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
                 finding_detail: None,
                 severity_override: None,

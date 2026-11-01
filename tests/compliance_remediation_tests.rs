@@ -140,7 +140,7 @@ fn spdx_inputs_get_spdx_field_paths() {
             .into_iter()
             .find(|r| r.level == level)
             .and_then(|r| r.violations.into_iter().find(|v| v.rule_id == rule_id))
-            .and_then(|v| v.remediation)
+            .and_then(|v| v.remediation.map(|text| text.into_owned()))
             .unwrap_or_else(|| panic!("{rel}: {level:?} must emit {rule_id}"))
     };
 

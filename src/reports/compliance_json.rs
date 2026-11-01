@@ -316,6 +316,7 @@ mod tests {
     use super::*;
     use crate::model::{Component, DocumentMetadata, NormalizedSbom};
     use crate::quality::{ComplianceChecker, ComplianceLevel};
+    use std::borrow::Cow;
 
     fn as_of() -> chrono::DateTime<chrono::Utc> {
         chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
@@ -415,7 +416,7 @@ mod tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
         }])
     }
 

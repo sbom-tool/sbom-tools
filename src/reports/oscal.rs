@@ -996,6 +996,7 @@ mod tests {
         ComplianceLevel, ComplianceResult, Violation, ViolationCategory, ViolationSeverity,
     };
     use chrono::{DateTime, TimeZone, Utc};
+    use std::borrow::Cow;
     use uuid::Uuid;
 
     fn violation(message: &str) -> Violation {
@@ -1008,7 +1009,7 @@ mod tests {
             rule_id: "SBOM-NTIA-TIMESTAMP",
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -1253,8 +1254,8 @@ mod tests {
     #[test]
     fn audit_fields_land_on_the_finding_and_its_observation() {
         let mut v = component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash");
-        v.standard_refs = v.registry_standard_refs();
-        v.field = Some("components[].supplier.name".to_string());
+        v.standard_refs = v.registry_standard_refs().into();
+        v.field = Some("components[].supplier.name".into());
         v.observed = Some("NOASSERTION".to_string());
         let key = crate::quality::finding_key(ComplianceLevel::NtiaMinimum, &v);
         let document = build(&[result(vec![v])]);
@@ -1362,7 +1363,7 @@ mod tests {
             rule_id: "SBOM-NTIA-TIMESTAMP",
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -1674,7 +1675,7 @@ mod tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
         };
         let mut checked = result(vec![violation("timestamp missing")]).with_passed(vec![pass]);
         checked.level = ComplianceLevel::NistPqc;

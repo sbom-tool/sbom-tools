@@ -58,7 +58,7 @@ pub use registry::{
     PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, RemediationFormat, RuleKind, RuleMeta,
     SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta, rules_for_level,
 };
-use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
+use registry::{REMEDIATION_UNREGISTERED, indexed_rule, lookup_static_rule_id};
 pub use rule_settings::{
     RuleSetting, RuleSettings, SettingSource, SeverityOverride, SuppressedRule,
 };
@@ -646,14 +646,14 @@ pub struct Violation {
     /// `metadata.component` instead (`metadata.component.supplier.name`).
     ///
     /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
-    /// and the input format, as [`Violation::remediation`] is. `None` when
-    /// the rule names no field in that format (the fix is the same in every
-    /// format, such as an algorithm choice) and on violations built outside
-    /// the checker.
+    /// and the input format, as [`Violation::remediation`] is, borrowing the
+    /// registry's text. `None` when the rule names no field in that format
+    /// (the fix is the same in every format, such as an algorithm choice)
+    /// and on violations built outside the checker.
     ///
     /// Serialized as `field`, omitted when `None`; old payloads without it
     /// deserialize to `None`.
-    pub field: Option<String>,
+    pub field: Option<Cow<'static, str>>,
     /// The value the check read from the SBOM, where there is one: the
     /// placeholder in a supplier field, a digest that does not count, a
     /// timestamp in the future, the algorithm a crypto check rejected. Kept
@@ -682,20 +682,23 @@ pub struct Violation {
     /// Structured references to harmonised-standard / regulation clauses.
     ///
     /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
-    /// via [`rule_meta`]. Empty when a violation's rule maps to no references.
-    pub standard_refs: Vec<StandardRef>,
+    /// via [`rule_meta`], borrowing the registry's list, which every finding
+    /// of the rule shares. Empty when a violation's rule maps to no
+    /// references.
+    pub standard_refs: Cow<'static, [StandardRef]>,
     /// Remediation guidance phrased for the format of the SBOM the violation
     /// was found in (see [`RuleMeta::remediation_for`]).
     ///
     /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
-    /// and the input format, as [`Violation::standard_refs`] is. `None` on
-    /// violations built outside the checker; read it through
+    /// and the input format, as [`Violation::standard_refs`] is, borrowing
+    /// the registry's text, which is rendered once per rule and format.
+    /// `None` on violations built outside the checker; read it through
     /// [`Violation::remediation_guidance`], which then falls back to the
     /// registry advice for every format.
     ///
     /// Serialized as `remediation` (always present); old payloads without
     /// the field deserialize to `None`.
-    pub remediation: Option<String>,
+    pub remediation: Option<Cow<'static, str>>,
 }
 
 /// Affected/total component counts carried by aggregate findings.
@@ -793,7 +796,7 @@ impl<'de> Deserialize<'de> for Violation {
                 .deadline
                 .zip(payload.deadline_source)
                 .map(|(date, source)| Deadline { date, source }),
-            field: payload.field,
+            field: payload.field.map(Cow::Owned),
             observed: payload.observed,
             requirement: payload.requirement,
             // Unknown ids (from newer/older registries) collapse to the
@@ -805,8 +808,8 @@ impl<'de> Deserialize<'de> for Violation {
                 .as_deref()
                 .and_then(lookup_static_rule_id)
                 .unwrap_or_else(default_rule_id),
-            standard_refs: payload.standard_refs,
-            remediation: payload.remediation,
+            standard_refs: Cow::Owned(payload.standard_refs),
+            remediation: payload.remediation.map(Cow::Owned),
         })
     }
 }
@@ -920,12 +923,12 @@ impl Violation {
     /// source of truth, so rewording a message can never silently drop a
     /// prEN/BSI cross-reference.
     ///
-    /// `ComplianceChecker::check()` calls this once and stores the result in
-    /// `Violation::standard_refs`, so most consumers should read the field
-    /// directly rather than re-deriving.
+    /// `ComplianceChecker::check()` stores the registry's list in
+    /// `Violation::standard_refs` (borrowed, not copied), so most consumers
+    /// should read the field directly rather than re-deriving.
     #[must_use]
     pub fn registry_standard_refs(&self) -> Vec<StandardRef> {
-        registry_refs(self.rule_id)
+        registry_refs(self.rule_id).to_vec()
     }
 
     /// Remediation guidance for this violation: the [`Violation::remediation`]
@@ -939,22 +942,20 @@ impl Violation {
     pub fn remediation_guidance(&self) -> Cow<'_, str> {
         match &self.remediation {
             Some(text) => Cow::Borrowed(text),
-            None => Cow::Owned(rule_meta(self.rule_id).map_or_else(
-                || REMEDIATION_UNREGISTERED.to_string(),
-                |m| m.remediation_all_formats(),
-            )),
+            None => Cow::Borrowed(
+                indexed_rule(self.rule_id).map_or(REMEDIATION_UNREGISTERED, |rule| {
+                    &rule.remediation_all_formats
+                }),
+            ),
         }
     }
 
     /// Registry remediation for this violation's rule, phrased for `format`.
-    /// `ComplianceChecker::check()` stores the result in
+    /// `ComplianceChecker::check()` stores the same text, borrowed, in
     /// [`Violation::remediation`].
     #[must_use]
     pub fn registry_remediation(&self, format: RemediationFormat) -> String {
-        rule_meta(self.rule_id).map_or_else(
-            || REMEDIATION_UNREGISTERED.to_string(),
-            |m| m.remediation_for(format),
-        )
+        registry_remediation(self.rule_id, format).to_string()
     }
 
     /// The documentation link of this violation's rule: the URL of the first
@@ -1011,36 +1012,20 @@ impl Violation {
 
 /// The harmonised-standard references the registry lists for `rule_id`, in
 /// registry order; empty for an unregistered id.
-fn registry_refs(rule_id: &str) -> Vec<StandardRef> {
-    rule_meta(rule_id)
-        .map(|m| {
-            m.refs
-                .iter()
-                .map(|(kind, id)| StandardRef::new(*kind, *id))
-                .collect()
-        })
-        .unwrap_or_default()
+fn registry_refs(rule_id: &str) -> &'static [StandardRef] {
+    indexed_rule(rule_id).map_or(&[], |rule| &rule.refs)
+}
+
+/// The registry remediation for `rule_id`, phrased for `format`; the
+/// unregistered-rule text for an unregistered id.
+fn registry_remediation(rule_id: &str, format: RemediationFormat) -> &'static str {
+    indexed_rule(rule_id).map_or(REMEDIATION_UNREGISTERED, |rule| rule.remediation(format))
 }
 
 /// The externally-visible SARIF rule id of `rule_id`; the generic CRA rule
 /// for an unregistered id.
 fn registry_sarif_id(rule_id: &str) -> &'static str {
-    rule_meta(rule_id).map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
-}
-
-/// Where the field `rule_id` checks lives in an SBOM of `format` (see
-/// [`Violation::field`]); `None` for an unregistered id or a rule that names
-/// no field in that format. The registry writes a component's field under
-/// `components[]`. A CycloneDX document keeps its primary component at
-/// `metadata.component`, so a finding `about_primary` names the field there.
-fn registry_field(rule_id: &str, format: RemediationFormat, about_primary: bool) -> Option<String> {
-    let field = rule_meta(rule_id)?.field_for(format)?;
-    match field.strip_prefix("components[]") {
-        Some(rest) if about_primary && format == RemediationFormat::CycloneDx => {
-            Some(format!("metadata.component{rest}"))
-        }
-        _ => Some(field.to_string()),
-    }
+    indexed_rule(rule_id).map_or("SBOM-CRA-GENERAL", |rule| rule.meta.sarif_id)
 }
 
 /// A check the SBOM passed: what a pass-only rule ([`RuleKind::Pass`])
@@ -1073,8 +1058,9 @@ pub struct PassedCheck {
     /// The requirement the check satisfied, as text.
     pub requirement: String,
     /// References to the clauses the rule implements, populated by
-    /// `ComplianceChecker::check()` from the registry.
-    pub standard_refs: Vec<StandardRef>,
+    /// `ComplianceChecker::check()` from the registry, borrowing its list
+    /// as [`Violation::standard_refs`] does.
+    pub standard_refs: Cow<'static, [StandardRef]>,
 }
 
 impl PassedCheck {
@@ -1083,7 +1069,7 @@ impl PassedCheck {
     /// [`Violation::registry_standard_refs`]).
     #[must_use]
     pub fn registry_standard_refs(&self) -> Vec<StandardRef> {
-        registry_refs(self.rule_id)
+        registry_refs(self.rule_id).to_vec()
     }
 
     /// Externally-visible SARIF rule id for this pass, looked up from the
@@ -1153,7 +1139,7 @@ impl<'de> Deserialize<'de> for PassedCheck {
             component_id: payload.component_id,
             finding_detail: payload.finding_detail,
             requirement: payload.requirement,
-            standard_refs: payload.standard_refs,
+            standard_refs: Cow::Owned(payload.standard_refs),
         })
     }
 }
@@ -2112,24 +2098,32 @@ impl ComplianceChecker {
         );
 
         // Populate harmonised-standard references, and the remediation and
-        // the field path for the input format, from the rule registry.
+        // the field path for the input format, from the rule registry: one
+        // lookup per finding, and each borrows its rule's text.
         let format = RemediationFormat::of(&sbom.document);
         let primary = sbom.primary_component_id.as_ref().map(|id| id.value());
         for v in &mut violations {
-            if v.standard_refs.is_empty() {
-                v.standard_refs = v.registry_standard_refs();
+            let rule = indexed_rule(v.rule_id);
+            if v.standard_refs.is_empty()
+                && let Some(rule) = rule
+            {
+                v.standard_refs = Cow::Borrowed(&rule.refs);
             }
             if v.remediation.is_none() {
-                v.remediation = Some(v.registry_remediation(format));
+                v.remediation = Some(Cow::Borrowed(
+                    rule.map_or(REMEDIATION_UNREGISTERED, |rule| rule.remediation(format)),
+                ));
             }
             if v.field.is_none() {
                 let about_primary = primary.is_some() && v.component_id.as_deref() == primary;
-                v.field = registry_field(v.rule_id, format, about_primary);
+                v.field = rule
+                    .and_then(|rule| rule.field(format, about_primary))
+                    .map(Cow::Borrowed);
             }
         }
         for p in &mut passed {
             if p.standard_refs.is_empty() {
-                p.standard_refs = p.registry_standard_refs();
+                p.standard_refs = Cow::Borrowed(registry_refs(p.rule_id));
             }
         }
         // Every finding keeps a key of its own, also where the SBOM lists
@@ -3239,7 +3233,7 @@ mod tests {
             rule_id: "SBOM-CRA-GENERAL",
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -3353,7 +3347,7 @@ mod tests {
             rule_id,
             component_id: None,
             counts,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -3470,7 +3464,7 @@ mod tests {
             rule_id: "SBOM-NTIA-SUPPLIER",
             component_id: Some("pkg:npm/lib@1.0".to_string()),
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -3533,7 +3527,7 @@ mod tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: None,
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: registry_refs("SBOM-PQC-009"),
+            standard_refs: Cow::Borrowed(registry_refs("SBOM-PQC-009")),
         }
     }
 
@@ -3769,7 +3763,7 @@ mod tests {
             rule_id,
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -3963,7 +3957,7 @@ mod tests {
                 rule_id: "SBOM-CRA-GENERAL",
                 component_id: None,
                 counts: None,
-                standard_refs: Vec::new(),
+                standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
                 finding_detail: None,
                 severity_override: None,
@@ -3980,7 +3974,7 @@ mod tests {
                 rule_id: "SBOM-CRA-GENERAL",
                 component_id: None,
                 counts: None,
-                standard_refs: Vec::new(),
+                standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
                 finding_detail: None,
                 severity_override: None,
@@ -3997,7 +3991,7 @@ mod tests {
                 rule_id: "SBOM-CRA-GENERAL",
                 component_id: None,
                 counts: None,
-                standard_refs: Vec::new(),
+                standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
                 finding_detail: None,
                 severity_override: None,
@@ -5117,7 +5111,7 @@ mod tests {
             rule_id,
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -5172,7 +5166,7 @@ mod tests {
             rule_id: "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN",
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,
