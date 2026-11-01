@@ -514,6 +514,9 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 and the schema is
 [`schemas/compliance/v2.schema.json`](schemas/compliance/v2.schema.json).
 Checks the SBOM passed are listed under `passed`, never as violations.
+Each result's `score` is 50–100 when the standard passes and 0–49 when it
+fails, scaled by the errors and warnings per element checked (see
+[Score](docs/compliance-output.md#score)).
 
 </details>
 

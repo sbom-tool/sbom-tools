@@ -45,7 +45,8 @@ standards use each one, its references and its remediation; see
 | `applicable` | boolean | Whether the standard evaluated the SBOM. The AI readiness profiles (`ai-act`, `bsi-ai`) do not apply to an SBOM without ML components. |
 | `not_applicable_reason` | string | Present exactly when `applicable` is `false`. |
 | `compliant` | boolean | No error-severity violation. Stays `true` for a standard that did not apply, so read `applicable` first: N/A is not a pass. |
-| `score` | integer or null | 0–100; `null` exactly when `applicable` is `false`. |
+| `score` | integer or null | 0–100: 50–100 when `compliant`, 0–49 when not (see [Score](#score)). `null` exactly when `applicable` is `false`. |
+| `score_basis` | object | `checked` and `failed`, the numbers `score` is computed from (see [Score](#score)). Present exactly when `applicable` is `true`. |
 | `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. |
 | `violations` | array | The findings, described below. |
 | `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
@@ -74,6 +75,73 @@ A standard named twice is checked once, at its first position, with a
 warning on stderr: `--standard cra,cra-phase2` names CRA Phase 2 twice
 (`cra-phase2` is an alias of `cra`), and checking it twice would report
 every finding twice, in SARIF as a second alert.
+
+## Score
+
+`score` sums a result up on a 0–100 scale. A compliant result (no error)
+scores 50–100 and a non-compliant one 0–49, so every compliant result
+outscores every non-compliant one:
+
+```text
+score = (compliant ? 50 : 0) + floor(50 × checked / (checked + failed))
+```
+
+`checked` and `failed` are the result's `score_basis`:
+
+- `checked` counts the elements the standard checked: the document itself,
+  plus each component in the standard's scope. `cnsa2` and `pqc` check the
+  cryptographic assets, `ai-act` and `bsi-ai` the ML models and datasets (and
+  the components that look like ML models), and `eucc` only the document.
+  Every other standard checks the package-scoped components: all components
+  but files, cryptographic assets and services.
+- `failed` counts the checks the errors and warnings failed. A finding about
+  one subject, the document or one component, failed one check. An aggregate
+  finding (one with `counts`) failed one check per item it reports as
+  failing, and at least one: `counts.affected`, or `counts.total -
+  counts.affected` for the three coverage findings whose `affected` counts
+  the items that pass (`SBOM-CRA-PRE-7-RQ-07-RE`,
+  `SBOM-FSCT-LICENSE-COVERAGE` and `SBOM-FSCT-COPYRIGHT-COVERAGE`).
+
+Info findings fail no check, and passed checks are not counted, so neither
+moves the score. Under `--pqc-mode deadline` a finding that is still Info
+before its deadline lowers the score only once its severity rises (see
+[PQC deadline mode](#pqc-deadline-mode)). With no failed check the score is
+100. Each failed check
+lowers it in proportion to the elements checked: one failed check per
+element halves the band (75, or 25 with an error), and the score never
+leaves its band. An extra error or warning never raises the score. In a
+large SBOM one warning costs one point, and one error drops the score just
+below 50.
+
+For an SBOM of three components (`checked` is 4: the document and the three
+components):
+
+| Findings | `compliant` | `failed` | `score` |
+|---|---|---|---|
+| None | `true` | 0 | 50 + 50 = 100 |
+| One warning | `true` | 1 | 50 + floor(200 / 5) = 90 |
+| Three warnings | `true` | 3 | 50 + floor(200 / 7) = 78 |
+| One error | `false` | 1 | floor(200 / 5) = 40 |
+| One error, two warnings | `false` | 3 | floor(200 / 7) = 28 |
+| One aggregate error with `counts` 2/3 | `false` | 2 | floor(200 / 6) = 33 |
+
+For an SBOM of 500,000 components (`checked` is 500,001):
+
+| Findings | `failed` | `score` |
+|---|---|---|
+| One warning | 1 | 50 + floor(25,000,050 / 500,002) = 99 |
+| One error | 1 | floor(25,000,050 / 500,002) = 49 |
+| One error on every component | 500,000 | floor(25,000,050 / 1,000,001) = 24 |
+
+Every output shows this score: `-o json`, `--summary`, the SARIF
+`overallScore`, the OSCAL `score` property, the Markdown and HTML reports and
+the TUI. `score_basis` is in `-o json` only. The library computes the score
+with `sbom_tools::quality::compliance_score` (and
+`ComplianceResult::score`).
+
+Releases before v0.4.0 scored `100 / (errors + warnings + 1)`: one error
+scored 50, as high as a compliant result, while three warnings scored 25,
+and a single finding halved the score of any SBOM, however large.
 
 ## Violations
 
@@ -318,7 +386,7 @@ violations and a lower `info_count`. The not-applicable markers
 | `is_compliant` | `compliant` |
 | `error_count`, `warning_count`, `info_count` | `counts.error`, `counts.warning`, `counts.info` |
 | `applicability.status`, `applicability.reason` | `applicable`, `not_applicable_reason` |
-| — | `score` |
+| — | `score`, `score_basis` |
 | — (Info violations before v0.4.0) | `passed[]`, `counts.passed` |
 
 `--summary` is a separate compact format (the verdict and counts per standard,
@@ -342,7 +410,7 @@ sbom-tools validate sbom.json --standard ntia -o oscal-json --as-of 2026-10-12T0
 | Where | What |
 |---|---|
 | `metadata.oscal-version` | `1.2.3`. |
-| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `passed-count`, `score`, and `not-applicable-reason` when the standard did not apply. |
+| `results[]` | One per checked standard, in `--standard` order. Its `props` carry the verdict: `standard`, `standard-name`, `is-compliant`, `applicability`, `error-count`, `warning-count`, `info-count`, `passed-count`, `score` (see [Score](#score)), and `not-applicable-reason` when the standard did not apply. |
 | `results[].findings[]` | A roll-up finding for the standard (`satisfied` when compliant), then one `not-satisfied` finding per violation, then one `satisfied` finding per [passed check](#passed-checks), each targeting the objective named by the lowercased rule id. A standard that did not apply gets no roll-up and no finding. |
 | `results[].observations[]` | One per violation, the evidence its finding relates to, typed `discovery`, with the properties `severity`, `standard-reference`, `rule-id`, `sarif-rule-id` and, when the SBOM gives a label, `sbom-element`; then one per passed check, typed `control-objective`, with the same properties but `severity`. |
 | `results[].observations[].subjects[]` | The SBOM document (`type: resource`), then, for a finding about a component, the component (`type: component`). |
@@ -419,7 +487,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
 | `runs[0].tool.driver.rules[]` | Exactly the rules of the standards checked: the rules each standard's checks can report, one per check and each once, in `--standard` order and in the order of each standard's list. `sbom-tools rules --standard <std>` prints the same list (see [Rule catalogue](#rule-catalogue)). `diff` and `view` check the SBOM against CRA Phase 2, so they list its rules after their own; `quality` lists the rules of its profile's standard, then the `SBOM-QUALITY-REC-*` rules of the recommendations it reports. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
-| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
+| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score)) and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
 | `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
 | `results[].level` | `error`, `warning` or `note`, from the violation's severity; `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. |
