@@ -863,6 +863,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         }
     }
 
@@ -875,6 +877,7 @@ mod tests {
             info_count: 0,
             violations,
             passed: Vec::new(),
+            evaluated: Vec::new(),
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
             elements_checked: 1,
@@ -1157,6 +1160,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let document = build(&[result(vec![
             with_severity("info finding", ViolationSeverity::Info),

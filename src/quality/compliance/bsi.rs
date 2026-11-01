@@ -22,14 +22,16 @@ impl ComplianceChecker {
     /// per-component fields), §5.2.4 (additional per-component fields),
     /// §6.1 (licence identifiers), §3.1 (no vulnerability information).
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn check_bsi_tr_03183_2(
-        &self,
-        sbom: &NormalizedSbom,
-        violations: &mut Vec<Violation>,
-    ) {
+    pub(crate) fn check_bsi_tr_03183_2(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         use crate::model::{
             CompletenessDeclaration, CreatorType, HashAlgorithm, HashProvenance, SbomFormat,
         };
+
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = findings;
 
         // §5.2.2 per-component fields have nothing to judge without a
         // package-scoped component.
@@ -47,14 +49,16 @@ impl ComplianceChecker {
         // assesses the document as newly generated. Versions are compared
         // numerically (not by string prefix); an empty or unparseable
         // spec_version skips the gate rather than false-failing synthetic
-        // documents.
+        // documents, and the result lists it as not evaluated.
         let minimum = match sbom.document.format {
             SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 6, 0),
             SbomFormat::Spdx => crate::model::SpecVersion::new(3, 0, 1),
         };
-        if let Some(actual) = sbom.document.spec_version_parsed()
-            && actual < minimum
-        {
+        let parsed = sbom.document.spec_version_parsed();
+        if parsed.is_none() {
+            not_evaluated.push("SBOM-BSI-TR-03183-2-4", SPEC_VERSION_UNPARSED);
+        }
+        if parsed.is_some_and(|actual| actual < minimum) {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::FormatSpecific,
@@ -73,6 +77,11 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(&format!(
+                    "{} {}",
+                    sbom.document.format, sbom.document.spec_version
+                )),
             });
         }
 
@@ -115,6 +124,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         } else {
             // The email, or the address or URL a creator's name carries,
@@ -140,6 +151,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: unreachable_creator(contacts()).and_then(observed),
                 });
             }
         }
@@ -165,6 +178,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         }
 
@@ -187,6 +202,8 @@ impl ComplianceChecker {
         let mut without_version: Vec<String> = Vec::new();
         let mut without_license: Vec<String> = Vec::new();
         let mut non_spdx_license: Vec<String> = Vec::new();
+        // The first licence that is no SPDX expression, as written.
+        let mut first_non_spdx: Option<String> = None;
         let mut without_creator = 0usize;
         let mut sha512_missing: Vec<String> = Vec::new();
         let mut without_hash = 0usize;
@@ -219,8 +236,9 @@ impl ComplianceChecker {
                 .collect();
             if known_licenses.is_empty() {
                 without_license.push(comp.name.clone());
-            } else if known_licenses.iter().any(|l| !l.is_valid_spdx) {
+            } else if let Some(license) = known_licenses.iter().find(|l| !l.is_valid_spdx) {
                 non_spdx_license.push(comp.name.clone());
+                first_non_spdx.get_or_insert_with(|| license.expression.clone());
             }
 
             // Component creator (§5.2.2). The TR wants an email address (or
@@ -287,6 +305,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -315,6 +335,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -341,6 +363,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -368,6 +392,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: first_non_spdx.as_deref().and_then(observed),
             });
         }
 
@@ -393,6 +419,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -421,6 +449,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
         // No hash at all: §3.2.1 legitimately allows omitting even required
@@ -449,6 +479,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -470,6 +502,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -500,6 +534,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -530,6 +566,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -563,6 +601,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }

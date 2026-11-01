@@ -42,7 +42,7 @@ pub use catalog::{
     RuleAdvice, RuleCatalogEntry, RuleCatalogFilter, RuleFormatAdvice, RuleReference, rule_catalog,
     rule_catalog_entry,
 };
-use context::{ComplianceContext, Findings, checker_for};
+use context::{ComplianceContext, Findings, NotEvaluated, checker_for};
 pub(crate) use finding::compose_finding_key;
 pub use finding::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,
@@ -70,13 +70,15 @@ pub(crate) use shared::plausible_digest;
 #[cfg(feature = "cli")]
 pub(crate) use shared::manufacturer_name;
 use shared::{
-    ValueState, creator_contacts, creator_identified, digest_problems, document_signed,
-    future_timestamp_violation, has_known_license, has_known_value, invalid_digest_note,
-    inventory_absent_violation, is_contact_reference, is_declared_unknown, is_eucc_reference,
-    is_placeholder, is_spdx2, is_valid_email_format, justified_not_affected, known_component_name,
-    known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
-    name_with_digest_problems, package_components, truncate_list, unparseable_timestamp,
-    unreachable_contact_note, unreachable_creator_note, unreachable_sidecar_note, value_state,
+    SPDX2_NO_SIGNATURE, SPEC_VERSION_UNPARSED, ValueState, creator_contacts, creator_identified,
+    digest_problems, document_signed, future_timestamp_violation, has_known_license,
+    has_known_value, invalid_digest_note, inventory_absent_violation, is_contact_reference,
+    is_declared_unknown, is_eucc_reference, is_placeholder, is_spdx2, is_valid_email_format,
+    justified_not_affected, known_component_name, known_contact, known_value, license_state,
+    manufacturer_identified, manufacturer_reference, name_with_digest_problems, observed,
+    observed_digest, observed_producer, observed_unparsed_timestamp, package_components,
+    truncate_list, unparseable_timestamp, unreachable_contact, unreachable_contact_note,
+    unreachable_creator, unreachable_creator_note, unreachable_sidecar_note, value_state,
 };
 
 /// CRA enforcement phase
@@ -620,6 +622,34 @@ pub struct Violation {
     /// Serialized as `deadline` (`YYYY-MM-DD`) and `deadline_source`, both
     /// omitted when `None`; old payloads without them deserialize to `None`.
     pub deadline: Option<Deadline>,
+    /// Where the field the rule checks lives in the SBOM's own format: the
+    /// registry's field path for the document's format (the
+    /// [`FieldAdvice::field`] that `sbom-tools rules explain` shows), such as
+    /// `components[].supplier.name` in CycloneDX, `packages[].supplier` in
+    /// SPDX 2.x or `suppliedBy` in SPDX 3.0. For a finding about the primary
+    /// component of a CycloneDX document, the path starts at
+    /// `metadata.component` instead (`metadata.component.supplier.name`).
+    ///
+    /// Populated by `ComplianceChecker::check()` from [`Violation::rule_id`]
+    /// and the input format, as [`Violation::remediation`] is. `None` when
+    /// the rule names no field in that format (the fix is the same in every
+    /// format, such as an algorithm choice) and on violations built outside
+    /// the checker.
+    ///
+    /// Serialized as `field`, omitted when `None`; old payloads without it
+    /// deserialize to `None`.
+    pub field: Option<String>,
+    /// The value the check read from the SBOM, where there is one: the
+    /// placeholder in a supplier field, a digest that does not count, a
+    /// timestamp in the future, the algorithm a crypto check rejected. Kept
+    /// as read, like [`Violation::message`] and [`Violation::element`], and
+    /// cut to 200 characters, ending in `…` when cut: a renderer that shows
+    /// it cleans it as it cleans them. `None` when the field is absent or the
+    /// check reads no single value.
+    ///
+    /// Serialized as `observed`, omitted when `None`; old payloads without
+    /// it deserialize to `None`.
+    pub observed: Option<String>,
     /// Standard/requirement being violated
     pub requirement: String,
     /// Stable internal rule key, set at the check site, indexing into
@@ -706,6 +736,10 @@ struct ViolationPayload {
     deadline: Option<chrono::NaiveDate>,
     #[serde(default)]
     deadline_source: Option<String>,
+    #[serde(default)]
+    field: Option<String>,
+    #[serde(default)]
+    observed: Option<String>,
     requirement: String,
     #[serde(default)]
     rule_id: Option<String>,
@@ -734,6 +768,8 @@ impl<'de> Deserialize<'de> for Violation {
                 .deadline
                 .zip(payload.deadline_source)
                 .map(|(date, source)| Deadline { date, source }),
+            field: payload.field,
+            observed: payload.observed,
             requirement: payload.requirement,
             // Unknown ids (from newer/older registries) collapse to the
             // generic default rather than failing deserialization; the
@@ -758,10 +794,10 @@ impl Serialize for Violation {
     /// `finding_detail` / `counts` are skipped when `None`, as their
     /// serde-derive `skip_serializing_if = "Option::is_none"` equivalents
     /// would be. A `deadline` is written as two fields, `deadline` and
-    /// `deadline_source`, both skipped when `None`. `remediation` is always
-    /// written (see [`Violation::remediation_guidance`]), followed by the
-    /// derived `help_uri`, which is skipped when no standard reference has a
-    /// URL.
+    /// `deadline_source`, both skipped when `None`, and so are `field` and
+    /// `observed`. `remediation` is always written (see
+    /// [`Violation::remediation_guidance`]), followed by the derived
+    /// `help_uri`, which is skipped when no standard reference has a URL.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -779,6 +815,8 @@ impl Serialize for Violation {
                 + usize::from(has_finding_detail)
                 + usize::from(has_counts)
                 + 2 * usize::from(self.deadline.is_some())
+                + usize::from(self.field.is_some())
+                + usize::from(self.observed.is_some())
                 + usize::from(help_uri.is_some()),
         )?;
         state.serialize_field("severity", &self.severity)?;
@@ -806,6 +844,16 @@ impl Serialize for Violation {
         } else {
             state.skip_field("deadline")?;
             state.skip_field("deadline_source")?;
+        }
+        if let Some(field) = &self.field {
+            state.serialize_field("field", field)?;
+        } else {
+            state.skip_field("field")?;
+        }
+        if let Some(observed) = &self.observed {
+            state.serialize_field("observed", observed)?;
+        } else {
+            state.skip_field("observed")?;
         }
         state.serialize_field("requirement", &self.requirement)?;
         state.serialize_field("rule_id", self.rule_id)?;
@@ -939,6 +987,21 @@ fn registry_refs(rule_id: &str) -> Vec<StandardRef> {
 /// for an unregistered id.
 fn registry_sarif_id(rule_id: &str) -> &'static str {
     rule_meta(rule_id).map_or("SBOM-CRA-GENERAL", |m| m.sarif_id)
+}
+
+/// Where the field `rule_id` checks lives in an SBOM of `format` (see
+/// [`Violation::field`]); `None` for an unregistered id or a rule that names
+/// no field in that format. The registry writes a component's field under
+/// `components[]`. A CycloneDX document keeps its primary component at
+/// `metadata.component`, so a finding `about_primary` names the field there.
+fn registry_field(rule_id: &str, format: RemediationFormat, about_primary: bool) -> Option<String> {
+    let field = rule_meta(rule_id)?.field_for(format)?;
+    match field.strip_prefix("components[]") {
+        Some(rest) if about_primary && format == RemediationFormat::CycloneDx => {
+            Some(format!("metadata.component{rest}"))
+        }
+        _ => Some(field.to_string()),
+    }
 }
 
 /// A check the SBOM passed: what a pass-only rule ([`RuleKind::Pass`])
@@ -1096,6 +1159,84 @@ impl Serialize for PassedCheck {
             state.skip_field("standard_refs")?;
         }
         state.end()
+    }
+}
+
+/// A check a standard did not evaluate on the SBOM, and why.
+///
+/// A check is listed when it applies to the SBOM but did not run: the
+/// document's format or spec version cannot carry the evidence it reads (or
+/// sbom-tools does not read it there), the spec version does not parse, the
+/// run's inputs leave it out (no CRA product class pinned, PQC readiness
+/// mode), the SBOM lists none of the component kinds it is about, or the
+/// SBOM is too large to analyze. Without the entry, a check that did not run
+/// reads like one that passed: neither reports a violation.
+///
+/// Not listed: a check that ran and found nothing to report, even over no
+/// entries (a vulnerability check of an SBOM without vulnerabilities), and a
+/// check of something the document's format does not have at all (an SPDX
+/// version string or an SPDX 3.0 profile declaration in a CycloneDX
+/// document).
+///
+/// A checker records one with `NotEvaluated::push` where it skips the check
+/// (see `context.rs`); [`ComplianceResult::evaluated`] lists them.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+pub struct RuleEvaluation {
+    /// The rule of the check: one of the rules the standard's checks report
+    /// ([`rules_for_level`]).
+    pub rule_id: &'static str,
+    /// What became of the check.
+    pub status: EvaluationStatus,
+    /// Why, in sbom-tools' own words (never SBOM text), e.g. "SPDX 2.x has
+    /// no field for an in-document signature".
+    pub reason: String,
+}
+
+impl RuleEvaluation {
+    /// The record of a check of `rule_id` that did not run, for `reason`.
+    #[must_use]
+    pub fn not_evaluated(rule_id: &'static str, reason: impl Into<String>) -> Self {
+        Self {
+            rule_id,
+            status: EvaluationStatus::NotEvaluated,
+            reason: reason.into(),
+        }
+    }
+}
+
+/// What became of the check a [`RuleEvaluation`] records.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum EvaluationStatus {
+    /// The check did not run on the SBOM.
+    NotEvaluated,
+}
+
+/// Owned mirror of [`RuleEvaluation`] for deserialization, for the reason
+/// [`ViolationPayload`] gives.
+#[derive(Deserialize)]
+struct RuleEvaluationPayload {
+    rule_id: String,
+    status: EvaluationStatus,
+    #[serde(default)]
+    reason: String,
+}
+
+impl<'de> Deserialize<'de> for RuleEvaluation {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let payload = RuleEvaluationPayload::deserialize(deserializer)?;
+        Ok(Self {
+            // Like a violation's: an unknown id collapses to the generic
+            // default rather than failing deserialization.
+            rule_id: lookup_static_rule_id(&payload.rule_id).unwrap_or_else(default_rule_id),
+            status: payload.status,
+            reason: payload.reason,
+        })
     }
 }
 
@@ -1264,6 +1405,16 @@ pub struct ComplianceResult {
     /// field deserialize to an empty list.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub passed: Vec<PassedCheck>,
+    /// The checks the standard did not evaluate on this SBOM, each with the
+    /// reason (see [`RuleEvaluation`]), one per rule, in the order the
+    /// checks ran. Every entry is [`EvaluationStatus::NotEvaluated`]. A
+    /// standard that did not apply at all lists none: its
+    /// [`ComplianceResult::applicability`] says why.
+    ///
+    /// Serialized as `evaluated`, omitted when empty; old payloads without
+    /// the field deserialize to an empty list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub evaluated: Vec<RuleEvaluation>,
     /// Error count
     pub error_count: usize,
     /// Warning count
@@ -1355,6 +1506,7 @@ impl ComplianceResult {
             level,
             violations,
             passed: Vec::new(),
+            evaluated: Vec::new(),
             conformity_summary: None,
             applicability: Applicability::Applicable,
             error_count,
@@ -1378,6 +1530,14 @@ impl ComplianceResult {
     #[must_use]
     pub fn with_elements_checked(mut self, elements: usize) -> Self {
         self.elements_checked = elements.max(1);
+        self
+    }
+
+    /// This result with `evaluated` as the checks the standard did not
+    /// evaluate. They move no count, no verdict and no score.
+    #[must_use]
+    pub fn with_evaluated(mut self, evaluated: Vec<RuleEvaluation>) -> Self {
+        self.evaluated = evaluated;
         self
     }
 
@@ -1754,12 +1914,13 @@ impl ComplianceChecker {
     /// Selects the [`StandardChecker`] for the configured level (the
     /// dedicated profiles get their own checker; the rest take the generic
     /// path), runs it, then back-fills harmonised-standard references (and,
-    /// for violations, the remediation for the SBOM's format) from the rule
-    /// registry, numbers the finding details of entries the SBOM repeats (so
-    /// every violation and every passed check keeps a key of its own, see
-    /// [`finding_key`]), records whether the standard applied, and attaches
-    /// the CRA Annex VIII conformity summary when a product class has been
-    /// pinned on CRA Phase 1 or Phase 2.
+    /// for violations, the remediation and the field path for the SBOM's
+    /// format) from the rule registry, numbers the finding details of
+    /// entries the SBOM repeats (so every violation and every passed check
+    /// keeps a key of its own, see [`finding_key`]), records whether the
+    /// standard applied and which of its checks it did not evaluate, and
+    /// attaches the CRA Annex VIII conformity summary when a product class
+    /// has been pinned on CRA Phase 1 or Phase 2.
     ///
     /// Every entry point builds its checkers through
     /// [`ComplianceRunConfig::checker`], which decides which of a run's
@@ -1776,8 +1937,18 @@ impl ComplianceChecker {
         let Findings {
             mut violations,
             mut passed,
+            not_evaluated,
             applicability,
         } = checker.check(&ctx);
+        let evaluated = not_evaluated.into_vec();
+        debug_assert!(
+            evaluated.iter().all(|e| {
+                rules_for_level(self.level).contains(&e.rule_id)
+                    && !violations.iter().any(|v| v.rule_id == e.rule_id)
+                    && !passed.iter().any(|p| p.rule_id == e.rule_id)
+            }),
+            "a check not evaluated must be one of the level's rules and report nothing"
+        );
         debug_assert!(
             violations
                 .iter()
@@ -1791,15 +1962,20 @@ impl ComplianceChecker {
             "a passed check must come from a registered pass-only rule"
         );
 
-        // Populate harmonised-standard references and the remediation,
-        // phrased for the input format, from the rule registry.
+        // Populate harmonised-standard references, and the remediation and
+        // the field path for the input format, from the rule registry.
         let format = RemediationFormat::of(&sbom.document);
+        let primary = sbom.primary_component_id.as_ref().map(|id| id.value());
         for v in &mut violations {
             if v.standard_refs.is_empty() {
                 v.standard_refs = v.registry_standard_refs();
             }
             if v.remediation.is_none() {
                 v.remediation = Some(v.registry_remediation(format));
+            }
+            if v.field.is_none() {
+                let about_primary = primary.is_some() && v.component_id.as_deref() == primary;
+                v.field = registry_field(v.rule_id, format, about_primary);
             }
         }
         for p in &mut passed {
@@ -1815,7 +1991,8 @@ impl ComplianceChecker {
 
         let mut result = ComplianceResult::new(self.level, violations)
             .with_passed(passed)
-            .with_elements_checked(elements_checked(self.level, sbom));
+            .with_elements_checked(elements_checked(self.level, sbom))
+            .with_evaluated(evaluated);
         result.applicability = applicability;
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA phase profile. Annex VIII
@@ -2906,6 +3083,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let errors_only = ComplianceResult::new(
             ComplianceLevel::NtiaMinimum,
@@ -3017,6 +3196,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let of = |affected, total| Some(ViolationCounts { affected, total });
         let w = ViolationSeverity::Warning;
@@ -3131,6 +3312,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let large = |severity| {
             ComplianceResult::new(ComplianceLevel::NtiaMinimum, vec![violation(severity)])
@@ -3336,6 +3519,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let json = serde_json::to_value(&hardware).expect("violation serializes");
         assert!(
@@ -3416,6 +3601,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let guidance = unstamped("SBOM-CRA-COMPONENT-SUPPLIER")
             .remediation_guidance()
@@ -3607,6 +3794,8 @@ mod tests {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             },
             Violation {
                 severity: ViolationSeverity::Warning,
@@ -3621,6 +3810,8 @@ mod tests {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             },
             Violation {
                 severity: ViolationSeverity::Info,
@@ -3635,6 +3826,8 @@ mod tests {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             },
         ];
 
@@ -4752,6 +4945,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         v.registry_standard_refs()
     }
@@ -4804,6 +4999,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         };
         let guidance = v.remediation_guidance();
         assert!(

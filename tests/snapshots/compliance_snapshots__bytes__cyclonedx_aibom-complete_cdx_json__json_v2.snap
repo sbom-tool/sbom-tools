@@ -51,6 +51,7 @@ source: tests/compliance_snapshots.rs
           "category": "IntegrityInfo",
           "message": "[BSI-AI] Metadata readiness: SBOM carries no document signature (integrity attestation recommended)",
           "element": null,
+          "field": "signature",
           "requirement": "BSI/G7 SBOM-for-AI — Metadata / Signature",
           "rule_id": "SBOM-BSIAI-META-SIGNATURE",
           "sarif_rule_id": "SBOM-BSIAI-META-SIGNATURE",
@@ -71,6 +72,7 @@ source: tests/compliance_snapshots.rs
           "category": "SupplierInfo",
           "message": "[BSI-AI] System-Level readiness: no producer/supplier of the AI system is declared",
           "element": null,
+          "field": "components[].supplier.name",
           "requirement": "BSI/G7 SBOM-for-AI — System-Level / Producer",
           "rule_id": "SBOM-BSIAI-SYS-PRODUCER",
           "sarif_rule_id": "SBOM-BSIAI-SYS-PRODUCER",
@@ -115,6 +117,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "components[].purl",
           "requirement": "BSI/G7 SBOM-for-AI — Models / Model identifier",
           "rule_id": "SBOM-BSIAI-MODEL-IDENTIFIER",
           "sarif_rule_id": "SBOM-BSIAI-MODEL-IDENTIFIER",
@@ -139,6 +142,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "components[].licenses[]",
           "requirement": "BSI/G7 SBOM-for-AI — Models / Model license",
           "rule_id": "SBOM-BSIAI-MODEL-LICENSE",
           "sarif_rule_id": "SBOM-BSIAI-MODEL-LICENSE",
@@ -163,6 +167,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "components[].purl",
           "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset identifier",
           "rule_id": "SBOM-BSIAI-DATASET-IDENTIFIER",
           "sarif_rule_id": "SBOM-BSIAI-DATASET-IDENTIFIER",
@@ -187,6 +192,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "components[].hashes[]",
           "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset hash value",
           "rule_id": "SBOM-BSIAI-DATASET-HASH",
           "sarif_rule_id": "SBOM-BSIAI-DATASET-HASH",
@@ -211,6 +217,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "components[].licenses[]",
           "requirement": "BSI/G7 SBOM-for-AI — Datasets / Dataset license",
           "rule_id": "SBOM-BSIAI-DATASET-LICENSE",
           "sarif_rule_id": "SBOM-BSIAI-DATASET-LICENSE",
@@ -235,6 +242,7 @@ source: tests/compliance_snapshots.rs
             "affected": 1,
             "total": 1
           },
+          "field": "data[].governance",
           "requirement": "BSI/G7 SBOM-for-AI — Datasets / Provenance & intended use",
           "rule_id": "SBOM-BSIAI-DATASET-PROVENANCE",
           "sarif_rule_id": "SBOM-BSIAI-DATASET-PROVENANCE",
@@ -255,6 +263,7 @@ source: tests/compliance_snapshots.rs
           "category": "DependencyInfo",
           "message": "[BSI-AI] Infrastructure readiness: no ML component links to its runtime / framework dependencies (no dependency edge or BOM/HBOM reference)",
           "element": null,
+          "field": "dependencies[]",
           "requirement": "BSI/G7 SBOM-for-AI — Infrastructure / Runtime & framework",
           "rule_id": "SBOM-BSIAI-INFRA-RUNTIME",
           "sarif_rule_id": "SBOM-BSIAI-INFRA-RUNTIME",

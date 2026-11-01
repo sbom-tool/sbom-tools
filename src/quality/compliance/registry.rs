@@ -62,6 +62,15 @@ impl RuleMeta {
         }
     }
 
+    /// Where the field this rule checks lives in an SBOM of `format`: the
+    /// [`FieldAdvice::field`] of its advice for that format. `None` when the
+    /// rule has no per-format advice, or the format has no field the check
+    /// reads.
+    #[must_use]
+    pub fn field_for(&self, format: RemediationFormat) -> Option<&'static str> {
+        self.advice.and_then(|advice| advice.get(format).field)
+    }
+
     /// Remediation when the input format is unknown (a violation built
     /// outside `ComplianceChecker::check()`): the format-neutral guidance
     /// followed by the advice for every format.

@@ -31,7 +31,8 @@
 //!
 //! Firing them anyway meant an SPDX 2.x SBOM could never pass
 //! `--fail-on-warning`, however complete. CycloneDX and SPDX 3 input is
-//! still checked.
+//! still checked. On SPDX 2.x the result lists the three as not evaluated,
+//! so the skip does not read as a pass.
 //!
 //! Escape hatches: several 2026 elements require the author to *explicitly*
 //! state that information is unknown instead of omitting it (Component
@@ -89,6 +90,12 @@ fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<S
     }
 }
 
+/// Why SBOM-CISA2026-GENERATION-CONTEXT did not run on SPDX 2.x.
+const SPDX2_NO_LIFECYCLE_PHASE: &str = "SPDX 2.x has no field for the lifecycle phase";
+
+/// Why SBOM-CISA2026-COVERAGE did not run on SPDX 2.x.
+const SPDX2_NO_COMPLETENESS: &str = "SPDX 2.x cannot declare the completeness of its inventory";
+
 impl ComplianceChecker {
     // ════════════════════════════════════════════════════════════════════
     // CISA 2026 Minimum Elements (successor to NTIA 2021)
@@ -103,8 +110,14 @@ impl ComplianceChecker {
     /// graph-level Dependency Relationship element and the Coverage /
     /// Explicitly Identifying Unknown Information declaration check.
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn check_cisa2026(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_cisa2026(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         use crate::model::{CompletenessDeclaration, CreatorType, ExternalRefType, HashProvenance};
+
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = findings;
 
         // The per-component elements below have nothing to judge without a
         // package-scoped component.
@@ -147,6 +160,13 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: sbom
+                    .document
+                    .creators
+                    .iter()
+                    .find(|c| c.creator_type != CreatorType::Tool)
+                    .and_then(|c| observed(&c.name)),
             });
         }
 
@@ -158,7 +178,9 @@ impl ComplianceChecker {
         // run. Presence is structural (algorithm + non-empty value) — nothing
         // is cryptographically verified.
         let has_signature = document_signed(sbom);
-        if !has_signature && !spdx2 {
+        if spdx2 {
+            not_evaluated.push("SBOM-CISA2026-SIGNATURE", SPDX2_NO_SIGNATURE);
+        } else if !has_signature {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -176,6 +198,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -192,9 +216,11 @@ impl ComplianceChecker {
             SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
             SbomFormat::Spdx => crate::model::SpecVersion::new(2, 2, 0),
         };
-        if let Some(actual) = sbom.document.spec_version_parsed()
-            && actual < minimum
-        {
+        let parsed = sbom.document.spec_version_parsed();
+        if parsed.is_none() {
+            not_evaluated.push("SBOM-CISA2026-FORMAT", SPEC_VERSION_UNPARSED);
+        }
+        if parsed.is_some_and(|actual| actual < minimum) {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::FormatSpecific,
@@ -215,6 +241,11 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(&format!(
+                    "{} {}",
+                    sbom.document.format, sbom.document.spec_version
+                )),
             });
         }
 
@@ -225,7 +256,9 @@ impl ComplianceChecker {
         // populates the field. SPDX 2.x has no standard field, so the check
         // skips it; SPDX 3 sbomType is not parsed yet, which keeps this a
         // Warning rather than an Error.
-        if !spdx2 && known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
+        if spdx2 {
+            not_evaluated.push("SBOM-CISA2026-GENERATION-CONTEXT", SPDX2_NO_LIFECYCLE_PHASE);
+        } else if known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -242,6 +275,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -280,6 +315,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         }
 
@@ -309,6 +346,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         } else if !tool_creators
             .iter()
@@ -331,6 +370,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: tool_creators.first().and_then(|t| observed(&t.name)),
             });
         }
 
@@ -373,6 +414,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -396,6 +439,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&comp.name),
                 });
             }
 
@@ -444,6 +489,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_producer(comp),
                 });
             }
 
@@ -471,6 +518,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: comp.version.as_deref().and_then(observed),
                 });
             }
 
@@ -497,6 +546,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -538,6 +589,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             } else if !has_hex_value && !hash_marked_unknown {
                 violations.push(Violation {
@@ -558,6 +611,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_digest(authored.iter().copied()),
                 });
             } else {
                 // Hash-value evidence is sound — assess the algorithms (see
@@ -597,6 +652,15 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: observed(
+                            &authored
+                                .iter()
+                                .filter(|h| hash_algorithm_shortfall(&h.algorithm).is_some())
+                                .map(|h| h.algorithm.to_string())
+                                .collect::<Vec<_>>()
+                                .join(", "),
+                        ),
                     });
                 }
             }
@@ -630,6 +694,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -666,6 +732,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -681,7 +749,9 @@ impl ComplianceChecker {
         // acknowledging the declaration is honest. SPDX 2.x cannot declare
         // completeness at all, so the check skips it.
         match sbom.document.completeness_declaration {
-            _ if spdx2 => {}
+            _ if spdx2 => {
+                not_evaluated.push("SBOM-CISA2026-COVERAGE", SPDX2_NO_COMPLETENESS);
+            }
             CompletenessDeclaration::Unknown | CompletenessDeclaration::NotSpecified => {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
@@ -701,6 +771,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
             CompletenessDeclaration::Incomplete
@@ -727,6 +799,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
             CompletenessDeclaration::Complete => {}

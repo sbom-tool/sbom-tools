@@ -72,6 +72,8 @@ pub(crate) fn inventory_absent_violation(
         remediation: None,
         finding_detail: None,
         deadline: None,
+        field: None,
+        observed: None,
     })
 }
 
@@ -104,6 +106,13 @@ pub(crate) fn unparseable_timestamp(sbom: &NormalizedSbom) -> Option<String> {
             quoted(value)
         )
     })
+}
+
+/// The creation timestamp the document wrote but that does not parse, as a
+/// finding's [`Violation::observed`] (see [`unparseable_timestamp`]); `None`
+/// when the timestamp parsed or is absent.
+pub(crate) fn observed_unparsed_timestamp(sbom: &NormalizedSbom) -> Option<String> {
+    sbom.document.created_unparsed.as_deref().and_then(observed)
 }
 
 /// The freshness finding for an SBOM dated in the future, or `None` when its
@@ -150,6 +159,8 @@ pub(crate) fn future_timestamp_violation(
         remediation: None,
         finding_detail: None,
         deadline: None,
+        field: None,
+        observed: observed(&created.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)),
     })
 }
 
@@ -263,6 +274,58 @@ pub(crate) fn known_component_name(comp: &Component) -> bool {
             .and_then(|seg| seg.split('@').next())
             .is_some_and(|purl_name| purl_name.eq_ignore_ascii_case(name))
     })
+}
+
+/// Why a spec-version check did not run: the document's version does not
+/// parse, so its range cannot be judged. Such a document gets no version
+/// finding, which used to read as a pass.
+pub(crate) const SPEC_VERSION_UNPARSED: &str =
+    "the document's spec version does not parse, so its range cannot be checked";
+
+/// The longest [`Violation::observed`] value, in characters, the `…` that
+/// marks a cut included.
+pub(crate) const OBSERVED_MAX_CHARS: usize = 200;
+
+/// `value`, read from the SBOM, as a finding's [`Violation::observed`]: the
+/// value as read, cut to [`OBSERVED_MAX_CHARS`] characters and ending in `…`
+/// when cut. An empty value stays empty: the field is there, with nothing in
+/// it. Like the finding's message and element, it is SBOM text kept as read:
+/// JSON and SARIF carry it as it is, and a human-readable output cleans it
+/// where it shows it (the text report and the TUI with `sanitize_line`).
+/// Returns `Some`, so an emission site writes `observed: observed(value)`,
+/// or `observed: field.and_then(observed)` for an optional field.
+pub(crate) fn observed(value: &str) -> Option<String> {
+    let mut chars = value.chars();
+    let mut text: String = chars.by_ref().take(OBSERVED_MAX_CHARS).collect();
+    if chars.next().is_some() {
+        text.pop();
+        text.push('…');
+    }
+    Some(text)
+}
+
+/// The first of `hashes` whose digest does not count ([`digest_problem`]),
+/// as a finding's [`Violation::observed`]: `<algorithm>:<value as read>`,
+/// e.g. `SHA-256:d41d8cd98f00b204e9800998ecf8427e`. The message says why it
+/// does not count. `None` when every digest counts.
+pub(crate) fn observed_digest<'a>(hashes: impl IntoIterator<Item = &'a Hash>) -> Option<String> {
+    let hash = hashes
+        .into_iter()
+        .find(|h| digest_problem(&h.algorithm, &h.value).is_some())?;
+    observed(&format!("{}:{}", hash.algorithm, hash.value))
+}
+
+/// What a component names as its producer, when nothing it names counts
+/// ([`has_known_producer`]): the first supplier, manufacturer or author
+/// value present, typically a placeholder such as `NOASSERTION` or `TBD`.
+/// `None` when the component names no producer at all.
+pub(crate) fn observed_producer(comp: &Component) -> Option<String> {
+    comp.supplier
+        .as_ref()
+        .map(|o| o.name.as_str())
+        .or_else(|| comp.manufacturer.as_ref().map(|o| o.name.as_str()))
+        .or(comp.author.as_deref())
+        .and_then(observed)
 }
 
 /// Render a slice of names as a comma-separated list, truncated with
@@ -443,20 +506,25 @@ pub(crate) fn creator_contacts(creator: &Creator) -> impl Iterator<Item = &str> 
         .chain((name.contains('@') || name.contains("://")).then_some(name))
 }
 
+/// The first of the creator contacts `values` that is given but reaches
+/// nobody (see [`known_contact`]).
+pub(crate) fn unreachable_creator<'a>(
+    values: impl IntoIterator<Item = &'a str>,
+) -> Option<&'a str> {
+    values.into_iter().find(|value| !known_contact(Some(value)))
+}
+
 /// A note naming the first of the creator contacts `values` that is given
-/// but reaches nobody (see [`known_contact`]), for the message of a check
-/// that found no creator contact; empty when there is none.
+/// but reaches nobody (see [`unreachable_creator`]), for the message of a
+/// check that found no creator contact; empty when there is none.
 pub(crate) fn unreachable_creator_note<'a>(values: impl IntoIterator<Item = &'a str>) -> String {
-    values
-        .into_iter()
-        .find(|value| !known_contact(Some(value)))
-        .map_or_else(String::new, |value| {
-            format!(
-                "; the creator contact '{}' reaches nobody (a placeholder, or an address at \
+    unreachable_creator(values).map_or_else(String::new, |value| {
+        format!(
+            "; the creator contact '{}' reaches nobody (a placeholder, or an address at \
                  example.com, example.net or example.org)",
-                value.trim()
-            )
-        })
+            value.trim()
+        )
+    })
 }
 
 /// The clause a contact finding appends when the CRA sidecar gives a
@@ -522,6 +590,10 @@ pub(crate) fn is_spdx2(sbom: &NormalizedSbom) -> bool {
             .spec_version_parsed()
             .is_none_or(|v| v.major < 3)
 }
+
+/// Why a signature check did not run on SPDX 2.x (see [`is_spdx2`]): the
+/// reason CISA 2026's SBOM Author Signature and FSCT §2.4 give alike.
+pub(crate) const SPDX2_NO_SIGNATURE: &str = "SPDX 2.x cannot carry a document signature";
 
 /// Whether the vulnerability's own VEX statement is `not_affected` and names
 /// its justification (CycloneDX `analysis.justification`, OpenVEX
@@ -789,6 +861,45 @@ mod tests {
             digest_problem(&A::Sha256, &format!("{}g", hex(63))),
             Some("SHA-256 digest is not hexadecimal".to_string())
         );
+    }
+
+    /// An observed value is kept as read, like the message, and bounded,
+    /// the cut marked; an empty value stays empty. The outputs that show it
+    /// clean it.
+    #[test]
+    fn observed_values_are_kept_as_read_and_bounded() {
+        assert_eq!(observed("NOASSERTION").as_deref(), Some("NOASSERTION"));
+        assert_eq!(observed("").as_deref(), Some(""));
+        let hostile = "::warning::x\n\u{1b}[1m\u{7}\u{202e}c";
+        assert_eq!(observed(hostile).as_deref(), Some(hostile));
+        let exact = "x".repeat(OBSERVED_MAX_CHARS);
+        assert_eq!(observed(&exact), Some(exact.clone()));
+        let long = observed(&"é".repeat(OBSERVED_MAX_CHARS + 1)).expect("observed");
+        assert_eq!(long.chars().count(), OBSERVED_MAX_CHARS);
+        assert_eq!(long, format!("{}…", "é".repeat(OBSERVED_MAX_CHARS - 1)));
+    }
+
+    /// The digest a hash finding observes is the first that does not count,
+    /// with its algorithm; the producer is the first value the component
+    /// names.
+    #[test]
+    fn observed_digest_and_producer_name_what_did_not_count() {
+        let sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        let hashes = [
+            Hash::new(HashAlgorithm::Sha256, sha256.to_string()),
+            Hash::new(HashAlgorithm::Sha512, "abc".to_string()),
+            Hash::new(HashAlgorithm::Md5, String::new()),
+        ];
+        assert_eq!(observed_digest(&hashes).as_deref(), Some("SHA-512:abc"));
+        assert_eq!(observed_digest(&hashes[..1]), None);
+        assert_eq!(observed_digest(&hashes[2..]).as_deref(), Some("MD5:"));
+
+        let mut comp = Component::new("lib".to_string(), "lib".to_string());
+        assert_eq!(observed_producer(&comp), None);
+        comp.author = Some("TBD".to_string());
+        assert_eq!(observed_producer(&comp).as_deref(), Some("TBD"));
+        comp.supplier = Some(Organization::new("NOASSERTION".to_string()));
+        assert_eq!(observed_producer(&comp).as_deref(), Some("NOASSERTION"));
     }
 
     #[test]

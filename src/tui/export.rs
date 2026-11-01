@@ -896,6 +896,8 @@ mod compliance_export_tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         }
     }
 

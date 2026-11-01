@@ -83,6 +83,7 @@ impl ComplianceChecker {
         &self,
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
+        not_evaluated: &mut NotEvaluated,
     ) {
         use crate::model::{CreatorType, ExternalRefType};
 
@@ -122,6 +123,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -151,6 +154,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -168,6 +173,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -194,6 +201,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: Some(email.clone()),
                         deadline: None,
+                        field: None,
+                        observed: observed(email),
                     });
                 }
             }
@@ -219,6 +228,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: sbom.document.name.as_deref().and_then(observed),
                     });
                 } else {
                     violations.push(Violation {
@@ -235,6 +246,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: sbom.document.name.as_deref().and_then(observed),
                     });
                 }
             }
@@ -273,6 +286,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -300,6 +315,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: unreachable_contact(sbom).and_then(observed),
                     });
                 }
             }
@@ -319,6 +336,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -346,6 +365,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -362,11 +383,11 @@ impl ComplianceChecker {
                 SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
                 SbomFormat::Spdx => crate::model::SpecVersion::new(2, 3, 0),
             };
-            let format_ok = sbom
-                .document
-                .spec_version_parsed()
-                .is_none_or(|v| v >= minimum);
-            if !format_ok {
+            let parsed = sbom.document.spec_version_parsed();
+            if parsed.is_none() {
+                not_evaluated.push("SBOM-CRA-MACHINE-READABLE", SPEC_VERSION_UNPARSED);
+            }
+            if parsed.is_some_and(|v| v < minimum) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::FormatSpecific,
@@ -384,6 +405,11 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&format!(
+                        "{} {}",
+                        sbom.document.format, sbom.document.spec_version
+                    )),
                 });
             }
 
@@ -411,6 +437,8 @@ impl ComplianceChecker {
                             remediation: None,
                             finding_detail: None,
                             deadline: None,
+                            field: None,
+                            observed: None,
                         });
             }
         }
@@ -449,6 +477,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 } else {
                     violations.push(Violation {
@@ -464,6 +494,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -486,6 +518,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -523,6 +557,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -550,6 +586,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -579,6 +617,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: unreachable_creator(emails()).and_then(observed),
                 });
             }
 
@@ -598,6 +638,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: sbom.document.name.as_deref().and_then(observed),
                 });
             }
 
@@ -627,6 +669,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -672,6 +716,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         }
 
@@ -705,6 +751,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -803,6 +851,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&comp.name),
                 });
             }
 
@@ -872,6 +922,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: comp.version.as_deref().and_then(observed),
                 });
             }
 
@@ -951,6 +1003,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -1025,6 +1079,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_producer(comp),
                 });
             }
 
@@ -1066,6 +1122,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -1123,6 +1181,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: observed_digest(&comp.hashes),
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
@@ -1167,6 +1227,14 @@ impl ComplianceChecker {
                             remediation: None,
                             finding_detail: None,
                             deadline: None,
+                            field: None,
+                            observed: observed(
+                                &plausible
+                                    .iter()
+                                    .map(|h| h.algorithm.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(", "),
+                            ),
                         });
                     }
                 }
@@ -1192,6 +1260,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed_digest(&comp.hashes),
                 });
             }
         }
@@ -1258,6 +1328,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             } else if has_multiple_components {
                 // Edges exist — check the graph is more than a token gesture.
@@ -1305,6 +1377,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
 
@@ -1346,6 +1420,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: None,
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
                 }
             }
@@ -1379,6 +1455,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -1415,6 +1493,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -1469,6 +1549,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
         }
@@ -1505,6 +1587,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: Some(vuln.id.clone()),
                     deadline: None,
+                    field: None,
+                    observed: None,
                 });
             }
 
@@ -1539,6 +1623,8 @@ impl ComplianceChecker {
                         remediation: None,
                         finding_detail: Some(vuln.id.clone()),
                         deadline: None,
+                        field: None,
+                        observed: None,
                     });
             }
         }
@@ -1548,8 +1634,14 @@ impl ComplianceChecker {
         &self,
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
+        not_evaluated: &mut NotEvaluated,
     ) {
         self.check_duplicate_components(sbom, violations);
+        // A version that does not parse cannot be placed in the range
+        // sbom-tools reads.
+        if sbom.document.spec_version_parsed().is_none() {
+            not_evaluated.push(SPEC_VERSION_RULES.get(self.level), SPEC_VERSION_UNPARSED);
+        }
         match sbom.document.format {
             SbomFormat::CycloneDx => {
                 self.check_cyclonedx_specific(sbom, violations);
@@ -1615,6 +1707,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1644,6 +1738,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(version),
                 });
             }
             // A version newer than any this tool reads (CycloneDX 2.0 is
@@ -1665,6 +1761,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(version),
                 });
             }
             _ => {}
@@ -1688,6 +1786,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&comp.identifiers.format_id),
                 });
             }
         }
@@ -1722,6 +1822,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(version),
             });
         }
 
@@ -1740,6 +1842,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(version),
             });
         }
 
@@ -1776,6 +1880,8 @@ impl ComplianceChecker {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: observed(&comp.identifiers.format_id),
                 });
             }
         }

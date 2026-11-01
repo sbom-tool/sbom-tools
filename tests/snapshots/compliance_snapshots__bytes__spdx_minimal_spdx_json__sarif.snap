@@ -785,7 +785,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "packages[].supplier"
           }
         },
         {
@@ -827,7 +828,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom"
             ],
-            "componentId": "pkg:npm/express@4.18.2"
+            "componentId": "pkg:npm/express@4.18.2",
+            "field": "packages[].supplier"
           }
         },
         {
@@ -864,7 +866,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
-            ]
+            ],
+            "field": "relationships[]"
           }
         },
         {
@@ -901,7 +904,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             ],
             "affected": 2,
-            "total": 2
+            "total": 2,
+            "field": "packages[].supplier"
           }
         },
         {
@@ -938,7 +942,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             ],
             "affected": 2,
-            "total": 2
+            "total": 2,
+            "field": "packages[].checksums[]"
           }
         },
         {
@@ -975,7 +980,8 @@ source: tests/compliance_snapshots.rs
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             ],
             "affected": 2,
-            "total": 2
+            "total": 2,
+            "field": "packages[].externalRefs[]"
           }
         },
         {
@@ -1017,7 +1023,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             ],
-            "componentId": "pkg:npm/lodash@4.17.21"
+            "componentId": "pkg:npm/lodash@4.17.21",
+            "field": "packages[].checksums[]"
           }
         },
         {
@@ -1091,7 +1098,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024",
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
-            ]
+            ],
+            "field": "relationships[]"
           }
         }
       ],
@@ -1108,7 +1116,17 @@ source: tests/compliance_snapshots.rs
             "profile": "CISA Framing Software Component Transparency (3rd ed.)",
             "applicable": true,
             "overallScore": 12.0,
-            "compliant": false
+            "compliant": false,
+            "notEvaluated": [
+              {
+                "ruleId": "SBOM-FSCT-SBOM-TYPE",
+                "reason": "sbom-tools reads the SBOM type from CycloneDX metadata.lifecycles only, not from an SPDX document"
+              },
+              {
+                "ruleId": "SBOM-FSCT-SIGNATURE",
+                "reason": "SPDX 2.x cannot carry a document signature"
+              }
+            ]
           }
         ]
       }

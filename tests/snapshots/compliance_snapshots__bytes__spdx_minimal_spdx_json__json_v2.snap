@@ -33,6 +33,7 @@ source: tests/compliance_snapshots.rs
           "message": "Component 'lodash' missing supplier/manufacturer",
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.21",
+          "field": "packages[].supplier",
           "requirement": "NTIA: Supplier information",
           "rule_id": "SBOM-NTIA-SUPPLIER",
           "sarif_rule_id": "SBOM-NTIA-SUPPLIER",
@@ -54,6 +55,7 @@ source: tests/compliance_snapshots.rs
           "message": "Component 'express' missing supplier/manufacturer",
           "element": "express",
           "component_id": "pkg:npm/express@4.18.2",
+          "field": "packages[].supplier",
           "requirement": "NTIA: Supplier information",
           "rule_id": "SBOM-NTIA-SUPPLIER",
           "sarif_rule_id": "SBOM-NTIA-SUPPLIER",
@@ -94,6 +96,7 @@ source: tests/compliance_snapshots.rs
           "category": "DependencyInfo",
           "message": "[CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness",
           "element": null,
+          "field": "relationships[]",
           "requirement": "CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)",
           "rule_id": "SBOM-FSCT-DIRECT-DEPS",
           "sarif_rule_id": "SBOM-FSCT-DIRECT-DEPS",
@@ -123,6 +126,7 @@ source: tests/compliance_snapshots.rs
             "affected": 2,
             "total": 2
           },
+          "field": "packages[].supplier",
           "requirement": "CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)",
           "rule_id": "SBOM-FSCT-SUPPLIER",
           "sarif_rule_id": "SBOM-FSCT-SUPPLIER",
@@ -147,6 +151,7 @@ source: tests/compliance_snapshots.rs
             "affected": 2,
             "total": 2
           },
+          "field": "packages[].checksums[]",
           "requirement": "CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)",
           "rule_id": "SBOM-FSCT-HASH",
           "sarif_rule_id": "SBOM-FSCT-HASH",
@@ -171,6 +176,7 @@ source: tests/compliance_snapshots.rs
             "affected": 2,
             "total": 2
           },
+          "field": "packages[].externalRefs[]",
           "requirement": "CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)",
           "rule_id": "SBOM-FSCT-IDENTIFIER-MULTI",
           "sarif_rule_id": "SBOM-FSCT-IDENTIFIER-MULTI",
@@ -192,6 +198,7 @@ source: tests/compliance_snapshots.rs
           "message": "[CISA FSCT 3e §2.2.2.5] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
           "element": "lodash",
           "component_id": "pkg:npm/lodash@4.17.21",
+          "field": "packages[].checksums[]",
           "requirement": "CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)",
           "rule_id": "SBOM-FSCT-HASH-PRIMARY-SHA2",
           "sarif_rule_id": "SBOM-FSCT-HASH-PRIMARY-SHA2",
@@ -237,6 +244,7 @@ source: tests/compliance_snapshots.rs
           "category": "DependencyInfo",
           "message": "[CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies",
           "element": null,
+          "field": "relationships[]",
           "requirement": "CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)",
           "rule_id": "SBOM-FSCT-DYNAMIC-DEPS",
           "sarif_rule_id": "SBOM-FSCT-DYNAMIC-DEPS",
@@ -256,7 +264,19 @@ source: tests/compliance_snapshots.rs
           "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
         }
       ],
-      "passed": []
+      "passed": [],
+      "evaluated": [
+        {
+          "rule_id": "SBOM-FSCT-SBOM-TYPE",
+          "status": "not_evaluated",
+          "reason": "sbom-tools reads the SBOM type from CycloneDX metadata.lifecycles only, not from an SPDX document"
+        },
+        {
+          "rule_id": "SBOM-FSCT-SIGNATURE",
+          "status": "not_evaluated",
+          "reason": "SPDX 2.x cannot carry a document signature"
+        }
+      ]
     }
   ]
 }

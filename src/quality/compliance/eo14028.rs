@@ -27,8 +27,14 @@ fn evidences_autogen_provenance(requirement: &DefinedRequirement) -> bool {
 
 impl ComplianceChecker {
     /// Executive Order 14028 Section 4 checks
-    pub(crate) fn check_eo14028(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_eo14028(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
         use crate::model::ExternalRefType;
+
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = findings;
 
         // The component checks below have nothing to judge without a
         // package-scoped component.
@@ -54,16 +60,17 @@ impl ComplianceChecker {
         // names SPDX (then at 2.2) as an accepted format, so SPDX 2.2
         // documents are machine-readable under the EO. Versions compare
         // numerically ("1.10" is newer than "1.7", not "1.1"); an absent or
-        // unparseable version skips the gate instead of false-failing.
+        // unparseable version skips the gate instead of false-failing, and
+        // the result lists it as not evaluated.
         let minimum = match sbom.document.format {
             crate::model::SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
             crate::model::SbomFormat::Spdx => crate::model::SpecVersion::new(2, 2, 0),
         };
-        let format_ok = sbom
-            .document
-            .spec_version_parsed()
-            .is_none_or(|v| v >= minimum);
-        if !format_ok {
+        let parsed = sbom.document.spec_version_parsed();
+        if parsed.is_none() {
+            not_evaluated.push("SBOM-EO14028-FORMAT", SPEC_VERSION_UNPARSED);
+        }
+        if parsed.is_some_and(|v| v < minimum) {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::FormatSpecific,
@@ -81,6 +88,11 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed(&format!(
+                    "{} {}",
+                    sbom.document.format, sbom.document.spec_version
+                )),
             });
         }
 
@@ -106,6 +118,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         }
 
@@ -143,6 +157,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -161,6 +177,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -194,6 +212,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -224,6 +244,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -244,6 +266,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -272,6 +296,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -311,6 +337,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -345,6 +373,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: unreachable_contact(sbom).and_then(observed),
             });
         }
 
@@ -375,6 +405,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }

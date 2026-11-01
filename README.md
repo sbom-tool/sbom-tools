@@ -521,7 +521,12 @@ and the schema is
 Checks the SBOM passed are listed under `passed`, never as violations.
 Each result's `score` is 50–100 when the standard passes and 0–49 when it
 fails, scaled by the errors and warnings per element checked (see
-[Score](docs/compliance-output.md#score)).
+[Score](docs/compliance-output.md#score)). A violation names the field it
+checks in the SBOM's format (`field`) and the value it read there
+(`observed`, such as a `NOASSERTION` supplier), and the checks a standard
+did not evaluate on the SBOM are listed under `evaluated` with the reason
+(CISA 2026's signature check on SPDX 2.x, say). The text report names the
+rule of each finding and lists the same checks under `Not evaluated:`.
 
 </details>
 

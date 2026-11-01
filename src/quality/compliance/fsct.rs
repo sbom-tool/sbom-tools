@@ -38,6 +38,9 @@
 //!   `licenses[].acknowledgement` field is not parsed, so the prong is gated
 //!   to SPDX input.
 //!
+//! A gated check is listed as not evaluated on the formats it skips, so its
+//! silence there does not read as a pass.
+//!
 //! Profile-policy heuristics (documented as policy, not standard text —
 //! "as many as possible"-style tiers are not crisply verifiable from the
 //! document alone): the ≥2-identifier-kinds threshold
@@ -77,13 +80,30 @@ impl ComplianceChecker {
     /// CISA FSCT 3e compliance checks: one evidence pass over the document,
     /// then per-tier emission (Minimum Expected → Error, Recommended
     /// Practice → Warning, Aspirational Goal → Info).
-    pub(crate) fn check_fsct(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_fsct(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+        let Findings {
+            violations,
+            not_evaluated,
+            ..
+        } = findings;
         let evidence = FsctEvidence::collect(sbom);
         fsct_minimum_expected(sbom, &evidence, violations);
         fsct_recommended_practice(sbom, &evidence, violations);
-        fsct_aspirational_goals(sbom, &evidence, violations);
+        fsct_aspirational_goals(sbom, &evidence, violations, not_evaluated);
     }
 }
+
+/// Why SBOM-FSCT-DYNAMIC-DEPS did not run on CycloneDX (see the module docs).
+const CYCLONEDX_NO_DYNAMIC_DEPS: &str =
+    "a CycloneDX dependency graph cannot mark a dependency dynamic, runtime or provided";
+
+/// Why SBOM-FSCT-LICENSE-CONCLUDED did not run on CycloneDX.
+const CYCLONEDX_CONCLUDED_NOT_READ: &str = "sbom-tools reads concluded licenses from SPDX \
+     (PackageLicenseConcluded) only, not the CycloneDX licenses[].acknowledgement";
+
+/// Why SBOM-FSCT-SBOM-TYPE did not run on SPDX.
+const SPDX_SBOM_TYPE_NOT_READ: &str = "sbom-tools reads the SBOM type from CycloneDX \
+     metadata.lifecycles only, not from an SPDX document";
 
 /// Whether the completeness of the dependency enumeration is genuinely
 /// undeclared (no recorded assertion). Any explicit declaration — including
@@ -162,6 +182,8 @@ struct FsctEvidence {
     /// Components carrying ambiguous placeholder attribute values
     /// (§2.3.1), rendered as "name (field, …)".
     ambiguous_placeholders: Vec<String>,
+    /// The first ambiguous placeholder value read, as written ("TBD").
+    first_placeholder: Option<String>,
     /// Whether any component carries a concluded license (SPDX
     /// `PackageLicenseConcluded` — the §2.2.2.7 Aspirational attestation).
     has_concluded_license: bool,
@@ -207,6 +229,7 @@ impl FsctEvidence {
         let mut without_license = Vec::new();
         let mut without_copyright = Vec::new();
         let mut ambiguous_placeholders = Vec::new();
+        let mut first_placeholder = None;
         let mut has_concluded_license = false;
 
         for comp in sbom.components.values() {
@@ -307,26 +330,26 @@ impl FsctEvidence {
 
             // §2.3.1: ambiguous placeholders (see `is_placeholder`).
             let mut fields = Vec::new();
-            if comp.version.as_deref().is_some_and(is_placeholder) {
+            let mut placeholders: Vec<&str> = Vec::new();
+            if let Some(version) = comp.version.as_deref().filter(|v| is_placeholder(v)) {
                 fields.push("version");
+                placeholders.push(version);
             }
-            if comp
-                .supplier
-                .as_ref()
-                .is_some_and(|s| is_placeholder(&s.name))
-            {
+            if let Some(supplier) = comp.supplier.as_ref().filter(|s| is_placeholder(&s.name)) {
                 fields.push("supplier");
+                placeholders.push(&supplier.name);
             }
-            if comp
-                .licenses
-                .all_licenses()
-                .iter()
-                .any(|l| is_placeholder(&l.expression))
-            {
+            let licenses = comp.licenses.all_licenses();
+            if let Some(license) = licenses.iter().find(|l| is_placeholder(&l.expression)) {
                 fields.push("license");
+                placeholders.push(&license.expression);
             }
-            if comp.copyright.as_deref().is_some_and(is_placeholder) {
+            if let Some(copyright) = comp.copyright.as_deref().filter(|c| is_placeholder(c)) {
                 fields.push("copyright");
+                placeholders.push(copyright);
+            }
+            if first_placeholder.is_none() {
+                first_placeholder = placeholders.first().map(|p| (*p).to_string());
             }
             if !fields.is_empty() {
                 ambiguous_placeholders.push(format!("{} ({})", comp.name, fields.join(", ")));
@@ -444,6 +467,7 @@ impl FsctEvidence {
             without_license,
             without_copyright,
             ambiguous_placeholders,
+            first_placeholder,
             has_concluded_license,
             primary_resolvable,
             direct_edge_count,
@@ -507,6 +531,13 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: sbom
+                .document
+                .creators
+                .iter()
+                .find(|c| c.creator_type != CreatorType::Tool)
+                .and_then(|c| observed(&c.name)),
         });
     }
 
@@ -540,6 +571,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: observed_unparsed_timestamp(sbom),
         });
     }
 
@@ -563,6 +596,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -594,6 +629,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
     // Direct-dependency edges whose target is not in the inventory: the
@@ -618,6 +655,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -643,6 +682,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -671,6 +712,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -699,6 +742,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -730,6 +775,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -760,6 +807,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -791,6 +840,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -816,6 +867,8 @@ fn fsct_minimum_expected(
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -840,6 +893,8 @@ fn fsct_minimum_expected(
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -873,6 +928,8 @@ fn fsct_minimum_expected(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: evidence.first_placeholder.as_deref().and_then(observed),
         });
     }
 }
@@ -922,6 +979,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     } else if !tool_creators
         .iter()
@@ -944,6 +1003,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -975,6 +1036,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1005,6 +1068,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1044,6 +1109,8 @@ fn fsct_recommended_practice(
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -1074,6 +1141,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1106,6 +1175,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1133,6 +1204,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1161,6 +1234,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1189,6 +1264,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1219,6 +1296,8 @@ fn fsct_recommended_practice(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 }
@@ -1239,16 +1318,26 @@ fn fsct_aspirational_goals(
     sbom: &NormalizedSbom,
     evidence: &FsctEvidence,
     violations: &mut Vec<Violation>,
+    not_evaluated: &mut NotEvaluated,
 ) {
     let pkg_total = evidence.pkg_total;
+    let cyclonedx = sbom.document.format == SbomFormat::CycloneDx;
+    let spdx2 = is_spdx2(sbom);
+    if cyclonedx {
+        not_evaluated.push("SBOM-FSCT-DYNAMIC-DEPS", CYCLONEDX_NO_DYNAMIC_DEPS);
+        not_evaluated.push("SBOM-FSCT-LICENSE-CONCLUDED", CYCLONEDX_CONCLUDED_NOT_READ);
+    } else {
+        not_evaluated.push("SBOM-FSCT-SBOM-TYPE", SPDX_SBOM_TYPE_NOT_READ);
+    }
+    if spdx2 {
+        not_evaluated.push("SBOM-FSCT-SIGNATURE", SPDX2_NO_SIGNATURE);
+    }
 
     // §2.2.1.3 — SBOM Type declared. Evidence-gated to CycloneDX: only the
     // CycloneDX parser populates lifecycle_phase (metadata.lifecycles);
     // SPDX 2.x's CreatorComment mapping and SPDX 3.0's sbomType are not
     // parsed, so SPDX input must not false-fail (see module docs).
-    if sbom.document.format == SbomFormat::CycloneDx
-        && known_value(sbom.document.lifecycle_phase.as_deref()).is_none()
-    {
+    if cyclonedx && known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::DocumentMetadata,
@@ -1265,6 +1354,8 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1272,7 +1363,7 @@ fn fsct_aspirational_goals(
     // uniquely identified. Evidence-gated to SPDX: dynamic/runtime/provided
     // link relationships are parsed only from SPDX relationships, so a
     // CycloneDX document can never carry the positive signal.
-    if sbom.document.format == SbomFormat::Spdx && !evidence.has_dynamic_edge {
+    if !cyclonedx && !evidence.has_dynamic_edge {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::DependencyInfo,
@@ -1292,6 +1383,8 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1320,13 +1413,14 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
     // …including concluded-license attestation. Evidence-gated to SPDX
     // (PackageLicenseConcluded): the CycloneDX 1.6 licenses[].acknowledgement
     // field is not parsed, so CycloneDX input must not false-fail.
-    if sbom.document.format == SbomFormat::Spdx && pkg_total > 0 && !evidence.has_concluded_license
-    {
+    if !cyclonedx && pkg_total > 0 && !evidence.has_concluded_license {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::LicenseInfo,
@@ -1345,6 +1439,8 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1373,6 +1469,8 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -1384,7 +1482,7 @@ fn fsct_aspirational_goals(
     // SPDX 3 verifiedUsing signature. SPDX 2.x has no in-band signature
     // field, so its sidecar/envelope signatures are unobservable and the
     // check skips it. Until v0.4.0 the check read CycloneDX only.
-    if !is_spdx2(sbom) && !document_signed(sbom) {
+    if !spdx2 && !document_signed(sbom) {
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::IntegrityInfo,
@@ -1402,6 +1500,8 @@ fn fsct_aspirational_goals(
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 }

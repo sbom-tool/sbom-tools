@@ -1509,6 +1509,8 @@ mod tests {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         }
     }
 
@@ -1530,6 +1532,7 @@ mod tests {
             level: ComplianceLevel::NtiaMinimum,
             violations,
             passed: Vec::new(),
+            evaluated: Vec::new(),
             error_count,
             warning_count,
             info_count,

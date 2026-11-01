@@ -16,7 +16,7 @@
 use super::ReportError;
 use crate::quality::{
     Applicability, ComplianceResult, ConformityAssessmentSummary, FindingIdentity, PassedCheck,
-    Violation, finding_id, finding_key, standard_key,
+    RuleEvaluation, Violation, finding_id, finding_key, standard_key,
 };
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -26,8 +26,8 @@ pub const COMPLIANCE_JSON_SCHEMA: &str = "sbom-tools/compliance/v2";
 
 /// Fields of a [`ComplianceResult`]'s serialization that the envelope
 /// renders itself (as `standard`/`name`, `compliant`, `applicable`/
-/// `not_applicable_reason`, `counts`, `violations`, `passed` and
-/// `conformity_summary`) instead of passing them through.
+/// `not_applicable_reason`, `counts`, `violations`, `passed`, `evaluated`
+/// and `conformity_summary`) instead of passing them through.
 const RENDERED_FIELDS: &[&str] = &[
     "level",
     "is_compliant",
@@ -37,6 +37,7 @@ const RENDERED_FIELDS: &[&str] = &[
     "info_count",
     "violations",
     "passed",
+    "evaluated",
     "conformity_summary",
 ];
 
@@ -68,6 +69,10 @@ struct EnvelopeResult<'a> {
     counts: Counts,
     violations: Vec<Identified<'a, Violation>>,
     passed: Vec<Identified<'a, PassedCheck>>,
+    /// The checks the standard did not evaluate, in their own field order;
+    /// omitted when it evaluated them all.
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    evaluated: &'a [RuleEvaluation],
     #[serde(skip_serializing_if = "Option::is_none")]
     conformity_summary: Option<&'a ConformityAssessmentSummary>,
     /// Every other field of the result's serialization, as a JSON value
@@ -197,6 +202,7 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
             .iter()
             .map(|pass| Identified::new(result, pass))
             .collect(),
+        evaluated: &result.evaluated,
         conformity_summary: result.conformity_summary.as_ref(),
         rest,
     })
@@ -214,8 +220,14 @@ mod tests {
             .with_timezone(&chrono::Utc)
     }
 
+    /// `level`'s result for a one-component CycloneDX 1.6 SBOM. Its spec
+    /// version parses, so NTIA evaluates every check and lists none under
+    /// `evaluated`.
     fn check(level: ComplianceLevel) -> ComplianceResult {
-        let mut sbom = NormalizedSbom::new(DocumentMetadata::default());
+        let mut sbom = NormalizedSbom::new(DocumentMetadata {
+            spec_version: "1.6".to_string(),
+            ..DocumentMetadata::default()
+        });
         sbom.add_component(
             Component::new("lodash".to_string(), "lodash-ref".to_string())
                 .with_version("4.17.21".to_string())

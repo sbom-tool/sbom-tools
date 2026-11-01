@@ -647,7 +647,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/ml-kem-768"
+            "componentId": "crypto/algorithm/ml-kem-768",
+            "observed": "ML-KEM-768"
           }
         },
         {
@@ -731,7 +732,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/ml-dsa-65"
+            "componentId": "crypto/algorithm/ml-dsa-65",
+            "observed": "ML-DSA-65"
           }
         },
         {
@@ -773,7 +775,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/slh-dsa-shake-256s"
+            "componentId": "crypto/algorithm/slh-dsa-shake-256s",
+            "observed": "SLH-DSA-SHAKE-256s"
           }
         },
         {
@@ -815,7 +818,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/x25519"
+            "componentId": "crypto/algorithm/x25519",
+            "observed": "ECDH"
           }
         },
         {
@@ -899,7 +903,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/hybrid-kem"
+            "componentId": "crypto/algorithm/hybrid-kem",
+            "observed": "X25519 + ML-KEM-768"
           }
         },
         {
@@ -941,7 +946,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/algorithm/ecdsa-p521"
+            "componentId": "crypto/algorithm/ecdsa-p521",
+            "observed": "ECDSA"
           }
         },
         {
@@ -983,7 +989,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/protocol/tls13-pqc"
+            "componentId": "crypto/protocol/tls13-pqc",
+            "observed": "X25519 + ML-KEM-768, ML-KEM-768"
           }
         },
         {
@@ -1025,7 +1032,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             ],
-            "componentId": "crypto/protocol/tls13-pqc"
+            "componentId": "crypto/protocol/tls13-pqc",
+            "observed": "ECDH"
           }
         },
         {
@@ -1069,7 +1077,8 @@ source: tests/compliance_snapshots.rs
               "https://csrc.nist.gov/projects/post-quantum-cryptography",
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
-            "componentId": "crypto/algorithm/x25519"
+            "componentId": "crypto/algorithm/x25519",
+            "observed": "ECDH"
           }
         },
         {
@@ -1113,7 +1122,8 @@ source: tests/compliance_snapshots.rs
               "https://csrc.nist.gov/projects/post-quantum-cryptography",
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
-            "componentId": "crypto/algorithm/ecdsa-p521"
+            "componentId": "crypto/algorithm/ecdsa-p521",
+            "observed": "ECDSA"
           }
         },
         {
@@ -1155,7 +1165,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://csrc.nist.gov/projects/post-quantum-cryptography"
             ],
-            "componentId": "crypto/protocol/tls13-pqc"
+            "componentId": "crypto/protocol/tls13-pqc",
+            "observed": "ECDH (quantum-vulnerable)"
           }
         }
       ],
@@ -1172,7 +1183,13 @@ source: tests/compliance_snapshots.rs
             "profile": "NIST PQC Readiness",
             "applicable": true,
             "overallScore": 42.0,
-            "compliant": false
+            "compliant": false,
+            "notEvaluated": [
+              {
+                "ruleId": "SBOM-PQC-PROTO-003",
+                "reason": "the federal TLS 1.3 deadline is checked only under --pqc-mode deadline --pqc-profile federal"
+              }
+            ]
           }
         ]
       }

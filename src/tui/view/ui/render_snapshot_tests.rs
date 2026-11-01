@@ -1678,6 +1678,8 @@ fn pqc_cnsa_cell_ignores_non_error_violations() {
                     remediation: None,
                     finding_detail: None,
                     deadline: None,
+                    field: None,
+                    observed: None,
                 }],
             ),
             ComplianceResult::new(ComplianceLevel::NistPqc, vec![]),

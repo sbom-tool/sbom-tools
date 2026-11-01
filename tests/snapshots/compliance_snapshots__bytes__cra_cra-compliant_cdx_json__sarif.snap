@@ -983,7 +983,9 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:cargo/lib-a@2.3.4"
+            "componentId": "pkg:cargo/lib-a@2.3.4",
+            "field": "bom-ref",
+            "observed": "lib-a"
           }
         },
         {
@@ -1025,7 +1027,9 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:cargo/lib-b@0.9.1"
+            "componentId": "pkg:cargo/lib-b@0.9.1",
+            "field": "bom-ref",
+            "observed": "lib-b"
           }
         },
         {
@@ -1064,7 +1068,8 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "observed": "2026-01-15T09:00:00Z"
           }
         },
         {
@@ -1099,7 +1104,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "vulnerabilities[]"
           }
         },
         {
@@ -1136,7 +1142,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "signature"
           }
         },
         {
@@ -1178,7 +1185,9 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:cargo/lib-a@2.3.4"
+            "componentId": "pkg:cargo/lib-a@2.3.4",
+            "field": "bom-ref",
+            "observed": "lib-a"
           }
         },
         {
@@ -1220,7 +1229,9 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "componentId": "pkg:cargo/lib-b@0.9.1"
+            "componentId": "pkg:cargo/lib-b@0.9.1",
+            "field": "bom-ref",
+            "observed": "lib-b"
           }
         },
         {
@@ -1259,7 +1270,8 @@ source: tests/compliance_snapshots.rs
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "observed": "2026-01-15T09:00:00Z"
           }
         },
         {
@@ -1294,7 +1306,8 @@ source: tests/compliance_snapshots.rs
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "field": "vulnerabilities[]"
           }
         },
         {
@@ -1331,7 +1344,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "signature"
           }
         }
       ],
@@ -1342,13 +1356,49 @@ source: tests/compliance_snapshots.rs
             "profile": "EU CRA Phase 2 (2027)",
             "applicable": true,
             "overallScore": 90.0,
-            "compliant": true
+            "compliant": true,
+            "notEvaluated": [
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              }
+            ]
           },
           {
             "profile": "EU CRA Phase 1 (2026)",
             "applicable": true,
             "overallScore": 90.0,
-            "compliant": true
+            "compliant": true,
+            "notEvaluated": [
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              },
+              {
+                "ruleId": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+                "reason": "the SBOM lists no device, firmware or device-driver component"
+              }
+            ]
           }
         ]
       }

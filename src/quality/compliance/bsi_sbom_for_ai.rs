@@ -107,6 +107,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -131,6 +133,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -159,6 +163,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: observed_unparsed_timestamp(sbom),
             });
         }
 
@@ -182,6 +188,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -204,6 +212,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -244,6 +254,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -273,6 +285,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
 
@@ -293,6 +307,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 
@@ -640,6 +656,8 @@ impl ComplianceChecker {
                 remediation: None,
                 finding_detail: None,
                 deadline: None,
+                field: None,
+                observed: None,
             });
         }
     }
@@ -663,6 +681,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
         violations.push(Violation {
             severity: ViolationSeverity::Info,
@@ -679,6 +699,8 @@ impl ComplianceChecker {
             remediation: None,
             finding_detail: None,
             deadline: None,
+            field: None,
+            observed: None,
         });
     }
 }
@@ -750,6 +772,8 @@ fn push_model_finding(
         remediation: None,
         finding_detail: None,
         deadline: None,
+        field: None,
+        observed: None,
     });
 }
 

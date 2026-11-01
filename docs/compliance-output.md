@@ -50,6 +50,7 @@ standards use each one, its references and its remediation; see
 | `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. |
 | `violations` | array | The findings, described below. |
 | `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
+| `evaluated` | array | The checks of the standard that did not run on this SBOM, each `{rule_id, status, reason}`, described [below](#checks-not-evaluated). Absent when every check ran. |
 | `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for `cra` and `cra-phase1` once a product class is pinned by `--cra-product-class` or the sidecar. Never for `oss-steward`: an open-source steward (Art. 24) follows no conformity-assessment procedure. |
 
 A standard that does not apply reports no violation: its verdict is
@@ -161,6 +162,8 @@ identity.
 | `counts` | object | `affected` and `total` components of an aggregate finding. Absent otherwise. |
 | `deadline` | string | `YYYY-MM-DD`. Under `--pqc-mode deadline`, the migration milestone a `cnsa2` or `pqc` finding is judged against: the last day before its severity rises, or, for an error, the last day the algorithm was allowed (see [PQC deadline mode](#pqc-deadline-mode)). Absent in readiness mode and for a finding no schedule dates. |
 | `deadline_source` | string | The schedule that sets `deadline`, e.g. `NIST IR 8547 Table 4`. Present exactly when `deadline` is. |
+| `field` | string | Where the field the rule checks lives in the SBOM's own format, e.g. `components[].supplier.name`. Absent when the rule names no field in that format. See [Field and observed value](#field-and-observed-value). |
+| `observed` | string | The value the check read there, e.g. `NOASSERTION`. Absent when the field is missing or the check reads no single value. See [Field and observed value](#field-and-observed-value). |
 | `requirement` | string | The requirement, as text. |
 | `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. Every standard reports under its own family's ids (`SBOM-NTIA-*` for `ntia`, `SBOM-FDA-*` for `fda`, and the `SBOM-QUALITY-*` rules of the `quality` profiles). Until v0.4.0 the Standard and Comprehensive quality profiles reported their version, timestamp, supplier and dependency checks as `SBOM-NTIA-*`, FDA its timestamp as `SBOM-NTIA-TIMESTAMP`, and `SBOM-FDA-SUPPLIER` named both the device manufacturer and the component supplier (the manufacturer is `SBOM-FDA-MANUFACTURER` now). |
 | `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Every check is its own SARIF rule, so this equals `rule_id` (until v0.4.0 several `rule_id`s shared one). |
@@ -262,6 +265,107 @@ descriptive fields (not `severity`, `category`, `counts`, `remediation` or
 | `rule_id` | string | Stable internal key of a pass-only rule. |
 | `sarif_rule_id` | string | The rule id `--sarif-include-passes` reports this pass under. |
 | `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
+
+## Field and observed value
+
+A violation says where the field it checks lives (`field`) and what the
+check read there (`observed`), so a finding about a placeholder shows the
+placeholder:
+
+```sh
+sbom-tools validate sbom.json --standard ntia -o json |
+  jq -c '.results[].violations[] | {rule_id, component_id, field, observed}'
+```
+
+```json
+{"rule_id":"SBOM-NTIA-SUPPLIER","component_id":"pkg:npm/lib@1.0.0","field":"components[].supplier.name","observed":"NOASSERTION"}
+```
+
+`field` is the rule's field for the document's format, as
+`sbom-tools rules explain` shows it, in the format's JSON shape (also for
+CycloneDX XML): `components[].supplier.name` in CycloneDX,
+`packages[].supplier` in SPDX 2.x, `suppliedBy` in SPDX 3.0. A finding about
+the primary component of a CycloneDX document names the field under
+`metadata.component` (`metadata.component.supplier.name`). A rule whose fix
+is the same in every format, such as an algorithm choice, names no field.
+
+`observed` is set by the checks that read one value:
+
+| Checks | `observed` |
+|---|---|
+| Supplier, producer, author | The value the component or document names, when it does not count (`NOASSERTION`, `TBD`). |
+| Component name, version | The placeholder or empty value read. |
+| Hash | The first digest that does not count, as `<algorithm>:<value>` (`SHA-256:abc`). The message says why it does not count. |
+| Hash algorithm | The algorithms that fall short (`MD5, SHA-1`). |
+| Spec version, format | The version read (`1.3`), or the format and version (`CycloneDX 1.3`). |
+| Element identifier | The `bom-ref`, `SPDXID` or `spdxId` read. |
+| Timestamp | The creation timestamp as written, when it does not parse; for freshness, the timestamp of an SBOM dated in the future or too old. |
+| Contact | The manufacturer email that is no address, or the first contact that reaches nobody (a placeholder, or an address at a documentation domain such as `example.com`). |
+| License | The first license that is no SPDX expression (`bsi`). |
+| Placeholders (`fsct`) | The first ambiguous placeholder (`TBD`, `N/A`) in a version, supplier, license or copyright. |
+| `cnsa2`, `pqc` | The algorithm the check rejected (`RSA-2048`), the protocol and version (`tls 1.0`), the algorithms a protocol offers, or the reference it cannot resolve. |
+| `eucc` | The certificate's valid-until date. |
+
+An observed value is SBOM text. Like `message` and `element`, `-o json` and
+the SARIF properties carry it as read, cut to 200 characters and ending in
+`…` when cut, so treat it as untrusted text: a script that prints it to a CI
+log should neutralize it as sbom-tools does. The text report and the TUI
+clean it where they show it, as the text report cleans the rest of the
+SBOM's text: a line break shows as `\n`, other control and bidi characters
+are removed, and a leading `:` gets a backslash (`\::warning`), so it can
+neither break a terminal nor start a CI workflow command.
+
+## Checks not evaluated
+
+A check that does not run on an SBOM reports nothing, so without more it
+reads like a check that passed. `evaluated` lists such checks, with the
+reason:
+
+```sh
+sbom-tools validate sbom.spdx.json --standard cisa-2026 -o json |
+  jq '.results[].evaluated'
+```
+
+```json
+[
+  {
+    "rule_id": "SBOM-CISA2026-SIGNATURE",
+    "status": "not_evaluated",
+    "reason": "SPDX 2.x cannot carry a document signature"
+  }
+]
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `rule_id` | string | The rule of the check: one of the rules `sbom-tools rules --standard` lists for the standard. |
+| `status` | string | `not_evaluated`. |
+| `reason` | string | Why the check did not run, in sbom-tools' own words. |
+
+A check is listed when it applies to the SBOM but did not run. An entry
+reports no violation and no passed check, and moves no count, score or
+verdict. These checks are skipped today:
+
+| Standard | Rules | Not evaluated when |
+|---|---|---|
+| `cisa-2026` | `SBOM-CISA2026-SIGNATURE`, `-GENERATION-CONTEXT`, `-COVERAGE` | The SBOM is SPDX 2.x, which has no field for a signature, the lifecycle phase or a completeness declaration. |
+| `fsct` | `SBOM-FSCT-SIGNATURE` | The SBOM is SPDX 2.x, which cannot carry a document signature, as for `cisa-2026`. |
+| `fsct` | `SBOM-FSCT-SBOM-TYPE` | The SBOM is SPDX: sbom-tools reads the SBOM type from CycloneDX `metadata.lifecycles` only. |
+| `fsct` | `SBOM-FSCT-DYNAMIC-DEPS`, `SBOM-FSCT-LICENSE-CONCLUDED` | The SBOM is CycloneDX: its dependency graph cannot mark a dependency dynamic, runtime or provided, and sbom-tools reads concluded licenses from SPDX only. |
+| `cra`, `cra-phase1` | `SBOM-CRA-ANNEX-IV`, `SBOM-CRA-ANNEX-VIII` | No product class is pinned (`--cra-product-class`, or `productClass` in the CRA sidecar). |
+| `cra`, `cra-phase1` | The four `SBOM-CRA-PRE-8-RQ-02-*` hardware checks | The SBOM lists no device, firmware or device-driver component. |
+| `pqc` | `SBOM-PQC-PROTO-003` | The run is not `--pqc-mode deadline --pqc-profile federal`. |
+| `ntia`, `fda`, `cra`, `cra-phase1`, `oss-steward` and the quality profiles | `SBOM-<FAMILY>-SPEC-VERSION` | The spec version does not parse, so its range cannot be checked. |
+| `cra`, `cra-phase1`; `cisa-2026`; `eo14028`; `bsi` | `SBOM-CRA-MACHINE-READABLE`; `SBOM-CISA2026-FORMAT`; `SBOM-EO14028-FORMAT`; `SBOM-BSI-TR-03183-2-4` | The spec version does not parse. |
+
+Not listed: a check that ran and found nothing to report, even over no
+entries (a vulnerability check of an SBOM without vulnerabilities), and a
+check of something the document's format does not have at all (an SPDX
+version string or an SPDX 3.0 profile declaration in a CycloneDX document).
+A standard that does not apply lists nothing: `not_applicable_reason` says
+why. `-o sarif` carries the same list in the run properties (see
+[SARIF](#sarif)), and the text report lists it after the findings (see
+[Text report](#text-report)).
 
 ## Finding identity
 
@@ -433,7 +537,8 @@ promises:
 that it is deprecated: a bare result object for one standard, an array of them
 for several, each with `is_compliant`, `level` (e.g. `NtiaMinimum`),
 `error_count`/`warning_count`/`info_count`, `applicability`, `violations`
-(without `finding_id`/`finding_key`) and `conformity_summary` when present.
+(without `finding_id`/`finding_key`), and `conformity_summary` and the
+[checks not evaluated](#checks-not-evaluated) (`evaluated`) when present.
 The v1 layout keeps that shape and predates passed checks, so they do not
 appear in it at all: before v0.4.0 they were Info violations
 (`SBOM-PQC-009`, `SBOM-PQC-010`), and a v1 consumer now sees fewer Info
@@ -549,7 +654,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `runs[0].automationDetails.id` | The analysis category, ending in `/`: `sbom-tools/` and the canonical `--standard` values, sorted and joined by `+` (`sbom-tools/cra+ntia/`), or the value of `--sarif-category`. GitHub code scanning keeps one set of alerts per category. |
 | `runs[0].originalUriBaseIds.SRCROOT` | Declared when the SBOM's URI is relative, which is the default: relative to the repository the SBOM file is in, or to `--sarif-base`. It carries a description only, no absolute URI, so the log names no path on the machine that wrote it. |
 | `runs[0].tool.driver.rules[]` | Exactly the rules of the standards checked: the rules each standard's checks can report, one per check and each once, in `--standard` order and in the order of each standard's list. `sbom-tools rules --standard <std>` prints the same list (see [Rule catalogue](#rule-catalogue)). `diff` and `view` check the SBOM against CRA Phase 2, so they list its rules after their own; `quality` lists the rules of its profile's standard, then the `SBOM-QUALITY-REC-*` rules of the recommendations it reports. `id` is the `rule_id`. Each has `shortDescription`, `fullDescription` (with the standard references), `defaultConfiguration.level`, `help.text` and `help.markdown` (the remediation, where the fix goes in each SBOM format, the references) and, where one is known, `helpUri`: the first reference with a URL, else the standard's own page. A `SBOM-<FAMILY>-GENERAL` fallback rule is listed only in a run that has a finding without a registered rule. |
-| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score)) and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. |
+| `runs[0].properties` | The verdict: `applicable` (with `notApplicableReason` when it is false), `overallScore` (the [score](#score)) and `profile` for one standard; `applicable` and `standards[]`, one summary per standard, for several. `notEvaluated` (in each `standards[]` entry for several standards) lists the [checks not evaluated](#checks-not-evaluated) as `{ruleId, reason}`; it is absent when every check ran. |
 | `results[].ruleId`, `ruleIndex` | The violation's `rule_id` and the index of its rule in `rules[]`. |
 | `results[].kind` | `pass` for a [passed check](#passed-checks), reported only under `--sarif-include-passes`; absent (SARIF's default, `fail`) for a violation. |
 | `results[].level` | `error`, `warning` or `note`, from the violation's severity; `none` for a pass. A pass-only rule's descriptor keeps `defaultConfiguration.level: note`, the lowest level GitHub accepts there. |
@@ -557,7 +662,7 @@ finding keys of their own, scoped `diff`, `view`, `quality` or
 | `results[].locations[0].physicalLocation` | The SBOM file (`artifactLocation.uri`, with `uriBaseId: SRCROOT` when relative) and `region.startLine`: the line of the component's `bom-ref`, `SPDXID`, `spdxId` or `@id`, or, for a finding about the document, the line of the CycloneDX `metadata` or the SPDX creation information. A component whose id the text does not state gets line 1, as does every result for a minified, single-line SBOM. |
 | `results[].locations[0].logicalLocations[0]` | For a finding about a component, `name` (its purl, else its `bom-ref`, `SPDXID` or `spdxId`) and `kind: component`. |
 | `results[].partialFingerprints` | `sbomToolsFinding/v1`: the full SHA-256 of the `finding_key` (64 hex digits). `primaryLocationLineHash`: its first 16 hex digits and `:1`. |
-| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, `affected` and `total` when the violation counts items, and `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding. |
+| `results[].properties` | `findingKey` and `findingId` as in `-o json`, then `standardIds`, `standardHelpUris`, `componentId` for a component finding, `affected` and `total` when the violation counts items, `deadline` and `deadlineSource` when [deadline mode](#pqc-deadline-mode) dates the finding, and `field` and `observed` as in `-o json` (see [Field and observed value](#field-and-observed-value)). |
 
 Both fingerprints depend on the finding identity alone, never on a line
 number or the message, so moving, reformatting or reordering the SBOM keeps
@@ -694,6 +799,33 @@ takes a `RuleCatalogFilter` (all rules, or those of some levels or
 standards), `rule_catalog_entry` looks up one rule, `rules_for_level` gives a
 level's list, and `sbom_tools::reports::generate_rule_catalog_json` writes
 the document.
+
+## Text report
+
+Without `-o`, `validate` prints a text report, one block per finding:
+
+```text
+[ERROR] SBOM-FDA-HASH | Integrity Information | FDA: Cryptographic hash for integrity | lodash
+  Component 'lodash' has no valid cryptographic hash: SHA-256 digest is not hexadecimal
+  observed: "SHA-256:abc123def456..." in packages[].checksums[]
+  fix: Give every component a cryptographic hash using SHA-256 or stronger …
+```
+
+The first line names the severity, the rule (the `rule_id` of `-o json`,
+the `ruleId` of `-o sarif`), the category, the requirement and the element.
+The message follows, then an `observed:` line when the finding read a value,
+a `deadline:` line when [deadline mode](#pqc-deadline-mode) dates it, and the
+`fix:` line. After the findings, the checks the standard did not evaluate
+follow, one line per reason:
+
+```text
+Not evaluated:
+  SBOM-CISA2026-SIGNATURE: SPDX 2.x cannot carry a document signature
+```
+
+SBOM text in every line is cleaned, the observed value included, as
+described under [Field and observed value](#field-and-observed-value). The
+text layout may change in any release; scripts should read `-o json`.
 
 ## Exit codes
 
