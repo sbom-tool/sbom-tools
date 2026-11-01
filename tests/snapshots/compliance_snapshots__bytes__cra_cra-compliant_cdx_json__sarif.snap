@@ -1142,7 +1142,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "signature"
           }
         },
         {
@@ -1343,7 +1344,8 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
-            ]
+            ],
+            "field": "signature"
           }
         }
       ],

@@ -274,7 +274,7 @@ source: tests/compliance_snapshots.rs
         {
           "rule_id": "SBOM-FSCT-SIGNATURE",
           "status": "not_evaluated",
-          "reason": "the check reads only a CycloneDX JSF signature (the profile's evidence gate)"
+          "reason": "SPDX 2.x cannot carry a document signature"
         }
       ]
     }

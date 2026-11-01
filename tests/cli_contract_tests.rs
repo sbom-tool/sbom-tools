@@ -1910,8 +1910,8 @@ fn validate_text_names_rules_and_lists_checks_not_evaluated() {
     }
     assert!(
         text.contains(
-            "\nNot evaluated:\n  SBOM-CISA2026-SIGNATURE: SPDX 2.x has no field for an \
-             in-document signature\n"
+            "\nNot evaluated:\n  SBOM-CISA2026-SIGNATURE: SPDX 2.x cannot carry a document \
+             signature\n"
         ),
         "{text}"
     );

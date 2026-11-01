@@ -575,7 +575,7 @@ mod tests {
         assert!(
             text.ends_with(
                 "\n\nNot evaluated:\n  \
-                 SBOM-CISA2026-SIGNATURE: SPDX 2.x has no field for an in-document signature\n  \
+                 SBOM-CISA2026-SIGNATURE: SPDX 2.x cannot carry a document signature\n  \
                  SBOM-CISA2026-GENERATION-CONTEXT: SPDX 2.x has no field for the lifecycle phase\n  \
                  SBOM-CISA2026-COVERAGE: SPDX 2.x cannot declare the completeness of its inventory"
             ),

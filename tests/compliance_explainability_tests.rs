@@ -312,6 +312,61 @@ fn observed_records_the_value_a_check_read() {
     );
 }
 
+/// A timestamp check records the creation timestamp the document wrote but
+/// that does not parse, and a contact check the contact that reaches nobody.
+#[test]
+fn observed_records_the_unparsed_timestamp_and_the_unreachable_contact() {
+    let mut document = cyclonedx(json!([lib()]));
+    document["metadata"]["timestamp"] = json!("last Tuesday");
+    let sbom = parse(&document);
+    assert!(!sbom.document.has_known_timestamp());
+    for (level, rule) in [
+        (ComplianceLevel::NtiaMinimum, "SBOM-NTIA-TIMESTAMP"),
+        (ComplianceLevel::FdaMedicalDevice, "SBOM-FDA-TIMESTAMP"),
+        (ComplianceLevel::Comprehensive, "SBOM-QUALITY-TIMESTAMP"),
+        (ComplianceLevel::Cisa2026, "SBOM-CISA2026-TIMESTAMP"),
+        (ComplianceLevel::Eo14028, "SBOM-EO14028-TIMESTAMP"),
+        (ComplianceLevel::BsiTr03183_2, "SBOM-BSI-TR-03183-2-5-2"),
+        (ComplianceLevel::Fsct, "SBOM-FSCT-TIMESTAMP"),
+        (ComplianceLevel::PciDss632, "SBOM-PCI-6-3-2-FRESHNESS"),
+        (ComplianceLevel::CraPhase2, "SBOM-CRA-SBOM-FRESHNESS"),
+    ] {
+        let result = checker(level).check(&sbom);
+        assert_eq!(
+            finding(&result, rule, None).observed.as_deref(),
+            Some("last Tuesday"),
+            "{level:?}"
+        );
+    }
+
+    // A creator email at a documentation domain reaches nobody.
+    let spdx_doc = json!({
+        "spdxVersion": "SPDX-2.3", "dataLicense": "CC0-1.0", "SPDXID": "SPDXRef-DOCUMENT",
+        "name": "app", "documentNamespace": "https://example.com/app-1.0.0",
+        "creationInfo": {"created": "2026-01-01T00:00:00Z",
+                         "creators": ["Organization: Acme (security@example.com)"]},
+        "packages": [{"SPDXID": "SPDXRef-app", "name": "app", "versionInfo": "1.0.0",
+                      "downloadLocation": "NOASSERTION"}]
+    });
+    let fda = checker(ComplianceLevel::FdaMedicalDevice).check(&parse(&spdx_doc));
+    assert_eq!(
+        finding(&fda, "SBOM-FDA-CONTACT", None).observed.as_deref(),
+        Some("security@example.com")
+    );
+
+    // A security contact on the product that reaches nobody.
+    let mut contact = cyclonedx(json!([lib()]));
+    contact["metadata"]["component"]["externalReferences"] =
+        json!([{"type": "security-contact", "url": "mailto:security@example.org"}]);
+    let cra = checker(ComplianceLevel::CraPhase2).check(&parse(&contact));
+    assert_eq!(
+        finding(&cra, "SBOM-CRA-ART-13-17-CONTACT", None)
+            .observed
+            .as_deref(),
+        Some("mailto:security@example.org")
+    );
+}
+
 /// Crypto checks record the algorithm or protocol version they rejected.
 #[test]
 fn observed_records_the_rejected_algorithm_and_protocol() {
@@ -399,7 +454,7 @@ fn cisa_2026_lists_the_checks_spdx_2_cannot_carry() {
     assert_eq!(signature.status, EvaluationStatus::NotEvaluated);
     assert_eq!(
         signature.reason,
-        "SPDX 2.x has no field for an in-document signature"
+        "SPDX 2.x cannot carry a document signature"
     );
 
     // CycloneDX carries all three: they run.
@@ -422,6 +477,14 @@ fn fsct_lists_its_evidence_gated_checks() {
         not_evaluated(&spdx),
         ["SBOM-FSCT-SBOM-TYPE", "SBOM-FSCT-SIGNATURE"]
     );
+    // The signature check reads SPDX 3, as CISA 2026's does; SPDX 2.x
+    // cannot carry a signature, and both say so alike.
+    assert_eq!(
+        spdx.evaluated[1].reason,
+        "SPDX 2.x cannot carry a document signature"
+    );
+    let spdx3 = checker(ComplianceLevel::Fsct).check(&fixture("spdx3/minimal.spdx3.json"));
+    assert_eq!(not_evaluated(&spdx3), ["SBOM-FSCT-SBOM-TYPE"]);
 }
 
 /// The CRA checks that depend on the product class run once a class is
@@ -602,7 +665,7 @@ fn the_json_envelope_carries_field_observed_and_evaluated() {
     assert_eq!(
         cisa["evaluated"][0],
         json!({"rule_id": "SBOM-CISA2026-SIGNATURE", "status": "not_evaluated",
-               "reason": "SPDX 2.x has no field for an in-document signature"})
+               "reason": "SPDX 2.x cannot carry a document signature"})
     );
     let fda = &document["results"][1];
     assert!(fda.get("evaluated").is_none(), "{fda}");
@@ -632,7 +695,7 @@ fn sarif_carries_field_observed_and_not_evaluated() {
     assert_eq!(
         run["properties"]["notEvaluated"][0],
         json!({"ruleId": "SBOM-CISA2026-SIGNATURE",
-               "reason": "SPDX 2.x has no field for an in-document signature"})
+               "reason": "SPDX 2.x cannot carry a document signature"})
     );
     // Every rule not evaluated is declared in the run's rules.
     let declared: Vec<&str> = run["tool"]["driver"]["rules"]
