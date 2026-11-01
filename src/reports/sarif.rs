@@ -1332,6 +1332,7 @@ fn sarif_standard_label(kind: crate::quality::StandardKind) -> &'static str {
         StandardKind::CisaMinimum2026 => "CISA-2026",
         StandardKind::PciDss4 => "PCI-DSS-v4",
         StandardKind::CisaFsct => "CISA-FSCT-3e",
+        StandardKind::EnisaSbomAdvisory => "ENISA-SBOM-TA",
         StandardKind::Other => "Other",
     }
 }

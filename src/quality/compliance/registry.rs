@@ -227,7 +227,16 @@ const REMEDIATION_BSIAI_DATASETS: &str = "Declare the BSI/G7 SBOM-for-AI Dataset
 const REMEDIATION_BSIAI_GENERAL: &str = "Declare the BSI/G7 SBOM-for-AI minimum elements: document author, data-format name + version, timestamp, generation tool, and signature; the primary AI system, its producer, and its data-flow/usage; runtime/framework infrastructure links; and AI-specific security controls / exploitability references where they can be expressed.";
 
 /// EUCC Substantial remediation, shared by the EUCC evidence rules.
-const REMEDIATION_EUCC: &str = "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.";
+const REMEDIATION_EUCC: &str = "Provide the Common Criteria evidence Implementing Regulation (EU) 2024/482 (EUCC, as amended by Implementing Regulations (EU) 2024/3144 and 2025/2462) expects alongside the SBOM: set euccProtectionProfileId (Protection Profile), euccTargetOfEvaluation (ToE), euccItsefIdentifier (evaluating ITSEF) and euccValidUntil (certificate validity) in the CRA sidecar.";
+
+/// The EUCC regulation as the EUCC rules cite it: Implementing Regulation
+/// (EU) 2024/482 with its two amendments (consolidated text of 2025-12-29).
+const EUCC_AS_AMENDED: &str = "Reg. (EU) 2024/482 as amended by (EU) 2024/3144 and (EU) 2025/2462";
+
+/// Where the CNSA rules cite CNSA 2.0: CNSSP 15, the CNSS policy that
+/// requires the suite for US national security systems. No issuance date:
+/// none could be confirmed from the policy itself (docs/STANDARDS_VERSIONS.md).
+const CNSA2_CNSSP15: &str = "CNSSP 15";
 
 /// CNSA 2.0 allowlist remediation, shared by the CNSA rules.
 const REMEDIATION_CNSA2: &str = "Migrate to the CNSA 2.0 suite: AES-256, SHA-384/SHA-512, ML-KEM-1024, ML-DSA-87, or SP 800-208 stateful hash-based signatures (LMS/XMSS/HSS); use TLS 1.3 for network protocols. Unclassifiable algorithms cannot be verified — declare an algorithmFamily, OID, or recognizable name.";
@@ -1370,6 +1379,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
     const CRA: K = K::CraArticle;
     const ANNEX: K = K::CraAnnex;
     const PREN: K = K::Pren40000_1_3;
+    const ENISA: K = K::EnisaSbomAdvisory;
     let meta = match rule_id {
         // ---- CRA Articles ------------------------------------------------
         "SBOM-CRA-ART-13-2" => RuleMeta {
@@ -1390,7 +1400,11 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraSbomFreshness",
             short_description: "CRA Art. 13(7) / Annex I Part II (1): SBOM freshness — timely regeneration after changes",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(CRA, "Art. 13(7)"), (ANNEX, "Annex I Part II (1)")],
+            refs: &[
+                (CRA, "Art. 13(7)"),
+                (ANNEX, "Annex I Part II (1)"),
+                (ENISA, "§3.2"),
+            ],
             remediation: "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
             advice: None,
         },
@@ -1403,7 +1417,11 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraMachineReadableFormat",
             short_description: "CRA Annex I Part II (1): SBOM must be in a commonly used, machine-readable format (CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+)",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(ANNEX, "Annex I Part II (1)"), (PREN, "PRE-7-RQ-04")],
+            refs: &[
+                (ANNEX, "Annex I Part II (1)"),
+                (PREN, "PRE-7-RQ-04"),
+                (ENISA, "§2.1.2"),
+            ],
             remediation: "Ensure the SBOM is produced in CycloneDX 1.4+ (JSON or XML), SPDX 2.3+ (JSON or tag-value), or SPDX 3.0+ (JSON-LD). Older format versions may not be recognized as machine-readable under CRA Annex I Part II (1).",
             advice: None,
         },
@@ -1415,7 +1433,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraLicensedComponentTracking",
             short_description: "CRA Art. 13(5): Third-party due diligence — license information for all components",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(CRA, "Art. 13(5)")],
+            refs: &[(CRA, "Art. 13(5)"), (ENISA, "§2.1.1")],
             remediation: "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components.",
             advice: Some(&ADVICE_LICENSE),
         },
@@ -1581,7 +1599,11 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentVersion",
             short_description: "CRA Annex I Part II (1): Component version identification",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I Part II (1)"), (PREN, "PRE-7-RQ-06")],
+            refs: &[
+                (ANNEX, "Annex I Part II (1)"),
+                (PREN, "PRE-7-RQ-06"),
+                (ENISA, "§2.1.1"),
+            ],
             remediation: "Every component must have a version string. Use the actual release version (e.g., '1.2.3'), not a range or placeholder.",
             advice: Some(&ADVICE_VERSION),
         },
@@ -1590,7 +1612,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraStewardComponentSupplier",
             short_description: "CRA Art. 24: Component supplier identification (open-source steward SBOM floor)",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(CRA, "Art. 24")],
+            refs: &[(CRA, "Art. 24"), (ENISA, "§2.1.1")],
             remediation: "Identify each component's supplier as part of the Art. 24 steward SBOM floor.",
             advice: Some(&ADVICE_PRODUCER),
         },
@@ -1624,7 +1646,11 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentSupplier",
             short_description: "CRA Annex I Part II (1): Component supplier identification",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(ANNEX, "Annex I Part II (1)"), (PREN, "PRE-7-RQ-03")],
+            refs: &[
+                (ANNEX, "Annex I Part II (1)"),
+                (PREN, "PRE-7-RQ-03"),
+                (ENISA, "§2.1.1"),
+            ],
             remediation: "Identify each component's supplier; placeholders such as NOASSERTION do not count.",
             advice: Some(&ADVICE_PRODUCER),
         },
@@ -1695,7 +1721,12 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentIdentifier",
             short_description: "CRA Annex I: Unique identifier (PURL, CPE, SWHID or SWID) on every component",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I"), (PREN, "PRE-7-RQ-07")],
+            refs: &[
+                (ANNEX, "Annex I"),
+                (PREN, "PRE-7-RQ-07"),
+                (ENISA, "§2.1.1"),
+                (ENISA, "§3.2"),
+            ],
             remediation: "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21).",
             advice: Some(&ADVICE_IDENTIFIER),
         },
@@ -1704,7 +1735,11 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraPrimaryTraceability",
             short_description: "CRA Annex I Part II (1): Primary product component traceable across updates by a PURL or CPE",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(ANNEX, "Annex I Part II"), (PREN, "PRE-7-RQ-07")],
+            refs: &[
+                (ANNEX, "Annex I Part II"),
+                (PREN, "PRE-7-RQ-07"),
+                (ENISA, "§3.2"),
+            ],
             remediation: "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check.",
             advice: Some(&ADVICE_PRIMARY_IDENTIFIER),
         },
@@ -1713,7 +1748,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraInventory",
             short_description: "CRA Annex I Part II (1): SBOM inventories the product's software components",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I Part II (1)")],
+            refs: &[(ANNEX, "Annex I Part II (1)"), (ENISA, "§2.1")],
             remediation: REMEDIATION_INVENTORY,
             advice: Some(&ADVICE_INVENTORY),
         },
@@ -1726,6 +1761,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (ANNEX, "Annex I Part II"),
                 (PREN, "PRE-7-RQ-01"),
                 (PREN, "PRE-7-RQ-03"),
+                (ENISA, "§2.1.1"),
             ],
             // Emitted only by the direct-dependency supplier check in cra.rs
             // (mandatory); the guidance must talk about suppliers, not
@@ -1744,6 +1780,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (ANNEX, "Annex I Part II"),
                 (PREN, "PRE-7-RQ-01"),
                 (PREN, "PRE-7-RQ-03"),
+                (ENISA, "§2.1.1"),
             ],
             remediation: "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03).",
             advice: Some(&ADVICE_PRODUCER),
@@ -1753,7 +1790,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentHash",
             short_description: "CRA Annex I Part I (2)(f): Component hashes (SHA-256 or stronger) for integrity verification",
             default_severity: ViolationSeverity::Info,
-            refs: &[(ANNEX, "Annex I Part I (2)(f)")],
+            refs: &[(ANNEX, "Annex I Part I (2)(f)"), (ENISA, "§2.1.1")],
             remediation: "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification.",
             advice: Some(&ADVICE_HASH),
         },
@@ -1762,7 +1799,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraDependencyRelationships",
             short_description: "CRA Annex I: Dependency relationships connect the primary component to its dependencies",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I")],
+            refs: &[(ANNEX, "Annex I"), (ENISA, "§2.1.1")],
             remediation: "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
             advice: Some(&ADVICE_DEPENDENCIES),
         },
@@ -1804,7 +1841,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraDocumentIntegrity",
             short_description: "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature",
             default_severity: ViolationSeverity::Info,
-            refs: &[(ANNEX, "Annex I Part I (2)(f)")],
+            refs: &[(ANNEX, "Annex I Part I (2)(f)"), (ENISA, "§2.2.1")],
             remediation: "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.",
             advice: Some(&ADVICE_SERIAL),
         },
@@ -1922,7 +1959,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraSbomCreator",
             short_description: "CRA readiness: SBOM creator identified (person, organization or tool)",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I Part II (1)")],
+            refs: &[(ANNEX, "Annex I Part II (1)"), (ENISA, "§2.1.1")],
             remediation: REMEDIATION_CREATOR,
             advice: Some(&ADVICE_CREATORS),
         },
@@ -1931,7 +1968,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraDocumentIdentifier",
             short_description: "CRA readiness: SBOM carries a unique document identifier",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(ANNEX, "Annex I Part II (1)")],
+            refs: &[(ANNEX, "Annex I Part II (1)"), (ENISA, "§2.1.1")],
             remediation: REMEDIATION_SERIAL,
             advice: Some(&ADVICE_SERIAL),
         },
@@ -1940,7 +1977,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "CraComponentName",
             short_description: "CRA readiness: Every component has a name",
             default_severity: ViolationSeverity::Error,
-            refs: &[(ANNEX, "Annex I Part II (1)")],
+            refs: &[(ANNEX, "Annex I Part II (1)"), (ENISA, "§2.1.1")],
             remediation: REMEDIATION_COMPONENT_NAME,
             advice: Some(&ADVICE_NAME),
         },
@@ -2079,7 +2116,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-PP" => RuleMeta {
             sarif_id: "SBOM-EUCC-PP",
             name: "EuccProtectionProfile",
-            short_description: "EUCC (Reg. (EU) 2024/482): Common Criteria Protection Profile reference — sidecar eucc_protection_profile_id",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): Common Criteria Protection Profile reference — sidecar eucc_protection_profile_id",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eucc, "Protection Profile")],
             remediation: REMEDIATION_EUCC,
@@ -2088,7 +2125,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-TOE" => RuleMeta {
             sarif_id: "SBOM-EUCC-TOE",
             name: "EuccTargetOfEvaluation",
-            short_description: "EUCC (Reg. (EU) 2024/482): Target of Evaluation reference — sidecar eucc_target_of_evaluation",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): Target of Evaluation reference — sidecar eucc_target_of_evaluation",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eucc, "ToE")],
             remediation: REMEDIATION_EUCC,
@@ -2097,7 +2134,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-ITSEF" => RuleMeta {
             sarif_id: "SBOM-EUCC-ITSEF",
             name: "EuccItsefIdentifier",
-            short_description: "EUCC (Reg. (EU) 2024/482): ITSEF (IT Security Evaluation Facility) identifier — sidecar eucc_itsef_identifier",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): ITSEF (IT Security Evaluation Facility) identifier — sidecar eucc_itsef_identifier",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eucc, "ITSEF")],
             remediation: REMEDIATION_EUCC,
@@ -2106,7 +2143,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-VALIDITY" => RuleMeta {
             sarif_id: "SBOM-EUCC-VALIDITY",
             name: "EuccCertificateValidity",
-            short_description: "EUCC (Reg. (EU) 2024/482): certificate valid-until date present, not expired, not near expiry — sidecar eucc_valid_until",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): certificate valid-until date present, not expired, not near expiry — sidecar eucc_valid_until",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::Eucc, "Certificate validity")],
             remediation: REMEDIATION_EUCC,
@@ -2115,7 +2152,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-CERTREF" => RuleMeta {
             sarif_id: "SBOM-EUCC-CERTREF",
             name: "EuccCertificationReference",
-            short_description: "EUCC (Reg. (EU) 2024/482): Certification/Attestation external reference to an EUCC certificate (recommended)",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): Certification/Attestation external reference to an EUCC certificate (recommended)",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::Eucc, "Certification reference")],
             remediation: "Reference the EUCC certificate from the SBOM itself (recommended alongside the sidecar evidence).",
@@ -2126,9 +2163,9 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         "SBOM-EUCC-GENERAL" => RuleMeta {
             sarif_id: "SBOM-EUCC-GENERAL",
             name: "EuccGeneralRequirement",
-            short_description: "EUCC (Reg. (EU) 2024/482): general SBOM evidence requirement",
+            short_description: "EUCC (Reg. (EU) 2024/482, as amended): general SBOM evidence requirement",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::Eucc, "Reg. (EU) 2024/482")],
+            refs: &[(K::Eucc, EUCC_AS_AMENDED)],
             remediation: REMEDIATION_EUCC,
             advice: None,
         },
@@ -3168,7 +3205,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2CryptoInventory",
             short_description: "CNSA 2.0: cryptographic inventory (CBOM) with evaluable assets required — compliance cannot be verified without one",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3177,7 +3214,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2SymmetricAlgorithm",
             short_description: "CNSA 2.0: symmetric encryption must be AES-256",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3186,7 +3223,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2HashAlgorithm",
             short_description: "CNSA 2.0: hashing must be SHA-384 or SHA-512",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3195,7 +3232,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2KeyEstablishment",
             short_description: "CNSA 2.0: key establishment must be ML-KEM-1024",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3204,7 +3241,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2SignatureAlgorithm",
             short_description: "CNSA 2.0: digital signatures must be ML-DSA-87 or SP 800-208 stateful hash-based signatures",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3213,7 +3250,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2QuantumVulnerable",
             short_description: "CNSA 2.0: quantum-vulnerable classical algorithm must migrate to the CNSA 2.0 suite",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3222,7 +3259,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2QuantumSecurityLevel",
             short_description: "CNSA 2.0: declared quantum security level below Level 5",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3233,7 +3270,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2BrokenAlgorithm",
             short_description: "CNSA 2.0: broken legacy algorithm (SHA-1, MD5, DES, RC4, …) in use",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3244,7 +3281,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2UnapprovedAlgorithm",
             short_description: "CNSA 2.0: recognized algorithm that is not on the CNSA 2.0 allowlist",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3255,7 +3292,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2UnclassifiableAlgorithm",
             short_description: "CNSA 2.0: algorithm cannot be classified, so it cannot be shown to be on the allowlist",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3264,7 +3301,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2CertificateSignature",
             short_description: "CNSA 2.0: certificate signature algorithm must be CNSA 2.0 approved",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3276,7 +3313,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2CertificateUnverifiable",
             short_description: "CNSA 2.0: certificate signature algorithm cannot be resolved, so it cannot be shown to be on the allowlist",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3286,7 +3323,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2ProtocolVersion",
             short_description: "CNSA 2.0: network protocols must use TLS 1.3",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3297,7 +3334,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2ProtocolAlgorithms",
             short_description: "CNSA 2.0: protocol cipher suites / IKEv2 transforms must use CNSA 2.0 algorithms",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3309,7 +3346,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2ProtocolUnverifiable",
             short_description: "CNSA 2.0: protocol names no algorithm the classifier can identify, so it cannot be shown to be on the allowlist",
             default_severity: ViolationSeverity::Error,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -3320,7 +3357,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             name: "Cnsa2GeneralRequirement",
             short_description: "CNSA 2.0: general algorithm-suite requirement",
             default_severity: ViolationSeverity::Warning,
-            refs: &[(K::Cnsa2, "CNSA 2.0")],
+            refs: &[(K::Cnsa2, CNSA2_CNSSP15)],
             remediation: REMEDIATION_CNSA2,
             advice: None,
         },
@@ -4874,6 +4911,51 @@ pub const FSCT_SARIF_RULE_IDS: &[&str] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The ENISA SBOM advisory is non-binding guidance on SBOM content: only
+    /// CRA rules cite it, and always after their CRA and prEN references, so
+    /// a rule that cites the regulation keeps linking it as its SARIF
+    /// helpUri.
+    #[test]
+    fn enisa_advisory_follows_the_cra_references() {
+        let mut citing = Vec::new();
+        for id in all_rule_ids() {
+            let refs = rule_meta(id).expect("listed id resolves").refs;
+            let Some(first) = refs
+                .iter()
+                .position(|(kind, _)| *kind == StandardKind::EnisaSbomAdvisory)
+            else {
+                continue;
+            };
+            assert!(id.starts_with("SBOM-CRA-"), "{id} is no CRA rule");
+            assert!(
+                refs[first..]
+                    .iter()
+                    .all(|(kind, _)| *kind == StandardKind::EnisaSbomAdvisory),
+                "{id}: the ENISA advisory must come after the other references"
+            );
+            citing.push(*id);
+        }
+        for id in [
+            "SBOM-CRA-COMPONENT-VERSION",
+            "SBOM-CRA-COMPONENT-SUPPLIER",
+            "SBOM-CRA-ANNEX-I-IDENTIFIER",
+            "SBOM-CRA-MACHINE-READABLE",
+            "SBOM-CRA-DOC-INTEGRITY",
+        ] {
+            assert!(citing.contains(&id), "{id} cites the ENISA advisory");
+        }
+    }
+
+    /// CNSA 2.0 is cited through CNSSP 15, the policy that requires it, on
+    /// every CNSA rule.
+    #[test]
+    fn cnsa_rules_cite_cnssp_15() {
+        for id in CNSA2_SARIF_RULE_IDS {
+            let refs = rule_meta(id).expect("listed id resolves").refs;
+            assert_eq!(refs, &[(StandardKind::Cnsa2, CNSA2_CNSSP15)], "{id}");
+        }
+    }
 
     /// Pass-only rules are registered, keep the `Info` default the SARIF
     /// catalogue declares as `note`, and share their SARIF identity with no

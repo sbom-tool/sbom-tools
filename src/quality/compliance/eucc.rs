@@ -1,4 +1,6 @@
-//! EUCC Substantial (Reg. (EU) 2024/482) reference-only profile checks.
+//! EUCC Substantial reference-only profile checks: Implementing Regulation
+//! (EU) 2024/482 as amended by Implementing Regulations (EU) 2024/3144 and
+//! 2025/2462 (consolidated text of 2025-12-29).
 
 use super::ssdf::{cdxa_note, standard_references_eucc};
 use super::*;

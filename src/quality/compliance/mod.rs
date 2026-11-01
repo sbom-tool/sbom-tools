@@ -123,7 +123,8 @@ pub enum ComplianceLevel {
     NistSsdf,
     /// Executive Order 14028 Section 4 — Enhancing Software Supply Chain Security
     Eo14028,
-    /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0
+    /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0,
+    /// which CNSSP 15 requires for US national security systems
     Cnsa2,
     /// NIST PQC Readiness — Post-Quantum Cryptography migration (IR 8547 + FIPS 203/204/205)
     NistPqc,
@@ -136,14 +137,15 @@ pub enum ComplianceLevel {
     /// and CVD policy are still required; manufacturer email, EU DoC, and
     /// conformity-assessment-module gating are NOT.
     CraOssSteward,
-    /// EUCC Substantial assurance level (Reg. (EU) 2024/482) — reference-only
-    /// profile for Annex IV products. Verifies that the SBOM/sidecar carries
+    /// EUCC Substantial assurance level (Implementing Regulation (EU)
+    /// 2024/482, as amended by Implementing Regulations (EU) 2024/3144 and
+    /// 2025/2462) — reference-only profile for Annex IV products. Verifies that the SBOM/sidecar carries
     /// a Common-Criteria Protection-Profile reference, Target-of-Evaluation
     /// reference, ITSEF identifier, and a valid-until date. Does not perform
     /// a Common-Criteria evaluation itself.
     EuccSubstantial,
-    /// EU AI Act (Regulation (EU) 2024/1689) Annex IV technical-documentation
-    /// READINESS. Maps the Annex IV documentation obligations for high-risk AI
+    /// EU AI Act (Regulation (EU) 2024/1689, as amended by Regulation (EU)
+    /// 2026/1744) Annex IV technical-documentation READINESS. Maps the Annex IV documentation obligations for high-risk AI
     /// systems onto the AI-BOM metadata sbom-tools already parses (model card,
     /// training-data characteristics, validation/testing metrics, limitations,
     /// energy disclosure). This is a documentation-readiness assessment, not a
@@ -263,7 +265,7 @@ impl ComplianceLevel {
                 "Executive Order 14028 §4 SBOM practice (not a federal mandate since OMB M-26-05 rescinded M-22-18 and M-23-16) — machine-readable SBOM, auto-generation, supply chain security"
             }
             Self::Cnsa2 => {
-                "CNSA 2.0 — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5"
+                "CNSA 2.0 (required by CNSSP 15) — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5"
             }
             Self::NistPqc => {
                 "NIST PQC — quantum-vulnerable algorithm detection, FIPS 203/204/205, SP 800-131A"
@@ -275,10 +277,10 @@ impl ComplianceLevel {
                 "CRA Article 24 — Open-source software steward (lighter than full manufacturer obligations): SBOM + CVD policy + vuln-handling required, no DoC/module/manufacturer-email enforcement"
             }
             Self::EuccSubstantial => {
-                "EUCC Substantial (Reg. (EU) 2024/482) — reference-only check for Common-Criteria Protection Profile, Target of Evaluation, ITSEF, and certificate valid-until date"
+                "EUCC Substantial (Implementing Reg. (EU) 2024/482, as amended by 2024/3144 and 2025/2462) — reference-only check for Common-Criteria Protection Profile, Target of Evaluation, ITSEF, and certificate valid-until date"
             }
             Self::EuAiAct => {
-                "EU AI Act (Reg. (EU) 2024/1689) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
+                "EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
             }
             Self::BsiSbomForAi => {
                 "BSI/G7 SBOM-for-AI Minimum Elements (joint G7 final, May 2026) READINESS — scores an AI-BOM element-by-element across the Metadata, System-Level, Models, Datasets, Infrastructure, and Security clusters (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
@@ -372,16 +374,20 @@ pub enum StandardKind {
     NtiaMinimum,
     /// CSAF v2.0 / ISO/IEC 20153:2025 advisory format
     Csaf2,
-    /// CNSA 2.0 (NSA Commercial National Security Algorithm Suite)
+    /// CNSA 2.0 (NSA Commercial National Security Algorithm Suite), which
+    /// CNSSP 15 requires for US national security systems
     Cnsa2,
     /// NIST Post-Quantum Cryptography (FIPS 203/204/205, SP 800-131A)
     NistPqc,
-    /// EU AI Act (Regulation (EU) 2024/1689) — Annex IV technical documentation
+    /// EU AI Act (Regulation (EU) 2024/1689, as amended by Regulation (EU)
+    /// 2026/1744) — Annex IV technical documentation
     EuAiAct,
     /// BSI/G7 "SBOM for AI — Minimum Elements" (joint G7 final, May 2026)
     BsiSbomForAi,
     /// EUCC — European cybersecurity certification scheme on Common Criteria,
-    /// Implementing Regulation (EU) 2024/482
+    /// Implementing Regulation (EU) 2024/482 as amended by Implementing
+    /// Regulations (EU) 2024/3144 and 2025/2462 (consolidated text of
+    /// 2025-12-29)
     Eucc,
     /// "2026 Minimum Elements for a Software Bill of Materials (SBOM)" v2.1
     /// (CISA/NSA/FBI et al., July 29, 2026)
@@ -391,6 +397,10 @@ pub enum StandardKind {
     PciDss4,
     /// CISA "Framing Software Component Transparency", Third Edition (2024)
     CisaFsct,
+    /// "ENISA Technical Advisory for Software Bill of Materials", v1.10
+    /// (2026-10-22). Non-binding guidance; cited on the CRA SBOM-content
+    /// rules it gives guidance for.
+    EnisaSbomAdvisory,
     /// Other / unrecognised standard
     Other,
 }
@@ -417,6 +427,7 @@ impl StandardKind {
             Self::CisaMinimum2026 => "CISA 2026",
             Self::PciDss4 => "PCI DSS v4",
             Self::CisaFsct => "CISA FSCT 3e",
+            Self::EnisaSbomAdvisory => "ENISA SBOM TA",
             Self::Other => "Other",
         }
     }
@@ -500,13 +511,17 @@ impl StandardKind {
             }
             // CSAF v2.0 OASIS standard.
             Self::Csaf2 => "https://docs.oasis-open.org/csaf/csaf/v2.0/csaf-v2.0.html",
-            // CNSA 2.0 fact sheet.
+            // CNSA 2.0 fact sheet (NSA Cybersecurity Advisory), the list of
+            // algorithms the checks apply. CNSSP 15, which requires the
+            // suite, is cited in the reference id.
             Self::Cnsa2 => {
                 "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
             // NIST PQC project landing page.
             Self::NistPqc => "https://csrc.nist.gov/projects/post-quantum-cryptography",
-            // EU AI Act Regulation (EU) 2024/1689 — EUR-Lex ELI is the canonical home.
+            // EU AI Act Regulation (EU) 2024/1689 — EUR-Lex ELI is the
+            // canonical home; its page links the text as amended by
+            // Regulation (EU) 2026/1744.
             Self::EuAiAct => "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
             // BSI/G7 "SBOM for AI — Minimum Elements" — final joint G7
             // guidance (2026-05-12); CISA hosts the stable resource page.
@@ -514,7 +529,9 @@ impl StandardKind {
                 "https://www.cisa.gov/resources-tools/resources/software-bill-materials-ai-minimum-elements"
             }
             // EUCC Implementing Regulation (EU) 2024/482 — EUR-Lex ELI is the
-            // canonical home.
+            // canonical home; its page links the consolidated text with the
+            // amendments of Implementing Regulations (EU) 2024/3144 and
+            // 2025/2462.
             Self::Eucc => "https://eur-lex.europa.eu/eli/reg_impl/2024/482/oj/eng",
             // 2026 Minimum Elements for an SBOM — CISA's resource page is the
             // stable handle (the PDF path under /sites/default/files churns).
@@ -528,6 +545,11 @@ impl StandardKind {
             // resource page rather than the version-pinned PDF path.
             Self::CisaFsct => {
                 "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            }
+            // ENISA Technical Advisory for SBOM — the publication page, which
+            // serves the current version's PDF.
+            Self::EnisaSbomAdvisory => {
+                "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             }
             Self::Other => return None,
         };

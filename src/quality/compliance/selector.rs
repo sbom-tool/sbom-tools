@@ -38,7 +38,8 @@ pub enum StandardSelector {
     /// practice (no federal mandate: OMB M-26-05 rescinded M-22-18)
     #[value(name = "eo14028", alias = "eo-14028", alias = "eo_14028")]
     Eo14028,
-    /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0
+    /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0,
+    /// required for US national security systems by CNSSP 15
     #[value(name = "cnsa2", alias = "cnsa-2", alias = "cnsa_2", alias = "cnsa2.0")]
     Cnsa2,
     /// NIST PQC readiness (IR 8547 + FIPS 203/204/205)
@@ -61,10 +62,12 @@ pub enum StandardSelector {
         alias = "art24"
     )]
     OssSteward,
-    /// EUCC Substantial assurance level (Reg. (EU) 2024/482), reference-only
+    /// EUCC Substantial assurance level (Reg. (EU) 2024/482 as amended by
+    /// 2024/3144 and 2025/2462), reference-only
     #[value(name = "eucc", alias = "eucc-substantial", alias = "common-criteria")]
     Eucc,
-    /// EU AI Act (Reg. (EU) 2024/1689) Annex IV documentation readiness
+    /// EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744)
+    /// Annex IV documentation readiness
     #[value(
         name = "ai-act",
         alias = "ai_act",

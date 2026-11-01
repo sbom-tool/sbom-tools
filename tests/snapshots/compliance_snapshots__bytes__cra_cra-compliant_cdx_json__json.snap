@@ -62,6 +62,11 @@ source: tests/compliance_snapshots.rs
             "standard": "CraAnnex",
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+          },
+          {
+            "standard": "EnisaSbomAdvisory",
+            "id": "§3.2",
+            "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
           }
         ],
         "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
@@ -174,6 +179,11 @@ source: tests/compliance_snapshots.rs
             "standard": "CraAnnex",
             "id": "Annex I Part II (1)",
             "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+          },
+          {
+            "standard": "EnisaSbomAdvisory",
+            "id": "§3.2",
+            "help_uri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
           }
         ],
         "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",

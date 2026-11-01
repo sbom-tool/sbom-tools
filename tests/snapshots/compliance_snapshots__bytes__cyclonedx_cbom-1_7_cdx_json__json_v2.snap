@@ -39,7 +39,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -60,7 +60,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -81,7 +81,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -102,7 +102,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -123,7 +123,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -144,7 +144,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -165,7 +165,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -186,7 +186,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -207,7 +207,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -229,7 +229,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],
@@ -251,7 +251,7 @@ source: tests/compliance_snapshots.rs
           "standard_refs": [
             {
               "standard": "Cnsa2",
-              "id": "CNSA 2.0",
+              "id": "CNSSP 15",
               "help_uri": "https://media.defense.gov/2022/Sep/07/2003071834/-1/-1/0/CSA_CNSA_2.0_ALGORITHMS_.PDF"
             }
           ],

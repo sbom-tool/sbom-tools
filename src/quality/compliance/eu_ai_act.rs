@@ -1,5 +1,8 @@
-//! EU AI Act (Regulation (EU) 2024/1689) Annex IV technical-documentation
-//! READINESS checks.
+//! EU AI Act (Regulation (EU) 2024/1689, as amended by Regulation (EU)
+//! 2026/1744, the Digital Omnibus on AI) Annex IV technical-documentation
+//! READINESS checks. The amendment moved when the high-risk obligations
+//! apply; the profile checks documentation only and has no dates, so it
+//! checks the same either way (see docs/STANDARDS_VERSIONS.md).
 //!
 //! Annex IV of the AI Act enumerates the technical documentation a provider of
 //! a high-risk AI system must draw up. Several of those items are, in practice,
