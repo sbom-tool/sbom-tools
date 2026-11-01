@@ -28,6 +28,7 @@
 //! and document names, versions) is Markdown-escaped; see `markup_text`.
 //! Property values are plain strings and are only normalized.
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::audit::{self, AssessedSbom, AuditField, AuditValue, OscalPart, instant_text, token};
@@ -38,7 +39,8 @@ use crate::quality::{
 };
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use serde_json::{Value, json};
+use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
+use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
 /// The OSCAL release the document conforms to, declared in
@@ -90,44 +92,98 @@ pub fn generate_assessment_results_at(
     build_assessment_results(results, Some(assessed), as_of, &mut uuids)
 }
 
-fn build_assessment_results(
+fn build_assessment_results<U: UuidSource>(
     results: &[ComplianceResult],
     assessed: Option<&AssessedSbom<'_>>,
     timestamp: DateTime<Utc>,
-    uuids: &mut impl UuidSource,
+    uuids: &mut U,
 ) -> Result<String> {
     let collected = instant_text(timestamp);
     let subjects = Subjects::new(assessed, uuids);
-    let mut result_entries: Vec<Value> = results
-        .iter()
-        .map(|result| standard_result(result, &collected, &subjects, uuids))
-        .collect();
-    // OSCAL requires at least one result entry; keep the historical empty
-    // assessment shape when no standard was checked at all.
-    if result_entries.is_empty() {
-        result_entries.push(json!({
-            "uuid": uuids.next(),
-            "title": "sbom-tools validation assessment",
-            "description": "Validation results derived only from the supplied SBOM.",
-            "start": collected,
-            "reviewed-controls": reviewed_controls(),
-        }));
-    }
+    let document = Document {
+        results,
+        collected: &collected,
+        subjects: &subjects,
+        uuids: RefCell::new(uuids),
+    };
+    Ok(serde_json::to_string_pretty(&document)?)
+}
 
-    Ok(serde_json::to_string_pretty(&json!({
-        "assessment-results": {
-            "uuid": uuids.next(),
-            "metadata": {
+/// The assessment-results document, written as it is built: one standard's
+/// result entry at a time is built, written and dropped. Its objects are
+/// written with their keys in the order a JSON object value sorts them, and
+/// the UUIDs are drawn in document order (every result entry's, then the
+/// document's), so the bytes are those of the document built whole.
+struct Document<'a, U> {
+    results: &'a [ComplianceResult],
+    collected: &'a str,
+    subjects: &'a Subjects<'a>,
+    uuids: RefCell<&'a mut U>,
+}
+
+impl<U: UuidSource> Serialize for Document<'_, U> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut document = serializer.serialize_map(Some(1))?;
+        document.serialize_entry("assessment-results", &AssessmentResults(self))?;
+        document.end()
+    }
+}
+
+/// The document's `assessment-results` object.
+struct AssessmentResults<'d, 'a, U>(&'d Document<'a, U>);
+
+impl<U: UuidSource> Serialize for AssessmentResults<'_, '_, U> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let document = self.0;
+        let mut object = serializer.serialize_map(Some(5))?;
+        object.serialize_entry(
+            "back-matter",
+            &json!({ "resources": [document.subjects.document_resource()] }),
+        )?;
+        object.serialize_entry("import-ap", &json!({ "href": ASSESSMENT_PLAN_URN }))?;
+        object.serialize_entry(
+            "metadata",
+            &json!({
                 "title": "sbom-tools validation assessment results",
-                "last-modified": collected,
+                "last-modified": document.collected,
                 "version": env!("CARGO_PKG_VERSION"),
                 "oscal-version": OSCAL_VERSION
-            },
-            "import-ap": { "href": ASSESSMENT_PLAN_URN },
-            "results": result_entries,
-            "back-matter": { "resources": [subjects.document_resource()] }
+            }),
+        )?;
+        object.serialize_entry("results", &ResultEntries(document))?;
+        // Drawn once every result entry has drawn its UUIDs.
+        object.serialize_entry("uuid", &document.uuids.borrow_mut().next())?;
+        object.end()
+    }
+}
+
+/// The document's `results`: one entry per checked standard, each built just
+/// before it is written.
+struct ResultEntries<'d, 'a, U>(&'d Document<'a, U>);
+
+impl<U: UuidSource> Serialize for ResultEntries<'_, '_, U> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let document = self.0;
+        let mut uuids = document.uuids.borrow_mut();
+        let mut entries = serializer.serialize_seq(Some(document.results.len().max(1)))?;
+        // OSCAL requires at least one result entry; keep the historical
+        // empty assessment shape when no standard was checked at all.
+        if document.results.is_empty() {
+            entries.serialize_element(&json!({
+                "uuid": uuids.next(),
+                "title": "sbom-tools validation assessment",
+                "description": "Validation results derived only from the supplied SBOM.",
+                "start": document.collected,
+                "reviewed-controls": reviewed_controls(),
+            }))?;
         }
-    }))?)
+        for result in document.results {
+            let entry =
+                standard_result(result, document.collected, document.subjects, &mut **uuids);
+            entries.serialize_element(&entry)?;
+        }
+        entries.end()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -254,10 +310,11 @@ impl Objective {
 /// [`Objective::Satisfied`].
 struct Check<'a> {
     rule_id: &'static str,
-    /// What the check found, as plain text that embeds SBOM values
-    /// (component names, versions, field contents); see
-    /// [`Check::description`].
-    message: &'a str,
+    /// The observation's and the finding's `description` (markup): what the
+    /// check found, its message, Markdown-escaped as a whole because SBOM
+    /// values (component names, versions, field contents) sit inside it. Its
+    /// own wording renders unchanged; only the raw JSON gains backslashes.
+    description: String,
     objective: Objective,
     /// Canonical id of the component the check is about; `None` for the
     /// document and for aggregate checks.
@@ -279,7 +336,7 @@ impl<'a> Check<'a> {
     fn violation(level: ComplianceLevel, violation: &'a Violation) -> Self {
         Self {
             rule_id: violation.rule_id,
-            message: &violation.message,
+            description: markup_text(&violation.message).unwrap_or_default(),
             objective: Objective::NotSatisfied,
             component_id: violation.component_id.as_deref(),
             label: violation.element.as_deref(),
@@ -292,19 +349,12 @@ impl<'a> Check<'a> {
     fn pass(level: ComplianceLevel, pass: &'a PassedCheck) -> Self {
         Self {
             rule_id: pass.rule_id,
-            message: &pass.message,
+            description: markup_text(&pass.message).unwrap_or_default(),
             objective: Objective::Satisfied,
             component_id: pass.component_id.as_deref(),
             label: pass.element.as_deref(),
             fields: audit::pass_fields(level, pass),
         }
-    }
-
-    /// The observation's and the finding's `description` (markup): the
-    /// message, Markdown-escaped as a whole because SBOM values sit inside it.
-    /// Its own wording renders unchanged; only the raw JSON gains backslashes.
-    fn description(&self) -> String {
-        markup_text(self.message).unwrap_or_default()
     }
 
     /// What the audit fields of `part` (the finding, or its observation)
@@ -498,7 +548,13 @@ fn standard_result(
     });
     set_array(&mut entry, "props", props);
     if !components.definitions.is_empty() {
-        entry["local-definitions"] = json!({ "components": components.definitions });
+        // Moved in: `json!` would copy every definition.
+        let mut local = Map::new();
+        local.insert(
+            "components".to_string(),
+            Value::Array(components.definitions),
+        );
+        entry["local-definitions"] = Value::Object(local);
     }
     set_array(&mut entry, "observations", observations);
     set_array(&mut entry, "findings", findings);
@@ -538,12 +594,13 @@ fn observation(check: Check<'_>, uuid: Uuid, collected: &str, subjects: Vec<Valu
     let mut observation = json!({
         "uuid": uuid,
         "title": check.rule_id,
-        "description": check.description(),
         "methods": ["EXAMINE"],
         "types": [check.objective.observation_type()],
-        "subjects": subjects,
         "collected": collected,
     });
+    // Moved in: `json!` would copy them.
+    observation["description"] = Value::String(check.description);
+    observation["subjects"] = Value::Array(subjects);
     set_array(&mut observation, "props", props);
     set_array(&mut observation, "links", links);
     observation
@@ -561,7 +618,7 @@ fn finding(check: &Check<'_>, observation_uuid: Uuid, uuid: Uuid) -> Value {
     let mut finding = json!({
         "uuid": uuid,
         "title": check.rule_id,
-        "description": check.description(),
+        "description": check.description,
         "target": {
             "type": "objective-id",
             "target-id": check.rule_id.to_ascii_lowercase(),
@@ -1644,7 +1701,7 @@ mod tests {
         let subjects_index = Subjects::new(Some(&assessed), &mut uuids);
         let check = Check {
             rule_id: "SBOM-NTIA-SUPPLIER",
-            message: "Component 'lodash' names its supplier",
+            description: "Component 'lodash' names its supplier".to_string(),
             objective: Objective::Satisfied,
             component_id: Some("pkg:npm/lodash@4.17.21"),
             label: Some("lodash"),
