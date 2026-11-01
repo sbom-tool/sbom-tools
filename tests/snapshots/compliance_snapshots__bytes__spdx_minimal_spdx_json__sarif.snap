@@ -211,6 +211,24 @@ source: tests/compliance_snapshots.rs
               }
             },
             {
+              "id": "SBOM-NTIA-DUPLICATE-COMPONENT",
+              "name": "NtiaDuplicateComponent",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: Every component is listed once"
+              },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Every component is listed once. References: NTIA Minimum Elements."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\nWhere the fix goes:\n- CycloneDX: list each component once in components[], under a bom-ref of its own.\n- SPDX 2.x: list each package once in packages[], under an SPDXID of its own.\n- SPDX 3.0: describe each package in one software_Package element, under an spdxId of its own.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\n**Where the fix goes**\n\n- **CycloneDX:** list each component once in components\\[\\], under a bom-ref of its own.\n- **SPDX 2.x:** list each package once in packages\\[\\], under an SPDXID of its own.\n- **SPDX 3.0:** describe each package in one software\\_Package element, under an spdxId of its own.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
+            },
+            {
               "id": "SBOM-FSCT-AUTHOR",
               "name": "FsctAuthorName",
               "shortDescription": {
@@ -814,7 +832,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DIRECT-DEPS",
-          "ruleIndex": 16,
+          "ruleIndex": 17,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.3.3] No direct dependencies of the Primary Component are identified, and no completeness declaration covers their absence — identify all static direct dependencies or declare the enumeration's completeness (Requirement: CISA FSCT 3e §2.2.2/§2.3.3: Direct dependencies (Minimum Expected)) [Element: unknown]"
@@ -851,7 +869,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-SUPPLIER",
-          "ruleIndex": 21,
+          "ruleIndex": 22,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.3] 2/2 component(s) declare no Supplier Name (an explicit 'unknown' is a permitted last resort; silent absence is not): lodash, express (Requirement: CISA FSCT 3e §2.2.2.3: Supplier Name (Minimum Expected)) [Element: unknown]"
@@ -888,7 +906,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-HASH",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express (Requirement: CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)) [Element: unknown]"
@@ -925,7 +943,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-IDENTIFIER-MULTI",
-          "ruleIndex": 23,
+          "ruleIndex": 24,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.4] 2/2 component(s) declare fewer than two globally unique identifier kinds (PURL/CPE/SWHID/SWID) — list as many as are available (heuristic threshold; profile policy): lodash, express (Requirement: CISA FSCT 3e §2.2.2.4: Unique Identifier multiplicity (Recommended Practice)) [Element: unknown]"
@@ -962,7 +980,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-HASH-PRIMARY-SHA2",
-          "ruleIndex": 25,
+          "ruleIndex": 26,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal (Requirement: CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)) [Element: lodash]"
@@ -1004,7 +1022,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-COMPLETENESS",
-          "ruleIndex": 28,
+          "ruleIndex": 29,
           "level": "warning",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.6.4] No relationship-completeness assertion (Unknown/None/Partial/Known) is recorded (CycloneDX: compositions.aggregate) (Requirement: CISA FSCT 3e §2.2.2.6.4: Relationship completeness (supplemental, optional)) [Element: unknown]"
@@ -1041,7 +1059,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-FSCT-DYNAMIC-DEPS",
-          "ruleIndex": 18,
+          "ruleIndex": 19,
           "level": "note",
           "message": {
             "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2/§2.2.2.6] No dynamic, runtime, or provided dependency relationships are identified (DYNAMIC_LINK / RUNTIME_DEPENDENCY_OF / PROVIDED_DEPENDENCY_OF) — readiness note for the aspirational goal of identifying dynamic and remote dependencies (Requirement: CISA FSCT 3e §2.2.2/§2.2.2.6: Dynamic and remote dependencies (Aspirational Goal)) [Element: unknown]"

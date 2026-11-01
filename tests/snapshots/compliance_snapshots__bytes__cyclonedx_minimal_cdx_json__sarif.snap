@@ -211,6 +211,24 @@ source: tests/compliance_snapshots.rs
               }
             },
             {
+              "id": "SBOM-NTIA-DUPLICATE-COMPONENT",
+              "name": "NtiaDuplicateComponent",
+              "shortDescription": {
+                "text": "NTIA Minimum Elements: Every component is listed once"
+              },
+              "fullDescription": {
+                "text": "NTIA Minimum Elements: Every component is listed once. References: NTIA Minimum Elements."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+              "help": {
+                "text": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\nWhere the fix goes:\n- CycloneDX: list each component once in components[], under a bom-ref of its own.\n- SPDX 2.x: list each package once in packages[], under an SPDXID of its own.\n- SPDX 3.0: describe each package in one software_Package element, under an spdxId of its own.\n\nReferences:\n- NTIA Minimum Elements (https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom)",
+                "markdown": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\n**Where the fix goes**\n\n- **CycloneDX:** list each component once in components\\[\\], under a bom-ref of its own.\n- **SPDX 2.x:** list each package once in packages\\[\\], under an SPDXID of its own.\n- **SPDX 3.0:** describe each package in one software\\_Package element, under an spdxId of its own.\n\n**References**\n\n- [NTIA Minimum Elements](<https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom>)"
+              }
+            },
+            {
               "id": "SBOM-CISA2026-AUTHOR",
               "name": "Cisa2026SbomAuthor",
               "shortDescription": {
@@ -802,7 +820,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-AUTHOR",
-          "ruleIndex": 11,
+          "ruleIndex": 12,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself) (Requirement: CISA 2026 Minimum Elements: SBOM Author) [Element: unknown]"
@@ -837,7 +855,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-SIGNATURE",
-          "ruleIndex": 12,
+          "ruleIndex": 13,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check (Requirement: CISA 2026 Minimum Elements: SBOM Author Signature) [Element: unknown]"
@@ -872,7 +890,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-GENERATION-CONTEXT",
-          "ruleIndex": 14,
+          "ruleIndex": 15,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field) (Requirement: CISA 2026 Minimum Elements: SBOM Generation Context) [Element: unknown]"
@@ -907,7 +925,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
-          "ruleIndex": 19,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: test-app]"
@@ -949,7 +967,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-IDENTIFIER",
-          "ruleIndex": 23,
+          "ruleIndex": 24,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify) (Requirement: CISA 2026 Minimum Elements: Component Identifiers) [Element: test-app]"
@@ -991,7 +1009,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: test-app]"
@@ -1033,7 +1051,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-LICENSE",
-          "ruleIndex": 26,
+          "ruleIndex": 27,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author) (Requirement: CISA 2026 Minimum Elements: Component License) [Element: test-app]"
@@ -1075,7 +1093,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
-          "ruleIndex": 19,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: lodash]"
@@ -1117,7 +1135,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: lodash]"
@@ -1159,7 +1177,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-PRODUCER",
-          "ruleIndex": 19,
+          "ruleIndex": 20,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance (Requirement: CISA 2026 Minimum Elements: Component Producer) [Element: express]"
@@ -1201,7 +1219,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-HASH",
-          "ruleIndex": 24,
+          "ruleIndex": 25,
           "level": "error",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author) (Requirement: CISA 2026 Minimum Elements: Component Hash Value) [Element: express]"
@@ -1243,7 +1261,7 @@ source: tests/compliance_snapshots.rs
         },
         {
           "ruleId": "SBOM-CISA2026-COVERAGE",
-          "ruleIndex": 28,
+          "ruleIndex": 29,
           "level": "warning",
           "message": {
             "text": "CISA 2026 Minimum Elements: [CISA 2026] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld (Requirement: CISA 2026 Minimum Elements: Coverage / Explicitly Identifying Unknown Information) [Element: unknown]"

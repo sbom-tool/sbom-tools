@@ -823,6 +823,24 @@ source: tests/compliance_snapshots.rs
               }
             },
             {
+              "id": "SBOM-CRA-DUPLICATE-COMPONENT",
+              "name": "CraDuplicateComponent",
+              "shortDescription": {
+                "text": "CRA readiness: Every component is listed once"
+              },
+              "fullDescription": {
+                "text": "CRA readiness: Every component is listed once. References: CRA Annex I Part II (1)."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+              "help": {
+                "text": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\nWhere the fix goes:\n- CycloneDX: list each component once in components[], under a bom-ref of its own.\n- SPDX 2.x: list each package once in packages[], under an SPDXID of its own.\n- SPDX 3.0: describe each package in one software_Package element, under an spdxId of its own.\n\nReferences:\n- CRA Annex I Part II (1) (https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng)",
+                "markdown": "List each component once. Entries that share an identifier (purl, CPE, SWHID or SWID, else the element identifier) and a name and version describe one component: sbom-tools merges them, so the verdict does not depend on their order, and names the fields on which they disagree. Fix the generator so that it writes one entry per component.\n\n**Where the fix goes**\n\n- **CycloneDX:** list each component once in components\\[\\], under a bom-ref of its own.\n- **SPDX 2.x:** list each package once in packages\\[\\], under an SPDXID of its own.\n- **SPDX 3.0:** describe each package in one software\\_Package element, under an spdxId of its own.\n\n**References**\n\n- [CRA Annex I Part II (1)](<https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng>)"
+              }
+            },
+            {
               "id": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
               "name": "CraHardwareProducer",
               "shortDescription": {
