@@ -12,14 +12,14 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-core@2.3.0
   E SBOM-NTIA-SUPPLIER  urn:spdx:pkg:lib-utils
-[CraPhase1] NON-COMPLIANT · E1 W10 I4
+[CraPhase1] NON-COMPLIANT · E1 W9 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  urn:spdx:pkg:lib-utils
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/lib-core@2.3.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:lib-utils
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-VULN-METADATA-PROFILE  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
   W SBOM-CRA-ART-14-ENISA  -
@@ -28,16 +28,16 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/lib-core@2.3.0
   W SBOM-CRA-COMPONENT-SUPPLIER  urn:spdx:pkg:lib-utils
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E2 W12 I6
+[CraPhase2] NON-COMPLIANT · E2 W11 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/lib-core@2.3.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:lib-utils
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-METADATA-PROFILE  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -49,40 +49,41 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-SBOM-FRESHNESS  -
   W SBOM-CRA-VULN-METADATA  pkg:cargo/lib-core@2.3.0
-[FdaMedicalDevice] NON-COMPLIANT · E4 W3 I0
+[FdaMedicalDevice] NON-COMPLIANT · E5 W2 I0
+  E SBOM-FDA-HASH  pkg:cargo/lib-core@2.3.0
   E SBOM-FDA-HASH  urn:spdx:pkg:lib-utils
   E SBOM-FDA-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-FDA-SUPPLIER  pkg:cargo/lib-core@2.3.0
   E SBOM-FDA-SUPPLIER  urn:spdx:pkg:lib-utils
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
-[NistSsdf] compliant · E0 W3 I1
+[NistSsdf] NON-COMPLIANT · E1 W2 I1
+  E SBOM-SSDF-PS2  - (2/3)
   I SBOM-SSDF-PO3  -
-  W SBOM-SSDF-PS2  - (1/3)
   W SBOM-SSDF-PS3  - (2/3)
   W SBOM-SSDF-RV1  - (1/3)
 [Eo14028] NON-COMPLIANT · E2 W2 I0
   E SBOM-EO14028-IDENTIFIER  - (1/3)
   E SBOM-EO14028-SUPPLIER  - (2/3)
   W SBOM-EO14028-DISCLOSURE  -
-  W SBOM-EO14028-INTEGRITY  - (1/3)
+  W SBOM-EO14028-INTEGRITY  - (2/3)
 [Cnsa2] NON-COMPLIANT · E1 W0 I0
   E SBOM-CNSA2-000  -
 [NistPqc] NON-COMPLIANT · E1 W0 I0
   E SBOM-PQC-000  -
 [BsiTr03183_2] NON-COMPLIANT · E3 W5 I0
   E SBOM-BSI-TR-03183-2-5-1  -
-  E SBOM-BSI-TR-03183-2-5-4  - (1/3)
+  E SBOM-BSI-TR-03183-2-5-4  - (2/3)
   E SBOM-BSI-TR-03183-2-LICENSE  - (1/3)
   W SBOM-BSI-TR-03183-2-3-1  - (1/4)
   W SBOM-BSI-TR-03183-2-5-2-4  - (1/3)
   W SBOM-BSI-TR-03183-2-5-4-MISSING  - (1/3)
   W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
   W SBOM-BSI-TR-03183-2-CREATOR  - (2/3)
-[CraOssSteward] NON-COMPLIANT · E2 W3 I1
+[CraOssSteward] NON-COMPLIANT · E2 W3 I2
   E SBOM-CRA-ANNEX-I-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-CRA-ART-24  -
+  I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/lib-core@2.3.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  urn:spdx:pkg:lib-utils
   W SBOM-CRA-ART-24-SUPPLIER  pkg:cargo/lib-core@2.3.0
   W SBOM-CRA-ART-24-SUPPLIER  urn:spdx:pkg:lib-utils
@@ -95,8 +96,9 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-EUCC-CERTREF  -
 [EuAiAct] not applicable · E0 W0 I0
 [BsiSbomForAi] not applicable · E0 W0 I0
-[Cisa2026] NON-COMPLIANT · E6 W3 I0
+[Cisa2026] NON-COMPLIANT · E7 W3 I0
   E SBOM-CISA2026-AUTHOR  -
+  E SBOM-CISA2026-HASH  pkg:cargo/lib-core@2.3.0
   E SBOM-CISA2026-HASH  urn:spdx:pkg:lib-utils
   E SBOM-CISA2026-IDENTIFIER  urn:spdx:pkg:lib-utils
   E SBOM-CISA2026-LICENSE  urn:spdx:pkg:lib-utils
@@ -113,7 +115,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-PCI-6-3-2-SUPPLIER  urn:spdx:pkg:lib-utils
 [Fsct] NON-COMPLIANT · E4 W5 I3
   E SBOM-FSCT-AUTHOR  -
-  E SBOM-FSCT-HASH  - (1/3)
+  E SBOM-FSCT-HASH  - (2/3)
   E SBOM-FSCT-IDENTIFIER  - (1/3)
   E SBOM-FSCT-SUPPLIER  - (2/3)
   I SBOM-FSCT-COPYRIGHT-ALL  - (2/3)
@@ -124,9 +126,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (2/3)
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
-[Comprehensive] NON-COMPLIANT · E2 W3 I0
+[Comprehensive] NON-COMPLIANT · E2 W4 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/lib-core@2.3.0
   E SBOM-NTIA-SUPPLIER  urn:spdx:pkg:lib-utils
+  W SBOM-QUALITY-HASH  pkg:cargo/lib-core@2.3.0
   W SBOM-QUALITY-HASH  urn:spdx:pkg:lib-utils
   W SBOM-QUALITY-IDENTIFIER  urn:spdx:pkg:lib-utils
   W SBOM-QUALITY-LICENSE  urn:spdx:pkg:lib-utils

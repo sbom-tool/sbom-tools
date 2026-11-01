@@ -634,6 +634,9 @@ fn spdx_relationship_type(rel: &DependencyType) -> Option<&'static str> {
 
 /// Record canonical-model data with no SPDX 2.3 home, for the report.
 fn note_unmappable(sbom: &NormalizedSbom, report: &mut FidelityReport) {
+    if sbom.document.supplier.is_some() {
+        report.dropped("metadata.supplier (no SPDX 2.3 document-level supplier)");
+    }
     for component in sbom.components.values() {
         for hash in &component.hashes {
             if spdx_algorithm(&hash.algorithm).is_none() {

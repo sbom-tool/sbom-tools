@@ -60,10 +60,13 @@ pub use selector::StandardSelector;
 // (quality/metrics.rs) classifies vendor components with the same
 // sentinel-aware producer test the checks use.
 pub(crate) use shared::has_known_producer;
+// The same metric counts only plausible digests, as every hash rule does.
+pub(crate) use shared::plausible_digest;
 use shared::{
-    ValueState, creator_identified, future_timestamp_violation, has_known_license, has_known_value,
-    inventory_absent_violation, is_declared_unknown, is_placeholder, is_valid_email_format,
-    known_component_name, known_value, manufacturer_scope_components, package_components,
+    ValueState, creator_identified, digest_problems, future_timestamp_violation, has_known_license,
+    has_known_value, invalid_digest_note, inventory_absent_violation, is_declared_unknown,
+    is_placeholder, is_valid_email_format, known_component_name, known_value,
+    manufacturer_identified, manufacturer_reference, name_with_digest_problems, package_components,
     truncate_list, value_state,
 };
 

@@ -104,10 +104,10 @@ source: tests/compliance_snapshots.rs
       {
         "severity": "Error",
         "category": "IntegrityInfo",
-        "message": "[CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express",
+        "message": "[CISA FSCT 3e §2.2.2.5] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express",
         "element": null,
         "counts": {
-          "affected": 1,
+          "affected": 2,
           "total": 2
         },
         "requirement": "CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)",
@@ -143,6 +143,25 @@ source: tests/compliance_snapshots.rs
           }
         ],
         "remediation": "List as many globally unique identifiers as are available for the component. Heuristic: the >=2-distinct-identifier-kinds (PURL/CPE/SWHID/SWID) threshold is profile policy — 'as available' is unverifiable from the document alone. SPDX 2.x: add a packages[].externalRefs[] entry with referenceCategory PACKAGE-MANAGER, referenceType purl and a pkg: locator (or a SECURITY cpe23Type, or a PERSISTENT-ID swh entry).",
+        "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+      },
+      {
+        "severity": "Warning",
+        "category": "IntegrityInfo",
+        "message": "[CISA FSCT 3e §2.2.2.5] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal",
+        "element": "lodash",
+        "component_id": "pkg:npm/lodash@4.17.21",
+        "requirement": "CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)",
+        "rule_id": "SBOM-FSCT-HASH-PRIMARY-SHA2",
+        "sarif_rule_id": "SBOM-FSCT-HASH-PRIMARY-SHA2",
+        "standard_refs": [
+          {
+            "standard": "CisaFsct",
+            "id": "§2.2.2.5",
+            "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+          }
+        ],
+        "remediation": "Provide at least one hash of the Primary Component, and use the cryptographically secure SHA-2 family (SHA-256 and higher) for hashed components; wherever less-secure hashes (MD5/SHA1) appear, add an additional cryptographically secure hash. SPDX 2.x: add packages[].checksums[] entries with algorithm SHA256, SHA384 or SHA512 and the checksumValue (PackageChecksum).",
         "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       },
       {
@@ -193,7 +212,7 @@ source: tests/compliance_snapshots.rs
       }
     ],
     "error_count": 3,
-    "warning_count": 2,
+    "warning_count": 3,
     "info_count": 1,
     "applicability": {
       "status": "applicable"

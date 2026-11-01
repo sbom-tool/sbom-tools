@@ -162,11 +162,12 @@ impl std::fmt::Debug for StreamingConfig {
 pub enum ParseEvent {
     /// Document metadata has been parsed.
     ///
-    /// Carries `primary_component_id`/`extensions` alongside the document so
-    /// a consumer reconstructing a full `NormalizedSbom` from the event
-    /// stream (see [`StreamingIterator::collect_sbom`]) does not silently
-    /// lose them — both live on `NormalizedSbom` itself, not on
-    /// `DocumentMetadata`, and previously had no event to travel in at all.
+    /// Carries `primary_component_id`, `described_root_ids` and `extensions`
+    /// alongside the document so a consumer reconstructing a full
+    /// `NormalizedSbom` from the event stream (see
+    /// [`StreamingIterator::collect_sbom`]) does not silently lose them —
+    /// they live on `NormalizedSbom` itself, not on `DocumentMetadata`, and
+    /// previously had no event to travel in at all.
     /// Boxed to keep this variant from dominating `ParseEvent`'s size.
     Metadata(Box<ParsedMetadata>),
     /// A component has been parsed
@@ -182,6 +183,9 @@ pub enum ParseEvent {
 pub struct ParsedMetadata {
     pub document: DocumentMetadata,
     pub primary_component_id: Option<CanonicalId>,
+    /// The other described components (see
+    /// [`NormalizedSbom::described_root_ids`]).
+    pub described_root_ids: Vec<CanonicalId>,
     pub extensions: FormatExtensions,
 }
 
@@ -305,6 +309,7 @@ impl StreamingIterator {
     pub fn collect_sbom(&mut self) -> Result<NormalizedSbom, ParseError> {
         let mut metadata: Option<DocumentMetadata> = None;
         let mut primary_component_id: Option<CanonicalId> = None;
+        let mut described_root_ids: Vec<CanonicalId> = Vec::new();
         let mut extensions: Option<FormatExtensions> = None;
         let mut components = Vec::new();
         let mut edges = Vec::new();
@@ -314,6 +319,7 @@ impl StreamingIterator {
                 Ok(ParseEvent::Metadata(meta)) => {
                     metadata = Some(meta.document);
                     primary_component_id = meta.primary_component_id;
+                    described_root_ids = meta.described_root_ids;
                     extensions = Some(meta.extensions);
                 }
                 Ok(ParseEvent::Component(comp)) => components.push(*comp),
@@ -326,6 +332,7 @@ impl StreamingIterator {
         let document = metadata.unwrap_or_default();
         let mut sbom = NormalizedSbom::new(document);
         sbom.primary_component_id = primary_component_id;
+        sbom.described_root_ids = described_root_ids;
         sbom.extensions = extensions.unwrap_or_default();
 
         for comp in components {
@@ -387,6 +394,7 @@ impl StreamingIterator {
                 if !metadata_emitted {
                     let document = sbom.document.clone();
                     let primary_component_id = sbom.primary_component_id.clone();
+                    let described_root_ids = sbom.described_root_ids.clone();
                     let extensions = sbom.extensions.clone();
                     self.state = StreamingState::Emitting {
                         sbom,
@@ -397,6 +405,7 @@ impl StreamingIterator {
                     return Some(Ok(ParseEvent::Metadata(Box::new(ParsedMetadata {
                         document,
                         primary_component_id,
+                        described_root_ids,
                         extensions,
                     }))));
                 }

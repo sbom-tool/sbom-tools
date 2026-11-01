@@ -67,6 +67,9 @@ pub fn emit_cyclonedx(sbom: &NormalizedSbom) -> Result<(String, FidelityReport),
         metadata.insert("manufacturer".to_string(), manufacturer);
         report.synthesized("metadata.manufacturer from organization creator");
     }
+    if let Some(supplier) = &sbom.document.supplier {
+        metadata.insert("supplier".to_string(), emit_organization(supplier));
+    }
     if let Some(primary) = primary_component_json {
         metadata.insert("component".to_string(), primary);
         report.synthesized("metadata.component from primary component");
@@ -590,6 +593,33 @@ fn emit_manufacturer(sbom: &NormalizedSbom) -> Option<Value> {
         o.insert("contact".to_string(), json!([{ "email": email }]));
     }
     Some(Value::Object(o))
+}
+
+/// Emit a CycloneDX organizationalEntity (`name`, `url[]`, `contact[]`).
+fn emit_organization(org: &crate::model::Organization) -> Value {
+    let mut o = Map::new();
+    o.insert("name".to_string(), json!(org.name));
+    if !org.urls.is_empty() {
+        o.insert("url".to_string(), json!(org.urls));
+    }
+    let contacts: Vec<Value> = org
+        .contacts
+        .iter()
+        .map(|c| {
+            let mut contact = Map::new();
+            for (key, value) in [("name", &c.name), ("email", &c.email), ("phone", &c.phone)] {
+                if let Some(value) = value {
+                    contact.insert(key.to_string(), json!(value));
+                }
+            }
+            Value::Object(contact)
+        })
+        .filter(|c| c.as_object().is_some_and(|o| !o.is_empty()))
+        .collect();
+    if !contacts.is_empty() {
+        o.insert("contact".to_string(), Value::Array(contacts));
+    }
+    Value::Object(o)
 }
 
 /// Emit the `dependencies` array from the edge list.

@@ -13,8 +13,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, Encoding, Outcome, RuleEntry, SbomFixture, assert_no_violations_in,
-    run_matrix,
+    ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, Outcome, RuleEntry, SbomFixture,
+    assert_no_violations_in, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, SSDF_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -130,7 +130,15 @@ fn ssdf_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "half the components missing hashes (at threshold)",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").hashes.clear()),
-        ),
+        )
+        // Only plausible digests count.
+        .with_implausible_digests(Sev::Error, &IMPLAUSIBLE_SHA256_DIGESTS, |alg, value| {
+            broken(|s| {
+                for name in ["libalpha", "libbeta"] {
+                    s.component_mut(name).hashes = vec![(alg.to_string(), value.to_string())];
+                }
+            })
+        }),
         RuleEntry::tested(
             "SBOM-SSDF-PS3",
             Sev::Warning,

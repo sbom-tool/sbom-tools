@@ -15,8 +15,9 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
-    assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
+    CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, RuleEntry,
+    SPDX_VERSION_CASE, SbomFixture, assert_no_violations_in, assert_spdx_version_unknown,
+    run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
@@ -179,6 +180,16 @@ fn comprehensive_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").hashes.clear()),
             base(),
+        )
+        // Only plausible digests count.
+        .with_implausible_digests(
+            Sev::Warning,
+            &IMPLAUSIBLE_SHA256_DIGESTS,
+            |alg, value| {
+                broken(|s| {
+                    s.component_mut("libalpha").hashes = vec![(alg.to_string(), value.to_string())];
+                })
+            },
         ),
         // CycloneDX newer than the latest version read (1.7) or SPDX newer
         // than 3.0 warns; an outdated CycloneDX version is an Info. Each

@@ -249,6 +249,21 @@ fn pci_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Outcome::Fires(Sev::Info),
             "SPDX 2.3 has no reference category for a VDR: an OTHER vulnerability-assertion \
              reference is unrecognized",
+        )
+        // A support link is no vulnerability-management hook in any format
+        // (before v0.4.0 the CycloneDX parser made the product's support
+        // link its disclosure URL).
+        .with_firing(
+            "support reference as the only link",
+            Sev::Info,
+            broken(|s| {
+                if let Some(primary) = &mut s.primary {
+                    primary.external_refs = vec![(
+                        "support".to_string(),
+                        "https://acme.example/support".to_string(),
+                    )];
+                }
+            }),
         ),
         // An embedded entry whose only rating severity is "unknown" (and no
         // CVSS score) is unranked; a "medium" entry is ranked and must stay

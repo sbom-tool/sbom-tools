@@ -146,11 +146,12 @@ struct FsctEvidence {
     /// Package components declaring fewer than two identifier kinds
     /// (§2.2.2.4 Recommended, profile-policy threshold).
     fewer_than_two_identifier_kinds: Vec<String>,
-    /// Package components with no author-provided hash (§2.2.2.5 —
-    /// enrichment-fetched hashes are not author evidence).
+    /// Package components with no author-provided, plausible hash
+    /// (§2.2.2.5 — enrichment-fetched hashes are not author evidence), each
+    /// named with why its present hashes did not count.
     without_hash: Vec<String>,
     /// Package components that carry authored hashes but none from the
-    /// SHA-2 ≥256 family (§2.2.2.5 Recommended).
+    /// SHA-2 ≥256 family (§2.2.2.5 Recommended), named as `without_hash`.
     weak_hash_only: Vec<String>,
     /// Package components with no real license expression (§2.2.2.7).
     without_license: Vec<String>,
@@ -221,23 +222,33 @@ impl FsctEvidence {
             }
             pkg_total += 1;
 
+            // Only author-provided, plausible digests count (see
+            // `plausible_digest`): an empty or garbage value is neither a
+            // hash nor an intrinsic identifier, and the findings name why.
+            let authored: Vec<_> = comp
+                .hashes
+                .iter()
+                .filter(|h| h.provenance == HashProvenance::Authored)
+                .collect();
             let mut has_authored_hash = false;
             let mut has_sha2_256_plus = false;
-            for h in &comp.hashes {
-                if h.provenance == HashProvenance::Authored {
-                    has_authored_hash = true;
-                    // §2.2.2.5 Recommended names the "SHA-2 family (SHA-256
-                    // and higher)". Deliberate literal reading: SHA-3 /
-                    // BLAKE / Streebog are not counted — accepting them
-                    // would extend beyond the document's text.
-                    if matches!(
-                        h.algorithm,
-                        HashAlgorithm::Sha256 | HashAlgorithm::Sha384 | HashAlgorithm::Sha512
-                    ) {
-                        has_sha2_256_plus = true;
-                    }
+            for h in authored
+                .iter()
+                .filter(|h| plausible_digest(&h.algorithm, &h.value))
+            {
+                has_authored_hash = true;
+                // §2.2.2.5 Recommended names the "SHA-2 family (SHA-256
+                // and higher)". Deliberate literal reading: SHA-3 /
+                // BLAKE / Streebog are not counted — accepting them
+                // would extend beyond the document's text.
+                if matches!(
+                    h.algorithm,
+                    HashAlgorithm::Sha256 | HashAlgorithm::Sha384 | HashAlgorithm::Sha512
+                ) {
+                    has_sha2_256_plus = true;
                 }
             }
+            let named = || name_with_digest_problems(&comp.name, authored.iter().copied());
 
             // §2.2.2.2: version, with the documented fallback — a component
             // without a unique version passes only via an authored hash.
@@ -270,10 +281,10 @@ impl FsctEvidence {
             // Recommended tier.
             if has_authored_hash {
                 if !has_sha2_256_plus {
-                    weak_hash_only.push(comp.name.clone());
+                    weak_hash_only.push(named());
                 }
             } else {
-                without_hash.push(comp.name.clone());
+                without_hash.push(named());
             }
 
             // §2.2.2.7 / §2.2.2.8 coverage inputs.
@@ -968,19 +979,29 @@ fn fsct_recommended_practice(
 
     // §2.2.2.5 (Recommended) — at least one hash of the Primary Component…
     if let Some(primary) = sbom.primary_component() {
-        let primary_has_authored_hash = primary
+        let authored: Vec<_> = primary
             .hashes
             .iter()
-            .any(|h| h.provenance == HashProvenance::Authored);
+            .filter(|h| h.provenance == HashProvenance::Authored)
+            .collect();
+        let primary_has_authored_hash = authored
+            .iter()
+            .any(|h| plausible_digest(&h.algorithm, &h.value));
         if !primary_has_authored_hash {
+            let mut message = format!(
+                "[CISA FSCT 3e §2.2.2.5] Primary Component '{}' has no author-provided \
+                 cryptographic hash",
+                primary.name
+            );
+            let problems = digest_problems(authored.iter().copied());
+            if !problems.is_empty() {
+                message.push_str(": ");
+                message.push_str(&problems.join("; "));
+            }
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::IntegrityInfo,
-                message: format!(
-                    "[CISA FSCT 3e §2.2.2.5] Primary Component '{}' has no author-provided \
-                     cryptographic hash",
-                    primary.name
-                ),
+                message,
                 element: Some(primary.name.clone()),
                 requirement: "CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended \
                               Practice)"

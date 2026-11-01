@@ -245,9 +245,13 @@ pub struct HashQualityMetrics {
     /// to verify CRA prEN 40000-1-3 `[PRE-7-RQ-07-RE]` (carry-through of
     /// vendor hashes).
     pub vendor_components_total: usize,
-    /// Vendor components that carry at least one hash entry.
+    /// Vendor components that carry at least one hash whose value is a
+    /// plausible digest (hex, as long as the algorithm's output): the
+    /// carry-through rule counts no empty or garbage value, as every
+    /// compliance hash rule does.
     pub vendor_components_with_hash: usize,
-    /// Vendor components that carry at least one strong hash (SHA-256+).
+    /// Vendor components that carry at least one strong hash (SHA-256+)
+    /// with a plausible digest.
     pub vendor_components_with_strong_hash: usize,
 }
 
@@ -276,6 +280,17 @@ impl HashQualityMetrics {
                 && comp.identifiers.has_cra_identifier();
             if is_vendor {
                 vendor_total += 1;
+                let mut plausible = comp.hashes.iter().filter(|h| {
+                    crate::quality::compliance::plausible_digest(&h.algorithm, &h.value)
+                });
+                if let Some(first) = plausible.next() {
+                    vendor_with_hash += 1;
+                    if is_strong_hash(&first.algorithm)
+                        || plausible.any(|h| is_strong_hash(&h.algorithm))
+                    {
+                        vendor_with_strong += 1;
+                    }
+                }
             }
 
             if comp.hashes.is_empty() {
@@ -302,13 +317,6 @@ impl HashQualityMetrics {
                 with_strong += 1;
             } else if has_weak {
                 with_weak_only += 1;
-            }
-
-            if is_vendor {
-                vendor_with_hash += 1;
-                if has_strong {
-                    vendor_with_strong += 1;
-                }
             }
         }
 

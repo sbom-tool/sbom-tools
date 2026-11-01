@@ -210,6 +210,18 @@ fn eucc_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                     )];
                 }),
             )
+            // A dependency's own certificate does not cover the product,
+            // even when the dependency sits in no relationship.
+            .with_firing(
+                "EUCC certificate reference on an orphan dependency only",
+                Sev::Warning,
+                broken(|s| {
+                    s.primary_mut().external_refs.clear();
+                    let mut upstream = ComponentFixture::conforming("libupstream");
+                    upstream.external_refs = vec![eucc_certificate_ref()];
+                    s.components.push(upstream);
+                }),
+            )
             .with_silent(
                 "attestation reference to a Common Criteria certificate",
                 broken(|s| {

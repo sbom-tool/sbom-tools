@@ -351,23 +351,29 @@ impl Spdx3Parser {
         // SpdxDocument.rootElement → software_Sbom/Bom collection →
         // collection.rootElement → package, so when the direct lookup misses,
         // follow exactly one level of collection indirection (bounded, no
-        // recursion — a reference cycle cannot loop).
-        if let Some(root_elements) = &doc.root_element {
-            'roots: for root_id in root_elements {
-                if let Some(canonical_id) = id_map.get(root_id) {
-                    sbom.set_primary_component(canonical_id.clone());
-                    break; // Use first resolvable root element as primary
-                }
-                if let Some(coll) = collection_map.get(root_id) {
-                    for inner_id in coll.root_element.iter().flatten() {
-                        if let Some(canonical_id) = id_map.get(inner_id) {
-                            sbom.set_primary_component(canonical_id.clone());
-                            break 'roots;
-                        }
-                    }
-                }
+        // recursion — a reference cycle cannot loop). The first resolvable
+        // root element is the primary; every other one is a described root
+        // (a document can describe several sibling products).
+        let mut described: Vec<CanonicalId> = Vec::new();
+        for root_id in doc.root_element.iter().flatten() {
+            if let Some(canonical_id) = id_map.get(root_id) {
+                described.push(canonical_id.clone());
+            } else if let Some(coll) = collection_map.get(root_id) {
+                described.extend(
+                    coll.root_element
+                        .iter()
+                        .flatten()
+                        .filter_map(|inner_id| id_map.get(inner_id).cloned()),
+                );
             }
         }
+        if let Some(primary_id) = described.first() {
+            sbom.set_primary_component(primary_id.clone());
+        }
+        for canonical_id in described {
+            sbom.add_described_root(canonical_id);
+        }
+        super::lift_disclosure_url(&mut sbom);
 
         // The AFFECTS and FIXED_IN relationships and the assessments that
         // name one vulnerability and one component add to one record while
@@ -582,6 +588,7 @@ impl Spdx3Parser {
             doc_version: None, // SPDX has no document revision counter
             created,
             creators,
+            supplier: None, // SPDX keeps the supplier on the described package
             name: doc.name.clone(),
             security_contact: None,
             vulnerability_disclosure_url: None,
@@ -3571,6 +3578,71 @@ mod tests {
             sbom.primary_component().map(|c| c.name.as_str()),
             Some("p"),
             "rootElement must resolve through the Bundle"
+        );
+    }
+
+    /// A document can describe several sibling products: the first
+    /// resolvable root element is the primary, every other one a described
+    /// root (directly or through the Sbom collection), so manufacturer
+    /// evidence on any of them counts.
+    #[test]
+    fn spdx3_every_root_element_is_a_described_component() {
+        let doc = r#"{
+          "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+          "@graph": [
+            {"type": "SpdxDocument", "spdxId": "urn:doc", "name": "d",
+             "rootElement": ["urn:sbom", "urn:pkg:c"]},
+            {"type": "software_Sbom", "spdxId": "urn:sbom",
+             "rootElement": ["urn:pkg:a", "urn:missing", "urn:pkg:b"]},
+            {"type": "software_Package", "spdxId": "urn:pkg:a", "name": "a"},
+            {"type": "software_Package", "spdxId": "urn:pkg:b", "name": "b"},
+            {"type": "software_Package", "spdxId": "urn:pkg:c", "name": "c"},
+            {"type": "software_Package", "spdxId": "urn:pkg:lib", "name": "lib"}
+          ]
+        }"#;
+        let sbom = Spdx3Parser::new().parse_str(doc).expect("parse");
+        let names: Vec<&str> = sbom
+            .described_components()
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect();
+        assert_eq!(names, vec!["a", "b", "c"]);
+        assert_eq!(sbom.primary_component().map(|c| c.name.as_str()), Some("a"));
+    }
+
+    /// The disclosure URL follows the rule every parser shares: the root
+    /// package's URL-shaped securityAdvisory reference, never its support
+    /// reference.
+    #[test]
+    fn spdx3_security_advisory_becomes_the_disclosure_url() {
+        let parse = |refs: &str| {
+            let doc = format!(
+                r#"{{
+                  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+                  "@graph": [
+                    {{"type": "SpdxDocument", "spdxId": "urn:doc", "name": "d",
+                     "rootElement": ["urn:pkg"]}},
+                    {{"type": "software_Package", "spdxId": "urn:pkg", "name": "p",
+                     "externalRef": [{refs}]}}
+                  ]
+                }}"#
+            );
+            Spdx3Parser::new().parse_str(&doc).expect("parse")
+        };
+        let support = r#"{"type": "ExternalRef", "externalRefType": "support",
+                          "locator": ["https://acme.example/support"]}"#;
+        let advisory = r#"{"type": "ExternalRef", "externalRefType": "securityAdvisory",
+                           "locator": ["https://acme.example/security/advisories"]}"#;
+        let bare = r#"{"type": "ExternalRef", "externalRefType": "securityAdvisory",
+                       "locator": ["acme-advisories"]}"#;
+        assert_eq!(parse(support).document.vulnerability_disclosure_url, None);
+        assert_eq!(parse(bare).document.vulnerability_disclosure_url, None);
+        assert_eq!(
+            parse(&format!("{support}, {bare}, {advisory}"))
+                .document
+                .vulnerability_disclosure_url
+                .as_deref(),
+            Some("https://acme.example/security/advisories")
         );
     }
 

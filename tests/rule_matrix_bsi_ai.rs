@@ -18,8 +18,8 @@
 mod rule_matrix;
 
 use rule_matrix::{
-    ComponentFixture, Encoding, MD5_FILLER, Outcome, RuleEntry, SPDX23_HAS_NO_AI_PROFILE,
-    SbomFixture, check_in, render_violations, run_matrix,
+    ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER, Outcome, RuleEntry,
+    SPDX23_HAS_NO_AI_PROFILE, SbomFixture, check_in, render_violations, run_matrix,
 };
 use sbom_tools::quality::{
     ComplianceLevel, ViolationSeverity as Sev, all_rule_ids, generic_rule_id_for_level,
@@ -297,7 +297,13 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| model(s).hashes.clear()),
             base(),
-        ),
+        )
+        // Only plausible digests count.
+        .with_implausible_digests(Sev::Error, &IMPLAUSIBLE_SHA256_DIGESTS, |alg, value| {
+            broken(|s| {
+                model(s).hashes = vec![(alg.to_string(), value.to_string())];
+            })
+        }),
         // A weight hash that no NIST-approved algorithm produced.
         RuleEntry::tested(
             "SBOM-BSIAI-MODEL-HASH-ALGO",
@@ -388,6 +394,15 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Warning,
             broken(|s| dataset(s).hashes.clear()),
             base(),
+        )
+        .with_implausible_digests(
+            Sev::Warning,
+            &IMPLAUSIBLE_SHA256_DIGESTS,
+            |alg, value| {
+                broken(|s| {
+                    dataset(s).hashes = vec![(alg.to_string(), value.to_string())];
+                })
+            },
         ),
         with_placeholders(
             RuleEntry::tested(

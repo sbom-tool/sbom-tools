@@ -891,7 +891,7 @@ source: tests/compliance_snapshots.rs
           "ruleIndex": 24,
           "level": "error",
           "message": {
-            "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] 1/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): express (Requirement: CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)) [Element: unknown]"
+            "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] 2/2 component(s) carry no author-provided cryptographic hash (enrichment-fetched hashes are not author evidence): lodash (SHA-256 digest is not hexadecimal), express (Requirement: CISA FSCT 3e §2.2.2.5: Cryptographic Hash (Minimum Expected)) [Element: unknown]"
           },
           "locations": [
             {
@@ -919,7 +919,7 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
             ],
-            "affected": 1,
+            "affected": 2,
             "total": 2
           }
         },
@@ -958,6 +958,48 @@ source: tests/compliance_snapshots.rs
             ],
             "affected": 2,
             "total": 2
+          }
+        },
+        {
+          "ruleId": "SBOM-FSCT-HASH-PRIMARY-SHA2",
+          "ruleIndex": 25,
+          "level": "warning",
+          "message": {
+            "text": "CISA Framing Software Component Transparency (3rd ed.): [CISA FSCT 3e §2.2.2.5] Primary Component 'lodash' has no author-provided cryptographic hash: SHA-256 digest is not hexadecimal (Requirement: CISA FSCT 3e §2.2.2.5: Primary Component hash (Recommended Practice)) [Element: lodash]"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "tests/fixtures/spdx/minimal.spdx.json",
+                  "uriBaseId": "SRCROOT"
+                },
+                "region": {
+                  "startLine": 17
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "pkg:npm/lodash@4.17.21",
+                  "kind": "component"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "sbomToolsFinding/v1": "0982d91d387a30f14f8d7d4b8942086440ffac10bb234806f1160f809fa2657b",
+            "primaryLocationLineHash": "0982d91d387a30f1:1"
+          },
+          "properties": {
+            "findingKey": "fsct|SBOM-FSCT-HASH-PRIMARY-SHA2|pkg:npm/lodash@4.17.21",
+            "findingId": "sbomtools:v1:0982d91d387a30f1",
+            "standardIds": [
+              "CISA-FSCT-3e:§2.2.2.5"
+            ],
+            "standardHelpUris": [
+              "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
+            ],
+            "componentId": "pkg:npm/lodash@4.17.21"
           }
         },
         {
@@ -1047,7 +1089,7 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "CISA Framing Software Component Transparency (3rd ed.)",
             "applicable": true,
-            "overallScore": 16.0,
+            "overallScore": 14.0,
             "compliant": false
           }
         ]

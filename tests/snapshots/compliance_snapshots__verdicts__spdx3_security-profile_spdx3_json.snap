@@ -11,12 +11,11 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   E SBOM-NTIA-SUPPLIER  pkg:npm/logging-lib@1.5.2
-[CraPhase1] compliant · E0 W11 I3
+[CraPhase1] compliant · E0 W10 I3
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/crypto-lib@3.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/logging-lib@1.5.2
   I SBOM-CRA-ART-13-8  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (2/3)
   W SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -26,14 +25,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W13 I5
+[CraPhase2] NON-COMPLIANT · E1 W12 I5
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (2/2)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/crypto-lib@3.0.1
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:npm/logging-lib@1.5.2
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
   I SBOM-CRA-LIFECYCLE  -
-  W SBOM-CRA-ART-13-16  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-2  -
   W SBOM-CRA-ART-13-5  - (2/3)
@@ -46,14 +44,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-SBOM-FRESHNESS  -
   W SBOM-CRA-VULN-METADATA  pkg:npm/crypto-lib@3.0.1
-[FdaMedicalDevice] NON-COMPLIANT · E4 W4 I0
+[FdaMedicalDevice] NON-COMPLIANT · E4 W3 I0
   E SBOM-FDA-HASH  pkg:npm/crypto-lib@3.0.1
   E SBOM-FDA-HASH  pkg:npm/logging-lib@1.5.2
   E SBOM-FDA-SUPPLIER  pkg:npm/crypto-lib@3.0.1
   E SBOM-FDA-SUPPLIER  pkg:npm/logging-lib@1.5.2
   W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SECURITY  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I1
   E SBOM-SSDF-PS2  - (2/3)

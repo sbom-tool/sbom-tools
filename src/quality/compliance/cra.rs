@@ -48,23 +48,22 @@ impl ComplianceChecker {
             None => (satisfied, detail.to_string()),
         };
 
+        // The rows read the same manufacturer-scope references as the
+        // Annex V / Annex VIII / Annex IV checks: a dependency's own
+        // certificate or attestation is not the product's.
         let any_ext = |needles: &[ExternalRefType]| -> bool {
-            sbom.components.values().any(|c| {
-                c.external_refs.iter().any(|r| {
-                    needles
-                        .iter()
-                        .any(|n| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(n))
-                })
+            manufacturer_reference(sbom, |r| {
+                needles
+                    .iter()
+                    .any(|n| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(n))
             })
         };
         let any_ext_url_contains = |types: &[ExternalRefType], substr: &str| -> bool {
-            sbom.components.values().any(|c| {
-                c.external_refs.iter().any(|r| {
-                    types
-                        .iter()
-                        .any(|t| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(t))
-                        && r.url.to_lowercase().contains(substr)
-                })
+            manufacturer_reference(sbom, |r| {
+                types
+                    .iter()
+                    .any(|t| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(t))
+                    && r.url.to_lowercase().contains(substr)
             })
         };
 
@@ -525,13 +524,26 @@ impl ComplianceChecker {
                     (None, None) => (ViolationSeverity::Info, String::new()),
                 };
                 if !threshold_msg.is_empty() {
+                    // The metric counts only plausible digests; name the
+                    // vendor components whose present hashes did not count.
+                    // All components: the same vendor cohort the metric
+                    // classifies (a known producer and an identifier).
+                    let mut message = format!(
+                        "[CRA Annex I, Part II / [PRE-7-RQ-07-RE]] Only {}/{} vendor-supplied components ({pct}%) carry an upstream hash — {threshold_msg}",
+                        metrics.vendor_components_with_hash, metrics.vendor_components_total
+                    );
+                    message.push_str(&invalid_digest_note(sbom.components.values().filter(|c| {
+                        has_known_producer(c)
+                            && c.identifiers.has_cra_identifier()
+                            && !c
+                                .hashes
+                                .iter()
+                                .any(|h| plausible_digest(&h.algorithm, &h.value))
+                    })));
                     violations.push(Violation {
                         severity,
                         category: ViolationCategory::IntegrityInfo,
-                        message: format!(
-                            "[CRA Annex I, Part II / [PRE-7-RQ-07-RE]] Only {}/{} vendor-supplied components ({pct}%) carry an upstream hash — {threshold_msg}",
-                            metrics.vendor_components_with_hash, metrics.vendor_components_total
-                        ),
+                        message,
                         element: None,
                         requirement: "CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-07-RE]: Vendor hash carry-through".to_string(),
                         rule_id: "SBOM-CRA-PRE-7-RQ-07-RE",
@@ -587,10 +599,10 @@ impl ComplianceChecker {
         // assessment. The SBOM (or sidecar) must reference it; absence is a
         // soft Warning under CraPhase2 (Annex V technical-doc requirement).
         if matches!(self.level, ComplianceLevel::CraPhase2) {
-            let has_ref_in_sbom = sbom.components.values().any(|comp| {
-                comp.external_refs
-                    .iter()
-                    .any(|r| matches!(r.ref_type, crate::model::ExternalRefType::RiskAssessment))
+            // The product's own risk assessment: a reference on the
+            // described product, not a dependency's.
+            let has_ref_in_sbom = manufacturer_reference(sbom, |r| {
+                matches!(r.ref_type, crate::model::ExternalRefType::RiskAssessment)
             }) || sbom.document.creators.iter().any(|c| {
                 // Some SBOMs encode the methodology in the creator comment
                 c.name.to_lowercase().contains("risk assessment")
@@ -830,19 +842,19 @@ impl ComplianceChecker {
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()
             .any(|s| standard_references_eucc(s.standard));
+        // A reference counts on the described product only: a
+        // dependency's own EUCC certificate does not cover the product.
         let has_eucc_ref = sidecar_has_eucc
             || cdxa_eucc_attested
-            || sbom.components.values().any(|comp| {
-                comp.external_refs.iter().any(|r| {
-                    let url_lower = r.url.to_lowercase();
-                    matches!(
-                        r.ref_type,
-                        crate::model::ExternalRefType::Certification
-                            | crate::model::ExternalRefType::Attestation
-                    ) && (url_lower.contains("eucc")
-                        || url_lower.contains("common-criteria")
-                        || url_lower.contains("commoncriteria"))
-                })
+            || manufacturer_reference(sbom, |r| {
+                let url_lower = r.url.to_lowercase();
+                matches!(
+                    r.ref_type,
+                    crate::model::ExternalRefType::Certification
+                        | crate::model::ExternalRefType::Attestation
+                ) && (url_lower.contains("eucc")
+                    || url_lower.contains("common-criteria")
+                    || url_lower.contains("commoncriteria"))
             });
         if !has_eucc_ref {
             let mut message = format!(
@@ -899,10 +911,10 @@ impl ComplianceChecker {
         if matches!(route, R::ModuleA) {
             return; // Module A self-assessment doesn't require external attestation
         }
-        let has_certificate = sbom.components.values().any(|comp| {
-            comp.external_refs
-                .iter()
-                .any(|r| matches!(r.ref_type, crate::model::ExternalRefType::Certification))
+        // The product's certificate: a dependency's own certification
+        // reference does not cover the product.
+        let has_certificate = manufacturer_reference(sbom, |r| {
+            matches!(r.ref_type, crate::model::ExternalRefType::Certification)
         });
         if !has_certificate {
             violations.push(Violation {
@@ -1239,19 +1251,17 @@ impl ComplianceChecker {
 
         // Vulnerability-handling process (Annex I Part II): require either
         // a vulnerability-disclosure URL on the document or a SecurityContact
-        // / Advisories external reference on at least one component, OR
-        // sidecar-supplied PSIRT URL.
+        // / Advisories / VulnerabilityAssertion external reference on the
+        // described product, OR sidecar-supplied PSIRT URL.
         let has_vuln_handling = sbom.document.vulnerability_disclosure_url.is_some()
             || sbom.document.security_contact.is_some()
-            || manufacturer_scope_components(sbom).iter().any(|c| {
-                c.external_refs.iter().any(|r| {
-                    matches!(
-                        r.ref_type,
-                        crate::model::ExternalRefType::SecurityContact
-                            | crate::model::ExternalRefType::Advisories
-                            | crate::model::ExternalRefType::VulnerabilityAssertion
-                    )
-                })
+            || manufacturer_reference(sbom, |r| {
+                matches!(
+                    r.ref_type,
+                    crate::model::ExternalRefType::SecurityContact
+                        | crate::model::ExternalRefType::Advisories
+                        | crate::model::ExternalRefType::VulnerabilityAssertion
+                )
             })
             || self
                 .sidecar
@@ -1275,12 +1285,10 @@ impl ComplianceChecker {
         }
 
         // Coordinated vulnerability disclosure policy (Annex I Part II (5)):
-        // require either an Advisories reference or sidecar-supplied
-        // coordinated_disclosure_policy_url.
-        let has_cvd_policy = manufacturer_scope_components(sbom).iter().any(|c| {
-            c.external_refs
-                .iter()
-                .any(|r| matches!(r.ref_type, crate::model::ExternalRefType::Advisories))
+        // require either an Advisories reference on the described product
+        // or sidecar-supplied coordinated_disclosure_policy_url.
+        let has_cvd_policy = manufacturer_reference(sbom, |r| {
+            matches!(r.ref_type, crate::model::ExternalRefType::Advisories)
         }) || self
             .sidecar
             .as_ref()

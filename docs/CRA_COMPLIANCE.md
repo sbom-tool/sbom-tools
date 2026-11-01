@@ -73,8 +73,8 @@ that ends up in SARIF `properties.standardHelpUris`.
 | `CRA Art. 13(7) / Annex I Part II (1): SBOM freshness`          | Art. 13(7); Annex I Part II (1)   | PRE-7-RQ-04         | §3.1             | regenerate SBOM on each release                           |
 | `CRA Annex I Part II (1): Machine-readable SBOM format`         | Annex I Part II (1)               | PRE-7-RQ-04         | §4               | parse-time check (CycloneDX 1.4+ / SPDX 2.3+)             |
 | `CRA Art. 13(5): Third-party due diligence (license tracking)`  | Art. 13(5)                        | PRE-7-RQ-05         | §5.2.2           | populate component `license` fields                       |
-| `CRA Art. 13(17): Vulnerability disclosure contact`             | Art. 13(17); Annex I Part II (6); Annex II (2) | RLS-2-RQ-01 | §5.2.5 (opt.) | `securityContact` / `vulnerabilityDisclosureUrl`          |
-| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl`                          |
+| `CRA Art. 13(17): Vulnerability disclosure contact`             | Art. 13(17); Annex I Part II (6); Annex II (2) | RLS-2-RQ-01 | §5.2.5 (opt.) | `securityContact` / `vulnerabilityDisclosureUrl` (or a security-contact, advisories or support reference on the product, see [manufacturer evidence](#manufacturer-evidence)) |
+| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl` (or an advisories reference on the product; a support link does not count) |
 | `CRA Art. 13(8): Support period / lifecycle management`         | Art. 13(8)                        | PRE-7-RQ-06         | —                | `supportEndDate` + EOL enrichment                         |
 | `CRA Art. 13(8) / 13(19): Support period disclosure`            | Art. 13(8); Art. 13(19); Annex II (7) | PRE-7-RQ-06     | —                | `supportEndDate`                                          |
 | `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | embedded vulnerabilities (or OSV / KEV / VEX enrichment), or a `vulnerability-assertion` / `exploitability-statement` external reference |
@@ -83,7 +83,7 @@ that ends up in SARIF `properties.standardHelpUris`.
 | `CRA Annex I Part II (1): Component version`                    | Annex I Part II (1)               | PRE-7-RQ-06         | §5.2.2           | component `version` fields                                |
 | `CRA Annex I Part II (1): Component supplier information`       | Annex I Part II (1)               | PRE-7-RQ-03         | §5.2.2           | component `supplier` fields                               |
 | `CRA Annex I Part II (4): Vulnerability metadata completeness`  | Annex I Part II (4)               | —                   | —                | vulnerability severity/CVSS + remediation detail, or a [justified VEX `not_affected` statement](#vex-not_affected-statements) |
-| `CRA Art. 13(16): Manufacturer identification`                  | Art. 13(16); Annex II (1)         | —                   | §5.2.1           | `manufacturerName` + `manufacturerEmail`                  |
+| `CRA Art. 13(16): Manufacturer identification`                  | Art. 13(16); Annex II (1)         | —                   | §5.2.1           | `manufacturerName` + `manufacturerEmail` (or, in the SBOM, an organization creator or the product's manufacturer or supplier, see [manufacturer evidence](#manufacturer-evidence)) |
 
 #### VEX `not_affected` statements
 
@@ -178,11 +178,11 @@ of the deadline.
 
 | Requirement string                                          | CRA Annex                | prEN 40000-1-3      | What clears it                                          |
 |-------------------------------------------------------------|--------------------------|---------------------|---------------------------------------------------------|
-| `CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-07-RE]: Vendor hash carry-through` | Annex I Part II | PRE-7-RQ-07-RE | strong (SHA-256+) hash on vendor-supplied components |
+| `CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-07-RE]: Vendor hash carry-through` | Annex I Part II | PRE-7-RQ-07-RE | a [valid](#hash-values) hash on vendor-supplied components |
 | `CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier` | Annex I         | PRE-7-RQ-07         | PURL / CPE / SWID / SWHID on each component             |
 | `CRA Annex I Part II: Supply chain transparency`            | Annex I Part II          | PRE-7-RQ-01,03      | supplier on direct + transitive deps                    |
 | `CRA Annex I Part I (2)(f): Document signature/integrity`   | Annex I Part I (2)(f)    | —                   | serial number / digital signature / attestation hash    |
-| `CRA Annex I Part I (2)(f): Component integrity information (hash)` | Annex I Part I (2)(f) | —                | cryptographic hash (SHA-256+) per component             |
+| `CRA Annex I Part I (2)(f): Component integrity information (hash)` | Annex I Part I (2)(f) | —                | a [valid](#hash-values) cryptographic hash (SHA-256+) per component |
 | `CRA Annex IV: EUCC reference (Common Criteria certificate)`| Annex IV                 | —                   | sidecar EUCC evidence fields, a `Certification`/`Attestation` external ref with `eucc`/`common-criteria` URL, or a [CDXA attestation](#attestation-evidence-cyclonedx-16-declarations) naming EUCC / Common Criteria |
 | `CRA Annex VII: Technical documentation`                    | Annex VII                | —                   | run `sbom-tools cra-docs <sbom> --output dossier/`     |
 | `CRA Annex V: EU Declaration of Conformity reference`       | Annex V                  | —                   | `Attestation`/`Certification` external ref OR `ceMarkingReference` |
@@ -221,6 +221,70 @@ and Module H rows accept only a `Certification` reference
 reference may be a self-attestation: it still serves as the Annex V
 Declaration of Conformity reference (and the Module C production-conformity
 statement), but not as the route's certificate.
+
+### Manufacturer evidence
+
+The checks that ask for the manufacturer's own evidence read it from the
+product only: the components the document describes. That is the primary
+component (CycloneDX `metadata.component`, SPDX 2 `documentDescribes` or a
+`DESCRIBES` relationship, SPDX 3 `rootElement`), plus every other product an
+SPDX document describes. A dependency's references never count, even when
+the dependency is in no dependency relationship: generators copy a
+third-party library's own advisories, support URL or certificate from its
+registry metadata, and a sparse `dependencies` section leaves the library
+without an incoming edge. Only a document that names no product falls back
+to the roots of its dependency graph (or, when the graph is fully cyclic, to
+every component).
+
+This scope applies to the security contact (Art. 13(17)), the CVD policy
+(Annex I Part II (5)), the risk assessment (Art. 13(2)), the EU Declaration
+of Conformity (Annex V), the module certificate (Annex VIII), the EUCC
+reference (Annex IV and `SBOM-EUCC-CERTREF`), the Art. 24 steward floors,
+the `conformity_summary` rows and `SBOM-EO14028-DISCLOSURE`. Before v0.4.0
+every component without an incoming edge counted, and the DoC, risk
+assessment, certificate and EUCC checks read every component.
+
+The manufacturer (Art. 13(16), and the FDA device manufacturer) is named by
+any of:
+
+- an organization creator of the SBOM with a real name or email address
+  (CycloneDX `metadata.manufacturer`, SPDX `Organization:` creator, SPDX 3
+  `createdBy` organization);
+- the supplier of the product, CycloneDX `metadata.supplier`;
+- the manufacturer or supplier of a described component: CycloneDX
+  `metadata.component.manufacturer` (where CycloneDX 1.6 moved the
+  deprecated `metadata.manufacture`) or `metadata.component.supplier`, the
+  SPDX 2 described package's `supplier`, the SPDX 3 root package's
+  `suppliedBy`.
+
+Placeholders such as `NOASSERTION`, `TBD` or `unknown` name nobody. The
+sidecar `manufacturerName` still lowers the finding to Info. Before v0.4.0
+only an organization creator (with any name) or the sidecar counted.
+
+The document's vulnerability-disclosure URL, which the CVD policy, EO 14028
+disclosure and PCI DSS checks read, comes from one rule in every format: the
+primary component's first advisories reference whose locator is a URL
+(`http://`, `https://` or `mailto:`) — CycloneDX `advisories`, SPDX 2
+SECURITY `advisory`, SPDX 3 `securityAdvisory`. A support reference never
+becomes the disclosure URL: a helpdesk is not a disclosure policy. Before
+v0.4.0 the CycloneDX parser also took a support link or any locator, and the
+SPDX 3 parser took nothing, so the same content passed in one format and
+failed in another.
+
+### Hash values
+
+A hash counts only when its value can be the algorithm's digest: hexadecimal
+digits (either case), as many as the algorithm's output has — MD5 32, SHA-1
+40, SHA-224 56, SHA-256, SHA3-256, BLAKE2b-256 and Streebog-256 64, SHA-384,
+SHA3-384 and BLAKE2b-384 96, SHA-512, SHA3-512, BLAKE2b-512 and Streebog-512
+128 — and at least one for BLAKE3 or an unknown algorithm. Every hash rule
+of every standard applies this, from the CRA integrity and vendor-hash
+checks to the BSI SHA-512 gate, FDA, FSCT, CISA 2026, EO 14028, SSDF and the
+BSI SBOM-for-AI hash elements. An empty, non-hex or wrong-length value does
+not count, and the finding says why, e.g. "SHA-512 digest is not 128 hex
+characters". Before v0.4.0 only CISA 2026 checked the value, and only for
+hex digits. An empty CycloneDX XML `<hash>` element now parses as an empty
+digest instead of failing the whole document.
 
 ### Article 24 — open-source software steward floor
 
@@ -388,7 +452,7 @@ SARIF rule prefix: `SBOM-BSI-TR-03183-2-*`. Canonical URL:
 | §5.2.1         | Timestamp of the SBOM data compilation (Error)                            | `metadata.timestamp` / SPDX `created`                          |
 | §5.2.2         | Component name (Error) and version (Error)                                | `name` + `version` (filename / RFC 3339 date fallbacks)        |
 | §5.2.2         | Distribution licence(s) per component (Error)                             | `licenses[]` with SPDX identifiers                             |
-| §5.2.2         | Hash of the deployable component **as SHA-512** (Error when only other algorithms; Warning when absent, §3.2.1) | SHA-512 hash per component |
+| §5.2.2         | Hash of the deployable component **as SHA-512** (Error when only other algorithms or no [valid](#hash-values) SHA-512 digest; Warning when absent, §3.2.1) | SHA-512 hash (128 hex characters) per component |
 | §5.2.2         | Component creator (Warning, presence-level)                               | `supplier` / `author` per component                            |
 | §5.2.2         | Dependencies (Error) + completeness clearly indicated (Warning)           | `dependencies` graph + `compositions[].aggregate`              |
 | §5.2.4 (add.)  | Other unique identifiers — purl/CPE (Warning)                             | one of `purl` / `cpe` / `swid` / `swhid` per component         |

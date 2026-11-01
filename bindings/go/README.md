@@ -547,6 +547,7 @@ type NormalizedSbomPayload struct {
  Extensions         map[string]any                 // Format-specific extensions
  ContentHash        uint64                         // Hash of normalized content
  PrimaryComponentID map[string]any                 // Root/primary component ID
+ DescribedRootIDs   []map[string]any               // Other described components (SPDX; omitted when none)
  CollisionCount     uint64                         // Count of ID collisions detected
 }
 ```

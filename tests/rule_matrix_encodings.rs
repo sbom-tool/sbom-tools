@@ -99,7 +99,10 @@ fn everything() -> SbomFixture {
         ),
     ];
     s.crypto_assets = vec![CryptoAssetFixture::algorithm("algo-aes", "AES")];
+    s.supplier = Some("Acme Distribution GmbH".to_string());
+    s.described = vec!["ref-libb".to_string()];
     let liba = s.component_mut("liba");
+    liba.manufacturer = Some("Acme Components Ltd".to_string());
     liba.concluded_license = Some("MIT".to_string());
     liba.properties = vec![("acme:build".to_string(), "42".to_string())];
     liba.hashed_external_refs = vec![(
@@ -310,11 +313,11 @@ fn summary(sbom: &NormalizedSbom) -> (Vec<ComponentSummary>, Vec<(String, String
 
 /// The renderers write every field where the parsers read it: plain software
 /// normalizes to the same components and graph, the same creators, and the
-/// same document name, serial number, timestamp, support end date and
-/// disclosure URL in every encoding — but for the two document fields the
-/// SPDX 3 parser does not lift from the root package (the end of support,
-/// an open gap the matrices name, and the advisory URL, which the checks
-/// read from the package's references instead).
+/// same document name, serial number, timestamp, disclosure URL and support
+/// end date in every encoding — but for the end of support, which the SPDX
+/// 3 parser does not lift from the root package (an open gap the matrices
+/// name). Since v0.4.0 every parser lifts the disclosure URL by one rule:
+/// the primary's URL-shaped advisories reference.
 #[test]
 fn plain_software_normalizes_alike_in_every_encoding() {
     let reference = software().parse_in(Encoding::CycloneDxJson);
@@ -348,16 +351,71 @@ fn plain_software_normalizes_alike_in_every_encoding() {
             sbom.primary_component_id.is_some(),
             "{enc}: the primary component"
         );
+        assert_eq!(
+            doc.vulnerability_disclosure_url.as_deref(),
+            Some("https://acme.example/security/advisories"),
+            "{enc}: disclosure URL"
+        );
         if encoding != Encoding::Spdx3JsonLd {
-            assert_eq!(
-                doc.vulnerability_disclosure_url, reference.document.vulnerability_disclosure_url,
-                "{enc}: disclosure URL"
-            );
             assert_eq!(
                 doc.support_end_date, reference.document.support_end_date,
                 "{enc}: support end date"
             );
         }
+    }
+}
+
+/// The manufacturer evidence of the described product normalizes alike
+/// where a format has it: a component manufacturer and the document's
+/// supplier in both CycloneDX encodings, the primary's supplier in all
+/// four, and a second described product in both SPDX encodings.
+#[test]
+fn manufacturer_evidence_normalizes_alike_where_a_format_has_it() {
+    let mut s = software();
+    s.supplier = Some("Acme Distribution GmbH".to_string());
+    s.primary_mut().manufacturer = Some("Acme Networks GmbH".to_string());
+    for &encoding in Encoding::CYCLONEDX {
+        let sbom = s.parse_in(encoding);
+        let enc = encoding.name();
+        let primary = sbom.primary_component().expect("the primary");
+        assert_eq!(
+            primary.manufacturer.as_ref().map(|m| m.name.as_str()),
+            Some("Acme Networks GmbH"),
+            "{enc}: component manufacturer"
+        );
+        assert_eq!(
+            sbom.document.supplier.as_ref().map(|o| o.name.as_str()),
+            Some("Acme Distribution GmbH"),
+            "{enc}: document supplier"
+        );
+    }
+    for &encoding in Encoding::ALL {
+        let sbom = s.parse_in(encoding);
+        assert_eq!(
+            sbom.primary_component()
+                .and_then(|p| p.supplier.as_ref())
+                .map(|o| o.name.as_str()),
+            Some("Acme Components Ltd"),
+            "{}: the primary's supplier",
+            encoding.name()
+        );
+    }
+
+    let mut s = software();
+    s.described = vec!["ref-libb".to_string()];
+    for &encoding in Encoding::SPDX {
+        let sbom = s.parse_in(encoding);
+        let described: Vec<&str> = sbom
+            .described_components()
+            .iter()
+            .map(|c| c.name.as_str())
+            .collect();
+        assert_eq!(
+            described,
+            vec!["acme-app", "libb"],
+            "{}: described components",
+            encoding.name()
+        );
     }
 }
 

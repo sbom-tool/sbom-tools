@@ -145,27 +145,26 @@ impl ComplianceChecker {
         }
 
         // 5. EUCC Certification external ref (recommended) — checked
-        // structurally; satisfied when any component carries a Certification
-        // ref whose URL contains "eucc" or "common-criteria", OR when the
-        // document carries fresh, fully-resolved CDXA attestation evidence
-        // for a CRA-classified standard naming EUCC / Common Criteria
-        // (Structural/SignaturePresent level; the URL-substring scan remains
-        // the SelfDeclared fallback).
+        // structurally; satisfied when the described product carries a
+        // Certification or Attestation ref whose URL contains "eucc" or
+        // "common-criteria" (a dependency's own certificate does not cover
+        // the product), OR when the document carries fresh, fully-resolved
+        // CDXA attestation evidence for a CRA-classified standard naming
+        // EUCC / Common Criteria (Structural/SignaturePresent level; the
+        // URL-substring scan remains the SelfDeclared fallback).
         let ctx = ComplianceContext::new(self, sbom);
         let cdxa_eucc_attested = ctx
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()
             .any(|s| standard_references_eucc(s.standard));
         let eucc_ref_present = cdxa_eucc_attested
-            || sbom.components.values().any(|c| {
-                c.external_refs.iter().any(|r| {
-                    let url = r.url.to_lowercase();
-                    matches!(
-                        r.ref_type,
-                        crate::model::ExternalRefType::Certification
-                            | crate::model::ExternalRefType::Attestation
-                    ) && (url.contains("eucc") || url.contains("common-criteria"))
-                })
+            || manufacturer_reference(sbom, |r| {
+                let url = r.url.to_lowercase();
+                matches!(
+                    r.ref_type,
+                    crate::model::ExternalRefType::Certification
+                        | crate::model::ExternalRefType::Attestation
+                ) && (url.contains("eucc") || url.contains("common-criteria"))
             });
         if !eucc_ref_present {
             let mut message = "[EUCC] No Certification/Attestation external reference points at an EUCC URL (recommended)".to_string();

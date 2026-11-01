@@ -513,19 +513,20 @@ const ADVICE_PERSON_ORG_CREATOR: FormatAdvice = FormatAdvice {
     },
 };
 
-/// The manufacturer as an organization creator of the SBOM.
-const ADVICE_ORG_CREATOR: FormatAdvice = FormatAdvice {
+/// The manufacturer: the product component's manufacturer or supplier, or
+/// an organization creator of the SBOM.
+const ADVICE_MANUFACTURER: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set metadata.manufacturer (name, contact[].email).",
-        field: Some("metadata.manufacturer"),
+        text: "set metadata.component.manufacturer (CycloneDX 1.6+) or metadata.supplier, or metadata.manufacturer for the organization that created the SBOM (name, contact[].email).",
+        field: Some("metadata.component.manufacturer"),
     },
     spdx2: FieldAdvice {
-        text: "add a creationInfo.creators[] entry \"Organization: Example Ltd (contact@example.com)\".",
-        field: Some("creationInfo.creators[]"),
+        text: "set packages[].supplier on the described package, e.g. \"Organization: Example Ltd\", or add a creationInfo.creators[] entry \"Organization: Example Ltd (contact@example.com)\".",
+        field: Some("packages[].supplier"),
     },
     spdx3: FieldAdvice {
-        text: "set creationInfo.createdBy to an Organization element.",
-        field: Some("creationInfo.createdBy"),
+        text: "set suppliedBy on the root package to an Organization element, or set creationInfo.createdBy to one.",
+        field: Some("suppliedBy"),
     },
 };
 
@@ -740,15 +741,15 @@ const ADVICE_FDA_CONTACT: FormatAdvice = FormatAdvice {
 /// FDA manufacturer creator and component suppliers (both SBOM-FDA-SUPPLIER findings).
 const ADVICE_FDA_SUPPLIER: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "set metadata.manufacturer for the SBOM, and components[].supplier.name (or manufacturer.name, or authors[].name) on each component.",
+        text: "name the device manufacturer in metadata.component.manufacturer (CycloneDX 1.6+), metadata.supplier or metadata.manufacturer, and set components[].supplier.name (or manufacturer.name, or authors[].name) on each component.",
         field: Some("components[].supplier.name"),
     },
     spdx2: FieldAdvice {
-        text: "add an \"Organization: Name (email)\" creationInfo.creators[] entry, and packages[].supplier (or packages[].originator) on each package.",
+        text: "name the device manufacturer as the described package's supplier or in an \"Organization: Name (email)\" creationInfo.creators[] entry, and set packages[].supplier (or packages[].originator) on each package.",
         field: Some("packages[].supplier"),
     },
     spdx3: FieldAdvice {
-        text: "set creationInfo.createdBy to an Organization element, and suppliedBy on each package.",
+        text: "name the device manufacturer in suppliedBy on the root package or as an Organization in creationInfo.createdBy, and set suppliedBy on each package.",
         field: Some("suppliedBy"),
     },
 };
@@ -1600,8 +1601,8 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 13(16): Manufacturer identification and contact information (Annex II (1))",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 13(16)"), (ANNEX, "Annex II (1)")],
-            remediation: "Identify the manufacturer as an organization creator of the SBOM (Art. 13(16)); manufacturerName in the CRA sidecar lowers this to Info.",
-            advice: Some(&ADVICE_ORG_CREATOR),
+            remediation: "Identify the manufacturer (Art. 13(16)): as the manufacturer or supplier of the product component, or as an organization creator of the SBOM; placeholders such as NOASSERTION do not count. manufacturerName in the CRA sidecar lowers this to Info.",
+            advice: Some(&ADVICE_MANUFACTURER),
         },
         "SBOM-CRA-ART-13-16-EMAIL" => RuleMeta {
             sarif_id: "SBOM-CRA-ART-13-16-EMAIL",
@@ -2545,7 +2546,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: Component supplier/manufacturer information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Identify the device manufacturer as an organization creator of the SBOM, and the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
+            remediation: "Identify the device manufacturer, as the manufacturer or supplier of the product component or as an organization creator of the SBOM, and the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
             advice: Some(&ADVICE_FDA_SUPPLIER),
         },
         "SBOM-FDA-SUPPORT" => RuleMeta {

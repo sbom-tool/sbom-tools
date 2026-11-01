@@ -110,18 +110,16 @@ impl ComplianceChecker {
             });
         }
 
-        // CRA: Manufacturer identification and product name
+        // CRA: Manufacturer identification and product name. An
+        // organization creator, the product's supplier (metadata.supplier)
+        // or the described product's own manufacturer or supplier names the
+        // manufacturer (see `manufacturer_identified`).
         if self.level.is_cra() {
-            let has_org = sbom
-                .document
-                .creators
-                .iter()
-                .any(|c| c.creator_type == CreatorType::Organization);
             let sidecar_has_manufacturer = self
                 .sidecar
                 .as_ref()
                 .is_some_and(|s| s.manufacturer_name.is_some());
-            if !has_org {
+            if !manufacturer_identified(sbom) {
                 if sidecar_has_manufacturer {
                     violations.push(Violation {
                         severity: ViolationSeverity::Info,
@@ -227,19 +225,17 @@ impl ComplianceChecker {
                 || sbom.document.vulnerability_disclosure_url.is_some();
 
             // Fallback: check component-level external refs — but only on the
-            // primary/root components. A third-party dependency's upstream
-            // advisories or support URL is not the manufacturer's contact.
-            let has_component_security_contact =
-                manufacturer_scope_components(sbom).iter().any(|comp| {
-                    comp.external_refs.iter().any(|r| {
-                        matches!(
-                            r.ref_type,
-                            ExternalRefType::SecurityContact
-                                | ExternalRefType::Support
-                                | ExternalRefType::Advisories
-                        )
-                    })
-                });
+            // described product components. A third-party dependency's
+            // upstream advisories or support URL is not the manufacturer's
+            // contact.
+            let has_component_security_contact = manufacturer_reference(sbom, |r| {
+                matches!(
+                    r.ref_type,
+                    ExternalRefType::SecurityContact
+                        | ExternalRefType::Support
+                        | ExternalRefType::Advisories
+                )
+            });
 
             if !has_doc_security_contact && !has_component_security_contact {
                 let sidecar_has_security = self.sidecar.as_ref().is_some_and(|s| {
@@ -389,14 +385,14 @@ impl ComplianceChecker {
         if matches!(self.level, ComplianceLevel::CraPhase2) {
             // CRA Annex I Part II (5): Coordinated vulnerability disclosure policy reference
             // Check for a vulnerability disclosure policy URL or advisories reference
-            // Component-level Advisories refs count only on the primary/root
-            // components — a dependency's upstream advisories URL is not the
-            // manufacturer's CVD policy.
+            // Component-level Advisories refs count only on the described
+            // product components — a dependency's upstream advisories URL is
+            // not the manufacturer's CVD policy. The disclosure URL comes from
+            // the primary's URL-shaped advisories reference only: a support
+            // link is no disclosure policy.
             let has_vuln_disclosure_policy = sbom.document.vulnerability_disclosure_url.is_some()
-                || manufacturer_scope_components(sbom).iter().any(|comp| {
-                    comp.external_refs
-                        .iter()
-                        .any(|r| matches!(r.ref_type, ExternalRefType::Advisories))
+                || manufacturer_reference(sbom, |r| {
+                    matches!(r.ref_type, ExternalRefType::Advisories)
                 });
             if !has_vuln_disclosure_policy {
                 let sidecar_has_cvd = self
@@ -455,15 +451,14 @@ impl ComplianceChecker {
             }
 
             // CRA Annex V: EU Declaration of Conformity reference
-            // Check for an attestation, certification, or declaration-of-conformity reference
-            let has_conformity_ref = sbom.components.values().any(|comp| {
-                comp.external_refs.iter().any(|r| {
-                    matches!(
-                        r.ref_type,
-                        ExternalRefType::Attestation | ExternalRefType::Certification
-                    ) || (matches!(r.ref_type, ExternalRefType::Other(ref s) if s.to_lowercase().contains("declaration-of-conformity"))
-                    )
-                })
+            // Check for an attestation, certification, or declaration-of-conformity
+            // reference on the described product: a dependency's own
+            // certification or attestation is not the product's declaration.
+            let has_conformity_ref = manufacturer_reference(sbom, |r| {
+                matches!(
+                    r.ref_type,
+                    ExternalRefType::Attestation | ExternalRefType::Certification
+                ) || (matches!(r.ref_type, ExternalRefType::Other(ref s) if s.to_lowercase().contains("declaration-of-conformity")))
             });
             let sidecar_has_doc_ref = self
                 .sidecar
@@ -492,18 +487,16 @@ impl ComplianceChecker {
             }
         }
 
-        // FDA requires manufacturer (organization) as creator
+        // FDA requires the device manufacturer: an organization creator, or
+        // the product's own manufacturer or supplier (see
+        // `manufacturer_identified`).
         if matches!(self.level, ComplianceLevel::FdaMedicalDevice) {
-            let has_org = sbom
-                .document
-                .creators
-                .iter()
-                .any(|c| c.creator_type == CreatorType::Organization);
-            if !has_org {
+            if !manufacturer_identified(sbom) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
-                    message: "FDA: SBOM should have manufacturer (organization) as creator"
+                    message: "FDA: SBOM should identify the device manufacturer (an organization \
+                              creator, or the manufacturer or supplier of the primary component)"
                         .to_string(),
                     element: None,
                     requirement: "FDA: Manufacturer identification".to_string(),
@@ -972,12 +965,35 @@ impl ComplianceChecker {
                 });
             }
 
+            // Only plausible digests count (see `plausible_digest`): an empty
+            // or garbage value carries no integrity information, and the
+            // finding names why each present hash did not count.
+            let plausible: Vec<_> = comp
+                .hashes
+                .iter()
+                .filter(|h| plausible_digest(&h.algorithm, &h.value))
+                .collect();
+            let no_valid_hash = |citation: &str, note: &str| {
+                if comp.hashes.is_empty() {
+                    format!(
+                        "{citation}Component '{}' missing cryptographic hash{note}",
+                        comp.name
+                    )
+                } else {
+                    format!(
+                        "{citation}Component '{}' has no valid cryptographic hash{note}: {}",
+                        comp.name,
+                        digest_problems(&comp.hashes).join("; ")
+                    )
+                }
+            };
+
             // FDA & Comprehensive: must have cryptographic hashes
             if matches!(
                 self.level,
                 ComplianceLevel::FdaMedicalDevice | ComplianceLevel::Comprehensive
             ) {
-                if comp.hashes.is_empty() {
+                if plausible.is_empty() {
                     violations.push(Violation {
                         severity: if self.level == ComplianceLevel::FdaMedicalDevice {
                             ViolationSeverity::Error
@@ -985,7 +1001,7 @@ impl ComplianceChecker {
                             ViolationSeverity::Warning
                         },
                         category: ViolationCategory::IntegrityInfo,
-                        message: format!("Component '{}' missing cryptographic hash", comp.name),
+                        message: no_valid_hash("", ""),
                         element: Some(comp.name.clone()),
                         requirement: if self.level == ComplianceLevel::FdaMedicalDevice {
                             "FDA: Cryptographic hash for integrity".to_string()
@@ -1005,7 +1021,7 @@ impl ComplianceChecker {
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
-                    let has_strong_hash = comp.hashes.iter().any(|h| {
+                    let has_strong_hash = plausible.iter().any(|h| {
                         matches!(
                             h.algorithm,
                             HashAlgorithm::Sha256
@@ -1023,13 +1039,19 @@ impl ComplianceChecker {
                         )
                     });
                     if !has_strong_hash {
+                        let mut message = format!(
+                            "Component '{}' has only weak hash algorithm (use SHA-256+)",
+                            comp.name
+                        );
+                        let problems = digest_problems(&comp.hashes);
+                        if !problems.is_empty() {
+                            message.push_str("; ");
+                            message.push_str(&problems.join("; "));
+                        }
                         violations.push(Violation {
                             severity: ViolationSeverity::Warning,
                             category: ViolationCategory::IntegrityInfo,
-                            message: format!(
-                                "Component '{}' has only weak hash algorithm (use SHA-256+)",
-                                comp.name
-                            ),
+                            message,
                             element: Some(comp.name.clone()),
                             requirement: "FDA: Strong cryptographic hash (SHA-256 or better)"
                                 .to_string(),
@@ -1045,17 +1067,18 @@ impl ComplianceChecker {
             }
 
             // CRA: hashes are recommended for integrity verification
-            if self.level.is_cra() && comp.hashes.is_empty() {
+            if self.level.is_cra() && plausible.is_empty() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Info,
                     category: ViolationCategory::IntegrityInfo,
-                    message: format!(
-                        "[CRA Annex I Part I (2)(f)] Component '{}' missing cryptographic hash (recommended for integrity)",
-                        comp.name
+                    message: no_valid_hash(
+                        "[CRA Annex I Part I (2)(f)] ",
+                        " (recommended for integrity)",
                     ),
                     element: Some(comp.name.clone()),
-                    requirement: "CRA Annex I Part I (2)(f): Component integrity information (hash)"
-                        .to_string(),
+                    requirement:
+                        "CRA Annex I Part I (2)(f): Component integrity information (hash)"
+                            .to_string(),
                     rule_id: "SBOM-CRA-ANNEX-I-INTEGRITY",
                     component_id: Some(comp.canonical_id.value().to_string()),
                     counts: None,
