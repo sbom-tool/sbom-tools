@@ -600,6 +600,7 @@ impl CycloneDxParser {
             completeness_declaration,
             signature,
             distribution_classification,
+            profile_conformance: Vec::new(),
             citations_count,
         }
     }

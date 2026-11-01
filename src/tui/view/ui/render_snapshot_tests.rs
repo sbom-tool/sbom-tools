@@ -2160,6 +2160,28 @@ fn overview_distributions_are_labelled_and_complete() {
     );
 }
 
+/// SPDX 3 `profileConformance` renders as the document's profiles, not as
+/// a distribution classification: until v0.4.0 the parser stored the
+/// profiles in the TLP field, so they showed as "Distribution".
+#[test]
+fn overview_shows_spdx3_profiles_apart_from_the_distribution() {
+    let mut app = demo_view_app(ViewTab::Overview);
+    app.sbom.document.profile_conformance = vec![
+        "core".to_string(),
+        "software".to_string(),
+        "security".to_string(),
+    ];
+    let text = render_to_text(120, 40, |frame| render(frame, &mut app));
+    assert!(
+        text.contains("Profiles:     core, software, security"),
+        "the declared profiles get their own line:\n{text}"
+    );
+    assert!(
+        !text.contains("Distribution:"),
+        "no distribution classification is shown:\n{text}"
+    );
+}
+
 /// Models tab: training datasets referenced by bom-ref must resolve to the
 /// referenced component's name (findings 39/189), the section header must
 /// say what it is, and K/J must scroll the detail pane (finding 46).

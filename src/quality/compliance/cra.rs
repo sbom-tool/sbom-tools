@@ -721,11 +721,13 @@ impl ComplianceChecker {
                 .components
                 .values()
                 .any(|c| !c.vulnerabilities.is_empty());
+            // The declared profiles (`DocumentMetadata::profile_conformance`;
+            // until v0.4.0 read from the distribution classification).
             let has_security_profile = sbom
                 .document
-                .distribution_classification
-                .as_ref()
-                .is_some_and(|p| p.to_lowercase().contains("security"));
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("security"));
 
             if has_vulns && !has_security_profile {
                 violations.push(Violation {
@@ -754,12 +756,9 @@ impl ComplianceChecker {
                 .any(|c| !c.licenses.declared.is_empty() || c.licenses.concluded.is_some());
             let has_licensing_profile = sbom
                 .document
-                .distribution_classification
-                .as_ref()
-                .is_some_and(|p| {
-                    p.to_lowercase().contains("simplelicensing")
-                        || p.to_lowercase().contains("licensing")
-                });
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("licensing"));
 
             if has_licenses && !has_licensing_profile {
                 violations.push(Violation {

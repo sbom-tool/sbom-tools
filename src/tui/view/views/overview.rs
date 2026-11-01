@@ -1109,6 +1109,7 @@ fn compute_doc_info_height(doc: &crate::model::DocumentMetadata) -> u16 {
         + u16::from(doc.signature.is_some())
         + u16::from(doc.lifecycle_phase.is_some())
         + u16::from(doc.distribution_classification.is_some())
+        + u16::from(!doc.profile_conformance.is_empty())
         + u16::from(doc.citations_count > 0);
     if trust_lines > 0 {
         lines += 1 + trust_lines; // section header + fields
@@ -1243,9 +1244,16 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
     let has_signature = doc.signature.is_some();
     let has_lifecycle = doc.lifecycle_phase.is_some();
     let has_distribution = doc.distribution_classification.is_some();
+    let has_profiles = !doc.profile_conformance.is_empty();
     let has_citations = doc.citations_count > 0;
 
-    if has_completeness || has_signature || has_lifecycle || has_distribution || has_citations {
+    if has_completeness
+        || has_signature
+        || has_lifecycle
+        || has_distribution
+        || has_profiles
+        || has_citations
+    {
         lines.push(Line::styled(
             "── Trust & Compliance ──",
             Style::default().fg(scheme.border),
@@ -1308,6 +1316,18 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
                 Span::styled(
                     format!(" {classification} "),
                     Style::default().fg(scheme.badge_fg_dark).bg(bg),
+                ),
+            ]));
+        }
+
+        // SPDX 3 profileConformance: the profiles the document declares,
+        // which are no distribution classification.
+        if has_profiles {
+            lines.push(Line::from(vec![
+                Span::styled("Profiles:     ", label_style),
+                Span::styled(
+                    doc.profile_conformance.join(", "),
+                    Style::default().fg(scheme.text),
                 ),
             ]));
         }

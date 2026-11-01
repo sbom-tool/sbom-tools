@@ -561,8 +561,10 @@ impl Spdx3Parser {
             .and_then(|ci| ci.spec_version.clone())
             .unwrap_or_else(|| "3.0".to_string());
 
-        // Extract profile conformance
-        let profile_conformance = doc.profile_conformance.as_ref().map(|ps| ps.join(", "));
+        // The profiles the document declares conformance to, in their own
+        // field: SPDX 3 has no distribution classification (until v0.4.0
+        // they were joined into it, so the TUI showed them as one).
+        let profile_conformance = doc.profile_conformance.clone().unwrap_or_default();
 
         // Signature from document if present. An empty value is no value,
         // as for the CycloneDX JSF and XML-DSig signatures.
@@ -596,7 +598,8 @@ impl Spdx3Parser {
             lifecycle_phase: None,
             completeness_declaration: crate::model::CompletenessDeclaration::Unknown,
             signature,
-            distribution_classification: profile_conformance,
+            distribution_classification: None,
+            profile_conformance,
             citations_count: 0,
         }
     }
@@ -3381,9 +3384,13 @@ mod tests {
             "rootElement must resolve through the software_Sbom container"
         );
         assert_eq!(
-            sbom.document.distribution_classification.as_deref(),
-            Some("core, software, simpleLicensing"),
+            sbom.document.profile_conformance,
+            ["core", "software", "simpleLicensing"],
             "profileConformance must lift from the @graph SpdxDocument node"
+        );
+        assert_eq!(
+            sbom.document.distribution_classification, None,
+            "the declared profiles are no distribution classification"
         );
         let ext = sbom
             .extensions
