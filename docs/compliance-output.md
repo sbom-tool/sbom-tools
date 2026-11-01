@@ -537,9 +537,10 @@ promises:
 that it is deprecated: a bare result object for one standard, an array of them
 for several, each with `is_compliant`, `level` (e.g. `NtiaMinimum`),
 `error_count`/`warning_count`/`info_count`, `applicability`, `violations`
-(without `finding_id`/`finding_key`) and `conformity_summary` when present.
-The v1 layout keeps that shape and predates passed checks and the checks not
-evaluated, so neither `passed` nor `evaluated` appears in it: before v0.4.0 they were Info violations
+(without `finding_id`/`finding_key`), and `conformity_summary` and the
+[checks not evaluated](#checks-not-evaluated) (`evaluated`) when present.
+The v1 layout keeps that shape and predates passed checks, so they do not
+appear in it at all: before v0.4.0 they were Info violations
 (`SBOM-PQC-009`, `SBOM-PQC-010`), and a v1 consumer now sees fewer Info
 violations and a lower `info_count`. The not-applicable markers
 `SBOM-AIACT-NA` and `SBOM-BSIAI-NA` are gone from v1 `violations` too:

@@ -121,6 +121,28 @@ source: tests/compliance_snapshots.rs
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
       }
     ],
+    "evaluated": [
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      }
+    ],
     "error_count": 0,
     "warning_count": 1,
     "info_count": 4,
@@ -266,6 +288,28 @@ source: tests/compliance_snapshots.rs
         ],
         "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
         "help_uri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+      }
+    ],
+    "evaluated": [
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-PRODUCER",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-IDENTIFIER",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-FIRMWARE-VERSION",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
+      },
+      {
+        "rule_id": "SBOM-CRA-PRE-8-RQ-02-DEVICE-FIRMWARE",
+        "status": "not_evaluated",
+        "reason": "the SBOM lists no device, firmware or device-driver component"
       }
     ],
     "error_count": 0,

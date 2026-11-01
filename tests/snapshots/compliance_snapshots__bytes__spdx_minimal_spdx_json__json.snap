@@ -219,6 +219,18 @@ source: tests/compliance_snapshots.rs
         "help_uri": "https://www.cisa.gov/resources-tools/resources/framing-software-component-transparency-2024"
       }
     ],
+    "evaluated": [
+      {
+        "rule_id": "SBOM-FSCT-SBOM-TYPE",
+        "status": "not_evaluated",
+        "reason": "sbom-tools reads the SBOM type from CycloneDX metadata.lifecycles only, not from an SPDX document"
+      },
+      {
+        "rule_id": "SBOM-FSCT-SIGNATURE",
+        "status": "not_evaluated",
+        "reason": "SPDX 2.x cannot carry a document signature"
+      }
+    ],
     "error_count": 3,
     "warning_count": 3,
     "info_count": 1,

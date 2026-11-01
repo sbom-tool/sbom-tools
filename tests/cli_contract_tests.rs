@@ -528,8 +528,8 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
 
     // The v1 layout predates passed checks: they simply stop appearing
     // there (they used to be Info violations), and no `passed` field joins.
-    // Nor does `evaluated`, the checks a standard did not evaluate (PQC's
-    // federal TLS check, outside deadline mode).
+    // `evaluated`, the checks a standard did not evaluate (PQC's federal TLS
+    // check, outside deadline mode), is a field of its own and stays.
     let cbom = fixture_path("cyclonedx/cbom-quantum-ready.cdx.json");
     let cbom_raw = std::fs::read_to_string(&cbom).expect("fixture readable");
     let cbom_sbom = sbom_tools::parse_sbom_str(&cbom_raw).expect("fixture parses");
@@ -539,7 +539,6 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
     assert!(!pqc.passed.is_empty(), "the fixture passes PQC checks");
     assert!(!pqc.evaluated.is_empty(), "PQC skips its federal TLS check");
     pqc.passed.clear();
-    pqc.evaluated.clear();
     let cbom = cbom.to_str().expect("utf-8");
     let pqc_v1 = run(&[
         "validate",
@@ -562,7 +561,10 @@ fn json_schema_v1_keeps_the_pre_0_4_shape() {
     );
     let json: Value = serde_json::from_str(&stdout(&pqc_v1)).expect("v1 is JSON");
     assert!(json.get("passed").is_none(), "{json}");
-    assert!(json.get("evaluated").is_none(), "{json}");
+    assert_eq!(
+        json["evaluated"][0]["rule_id"], "SBOM-PQC-PROTO-003",
+        "{json}"
+    );
     assert_eq!(json["info_count"], 0, "{json}");
 
     // The deprecation note goes to stderr, never into the JSON.

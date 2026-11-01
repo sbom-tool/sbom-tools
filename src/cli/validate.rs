@@ -235,13 +235,13 @@ fn write_compliance_output(
 }
 
 /// `result` as the deprecated `--json-schema v1` layout prints it: the
-/// result's own serialization without the passed checks and the checks not
-/// evaluated, which that layout predates. A passed check simply does not
-/// appear there (it used to be an Info violation).
+/// result's own serialization without the passed checks, which that layout
+/// predates. A passed check simply does not appear there (it used to be an
+/// Info violation). The checks not evaluated stay: they are a field of
+/// their own and change no other, so the layout keeps meaning what it did.
 fn v1_result(result: &ComplianceResult) -> ComplianceResult {
     let mut v1 = result.clone();
     v1.passed.clear();
-    v1.evaluated.clear();
     v1
 }
 

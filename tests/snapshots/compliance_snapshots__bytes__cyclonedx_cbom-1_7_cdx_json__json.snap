@@ -309,6 +309,13 @@ source: tests/compliance_snapshots.rs
         "help_uri": "https://csrc.nist.gov/projects/post-quantum-cryptography"
       }
     ],
+    "evaluated": [
+      {
+        "rule_id": "SBOM-PQC-PROTO-003",
+        "status": "not_evaluated",
+        "reason": "the federal TLS 1.3 deadline is checked only under --pqc-mode deadline --pqc-profile federal"
+      }
+    ],
     "error_count": 3,
     "warning_count": 0,
     "info_count": 0,
