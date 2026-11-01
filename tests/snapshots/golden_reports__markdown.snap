@@ -117,7 +117,7 @@ expression: "render(&MarkdownReporter::new())"
 | | Old SBOM | New SBOM | Trend |
 |--|----------|----------|-------|
 | **Status** | Non-compliant | Non-compliant | |
-| **Score** | 4% | 4% |  |
+| **Score** | 13% | 13% |  |
 | **Level** | EU CRA Phase 2 (2027) | EU CRA Phase 2 (2027) | |
 | **Errors** | 2 | 2 |  |
 | **Warnings** | [N] | [N] |  |

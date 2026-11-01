@@ -165,6 +165,25 @@ fn assert_envelope_invariants(envelope: &Value, results: &[ComplianceResult], la
             !applicable,
             "{label}: a null score exactly when N/A"
         );
+        assert_eq!(
+            entry.get("score_basis").is_some(),
+            applicable,
+            "{label}: a score basis exactly when applicable"
+        );
+        if applicable {
+            // The documented formula, from the envelope's own fields.
+            let basis = &entry["score_basis"];
+            let checked = basis["checked"].as_u64().expect("checked");
+            let failed = basis["failed"].as_u64().expect("failed");
+            assert!(checked >= 1, "{label}: the document is always checked");
+            let band = if entry["compliant"] == true { 50 } else { 0 };
+            let within = if failed == 0 {
+                50
+            } else {
+                50 * checked / (checked + failed)
+            };
+            assert_eq!(entry["score"], band + within, "{label}: {standard}");
+        }
         let violations = entry["violations"].as_array().expect("violations");
         for severity in ["Error", "Warning", "Info"] {
             let counted = violations
@@ -424,7 +443,8 @@ fn minimal_envelope() -> Value {
             "name": "NTIA Minimum Elements",
             "applicable": true,
             "compliant": false,
-            "score": 50,
+            "score": 25,
+            "score_basis": {"checked": 1, "failed": 1},
             "counts": {"error": 1, "warning": 0, "info": 0, "passed": 0},
             "violations": [{
                 "finding_id": "sbomtools:v1:60072ae05d1ef4b8",

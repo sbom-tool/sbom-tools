@@ -422,7 +422,7 @@ expression: "render(&HtmlReporter::new())"
         </thead>
         <tbody>
             <tr><td><strong>Status</strong></td><td><span class="badge badge-removed">Non-compliant</span></td><td><span class="badge badge-removed">Non-compliant</span></td><td></td></tr>
-            <tr><td><strong>Score</strong></td><td>4%</td><td>4%</td><td></td></tr>
+            <tr><td><strong>Score</strong></td><td>13%</td><td>13%</td><td></td></tr>
             <tr><td><strong>Level</strong></td><td>EU CRA Phase 2 (2027)</td><td>EU CRA Phase 2 (2027)</td><td></td></tr>
             <tr><td><strong>Errors</strong></td><td>2</td><td>2</td><td></td></tr>
             <tr><td><strong>Warnings</strong></td><td>[N]</td><td>[N]</td><td></td></tr>

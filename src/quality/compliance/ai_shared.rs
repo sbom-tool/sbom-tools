@@ -60,6 +60,18 @@ impl AiBomScope<'_> {
             || !self.dataset_components.is_empty()
             || !self.untyped_ml_components.is_empty()
     }
+
+    /// The number of components in the scope. A model that also carries
+    /// dataset evidence is in both lists and counts once.
+    pub(crate) fn component_count(&self) -> usize {
+        let both = self
+            .dataset_components
+            .iter()
+            .filter(|d| self.ml_components.iter().any(|m| std::ptr::eq(*m, **d)))
+            .count();
+        self.ml_components.len() + self.dataset_components.len() - both
+            + self.untyped_ml_components.len()
+    }
 }
 
 /// Classify the SBOM's components for the AI-BOM compliance profiles.

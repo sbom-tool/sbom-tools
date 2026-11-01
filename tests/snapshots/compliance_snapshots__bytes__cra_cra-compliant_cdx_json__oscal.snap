@@ -429,7 +429,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "50"
+            "value": "90"
           }
         ],
         "reviewed-controls": {
@@ -814,7 +814,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "50"
+            "value": "90"
           }
         ],
         "reviewed-controls": {

@@ -877,6 +877,7 @@ mod tests {
             passed: Vec::new(),
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
+            elements_checked: 1,
         }
     }
 

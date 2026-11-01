@@ -1161,8 +1161,8 @@ fn diff_compliance_na_standard_renders_na_not_pass() {
 #[test]
 fn diff_compliance_header_uses_shared_score_formula() {
     // The header percentage must come from ComplianceResult::score()
-    // (100/(errors+warnings+1), Info-neutral) — the same formula the
-    // exports and markdown/HTML reports render — not a bespoke weighting.
+    // (`compliance_score`, Info-neutral) — the same formula the exports
+    // and markdown/HTML reports render — not a bespoke weighting.
     let mut app = demo_app(TabKind::Compliance);
     let idx = app.diff_compliance_state().selected_standard;
     app.ensure_compliance_results();

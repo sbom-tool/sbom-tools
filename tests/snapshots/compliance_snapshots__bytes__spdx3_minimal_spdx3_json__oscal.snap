@@ -585,7 +585,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "11"
+            "value": "14"
           }
         ],
         "reviewed-controls": {

@@ -1165,13 +1165,13 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "CNSA 2.0",
             "applicable": true,
-            "overallScore": 8.0,
+            "overallScore": 30.0,
             "compliant": false
           },
           {
             "profile": "NIST PQC Readiness",
             "applicable": true,
-            "overallScore": 25.0,
+            "overallScore": 42.0,
             "compliant": false
           }
         ]

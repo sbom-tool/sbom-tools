@@ -1245,13 +1245,13 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "EU CRA Phase 2 (2027)",
             "applicable": true,
-            "overallScore": 50.0,
+            "overallScore": 90.0,
             "compliant": true
           },
           {
             "profile": "EU CRA Phase 1 (2026)",
             "applicable": true,
-            "overallScore": 50.0,
+            "overallScore": 90.0,
             "compliant": true
           }
         ]

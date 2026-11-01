@@ -313,7 +313,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "33"
+            "value": "30"
           }
         ],
         "reviewed-controls": {
@@ -836,7 +836,7 @@ source: tests/compliance_snapshots.rs
           {
             "name": "score",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "14"
+            "value": "12"
           }
         ],
         "reviewed-controls": {

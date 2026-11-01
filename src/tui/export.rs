@@ -953,7 +953,8 @@ mod compliance_export_tests {
         assert!(md.contains(RULE_ID), "markdown must carry stable rule ids");
         assert!(md.contains("NON-COMPLIANT"));
         assert!(md.contains("| Error |"), "severity via canonical label");
-        // Shared ComplianceResult::score(): 1 error → 100/(1+1) = 50.
+        // Shared ComplianceResult::score(): 1 error over the document alone
+        // → floor(50 × 1 / 2) = 25.
         let expected = format!("Score: {}%", results[0].score().expect("applicable score"));
         assert!(md.contains(&expected), "score must come from score()");
     }

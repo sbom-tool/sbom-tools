@@ -1083,13 +1083,13 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "NTIA Minimum Elements",
             "applicable": true,
-            "overallScore": 33.0,
+            "overallScore": 30.0,
             "compliant": false
           },
           {
             "profile": "CISA Framing Software Component Transparency (3rd ed.)",
             "applicable": true,
-            "overallScore": 14.0,
+            "overallScore": 12.0,
             "compliant": false
           }
         ]

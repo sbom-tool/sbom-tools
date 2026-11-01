@@ -13,7 +13,11 @@ source: tests/compliance_snapshots.rs
       "name": "NTIA Minimum Elements",
       "applicable": true,
       "compliant": false,
-      "score": 33,
+      "score": 30,
+      "score_basis": {
+        "checked": 3,
+        "failed": 2
+      },
       "counts": {
         "error": 2,
         "warning": 0,
@@ -71,7 +75,11 @@ source: tests/compliance_snapshots.rs
       "name": "CISA Framing Software Component Transparency (3rd ed.)",
       "applicable": true,
       "compliant": false,
-      "score": 14,
+      "score": 12,
+      "score_basis": {
+        "checked": 3,
+        "failed": 9
+      },
       "counts": {
         "error": 3,
         "warning": 3,

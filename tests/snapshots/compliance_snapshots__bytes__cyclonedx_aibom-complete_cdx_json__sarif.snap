@@ -1137,7 +1137,7 @@ source: tests/compliance_snapshots.rs
           {
             "profile": "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
             "applicable": true,
-            "overallScore": 12.0,
+            "overallScore": 15.0,
             "compliant": false
           }
         ]
