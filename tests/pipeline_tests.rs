@@ -649,7 +649,6 @@ mod multi_diff_pipeline {
             rules: MatchingRulesPathConfig::default(),
             ecosystem_rules: Default::default(),
             enrichment: EnrichmentConfig::default(),
-            compliance: sbom_tools::quality::ComplianceRunConfig::default(),
         });
 
         result.expect("multi-diff should succeed");
@@ -756,7 +755,6 @@ mod multi_diff_pipeline {
             rules: MatchingRulesPathConfig::default(),
             ecosystem_rules: Default::default(),
             enrichment: EnrichmentConfig::default(),
-            compliance: sbom_tools::quality::ComplianceRunConfig::default(),
         });
 
         result.expect("matrix should succeed");
@@ -792,7 +790,6 @@ mod multi_diff_pipeline {
             rules: MatchingRulesPathConfig::default(),
             ecosystem_rules: Default::default(),
             enrichment: EnrichmentConfig::default(),
-            compliance: sbom_tools::quality::ComplianceRunConfig::default(),
         });
 
         assert!(result.is_err(), "Matrix with 1 SBOM should fail");

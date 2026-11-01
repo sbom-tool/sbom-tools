@@ -64,8 +64,8 @@ These inputs besides the SBOM can change a verdict. Every command that checks
 compliance (`validate`, `quality`, `view` and `diff` with their TUIs,
 `cra-docs`, and `timeline` for its compliance trend) takes them the same way
 and hands each standard only the ones it reads, so the same SBOM with the
-same inputs gets the same verdict everywhere. `diff-multi` and `matrix` take
-them too.
+same inputs gets the same verdict everywhere. `diff-multi` and `matrix` check
+no compliance, so they take none of them.
 
 | Input | Flag | Standards that read it |
 |---|---|---|
@@ -335,7 +335,10 @@ line. `--include-excluded-scope` (config key
 `compliance.include_excluded_scope`) judges them like any other component.
 The rules that cover every component, such as the component name, and the
 crypto, EUCC and AI profiles, which have no package rules, judge them
-either way. The primary component is never left out.
+either way. The primary component is never left out. The compliance score
+leaves them out too, but the quality score of `sbom-tools quality` keeps
+counting them: it measures the document's data, and every component is in
+the document.
 
 ## Passed checks
 

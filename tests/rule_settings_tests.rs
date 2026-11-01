@@ -1091,40 +1091,44 @@ fn timeline_takes_the_shared_run_inputs() {
     );
 }
 
-/// `diff-multi` and `matrix` accept the shared run inputs too.
+/// `diff-multi` and `matrix` check no compliance, so they take no run input:
+/// a flag that would change nothing is a usage error, not a silent no-op.
 #[test]
-fn diff_multi_and_matrix_accept_the_shared_run_inputs() {
+fn diff_multi_and_matrix_take_no_run_inputs() {
     let old = fixture("demo-old.cdx.json");
     let new = fixture("demo-new.cdx.json");
     let old = old.to_str().expect("utf-8 path");
     let new = new.to_str().expect("utf-8 path");
     for command in ["diff-multi", "matrix"] {
-        let output = run_cli(&[
-            command,
-            old,
-            new,
-            "-o",
-            "json",
-            "--as-of",
-            AS_OF,
-            "--cra-product-class",
-            "important-class-1",
-            "--rule",
-            "SBOM-NTIA-SUPPLIER=warning",
-        ]);
+        let output = run_cli(&[command, old, new, "-o", "json"]);
         assert_eq!(
             output.status.code(),
             Some(0),
             "{command}: {}",
             stderr(&output)
         );
-        let output = run_cli(&[command, old, new, "-o", "json", "--as-of", "not-a-date"]);
-        assert_eq!(
-            output.status.code(),
-            Some(3),
-            "{command}: {}",
-            stderr(&output)
-        );
+        for flag in [
+            &["--as-of", AS_OF][..],
+            &["--cra-product-class", "important-class-1"],
+            &["--pqc-mode", "deadline"],
+            &["--rule", "SBOM-NTIA-SUPPLIER=warning"],
+            &["--include-excluded-scope"],
+        ] {
+            let mut args = vec![command, old, new, "-o", "json"];
+            args.extend_from_slice(flag);
+            let output = run_cli(&args);
+            assert_eq!(
+                output.status.code(),
+                Some(3),
+                "{command} {flag:?}: {}",
+                stderr(&output)
+            );
+            assert!(
+                stderr(&output).contains("unexpected argument"),
+                "{command} {flag:?}: {}",
+                stderr(&output)
+            );
+        }
     }
 }
 

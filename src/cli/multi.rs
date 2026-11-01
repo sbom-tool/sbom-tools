@@ -74,20 +74,17 @@ fn load_multi_rules(rules: &MatchingRulesPathConfig) -> Option<MatchingRulesConf
     }
 }
 
-/// Build a `MultiDiffEngine` with graph diffing, matching rules and the
-/// compliance run (`--as-of`, `--cra-product-class`, the PQC flags,
-/// `--rule`, `--include-excluded-scope`) wired in from CLI configuration.
+/// Build a `MultiDiffEngine` with graph diffing and matching rules wired in
+/// from CLI configuration.
 fn build_multi_engine(
     fuzzy_config: FuzzyMatchConfig,
     include_unchanged: bool,
     graph: &GraphAwareDiffConfig,
     rules: &MatchingRulesPathConfig,
-    compliance: &crate::quality::ComplianceRunConfig,
 ) -> MultiDiffEngine {
     let mut engine = MultiDiffEngine::new()
         .with_fuzzy_config(fuzzy_config)
-        .include_unchanged(include_unchanged)
-        .with_compliance(compliance.clone());
+        .include_unchanged(include_unchanged);
     if graph.enabled {
         engine = engine.with_graph_diff(graph_diff_config_from(graph));
     }
@@ -149,7 +146,6 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
-        &config.compliance,
     );
 
     let mut result = engine.diff_multi(
@@ -270,8 +266,11 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
-        &config.compliance,
     );
+    // The compliance trend checks every SBOM with the run's inputs
+    // (`--as-of`, `--cra-product-class`, the PQC flags, `--rule`,
+    // `--include-excluded-scope`).
+    engine = engine.with_compliance(config.compliance.clone());
     let mut result = engine.timeline(&sbom_refs)?;
 
     // Apply severity/VEX/graph-impact post-processing to each incremental diff.
@@ -345,7 +344,6 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
-        &config.compliance,
     );
     let mut result = engine.matrix(&sbom_refs, Some(config.cluster_threshold))?;
 

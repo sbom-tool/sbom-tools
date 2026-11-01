@@ -481,11 +481,6 @@ pub struct MultiDiffConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
-    /// The compliance inputs every SBOM is judged with (`--as-of`,
-    /// `--cra-product-class`, the PQC flags, `--rule`,
-    /// `--include-excluded-scope`); the timeline's compliance trend reads
-    /// them.
-    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Configuration for timeline analysis
@@ -509,10 +504,9 @@ pub struct TimelineConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
-    /// The compliance inputs every SBOM is judged with (`--as-of`,
-    /// `--cra-product-class`, the PQC flags, `--rule`,
-    /// `--include-excluded-scope`); the timeline's compliance trend reads
-    /// them.
+    /// The compliance inputs the compliance trend checks every SBOM with
+    /// (`--as-of`, `--cra-product-class`, the PQC flags, `--rule`,
+    /// `--include-excluded-scope`).
     pub compliance: crate::quality::ComplianceRunConfig,
 }
 
@@ -554,11 +548,6 @@ pub struct MatrixConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
-    /// The compliance inputs every SBOM is judged with (`--as-of`,
-    /// `--cra-product-class`, the PQC flags, `--rule`,
-    /// `--include-excluded-scope`); the timeline's compliance trend reads
-    /// them.
-    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Configuration for the `vex` subcommand.

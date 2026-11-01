@@ -682,10 +682,11 @@ sbom-tools matrix sbom1.json sbom2.json sbom3.json
 
 Each command opens a full-screen dashboard: press `p`/`Tab` to switch panels, `v` for the variable-components drill-down (multi-diff), `Enter` for a pair diff (matrix), and `d` to compare adjacent versions (timeline).
 
-They take the compliance inputs of a run as `validate` does (`--as-of`,
-`--cra-product-class`, the PQC flags, `--rule`, `--include-excluded-scope`,
-with the config file's defaults): `timeline` checks every SBOM of its
-compliance trend with them, so `--as-of` pins the trend.
+`timeline` takes the compliance inputs of a run as `validate` does
+(`--as-of`, `--cra-product-class`, the PQC flags, `--rule`,
+`--include-excluded-scope`, with the config file's defaults) and checks every
+SBOM of its compliance trend with them, so `--as-of` pins the trend.
+`diff-multi` and `matrix` check no compliance and take none of them.
 
 These three commands accept `-o auto|tui|json` only (`auto` = TUI on a TTY,
 JSON when piped); any other value is rejected as a usage error before any

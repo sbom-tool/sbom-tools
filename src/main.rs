@@ -341,9 +341,10 @@ fn seed_vex_enrichment(
 }
 
 /// The compliance inputs every compliance-checking command takes (`validate`,
-/// `quality`, `view`, `diff`, `cra-docs`, and the timeline's compliance
-/// trend through `diff-multi`, `timeline` and `matrix`), defined once so the
-/// commands accept them identically and judge an SBOM the same way.
+/// `quality`, `view`, `diff`, `cra-docs`, and `timeline` for its compliance
+/// trend), defined once so the commands accept them identically and judge an
+/// SBOM the same way. `diff-multi` and `matrix` check no compliance, so they
+/// take none of them.
 #[derive(Args, Debug)]
 struct ComplianceRunArgs {
     /// CRA Annex III/IV product class (drives severity calibration of the
@@ -1033,9 +1034,6 @@ struct DiffMultiArgs {
     fail_on_vex_gap: bool,
 
     #[command(flatten)]
-    compliance: ComplianceRunArgs,
-
-    #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
 }
 
@@ -1048,6 +1046,7 @@ struct DiffMultiArgs {
 EXAMPLES:
     sbom-tools timeline v1.0.json v1.1.json v1.2.json             # Version evolution
     sbom-tools timeline releases/*.json --enrich-vulns -o json     # Vuln trend report
+    sbom-tools timeline releases/*.json --as-of 2027-01-01 -o json # Pinned compliance trend
     sbom-tools timeline *.json --fail-on-vuln --fail-on-change     # CI gate")]
 struct TimelineArgs {
     /// Paths to SBOMs in chronological order (oldest first)
@@ -1175,9 +1174,6 @@ struct MatrixArgs {
     /// Exit with code 4 if introduced vulnerabilities lack VEX statements
     #[arg(long)]
     fail_on_vex_gap: bool,
-
-    #[command(flatten)]
-    compliance: ComplianceRunArgs,
 
     #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
@@ -2496,9 +2492,6 @@ fn run() -> Result<()> {
         Commands::DiffMulti(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
-            // The compliance run every SBOM is judged with (the timeline's
-            // compliance trend), parsed like `diff`'s.
-            let compliance = args.compliance.shared_run(&app)?;
             let config = MultiDiffConfig {
                 baseline: args.baseline,
                 targets: args.targets,
@@ -2569,7 +2562,6 @@ fn run() -> Result<()> {
                 },
                 ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
-                compliance,
             };
             let exit_code = cli::run_diff_multi(config)?;
             if exit_code != 0 {
@@ -2581,8 +2573,8 @@ fn run() -> Result<()> {
         Commands::Timeline(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
-            // The compliance run every SBOM is judged with (the timeline's
-            // compliance trend), parsed like `diff`'s.
+            // The compliance run the trend checks every SBOM with, parsed
+            // like `diff`'s.
             let compliance = args.compliance.shared_run(&app)?;
             let config = TimelineConfig {
                 sbom_paths: args.sboms,
@@ -2662,9 +2654,6 @@ fn run() -> Result<()> {
         Commands::Matrix(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
-            // The compliance run every SBOM is judged with (the timeline's
-            // compliance trend), parsed like `diff`'s.
-            let compliance = args.compliance.shared_run(&app)?;
             let config = MatrixConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
@@ -2732,7 +2721,6 @@ fn run() -> Result<()> {
                 },
                 ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
-                compliance,
             };
             let exit_code = cli::run_matrix(config)?;
             if exit_code != 0 {
