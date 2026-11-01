@@ -38,7 +38,7 @@ use sbom_tools::quality::{
 };
 use sbom_tools::reports::oscal::generate_assessment_results_at;
 use sbom_tools::reports::{
-    SarifArtifact, SarifArtifactLocation, SarifOptions, generate_compliance_json,
+    AssessedSbom, SarifArtifact, SarifArtifactLocation, SarifOptions, generate_compliance_json_at,
     generate_multi_compliance_sarif_with,
 };
 
@@ -299,17 +299,9 @@ const BYTE_FIXTURES: &[(&str, &[&str])] = &[
     ("cyclonedx/aibom-complete.cdx.json", &["ai-act", "bsi-ai"]),
 ];
 
-fn sha256_hex(bytes: &[u8]) -> String {
-    use sha2::{Digest, Sha256};
-    Sha256::digest(bytes)
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
-}
-
 /// The fixture text with CRLF line endings folded to LF. Windows checkouts
 /// convert line endings (the repo has no `.gitattributes`), which would change
-/// the SBOM digest that OSCAL UUIDs derive from.
+/// the SBOM digest the JSON subject states and OSCAL UUIDs derive from.
 fn lf_normalized(raw: &str) -> String {
     raw.replace("\r\n", "\n")
 }
@@ -347,7 +339,11 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
         })
         .collect();
     let json = serde_json::to_string_pretty(&v1).expect("JSON serializes");
-    let envelope = generate_compliance_json(&results).expect("envelope serializes");
+    // The SBOM as `validate` reads it: its digest (of the LF-folded text, so
+    // a Windows checkout gives the same) and its file name.
+    let assessed = AssessedSbom::new(&sbom, lf_normalized(&raw).as_bytes()).with_file_name(rel);
+    let envelope =
+        generate_compliance_json_at(&results, &assessed, as_of()).expect("envelope serializes");
     // The SBOM as the CLI names it from the repository root.
     let artifact = SarifArtifact::new(
         SarifArtifactLocation::relative(format!("tests/fixtures/{rel}")),
@@ -359,13 +355,8 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
         &SarifOptions::new().with_artifact(artifact),
     )
     .expect("SARIF serializes");
-    let oscal = generate_assessment_results_at(
-        &results,
-        &sbom,
-        &sha256_hex(lf_normalized(&raw).as_bytes()),
-        Some(as_of()),
-    )
-    .expect("OSCAL serializes");
+    let oscal =
+        generate_assessment_results_at(&results, &assessed, as_of()).expect("OSCAL serializes");
     [
         ("json", json),
         ("json_v2", envelope),

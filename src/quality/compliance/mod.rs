@@ -1519,9 +1519,10 @@ const fn is_zero(count: &usize) -> bool {
 }
 
 /// Per-route checklist of evidence the CRA Annex VIII conformity-assessment
-/// procedure expects. Surfaced in markdown / HTML / SARIF / TUI reports so
-/// notified bodies and auditors see the route + the missing evidence in
-/// one glance.
+/// procedure expects. Surfaced in the JSON, SARIF and OSCAL outputs (the
+/// standard's `conformity_summary`, `conformitySummary` and `conformity-*`
+/// properties) and the markdown, HTML and TUI reports, so notified bodies
+/// and auditors see the route + the missing evidence in one glance.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ConformityAssessmentSummary {
