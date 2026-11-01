@@ -753,22 +753,6 @@ const ADVICE_FDA_CONTACT: FormatAdvice = FormatAdvice {
     },
 };
 
-/// FDA manufacturer creator and component suppliers (both SBOM-FDA-SUPPLIER findings).
-const ADVICE_FDA_SUPPLIER: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "name the device manufacturer in metadata.component.manufacturer (CycloneDX 1.6+), metadata.supplier or metadata.manufacturer, and set components[].supplier.name (or manufacturer.name, or authors[].name) on each component.",
-        field: Some("components[].supplier.name"),
-    },
-    spdx2: FieldAdvice {
-        text: "name the device manufacturer as the described package's supplier or in an \"Organization: Name (email)\" creationInfo.creators[] entry, and set packages[].supplier (or packages[].originator) on each package.",
-        field: Some("packages[].supplier"),
-    },
-    spdx3: FieldAdvice {
-        text: "name the device manufacturer in suppliedBy on the root package or as an Organization in creationInfo.createdBy, and set suppliedBy on each package.",
-        field: Some("suppliedBy"),
-    },
-};
-
 /// Completeness declaration; SPDX 2.x has no field for it.
 const ADVICE_COMPLETENESS: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -2172,6 +2156,46 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             remediation: REMEDIATION_DUPLICATE_COMPONENT,
             advice: Some(&ADVICE_DUPLICATE_COMPONENT),
         },
+        // The Standard and Comprehensive profiles' NTIA-baseline checks, with
+        // ids of the quality family. They reported as SBOM-NTIA-VERSION,
+        // -TIMESTAMP, -SUPPLIER and -DEPENDENCY until v0.4.0, so a quality
+        // run listed NTIA rules.
+        "SBOM-QUALITY-TIMESTAMP" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-TIMESTAMP",
+            name: "QualityTimestamp",
+            short_description: "SBOM quality: SBOM creation timestamp",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Record when the SBOM was created.",
+            advice: Some(&ADVICE_TIMESTAMP),
+        },
+        "SBOM-QUALITY-VERSION" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-VERSION",
+            name: "QualityComponentVersion",
+            short_description: "SBOM quality: Every component has a version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Give every component the version its supplier assigned; placeholders such as NOASSERTION, TBD or N/A do not count.",
+            advice: Some(&ADVICE_VERSION),
+        },
+        "SBOM-QUALITY-SUPPLIER" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-SUPPLIER",
+            name: "QualityComponentSupplier",
+            short_description: "SBOM quality: Every component names its supplier",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Name the supplier of every component, the entity that creates, defines and identifies it; placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-QUALITY-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-DEPENDENCY",
+            name: "QualityDependency",
+            short_description: "SBOM quality: Dependency relationships between the components",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Declare the dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
+            advice: Some(&ADVICE_DEPENDENCIES),
+        },
         // ---- EUCC Substantial (reference-only profile) -------------------
         "SBOM-EUCC-PP" => RuleMeta {
             sarif_id: "SBOM-EUCC-PP",
@@ -2640,14 +2664,37 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_DEPENDENCIES),
         },
         // ---- FDA ---------------------------------------------------------
+        // The supplier of every component. The document-level device
+        // manufacturer reports under SBOM-FDA-MANUFACTURER; until v0.4.0
+        // both checks shared this id.
         "SBOM-FDA-SUPPLIER" => RuleMeta {
             sarif_id: "SBOM-FDA-SUPPLIER",
             name: "FdaSupplier",
             short_description: "FDA Medical Device: Component supplier/manufacturer information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Identify the device manufacturer, as the manufacturer or supplier of the product component or as an organization creator of the SBOM, and the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
-            advice: Some(&ADVICE_FDA_SUPPLIER),
+            remediation: "Name the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-FDA-MANUFACTURER" => RuleMeta {
+            sarif_id: "SBOM-FDA-MANUFACTURER",
+            name: "FdaManufacturer",
+            short_description: "FDA Medical Device: Device manufacturer identified",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Identify the device manufacturer (FDA premarket guidance): as an organization creator of the SBOM, as the supplier of the product, or as the manufacturer or supplier of the product component. Placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_MANUFACTURER),
+        },
+        // The NTIA Timestamp element under FDA, which incorporates the NTIA
+        // baseline; it reported as SBOM-NTIA-TIMESTAMP until v0.4.0.
+        "SBOM-FDA-TIMESTAMP" => RuleMeta {
+            sarif_id: "SBOM-FDA-TIMESTAMP",
+            name: "FdaTimestamp",
+            short_description: "FDA Medical Device: SBOM creation timestamp (NTIA baseline element)",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Record when the SBOM was created (an NTIA baseline element the FDA guidance incorporates).",
+            advice: Some(&ADVICE_TIMESTAMP),
         },
         "SBOM-FDA-SUPPORT" => RuleMeta {
             sarif_id: "SBOM-FDA-SUPPORT",
@@ -4238,6 +4285,10 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
     "SBOM-QUALITY-DUPLICATE-COMPONENT",
+    "SBOM-QUALITY-TIMESTAMP",
+    "SBOM-QUALITY-VERSION",
+    "SBOM-QUALITY-SUPPLIER",
+    "SBOM-QUALITY-DEPENDENCY",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -4288,6 +4339,8 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-SUPPLIER",
     "SBOM-NTIA-DEPENDENCY",
     "SBOM-FDA-SUPPLIER",
+    "SBOM-FDA-MANUFACTURER",
+    "SBOM-FDA-TIMESTAMP",
     "SBOM-FDA-SUPPORT",
     "SBOM-FDA-CONTACT",
     "SBOM-FDA-NAME",
@@ -4564,14 +4617,13 @@ const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// The Standard quality profile's rules (generic.rs): Minimum's, plus the
-/// serial number, component versions (an NTIA rule), unique identifiers and
-/// licenses.
+/// serial number, component versions, unique identifiers and licenses.
 const STANDARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
     "SBOM-QUALITY-NAME",
-    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-VERSION",
     "SBOM-QUALITY-IDENTIFIER",
     "SBOM-QUALITY-LICENSE",
     "SBOM-QUALITY-SPEC-VERSION",
@@ -4581,19 +4633,20 @@ const STANDARD_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// The Comprehensive quality profile's rules (generic.rs): Standard's, plus
-/// the NTIA timestamp, supplier and dependency rules and component hashes.
+/// the creation timestamp, component suppliers and hashes, and dependency
+/// relationships.
 const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
-    "SBOM-NTIA-TIMESTAMP",
+    "SBOM-QUALITY-TIMESTAMP",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
     "SBOM-QUALITY-NAME",
-    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-VERSION",
     "SBOM-QUALITY-IDENTIFIER",
-    "SBOM-NTIA-SUPPLIER",
+    "SBOM-QUALITY-SUPPLIER",
     "SBOM-QUALITY-LICENSE",
     "SBOM-QUALITY-HASH",
-    "SBOM-NTIA-DEPENDENCY",
+    "SBOM-QUALITY-DEPENDENCY",
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
@@ -4826,15 +4879,17 @@ pub const NTIA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-DUPLICATE-COMPONENT",
 ];
 
-/// FDA premarket SARIF rule catalogue. The FDA baseline check reuses the
-/// NTIA timestamp rule id (the FDA guidance incorporates the NTIA minimum
-/// elements).
+/// FDA premarket SARIF rule catalogue. Its NTIA-baseline checks (the
+/// guidance incorporates the NTIA minimum elements) report under FDA ids of
+/// their own, the timestamp too: it reported as SBOM-NTIA-TIMESTAMP until
+/// v0.4.0.
 pub const FDA_SARIF_RULE_IDS: &[&str] = &[
-    "SBOM-NTIA-TIMESTAMP",
+    "SBOM-FDA-TIMESTAMP",
     "SBOM-FDA-INVENTORY",
     "SBOM-FDA-CREATOR",
     "SBOM-FDA-NAMESPACE",
     "SBOM-FDA-NAME",
+    "SBOM-FDA-MANUFACTURER",
     "SBOM-FDA-SUPPLIER",
     "SBOM-FDA-HASH",
     "SBOM-FDA-IDENTIFIER",
@@ -5485,6 +5540,27 @@ mod tests {
             orphans.is_empty(),
             "rules in no level's list (add each to rules_for_level's table): {orphans:?}"
         );
+    }
+
+    /// Every level reports under its own family's rule ids, the prefix of
+    /// its fallback rule: `SBOM-QUALITY-` for the quality profiles,
+    /// `SBOM-NTIA-` for NTIA, `SBOM-FDA-` for FDA and so on. Until v0.4.0
+    /// the Standard and Comprehensive profiles reported four `SBOM-NTIA-*`
+    /// rules and FDA the NTIA timestamp, so their runs listed NTIA rules.
+    #[test]
+    fn every_level_reports_under_its_own_family() {
+        for level in ComplianceLevel::all() {
+            let fallback = super::super::generic_rule_id_for_level(*level);
+            let prefix = fallback
+                .strip_suffix("GENERAL")
+                .expect("a fallback rule id ends in GENERAL");
+            for id in rules_for_level(*level) {
+                assert!(
+                    id.starts_with(prefix),
+                    "{level:?} lists {id}, a rule outside its family {prefix}*"
+                );
+            }
+        }
     }
 
     /// Every rule a standard reports cites the clause it implements, so its

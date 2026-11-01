@@ -2043,10 +2043,9 @@ mod tests {
         );
         let r = checker(ComplianceLevel::FdaMedicalDevice).check(&sbom);
         assert!(
-            r.violations
-                .iter()
-                .any(|v| v.rule_id == "SBOM-NTIA-TIMESTAMP"
-                    && v.severity == ViolationSeverity::Error),
+            r.violations.iter().any(
+                |v| v.rule_id == "SBOM-FDA-TIMESTAMP" && v.severity == ViolationSeverity::Error
+            ),
             "missing timestamp must fail FDA (NTIA baseline)"
         );
     }

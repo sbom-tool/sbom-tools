@@ -529,18 +529,21 @@ impl ComplianceChecker {
 
         // FDA requires the device manufacturer: an organization creator, or
         // the product's own manufacturer or supplier (see
-        // `manufacturer_identified`).
+        // `manufacturer_identified`). It reports under a rule of its own:
+        // SBOM-FDA-SUPPLIER is the per-component supplier element below
+        // (until v0.4.0 both checks shared that id).
         if matches!(self.level, ComplianceLevel::FdaMedicalDevice) {
             if !manufacturer_identified(sbom) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
                     message: "FDA: SBOM should identify the device manufacturer (an organization \
-                              creator, or the manufacturer or supplier of the primary component)"
+                              creator, the product's supplier, or the manufacturer or supplier \
+                              of the primary component)"
                         .to_string(),
                     element: None,
                     requirement: "FDA: Manufacturer identification".to_string(),
-                    rule_id: "SBOM-FDA-SUPPLIER",
+                    rule_id: "SBOM-FDA-MANUFACTURER",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
@@ -624,6 +627,8 @@ impl ComplianceChecker {
         // source timestamp is stored as the UNIX_EPOCH sentinel (see
         // `has_known_timestamp`), so gate on that rather than assuming it is
         // always meaningful. An invalid one is quoted, not called missing.
+        // Each level reports the check under its own family's id (until
+        // v0.4.0 FDA and Comprehensive reported SBOM-NTIA-TIMESTAMP).
         if matches!(
             self.level,
             ComplianceLevel::NtiaMinimum
@@ -631,10 +636,14 @@ impl ComplianceChecker {
                 | ComplianceLevel::Comprehensive
         ) && !sbom.document.has_known_timestamp()
         {
-            let requirement = if self.level == ComplianceLevel::FdaMedicalDevice {
-                "FDA (NTIA baseline): Timestamp".to_string()
-            } else {
-                "NTIA Minimum Elements: Timestamp".to_string()
+            let (requirement, rule_id) = match self.level {
+                ComplianceLevel::NtiaMinimum => {
+                    ("NTIA Minimum Elements: Timestamp", "SBOM-NTIA-TIMESTAMP")
+                }
+                ComplianceLevel::FdaMedicalDevice => {
+                    ("FDA (NTIA baseline): Timestamp", "SBOM-FDA-TIMESTAMP")
+                }
+                _ => ("SBOM creation timestamp", "SBOM-QUALITY-TIMESTAMP"),
             };
             let message = unparseable_timestamp(sbom).map_or_else(
                 || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
@@ -645,8 +654,8 @@ impl ComplianceChecker {
                 category: ViolationCategory::DocumentMetadata,
                 message,
                 element: None,
-                requirement,
-                rule_id: "SBOM-NTIA-TIMESTAMP",
+                requirement: requirement.to_string(),
+                rule_id,
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
@@ -827,10 +836,17 @@ impl ComplianceChecker {
                         ),
                         "SBOM-CRA-COMPONENT-VERSION",
                     ),
-                    _ => (
+                    ComplianceLevel::NtiaMinimum => (
                         "NTIA: Component version".to_string(),
                         format!("Component '{}' missing version", comp.name),
                         "SBOM-NTIA-VERSION",
+                    ),
+                    // Standard and Comprehensive, whose checks report under
+                    // SBOM-QUALITY-* ids (SBOM-NTIA-VERSION until v0.4.0).
+                    _ => (
+                        "Component version".to_string(),
+                        format!("Component '{}' missing version", comp.name),
+                        "SBOM-QUALITY-VERSION",
                     ),
                 };
                 violations.push(Violation {
@@ -974,10 +990,16 @@ impl ComplianceChecker {
                         "CRA Art. 24 (steward): Component supplier information".to_string(),
                         "SBOM-CRA-ART-24-SUPPLIER",
                     ),
-                    _ => (
+                    ComplianceLevel::NtiaMinimum => (
                         format!("Component '{}' missing supplier/manufacturer", comp.name),
                         "NTIA: Supplier information".to_string(),
                         "SBOM-NTIA-SUPPLIER",
+                    ),
+                    // Comprehensive (SBOM-NTIA-SUPPLIER until v0.4.0).
+                    _ => (
+                        format!("Component '{}' missing supplier/manufacturer", comp.name),
+                        "Component supplier information".to_string(),
+                        "SBOM-QUALITY-SUPPLIER",
                     ),
                 };
                 violations.push(Violation {
@@ -1197,7 +1219,11 @@ impl ComplianceChecker {
                 ComplianceLevel::FdaMedicalDevice => {
                     ("FDA: Dependency relationships", "SBOM-FDA-DEPENDENCY")
                 }
-                _ => ("NTIA: Dependency relationships", "SBOM-NTIA-DEPENDENCY"),
+                ComplianceLevel::NtiaMinimum => {
+                    ("NTIA: Dependency relationships", "SBOM-NTIA-DEPENDENCY")
+                }
+                // Comprehensive (SBOM-NTIA-DEPENDENCY until v0.4.0).
+                _ => ("Dependency relationships", "SBOM-QUALITY-DEPENDENCY"),
             };
 
             if has_multiple_components && !has_deps {
