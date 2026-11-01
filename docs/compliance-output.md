@@ -414,6 +414,8 @@ CycloneDX XML): `components[].supplier.name` in CycloneDX,
 the primary component of a CycloneDX document names the field under
 `metadata.component` (`metadata.component.supplier.name`). A rule whose fix
 is the same in every format, such as an algorithm choice, names no field.
+Of the crypto rules, only `SBOM-PQC-HASH-001` names one, the digest size it
+reads: `components[].cryptoProperties.algorithmProperties.parameterSetIdentifier`.
 
 `observed` is set by the checks that read one value:
 
