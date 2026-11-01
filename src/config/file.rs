@@ -338,6 +338,35 @@ impl AppConfig {
                 .cra_product_class
                 .clone_from(&other.compliance.cra_product_class);
         }
+        // A rule setting of `other` wins for its rule; the rest stay.
+        for (rule_id, setting) in &other.compliance.rules {
+            self.compliance
+                .rules
+                .insert(rule_id.clone(), setting.clone());
+        }
+        for rule_id in &other.compliance.fail_on {
+            if !self.compliance.fail_on.contains(rule_id) {
+                self.compliance.fail_on.push(rule_id.clone());
+            }
+        }
+        if other.compliance.include_excluded_scope {
+            self.compliance.include_excluded_scope = true;
+        }
+        if other.compliance.pqc_mode.is_some() {
+            self.compliance
+                .pqc_mode
+                .clone_from(&other.compliance.pqc_mode);
+        }
+        if other.compliance.pqc_profile.is_some() {
+            self.compliance
+                .pqc_profile
+                .clone_from(&other.compliance.pqc_profile);
+        }
+        if other.compliance.cnsa_category.is_some() {
+            self.compliance
+                .cnsa_category
+                .clone_from(&other.compliance.cnsa_category);
+        }
 
         // Enrichment config
         if other.enrichment.is_some() {
@@ -475,6 +504,28 @@ compliance:
   # CRA product class for every command that checks compliance (`diff`
   # too): default, important-class-1, important-class-2, critical
   # cra_product_class: default
+  # Rule settings for every command that checks compliance: rule id ->
+  # off, info, warning or error (`sbom-tools rules` lists the ids). The
+  # verdict, the counts, the score and the exit code follow them; `off`
+  # drops the rule's findings and counts them under `suppressed`. A
+  # `--rule RULE=SETTING` flag wins for its rule.
+  # rules:
+  #   SBOM-NTIA-SUPPLIER: warning
+  #   SBOM-CRA-ART-13-15-PRODUCT: off
+  # Fail `validate` (exit 1) on any finding of these rules, whatever its
+  # severity (`--fail-on` adds more)
+  # fail_on: [SBOM-NTIA-SUPPLIER]
+  # Judge components whose scope is excluded (CycloneDX `scope: excluded`,
+  # SPDX development, build and test dependencies) by the package rules
+  # too; by default they are left out
+  include_excluded_scope: false
+  # How `cnsa2` and `pqc` judge quantum-vulnerable cryptography: readiness
+  # (default) or deadline. pqc_profile (nist, federal) and cnsa_category
+  # (software-signing, web-cloud, networking, operating-systems, niche,
+  # custom-legacy) apply only with `pqc_mode: deadline`
+  # pqc_mode: deadline
+  # pqc_profile: nist
+  # cnsa_category: software-signing
 
 # Enrichment configuration (optional)
 # enrichment:
@@ -512,6 +563,70 @@ mod tests {
             errors.is_empty(),
             "the generated example config must validate: {errors:?}"
         );
+    }
+
+    /// `compliance.rules` takes the settings as YAML spells them: a bare
+    /// `off` is the setting, not YAML 1.1's boolean.
+    #[test]
+    fn compliance_rules_load_as_written() {
+        let tmp = TempDir::new().unwrap();
+        let path = tmp.path().join(".sbom-tools.yaml");
+        std::fs::write(
+            &path,
+            "compliance:\n  rules:\n    SBOM-NTIA-SUPPLIER: warning\n    SBOM-NTIA-VERSION: off\n  \
+             fail_on: [SBOM-NTIA-AUTHOR]\n  include_excluded_scope: true\n  pqc_mode: deadline\n",
+        )
+        .unwrap();
+        let config = load_config_file(&path).expect("the config loads");
+        assert_eq!(
+            config
+                .compliance
+                .rules
+                .get("SBOM-NTIA-VERSION")
+                .map(String::as_str),
+            Some("off")
+        );
+        assert_eq!(
+            config
+                .compliance
+                .rules
+                .get("SBOM-NTIA-SUPPLIER")
+                .map(String::as_str),
+            Some("warning")
+        );
+        assert_eq!(config.compliance.fail_on, ["SBOM-NTIA-AUTHOR"]);
+        assert!(config.compliance.include_excluded_scope);
+        assert_eq!(config.compliance.pqc_mode.as_deref(), Some("deadline"));
+        use crate::config::Validatable;
+        assert!(config.is_valid(), "{:?}", config.validate());
+    }
+
+    /// A merged config keeps the base's rule settings and lets `other` win
+    /// for the rules it sets.
+    #[test]
+    fn merge_overrides_rule_settings_per_rule() {
+        let mut base = AppConfig::default();
+        base.compliance
+            .rules
+            .insert("SBOM-NTIA-SUPPLIER".to_string(), "off".to_string());
+        base.compliance
+            .rules
+            .insert("SBOM-NTIA-VERSION".to_string(), "info".to_string());
+        let mut other = AppConfig::default();
+        other
+            .compliance
+            .rules
+            .insert("SBOM-NTIA-SUPPLIER".to_string(), "error".to_string());
+        other
+            .compliance
+            .fail_on
+            .push("SBOM-NTIA-AUTHOR".to_string());
+        other.compliance.pqc_mode = Some("deadline".to_string());
+        base.merge(&other);
+        assert_eq!(base.compliance.rules["SBOM-NTIA-SUPPLIER"], "error");
+        assert_eq!(base.compliance.rules["SBOM-NTIA-VERSION"], "info");
+        assert_eq!(base.compliance.fail_on, ["SBOM-NTIA-AUTHOR"]);
+        assert_eq!(base.compliance.pqc_mode.as_deref(), Some("deadline"));
     }
 
     #[test]

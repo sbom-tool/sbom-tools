@@ -32,6 +32,7 @@ mod generic;
 mod pci_dss;
 mod pqc_calendar;
 mod registry;
+mod rule_settings;
 mod run_config;
 mod selector;
 mod shared;
@@ -50,6 +51,7 @@ pub use finding::{
 };
 use pqc_calendar::Calendar;
 pub use pqc_calendar::{CnsaCategory, Deadline, PqcMode, PqcProfile};
+pub use registry::resolve_rule_id;
 pub use registry::{
     CISA2026_SARIF_RULE_IDS, CNSA2_SARIF_RULE_IDS, EO14028_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS,
     FSCT_SARIF_RULE_IDS, FieldAdvice, FormatAdvice, NTIA_SARIF_RULE_IDS, PASS_RULE_IDS,
@@ -57,6 +59,9 @@ pub use registry::{
     SSDF_SARIF_RULE_IDS, all_rule_ids, rule_kind, rule_meta, rules_for_level,
 };
 use registry::{REMEDIATION_UNREGISTERED, lookup_static_rule_id};
+pub use rule_settings::{
+    RuleSetting, RuleSettings, SettingSource, SeverityOverride, SuppressedRule,
+};
 pub use run_config::ComplianceRunConfig;
 pub use selector::StandardSelector;
 // The vendor-hash metric behind SBOM-CRA-PRE-7-RQ-07-RE
@@ -72,13 +77,13 @@ pub(crate) use shared::manufacturer_name;
 use shared::{
     SPDX2_NO_SIGNATURE, SPEC_VERSION_UNPARSED, ValueState, creator_contacts, creator_identified,
     digest_problems, document_signed, future_timestamp_violation, has_known_license,
-    has_known_value, invalid_digest_note, inventory_absent_violation, is_contact_reference,
-    is_declared_unknown, is_eucc_reference, is_placeholder, is_spdx2, is_valid_email_format,
-    justified_not_affected, known_component_name, known_contact, known_value, license_state,
-    manufacturer_identified, manufacturer_reference, name_with_digest_problems, observed,
-    observed_digest, observed_producer, observed_unparsed_timestamp, package_components,
-    truncate_list, unparseable_timestamp, unreachable_contact, unreachable_contact_note,
-    unreachable_creator, unreachable_creator_note, unreachable_sidecar_note, value_state,
+    has_known_value, invalid_digest_note, is_contact_reference, is_declared_unknown,
+    is_eucc_reference, is_placeholder, is_spdx2, is_valid_email_format, justified_not_affected,
+    known_component_name, known_contact, known_value, license_state, manufacturer_identified,
+    manufacturer_reference, name_with_digest_problems, observed, observed_digest,
+    observed_producer, observed_unparsed_timestamp, truncate_list, unparseable_timestamp,
+    unreachable_contact, unreachable_contact_note, unreachable_creator, unreachable_creator_note,
+    unreachable_sidecar_note, value_state,
 };
 
 /// CRA enforcement phase
@@ -569,8 +574,18 @@ impl StandardKind {
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Violation {
-    /// Severity: error, warning, info
+    /// Severity: error, warning, info. The one the run's rule settings give
+    /// the finding's rule, if they set it (see
+    /// [`Violation::severity_override`]).
     pub severity: ViolationSeverity,
+    /// When the run's rule settings set the finding's rule (`--rule`, the
+    /// config file's `compliance.rules`): the severity the check gave the
+    /// finding and where the setting comes from. `None` for a rule the run
+    /// does not set.
+    ///
+    /// Serialized as `default_severity` and `severity_source`, both omitted
+    /// when `None`; old payloads without them deserialize to `None`.
+    pub severity_override: Option<SeverityOverride>,
     /// Category of the violation
     pub category: ViolationCategory,
     /// Human-readable message
@@ -723,6 +738,10 @@ fn default_rule_id() -> &'static str {
 #[derive(Deserialize)]
 struct ViolationPayload {
     severity: ViolationSeverity,
+    #[serde(default)]
+    default_severity: Option<ViolationSeverity>,
+    #[serde(default)]
+    severity_source: Option<SettingSource>,
     category: ViolationCategory,
     message: String,
     element: Option<String>,
@@ -757,6 +776,12 @@ impl<'de> Deserialize<'de> for Violation {
         let payload = ViolationPayload::deserialize(deserializer)?;
         Ok(Self {
             severity: payload.severity,
+            // An override is the check's severity and the setting's source
+            // together.
+            severity_override: payload
+                .default_severity
+                .zip(payload.severity_source)
+                .map(|(default, source)| SeverityOverride::new(default, source)),
             category: payload.category,
             message: payload.message,
             element: payload.element,
@@ -795,7 +820,9 @@ impl Serialize for Violation {
     /// serde-derive `skip_serializing_if = "Option::is_none"` equivalents
     /// would be. A `deadline` is written as two fields, `deadline` and
     /// `deadline_source`, both skipped when `None`, and so are `field` and
-    /// `observed`. `remediation` is always written (see
+    /// `observed`. A `severity_override` is written as `default_severity`
+    /// and `severity_source`, right after `severity`, both skipped when
+    /// `None`. `remediation` is always written (see
     /// [`Violation::remediation_guidance`]), followed by the derived
     /// `help_uri`, which is skipped when no standard reference has a URL.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -811,6 +838,7 @@ impl Serialize for Violation {
         let mut state = serializer.serialize_struct(
             "Violation",
             8 + usize::from(has_refs)
+                + 2 * usize::from(self.severity_override.is_some())
                 + usize::from(has_component_id)
                 + usize::from(has_finding_detail)
                 + usize::from(has_counts)
@@ -820,6 +848,13 @@ impl Serialize for Violation {
                 + usize::from(help_uri.is_some()),
         )?;
         state.serialize_field("severity", &self.severity)?;
+        if let Some(severity_override) = &self.severity_override {
+            state.serialize_field("default_severity", &severity_override.default)?;
+            state.serialize_field("severity_source", &severity_override.source)?;
+        } else {
+            state.skip_field("default_severity")?;
+            state.skip_field("severity_source")?;
+        }
         state.serialize_field("category", &self.category)?;
         state.serialize_field("message", &self.message)?;
         state.serialize_field("element", &self.element)?;
@@ -1439,18 +1474,44 @@ pub struct ComplianceResult {
     /// in the standard's scope. `cnsa2` and `pqc` check cryptographic
     /// assets, `ai-act` and `bsi-ai` ML models, datasets and components that
     /// look like ML models, `eucc` only the document, and every other
-    /// standard the package-scoped components.
+    /// standard the package-scoped components it judges (those it left
+    /// out for their excluded scope count in
+    /// [`ComplianceResult::excluded_components`] instead).
     ///
     /// Set by `ComplianceChecker::check()`; `1` (the document alone) for a
     /// result built with [`ComplianceResult::new`]. Not serialized: the
     /// `-o json` envelope reports it as `score_basis.checked`.
     #[serde(skip, default = "document_only")]
     pub elements_checked: usize,
+    /// The rules whose findings the run's rule settings turned off, by rule
+    /// id, with how many findings each dropped. The dropped findings count
+    /// toward no severity, the verdict or the score.
+    ///
+    /// Serialized as `suppressed`, omitted when empty; old payloads without
+    /// the field deserialize to an empty list.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub suppressed: Vec<SuppressedRule>,
+    /// How many components the package rules left out because their scope
+    /// is excluded (CycloneDX `scope: excluded`, or an SPDX development,
+    /// build or test dependency; see `Component::scope`). Zero when the run
+    /// judges them too (`--include-excluded-scope`) and for a standard
+    /// without package rules (CNSA 2.0, NIST PQC, EUCC and the AI profiles).
+    ///
+    /// Serialized as `excluded_components`, omitted when zero; old payloads
+    /// without the field deserialize to zero.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub excluded_components: usize,
 }
 
 /// Serde default for [`ComplianceResult::elements_checked`]: the document.
 const fn document_only() -> usize {
     1
+}
+
+/// Serde helper: skip a count that is zero.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero(count: &usize) -> bool {
+    *count == 0
 }
 
 /// Per-route checklist of evidence the CRA Annex VIII conformity-assessment
@@ -1513,7 +1574,16 @@ impl ComplianceResult {
             warning_count,
             info_count,
             elements_checked: document_only(),
+            suppressed: Vec::new(),
+            excluded_components: 0,
         }
+    }
+
+    /// How many findings the run's rule settings turned off: the sum of
+    /// [`ComplianceResult::suppressed`].
+    #[must_use]
+    pub fn suppressed_count(&self) -> usize {
+        self.suppressed.iter().map(|rule| rule.findings).sum()
     }
 
     /// This result with `passed` as its passed checks. Passes move no count,
@@ -1700,6 +1770,12 @@ pub struct ComplianceChecker {
     /// The CNSA 2.0 equipment category deadline mode applies (CLI
     /// `--cnsa-category`); `None` means the strictest.
     cnsa_category: Option<CnsaCategory>,
+    /// The run's rule settings (CLI `--rule`, the config file's
+    /// `compliance.rules`), applied to the findings after the checks.
+    rule_settings: RuleSettings,
+    /// Whether the package rules judge components whose scope is excluded
+    /// too (CLI `--include-excluded-scope`); by default they leave them out.
+    include_excluded_scope: bool,
 }
 
 impl ComplianceChecker {
@@ -1714,7 +1790,73 @@ impl ComplianceChecker {
             pqc_mode: PqcMode::Readiness,
             pqc_profile: PqcProfile::Nist,
             cnsa_category: None,
+            rule_settings: RuleSettings::new(),
+            include_excluded_scope: false,
         }
+    }
+
+    /// Apply `settings` to the findings after the checks: a finding of a
+    /// rule set to a severity takes it, and the findings of a rule that is
+    /// off are dropped and counted in [`ComplianceResult::suppressed`]. The
+    /// counts, the verdict and the score follow the severities it sets.
+    #[must_use]
+    pub fn with_rule_settings(mut self, settings: RuleSettings) -> Self {
+        self.rule_settings = settings;
+        self
+    }
+
+    /// Whether the package rules judge components whose scope is excluded
+    /// too (`include`), or leave them out, the default (see
+    /// [`ComplianceRunConfig::with_include_excluded_scope`]).
+    #[must_use]
+    pub const fn with_include_excluded_scope(mut self, include: bool) -> Self {
+        self.include_excluded_scope = include;
+        self
+    }
+
+    /// Whether the run leaves `comp` out of the package rules: its scope is
+    /// excluded, the run does not judge such components, and it is not the
+    /// document's primary component (the product itself is never left out).
+    pub(crate) fn leaves_out(&self, sbom: &NormalizedSbom, comp: &crate::model::Component) -> bool {
+        !self.include_excluded_scope
+            && comp.scope == Some(crate::model::DependencyScope::Excluded)
+            && sbom.primary_component_id.as_ref() != Some(&comp.canonical_id)
+    }
+
+    /// Whether the package rules judge `comp`: a package-scoped component
+    /// (see [`crate::model::ComponentType::is_package_scoped`]) the run does
+    /// not leave out for its excluded scope (see [`Self::leaves_out`]).
+    pub(crate) fn judges_package(
+        &self,
+        sbom: &NormalizedSbom,
+        comp: &crate::model::Component,
+    ) -> bool {
+        comp.component_type.is_package_scoped() && !self.leaves_out(sbom, comp)
+    }
+
+    /// The components package rules apply to (see [`Self::judges_package`]).
+    /// Every per-component package check iterates through this or tests
+    /// [`Self::judges_package`], so no standard can forget a carve-out.
+    pub(crate) fn package_components<'a>(
+        &'a self,
+        sbom: &'a NormalizedSbom,
+    ) -> impl Iterator<Item = &'a crate::model::Component> + 'a {
+        sbom.components
+            .values()
+            .filter(move |c| self.judges_package(sbom, c))
+    }
+
+    /// How many package-scoped components this check leaves out of its
+    /// package rules for their excluded scope: none for a standard without
+    /// package rules (see [`ComplianceRunConfig::excluded_scope_applies`]).
+    fn excluded_component_count(&self, sbom: &NormalizedSbom) -> usize {
+        if !ComplianceRunConfig::excluded_scope_applies(self.level) {
+            return 0;
+        }
+        sbom.components
+            .values()
+            .filter(|c| c.component_type.is_package_scoped() && self.leaves_out(sbom, c))
+            .count()
     }
 
     /// Pin the evaluation clock. Deadline-sensitive checks (Art. 14
@@ -1917,8 +2059,10 @@ impl ComplianceChecker {
     /// for violations, the remediation and the field path for the SBOM's
     /// format) from the rule registry, numbers the finding details of
     /// entries the SBOM repeats (so every violation and every passed check
-    /// keeps a key of its own, see [`finding_key`]), records whether the
-    /// standard applied and which of its checks it did not evaluate, and
+    /// keeps a key of its own, see [`finding_key`]), applies the run's rule
+    /// settings (see [`Self::with_rule_settings`]), records whether the
+    /// standard applied, which of its checks it did not evaluate and how
+    /// many components it left out for their excluded scope, and
     /// attaches the CRA Annex VIII conformity summary when a product class
     /// has been pinned on CRA Phase 1 or Phase 2.
     ///
@@ -1989,11 +2133,18 @@ impl ComplianceChecker {
         finding::number_repeated_details(&mut violations);
         finding::number_repeated_details(&mut passed);
 
+        // The run's rule settings, after the checks and before the counts:
+        // the verdict, the counts and the score follow the severities they
+        // set, and what `off` drops is counted, never lost silently.
+        let suppressed = self.rule_settings.apply(&mut violations);
+
         let mut result = ComplianceResult::new(self.level, violations)
             .with_passed(passed)
-            .with_elements_checked(elements_checked(self.level, sbom))
+            .with_elements_checked(self.elements_checked(sbom))
             .with_evaluated(evaluated);
         result.applicability = applicability;
+        result.suppressed = suppressed;
+        result.excluded_components = self.excluded_component_count(sbom);
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA phase profile. Annex VIII
         // lists the manufacturer's conformity-assessment procedures; an
@@ -2011,26 +2162,30 @@ impl Default for ComplianceChecker {
     }
 }
 
-/// The elements `level` checks in `sbom`, the unit its score is normalised
-/// by (see [`ComplianceResult::elements_checked`]): the document, plus the
-/// components in the standard's scope.
-fn elements_checked(level: ComplianceLevel, sbom: &NormalizedSbom) -> usize {
-    let components = match level {
-        // EUCC checks the sidecar's certification evidence, not components.
-        ComplianceLevel::EuccSubstantial => 0,
-        // All components: the count selects cryptographic assets by type,
-        // the subjects of the CNSA 2.0 and PQC checks.
-        ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc => sbom
-            .components
-            .values()
-            .filter(|c| c.component_type == crate::model::ComponentType::Cryptographic)
-            .count(),
-        ComplianceLevel::EuAiAct | ComplianceLevel::BsiSbomForAi => {
-            ai_shared::ai_bom_scope(sbom).component_count()
-        }
-        _ => package_components(sbom).count(),
-    };
-    components.saturating_add(1)
+impl ComplianceChecker {
+    /// The elements this check judges in `sbom`, the unit its score is
+    /// normalised by (see [`ComplianceResult::elements_checked`]): the
+    /// document, plus the components in the standard's scope. The package
+    /// standards count the components their package rules judge, so the
+    /// ones left out for their excluded scope do not count.
+    fn elements_checked(&self, sbom: &NormalizedSbom) -> usize {
+        let components = match self.level {
+            // EUCC checks the sidecar's certification evidence, not components.
+            ComplianceLevel::EuccSubstantial => 0,
+            // All components: the count selects cryptographic assets by type,
+            // the subjects of the CNSA 2.0 and PQC checks.
+            ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc => sbom
+                .components
+                .values()
+                .filter(|c| c.component_type == crate::model::ComponentType::Cryptographic)
+                .count(),
+            ComplianceLevel::EuAiAct | ComplianceLevel::BsiSbomForAi => {
+                ai_shared::ai_bom_scope(sbom).component_count()
+            }
+            _ => self.package_components(sbom).count(),
+        };
+        components.saturating_add(1)
+    }
 }
 
 #[cfg(test)]
@@ -3082,6 +3237,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -3195,6 +3351,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -3311,6 +3468,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -3518,6 +3676,7 @@ mod tests {
                 .collect(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -3600,6 +3759,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -3793,6 +3953,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -3809,6 +3970,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -3825,6 +3987,7 @@ mod tests {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -4944,6 +5107,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -4998,6 +5162,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,

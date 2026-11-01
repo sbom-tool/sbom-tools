@@ -7,11 +7,14 @@
 //! - **Verdict snapshots**, one per fixture: for each of the 19 levels, the
 //!   verdict, the severity counts and every finding as (severity, rule ID,
 //!   subject, counts), then the passed checks as `P` lines (rule ID,
-//!   subject) after a `P<n>` count on the header. Messages are left out so
-//!   rewording does not churn them. Fixtures with an auto-discovered CRA
-//!   sidecar are also run with it, for the levels the shared run
-//!   configuration (`ComplianceRunConfig`, which every CLI command and TUI
-//!   uses) hands a sidecar to.
+//!   subject) after a `P<n>` count on the header. A level that left
+//!   components out of its package rules for their excluded scope counts
+//!   them as `X<n>` on the header. Messages are left out so rewording does
+//!   not churn them. Fixtures with an auto-discovered CRA sidecar are also
+//!   run with it, for the levels the shared run configuration
+//!   (`ComplianceRunConfig`, which every CLI command and TUI uses) hands a
+//!   sidecar to, and fixtures with components whose scope is excluded are
+//!   also run with `--include-excluded-scope`.
 //! - **Byte snapshots** of the JSON (the v1 result array and the
 //!   `sbom-tools/compliance/v2` envelope), SARIF and OSCAL writers for six
 //!   pinned fixtures, plus a check that each writer is byte-identical across
@@ -27,7 +30,7 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use sbom_tools::model::CraSidecarMetadata;
+use sbom_tools::model::{CraSidecarMetadata, DependencyScope};
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
     CnsaCategory, ComplianceLevel, ComplianceResult, ComplianceRunConfig, PqcMode, PqcProfile,
@@ -185,9 +188,14 @@ fn render_verdict(out: &mut String, label: &str, result: &ComplianceResult) {
     } else {
         format!(" P{}", result.passed.len())
     };
+    let excluded = if result.excluded_components == 0 {
+        String::new()
+    } else {
+        format!(" X{}", result.excluded_components)
+    };
     let _ = writeln!(
         out,
-        "[{label}] {verdict} · E{} W{} I{}{passed}",
+        "[{label}] {verdict} · E{} W{} I{}{passed}{excluded}",
         result.error_count, result.warning_count, result.info_count
     );
     let findings: Vec<String> = result
@@ -255,6 +263,21 @@ fn verdict_snapshots_for_every_fixture_and_level() {
             out.push_str("\nwith auto-discovered CRA sidecar:\n");
             for result in run(Some(sc)).check_levels(&sidecar_levels(), &sbom) {
                 render_verdict(&mut out, &format!("{:?} + sidecar", result.level), &result);
+            }
+        }
+        if sbom
+            .components
+            .values()
+            .any(|c| c.scope == Some(DependencyScope::Excluded))
+        {
+            out.push_str("\nwith --include-excluded-scope:\n");
+            let run = run(sidecar.as_ref()).with_include_excluded_scope(true);
+            for result in run.check_levels(ComplianceLevel::all(), &sbom) {
+                render_verdict(
+                    &mut out,
+                    &format!("{:?} + excluded scope", result.level),
+                    &result,
+                );
             }
         }
         insta::assert_snapshot!(format!("verdicts__{}", snapshot_name(&rel)), out);

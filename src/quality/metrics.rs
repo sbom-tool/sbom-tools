@@ -5,9 +5,9 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use crate::model::{
-    AlgorithmClass, CompletenessDeclaration, ComponentType, CreatorType, CryptoAssetType,
-    CryptoMaterialState, CryptoPrimitive, EolStatus, ExternalRefType, HashAlgorithm,
-    NormalizedSbom, StalenessLevel, classify_algorithm,
+    AlgorithmClass, CompletenessDeclaration, Component, ComponentType, CreatorType,
+    CryptoAssetType, CryptoMaterialState, CryptoPrimitive, EolStatus, ExternalRefType,
+    HashAlgorithm, NormalizedSbom, StalenessLevel, classify_algorithm,
 };
 use serde::{Deserialize, Serialize};
 
@@ -259,6 +259,13 @@ impl HashQualityMetrics {
     /// Calculate hash quality metrics from an SBOM
     #[must_use]
     pub fn from_sbom(sbom: &NormalizedSbom) -> Self {
+        Self::from_components(sbom.components.values())
+    }
+
+    /// Calculate hash quality metrics over `components`, such as the
+    /// components a compliance run judges.
+    #[must_use]
+    pub fn from_components<'a>(components: impl IntoIterator<Item = &'a Component>) -> Self {
         let mut with_any = 0;
         let mut with_strong = 0;
         let mut with_weak_only = 0;
@@ -268,7 +275,7 @@ impl HashQualityMetrics {
         let mut vendor_with_hash = 0;
         let mut vendor_with_strong = 0;
 
-        for comp in sbom.components.values() {
+        for comp in components {
             // Vendor-component classification (independent of hash presence),
             // with the sentinel-aware producer test: a NOASSERTION or
             // placeholder supplier names no vendor, exactly like an absent one.

@@ -38,7 +38,7 @@ impl ComplianceChecker {
 
         // The component checks below have nothing to judge without a
         // package-scoped component.
-        violations.extend(inventory_absent_violation(
+        violations.extend(self.inventory_absent_violation(
             sbom,
             "SBOM-EO14028-INVENTORY",
             "EO 14028 §4(e) practice: component inventory",
@@ -87,6 +87,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: observed(&format!(
@@ -117,6 +118,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: observed_unparsed_timestamp(sbom),
@@ -156,6 +158,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -176,6 +179,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -187,7 +191,7 @@ impl ComplianceChecker {
         // components are not flagged)
         // Package elements (identifier, version, hash, supplier) apply to
         // package-scoped components only; names apply to every component.
-        let packages: Vec<_> = package_components(sbom).collect();
+        let packages: Vec<_> = self.package_components(sbom).collect();
         let total = packages.len();
         let without_id = packages
             .iter()
@@ -211,6 +215,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -243,6 +248,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -265,6 +271,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -295,6 +302,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -336,6 +344,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,
@@ -372,6 +381,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: unreachable_contact(sbom).and_then(observed),
@@ -404,6 +414,7 @@ impl ComplianceChecker {
                 standard_refs: Vec::new(),
                 remediation: None,
                 finding_detail: None,
+                severity_override: None,
                 deadline: None,
                 field: None,
                 observed: None,

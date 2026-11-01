@@ -64,6 +64,10 @@ pub struct QualityConfig {
     /// cryptography (`--pqc-mode`, `--pqc-profile`, `--cnsa-category`); the
     /// `cbom` profile's NIST PQC check reads it.
     pub pqc: super::PqcOptions,
+    /// The rule settings and component scope of the embedded compliance
+    /// check (`--rule`, `--include-excluded-scope`), applied as `validate`
+    /// applies them.
+    pub rules: super::RuleOptions,
 }
 
 /// Run the quality command, returning the desired exit code.
@@ -93,6 +97,7 @@ pub fn run_quality(
     sarif_category: Option<String>,
     sarif_max_results: usize,
     pqc: super::PqcOptions,
+    rules: super::RuleOptions,
 ) -> Result<i32> {
     let config = QualityConfig {
         sbom_path,
@@ -112,6 +117,7 @@ pub fn run_quality(
         sarif_category,
         sarif_max_results,
         pqc,
+        rules,
     };
 
     run_quality_impl(config)
@@ -128,14 +134,19 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
     // The embedded compliance check's inputs, resolved like `validate`'s
     // before the SBOM is read, so a bad value fails first: the pinned clock,
     // the product class, the CRA sidecar (explicit, else found next to the
-    // SBOM) and the PQC mode.
+    // SBOM), the PQC mode, the rule settings and the component scope.
     let compliance = super::compliance_run_config_for(
         &config.sbom_path,
         config.cra_sidecar_path.as_deref(),
         config.cra_product_class.as_deref(),
         config.as_of.as_deref(),
         config.pqc,
+        &config.rules,
     )?;
+    compliance.warn_on_unmatched_rules(
+        &[config.profile.compliance_level()],
+        "the profile's compliance checks",
+    );
 
     #[cfg_attr(not(feature = "enrichment"), allow(unused_mut))]
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
@@ -729,6 +740,7 @@ mod tests {
                 None,
                 crate::reports::DEFAULT_SARIF_MAX_RESULTS,
                 crate::cli::PqcOptions::default(),
+                crate::cli::RuleOptions::default(),
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -773,6 +785,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect("sbomqs-json run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -819,6 +832,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect("summary run must succeed");
         assert_eq!(code, exit_codes::SUCCESS);
@@ -860,6 +874,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));
@@ -900,6 +915,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect("an N/A AI-readiness run must not error");
         assert_eq!(
@@ -933,6 +949,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect("the run itself must succeed");
         assert_eq!(code, exit_codes::COMPLIANCE_ERRORS);
@@ -962,6 +979,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -992,6 +1010,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect_err("invalid --as-of must be rejected");
         assert!(err.to_string().contains("invalid --as-of"));
@@ -1028,6 +1047,7 @@ mod tests {
             None,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            crate::cli::RuleOptions::default(),
         )
         .expect_err("a discovered-but-broken sidecar must hard-error");
         assert!(
@@ -1055,6 +1075,7 @@ mod tests {
             sarif_category: None,
             sarif_max_results: crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             pqc: crate::cli::PqcOptions::default(),
+            rules: crate::cli::RuleOptions::default(),
         }
     }
 

@@ -8,7 +8,7 @@
 
 use crate::quality::{
     ComplianceLevel, RemediationFormat, RuleCatalogEntry, RuleCatalogFilter, RuleKind,
-    StandardSelector, all_rule_ids, rule_catalog, rule_catalog_entry, standard_key,
+    StandardSelector, resolve_rule_id, rule_catalog, rule_catalog_entry, standard_key,
 };
 use crate::reports::escape::{escape_markdown_inline, markdown_link_destination};
 use crate::reports::generate_rule_catalog_json;
@@ -47,39 +47,10 @@ pub fn run_rules_explain(rule_id: &str, format: RulesOutputFormat) -> Result<()>
 }
 
 /// Resolve a rule id typed on the command line to the registry's own
-/// spelling, ignoring case. The error says how to list the rule ids and
-/// names the closest one, if one is close.
+/// spelling, ignoring case (see [`resolve_rule_id`]). The error says how to
+/// list the rule ids and names the closest one, if one is close.
 pub fn parse_rule_id(value: &str) -> std::result::Result<&'static str, String> {
-    let value = value.trim();
-    if let Some(id) = all_rule_ids()
-        .iter()
-        .find(|id| id.eq_ignore_ascii_case(value))
-    {
-        return Ok(id);
-    }
-    Err(match closest_rule_id(value) {
-        Some(id) => {
-            format!("unknown rule id (did you mean {id}?); `sbom-tools rules` lists every rule id")
-        }
-        None => "unknown rule id; `sbom-tools rules` lists every rule id".to_string(),
-    })
-}
-
-/// The registered rule id closest to `value`, when it is a few edits away
-/// (with or without the `SBOM-` prefix).
-fn closest_rule_id(value: &str) -> Option<&'static str> {
-    let upper = value.to_ascii_uppercase();
-    let prefixed = if upper.starts_with("SBOM-") {
-        upper
-    } else {
-        format!("SBOM-{upper}")
-    };
-    all_rule_ids()
-        .iter()
-        .map(|id| (strsim::levenshtein(&prefixed, id), *id))
-        .filter(|(distance, _)| *distance <= 3)
-        .min_by_key(|(distance, _)| *distance)
-        .map(|(_, id)| id)
+    resolve_rule_id(value)
 }
 
 /// Render a rule list in `format`.

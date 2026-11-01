@@ -500,6 +500,13 @@ fn render_category_breakdown(frame: &mut Frame, area: Rect, result: &ComplianceR
         ));
         status_line.push(passed);
     }
+    for span in run_input_spans(result) {
+        status_line.push(Span::styled(
+            "  \u{00b7}  ",
+            Style::default().fg(scheme.muted),
+        ));
+        status_line.push(span);
+    }
     let mut lines: Vec<Line> = vec![Line::from(status_line)];
 
     // Conformity-assessment route (CRA-P4.3): only when product class pinned.
@@ -677,7 +684,32 @@ fn compact_verdict_line(result: &ComplianceResult) -> Line<'static> {
         spans.push(Span::raw("  "));
         spans.push(passed);
     }
+    for span in run_input_spans(result) {
+        spans.push(Span::raw("  "));
+        spans.push(span);
+    }
     Line::from(spans)
+}
+
+/// "N suppressed" and "N excluded" in the muted color, for the findings the
+/// run's rule settings turned off and the components the package rules left
+/// out for their excluded scope, as the text report's `Suppressed:` and
+/// `Excluded:` lines count them. Neither is shown when zero.
+fn run_input_spans(result: &ComplianceResult) -> Vec<Span<'static>> {
+    let scheme = colors();
+    [
+        (result.suppressed_count(), "suppressed"),
+        (result.excluded_components, "excluded"),
+    ]
+    .into_iter()
+    .filter(|(count, _)| *count > 0)
+    .map(|(count, what)| {
+        Span::styled(
+            format!("{count} {what}"),
+            Style::default().fg(scheme.text_muted),
+        )
+    })
+    .collect()
 }
 
 /// "N passed" in the success color, when `result` passed any check. Passed

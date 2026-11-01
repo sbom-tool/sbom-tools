@@ -340,8 +340,9 @@ fn seed_vex_enrichment(
 }
 
 /// The compliance inputs every compliance-checking command takes (`validate`,
-/// `quality`, `view`, `diff`, `cra-docs`), defined once so the commands
-/// accept them identically and judge an SBOM the same way.
+/// `quality`, `view`, `diff`, `cra-docs`, and the timeline's compliance
+/// trend through `diff-multi`, `timeline` and `matrix`), defined once so the
+/// commands accept them identically and judge an SBOM the same way.
 #[derive(Args, Debug)]
 struct ComplianceRunArgs {
     /// CRA Annex III/IV product class (drives severity calibration of the
@@ -383,16 +384,61 @@ struct ComplianceRunArgs {
     /// software-signing (2025, 2030)
     #[arg(long, value_enum, value_name = "CATEGORY")]
     cnsa_category: Option<sbom_tools::quality::CnsaCategory>,
+
+    /// Set a rule's severity for this run, or turn it off:
+    /// RULE=off|info|warning|error, e.g. --rule SBOM-NTIA-SUPPLIER=warning
+    /// (repeatable; `sbom-tools rules` lists the rule ids). The verdict, the
+    /// counts, the score and the exit code follow the severities it sets;
+    /// each finding keeps its rule's own severity as `default_severity`.
+    /// `off` drops the rule's findings and counts them under `suppressed`.
+    /// Wins over the config file's `compliance.rules` for its rule
+    #[arg(
+        long = "rule",
+        value_name = "RULE=SETTING",
+        value_parser = cli::parse_rule_setting_arg
+    )]
+    rule: Vec<(&'static str, sbom_tools::quality::RuleSetting)>,
+
+    /// Judge components whose scope is excluded by the package rules too
+    /// (version, supplier, license, hash, identifier, dependency graph).
+    /// CycloneDX `scope: excluded` (and an SPDX development, build or test
+    /// dependency) marks a component the product does not need at runtime;
+    /// by default those are left out, and each result says how many
+    #[arg(long)]
+    include_excluded_scope: bool,
 }
 
 impl ComplianceRunArgs {
-    /// The PQC inputs of the run, as the handlers take them.
-    fn pqc(&self) -> cli::PqcOptions {
-        cli::PqcOptions {
-            mode: self.pqc_mode.unwrap_or_default(),
-            profile: self.pqc_profile,
-            cnsa_category: self.cnsa_category,
-        }
+    /// The PQC inputs of the run, as the handlers take them: each flag, else
+    /// the config file's `compliance.pqc_mode`, `pqc_profile` and
+    /// `cnsa_category`.
+    fn pqc(&self, app: &AppConfig) -> Result<cli::PqcOptions> {
+        cli::PqcOptions::with_config_defaults(
+            self.pqc_mode,
+            self.pqc_profile,
+            self.cnsa_category,
+            &app.compliance,
+        )
+    }
+
+    /// The rule settings and component scope of the run: `--rule` over the
+    /// config file's `compliance.rules`, and `--include-excluded-scope` or
+    /// the file's `compliance.include_excluded_scope`.
+    fn rules(&self, app: &AppConfig) -> Result<cli::RuleOptions> {
+        cli::RuleOptions::from_flags(&self.rule, self.include_excluded_scope, &app.compliance)
+    }
+
+    /// The run every SBOM of a command that judges several is checked with:
+    /// these flags over the config file (`diff` adds each side's sidecar).
+    fn shared_run(&self, app: &AppConfig) -> Result<sbom_tools::quality::ComplianceRunConfig> {
+        cli::compliance_run_config(
+            self.cra_product_class
+                .as_deref()
+                .or(app.compliance.cra_product_class.as_deref()),
+            self.as_of.as_deref(),
+            self.pqc(app)?,
+            &self.rules(app)?,
+        )
     }
 }
 
@@ -656,17 +702,19 @@ struct ViewArgs {
     0  Compliant (no errors; no warnings with --fail-on-warning). A standard
        that does not apply to the SBOM (N/A) also exits 0, unless
        --require-applicable
-    1  Compliance errors found (non-compliant), or a standard is N/A under
-       --require-applicable
+    1  Compliance errors found (non-compliant), a finding of a --fail-on
+       rule at any severity, or a standard is N/A under --require-applicable
     2  Compliance warnings found (only with --fail-on-warning)
     3  Usage error (unknown flag or standard, invalid flag value, missing
        argument) or operational error (unsupported output format, invalid
        --as-of / --cra-product-class / --cra-sidecar, --pqc-profile or
-       --cnsa-category without --pqc-mode deadline, broken config file, I/O)
+       --cnsa-category without --pqc-mode deadline, an unknown --rule or
+       --fail-on rule id, broken config file, I/O)
 
     The gate codes (0/1/2) only apply to runs that completed a
     validation — a nonzero exit is only a compliance verdict when the
-    expected report was produced.
+    expected report was produced. They follow the severities --rule (or
+    the config file's compliance.rules) sets.
 
 JSON OUTPUT:
     -o json emits the sbom-tools/compliance/v2 envelope (one object for any
@@ -683,6 +731,8 @@ EXAMPLES:
     sbom-tools validate app.cdx.json --standard ntia -o sarif     # SARIF for CI
     sbom-tools validate app.cdx.json --standard ntia -o oscal-json # OSCAL assessment results
     sbom-tools validate app.cdx.json --fail-on-warning            # Strict CI gate
+    sbom-tools validate app.cdx.json --rule SBOM-NTIA-SUPPLIER=warning  # Relax one rule
+    sbom-tools validate app.cdx.json --fail-on SBOM-NTIA-SUPPLIER # Gate on one rule
     sbom-tools validate ai.cdx.json --standard ai-act --require-applicable
     sbom-tools validate cbom.json --standard pqc --pqc-mode deadline --as-of 2031-06-01  # PQC migration deadlines")]
 struct ValidateArgs {
@@ -738,9 +788,18 @@ struct ValidateArgs {
     #[arg(long, value_name = "N")]
     sarif_max_results: Option<usize>,
 
-    /// Exit with non-zero code when warnings are found (not just errors)
+    /// Exit 2 when warnings are found (not just errors). Errors, and the
+    /// findings of a --fail-on rule, still exit 1
     #[arg(long)]
     fail_on_warning: bool,
+
+    /// Exit 1 (non-compliant) when the run reports any finding of this
+    /// rule, whatever its severity, info included (repeatable, e.g.
+    /// --fail-on SBOM-NTIA-SUPPLIER). It reads the severities --rule sets:
+    /// a rule that is `off` reports no finding, so it never trips. Adds to
+    /// the config file's `compliance.fail_on`
+    #[arg(long = "fail-on", value_name = "RULE", value_parser = cli::parse_fail_on_arg)]
+    fail_on: Vec<&'static str>,
 
     /// Exit 1 (non-compliant) when a selected standard does not apply to the
     /// SBOM, e.g. ai-act or bsi-ai on an SBOM without ML components. Without
@@ -972,6 +1031,9 @@ struct DiffMultiArgs {
     fail_on_vex_gap: bool,
 
     #[command(flatten)]
+    compliance: ComplianceRunArgs,
+
+    #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
 }
 
@@ -1037,6 +1099,9 @@ struct TimelineArgs {
     /// Exit with code 4 if introduced vulnerabilities lack VEX statements
     #[arg(long)]
     fail_on_vex_gap: bool,
+
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 
     #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
@@ -1108,6 +1173,9 @@ struct MatrixArgs {
     /// Exit with code 4 if introduced vulnerabilities lack VEX statements
     #[arg(long)]
     fail_on_vex_gap: bool,
+
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 
     #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
@@ -2173,16 +2241,9 @@ fn run() -> Result<()> {
                 enrichment.enable_kev = true;
             }
             // The compliance inputs both SBOMs share, parsed like every other
-            // compliance command's (config-file fallback for the class).
-            let pqc = args.compliance.pqc();
-            let compliance = cli::compliance_run_config(
-                args.compliance
-                    .cra_product_class
-                    .or_else(|| app.compliance.cra_product_class.clone())
-                    .as_deref(),
-                args.compliance.as_of.as_deref(),
-                pqc,
-            )?;
+            // compliance command's (config-file fallback for the class, the
+            // PQC flags and the rule settings).
+            let compliance = args.compliance.shared_run(&app)?;
 
             let config = DiffConfig {
                 paths: DiffPaths {
@@ -2298,6 +2359,8 @@ fn run() -> Result<()> {
         Commands::View(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
+            let pqc = args.compliance.pqc(&app)?;
+            let rules = args.compliance.rules(&app)?;
 
             let config = ViewConfig {
                 sbom_path: args.sbom,
@@ -2334,9 +2397,11 @@ fn run() -> Result<()> {
                     .cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone()),
                 as_of: args.compliance.as_of,
-                pqc_mode: args.compliance.pqc_mode,
-                pqc_profile: args.compliance.pqc_profile,
-                cnsa_category: args.compliance.cnsa_category,
+                pqc_mode: Some(pqc.mode),
+                pqc_profile: pqc.profile,
+                cnsa_category: pqc.cnsa_category,
+                rule_settings: rules.settings,
+                include_excluded_scope: rules.include_excluded_scope,
             };
             let exit_code = cli::run_view(config)?;
             if exit_code != 0 {
@@ -2375,7 +2440,24 @@ fn run() -> Result<()> {
                     cli::VALIDATE_OUTPUT_FORMATS,
                 ),
             );
-            let pqc = args.compliance.pqc();
+            let pqc = args.compliance.pqc(&app)?;
+            let rules = args.compliance.rules(&app)?;
+            // `--fail-on` adds to the config file's `compliance.fail_on`
+            // (validated at load, so a typo never gets here).
+            let mut fail_on = app
+                .compliance
+                .fail_on
+                .iter()
+                .map(|id| {
+                    cli::parse_fail_on_arg(id)
+                        .map_err(|e| anyhow::anyhow!("invalid `compliance.fail_on` {id}: {e}"))
+                })
+                .collect::<Result<Vec<&'static str>>>()?;
+            for id in &args.fail_on {
+                if !fail_on.contains(id) {
+                    fail_on.push(id);
+                }
+            }
             let exit_code = cli::run_validate(
                 args.sbom,
                 standards,
@@ -2400,6 +2482,8 @@ fn run() -> Result<()> {
                     .or(app.output.sarif_max_results)
                     .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
                 pqc,
+                &rules,
+                &fail_on,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -2410,6 +2494,9 @@ fn run() -> Result<()> {
         Commands::DiffMulti(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
+            // The compliance run every SBOM is judged with (the timeline's
+            // compliance trend), parsed like `diff`'s.
+            let compliance = args.compliance.shared_run(&app)?;
             let config = MultiDiffConfig {
                 baseline: args.baseline,
                 targets: args.targets,
@@ -2480,6 +2567,7 @@ fn run() -> Result<()> {
                 },
                 ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
+                compliance,
             };
             let exit_code = cli::run_diff_multi(config)?;
             if exit_code != 0 {
@@ -2491,6 +2579,9 @@ fn run() -> Result<()> {
         Commands::Timeline(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
+            // The compliance run every SBOM is judged with (the timeline's
+            // compliance trend), parsed like `diff`'s.
+            let compliance = args.compliance.shared_run(&app)?;
             let config = TimelineConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
@@ -2557,6 +2648,7 @@ fn run() -> Result<()> {
                 },
                 ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
+                compliance,
             };
             let exit_code = cli::run_timeline(config)?;
             if exit_code != 0 {
@@ -2568,6 +2660,9 @@ fn run() -> Result<()> {
         Commands::Matrix(args) => {
             let sm = sub_matches;
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
+            // The compliance run every SBOM is judged with (the timeline's
+            // compliance trend), parsed like `diff`'s.
+            let compliance = args.compliance.shared_run(&app)?;
             let config = MatrixConfig {
                 sbom_paths: args.sboms,
                 output: OutputConfig {
@@ -2635,6 +2730,7 @@ fn run() -> Result<()> {
                 },
                 ecosystem_rules: app.ecosystem_rules.clone(),
                 enrichment,
+                compliance,
             };
             let exit_code = cli::run_matrix(config)?;
             if exit_code != 0 {
@@ -2668,7 +2764,8 @@ fn run() -> Result<()> {
                 args.profile
             };
             let enrichment = seed_enrichment(&args.enrichment, sm, &app, offline);
-            let pqc = args.compliance.pqc();
+            let pqc = args.compliance.pqc(&app)?;
+            let rules = args.compliance.rules(&app)?;
             let exit_code = cli::run_quality(
                 args.sbom,
                 profile,
@@ -2697,6 +2794,7 @@ fn run() -> Result<()> {
                     .or(app.output.sarif_max_results)
                     .unwrap_or(sbom_tools::reports::DEFAULT_SARIF_MAX_RESULTS),
                 pqc,
+                rules,
             )?;
             if exit_code != 0 {
                 std::process::exit(exit_code);
@@ -3142,7 +3240,8 @@ fn run() -> Result<()> {
         // flags are absent, so the dossier agrees with the validate verdict
         // produced under the same config.
         Commands::CraDocs(args) => {
-            let pqc = args.compliance.pqc();
+            let pqc = args.compliance.pqc(&app)?;
+            let rules = args.compliance.rules(&app)?;
             cli::run_cra_docs_with_force(
                 args.sbom,
                 args.output,
@@ -3155,6 +3254,7 @@ fn run() -> Result<()> {
                 args.compliance.as_of.as_deref(),
                 args.force,
                 pqc,
+                &rules,
             )
         }
 

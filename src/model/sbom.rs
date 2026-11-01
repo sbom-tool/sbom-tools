@@ -764,6 +764,18 @@ pub struct Component {
     /// Cryptographic properties (CycloneDX 1.6+ cryptoProperties)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub crypto_properties: Option<CryptoProperties>,
+    /// Whether the product needs the component at runtime: the CycloneDX
+    /// component `scope` (`required`, `optional`, `excluded`). SPDX states
+    /// it on the relationships instead, so an SPDX component is `Excluded`
+    /// when only development, build or test relationships bring it in
+    /// (SPDX 2.3 `DEV_DEPENDENCY_OF`, `BUILD_DEPENDENCY_OF`,
+    /// `TEST_DEPENDENCY_OF` and the `*_TOOL_OF` types; SPDX 3.0
+    /// `LifecycleScopedRelationship`s of scope `design`, `development`,
+    /// `build` or `test`), directly or through other such components. `None`
+    /// when the SBOM does not say. Compliance package rules leave `Excluded`
+    /// components out unless the run includes them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope: Option<DependencyScope>,
 }
 
 impl Component {
@@ -812,6 +824,7 @@ impl Component {
             ml_model: None,
             dataset: None,
             crypto_properties: None,
+            scope: None,
         }
     }
 

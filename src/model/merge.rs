@@ -20,7 +20,13 @@
 //!   conflict;
 //! - when the entries give a single-valued field two different known
 //!   values, the value that sorts first is kept, and the field is recorded
-//!   as a conflict.
+//!   as a conflict;
+//! - the scope is the one of the entry the product needs most at runtime:
+//!   `required`, then a scope left unstated (which CycloneDX reads as
+//!   `required`), then `optional`, then `excluded`. An entry marked
+//!   `excluded` therefore never hides one the product needs, and the
+//!   component stays judged by the package rules. Scopes that differ in
+//!   effect are recorded as a conflict.
 //!
 //! Values sort by their JSON form. What counts as known is what every
 //! compliance check counts (see `model::known`).
@@ -29,8 +35,8 @@
 //! [`NormalizedSbom::add_component`]: super::NormalizedSbom::add_component
 
 use super::{
-    CanonicalId, Component, ComponentExtensions, ComponentIdentifiers, Hash, HashProvenance,
-    LicenseExpression, LicenseInfo, Organization, is_known,
+    CanonicalId, Component, ComponentExtensions, ComponentIdentifiers, DependencyScope, Hash,
+    HashProvenance, LicenseExpression, LicenseInfo, Organization, is_known,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -312,6 +318,7 @@ impl Component {
             ml_model,
             dataset,
             crypto_properties,
+            scope,
         } = other;
 
         record("name", pick_known(&mut self.name, name, |n| is_known(n)));
@@ -427,10 +434,34 @@ impl Component {
             "crypto_properties",
             pick(&mut self.crypto_properties, crypto_properties),
         );
+        record("scope", pick_scope(&mut self.scope, scope));
 
         self.calculate_content_hash();
         conflicts
     }
+}
+
+/// Keep the scope of the entry the product needs most at runtime (see the
+/// module docs): an entry marked `excluded` never hides one that is
+/// `required`, or that states no scope, which CycloneDX reads as
+/// `required`. Returns whether the two scopes differ in effect, an unstated
+/// scope counting as `required`.
+fn pick_scope(kept: &mut Option<DependencyScope>, other: Option<DependencyScope>) -> bool {
+    const fn need(scope: Option<&DependencyScope>) -> u8 {
+        match scope {
+            Some(DependencyScope::Required) => 3,
+            None => 2,
+            Some(DependencyScope::Optional) => 1,
+            Some(DependencyScope::Excluded) => 0,
+        }
+    }
+    let effective =
+        |scope: Option<&DependencyScope>| scope.cloned().unwrap_or(DependencyScope::Required);
+    let disagree = effective(kept.as_ref()) != effective(other.as_ref());
+    if need(other.as_ref()) > need(kept.as_ref()) {
+        *kept = other;
+    }
+    disagree
 }
 
 #[cfg(test)]
@@ -510,6 +541,40 @@ mod tests {
             sbom.add_component(c);
         }
         sbom
+    }
+
+    /// An entry marked `excluded` never hides one the product needs: the
+    /// merged scope is the most needed one in every order, so the component
+    /// stays judged, and scopes that differ in effect are a conflict.
+    #[test]
+    fn an_excluded_entry_never_hides_a_needed_one() {
+        use crate::model::DependencyScope::{Excluded, Optional, Required};
+        let with_scope = |format_id: &str, scope: Option<DependencyScope>| {
+            let mut c = entry(format_id);
+            c.scope = scope;
+            c
+        };
+        for (a, b, merged, conflict) in [
+            (Some(Excluded), Some(Required), Some(Required), true),
+            (Some(Excluded), None, None, true),
+            (Some(Excluded), Some(Optional), Some(Optional), true),
+            (Some(Optional), Some(Required), Some(Required), true),
+            (Some(Optional), None, None, true),
+            (None, Some(Required), Some(Required), false),
+            (Some(Excluded), Some(Excluded), Some(Excluded), false),
+            (None, None, None, false),
+        ] {
+            for (first, second) in [(a.clone(), b.clone()), (b.clone(), a.clone())] {
+                let mut kept = with_scope("ref-a", first.clone());
+                let conflicts = kept.merge_duplicate(with_scope("ref-b", second.clone()));
+                assert_eq!(kept.scope, merged, "{first:?} + {second:?}");
+                assert_eq!(
+                    conflicts.contains("scope"),
+                    conflict,
+                    "{first:?} + {second:?}: {conflicts:?}"
+                );
+            }
+        }
     }
 
     #[test]

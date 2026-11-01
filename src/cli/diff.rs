@@ -47,6 +47,10 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
         config.output.sarif_base.as_deref(),
         config.output.sarif_category.as_deref(),
     )?;
+    // The compliance tab checks every standard.
+    config
+        .compliance
+        .warn_on_unmatched_rules(crate::quality::ComplianceLevel::all(), "the standards");
 
     // Stdin can only be consumed once, so a diff can read at most one side from "-".
     if is_stdin_path(&config.paths.old) && is_stdin_path(&config.paths.new) {

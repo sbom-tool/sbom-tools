@@ -48,19 +48,22 @@ pub fn run_cra_docs(
         None,
         false,
         super::PqcOptions::default(),
+        &super::RuleOptions::default(),
     )
 }
 
 /// [`run_cra_docs`] with an explicit overwrite decision, evaluation clock
-/// (`--as-of`, judged like `validate --as-of`; the wall clock when `None`)
-/// and the shared PQC flags (`pqc`), which the dossier's CRA check does not
-/// read but which are held to the rules every command applies.
+/// (`--as-of`, judged like `validate --as-of`; the wall clock when `None`),
+/// the shared PQC flags (`pqc`), which the dossier's CRA check does not
+/// read but which are held to the rules every command applies, and the
+/// rule settings and component scope (`rules`), which its CRA check
+/// applies as `validate --standard cra` does.
 ///
 /// The generated dossier is a *starting point* the operator completes by
 /// hand (`_TBD_` placeholders), so a re-run must not silently clobber those
 /// edits: when `force` is false and any dossier file already exists, this
 /// errors listing the existing files; `--force` overwrites them.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn run_cra_docs_with_force(
     sbom_path: PathBuf,
     output_dir: PathBuf,
@@ -69,6 +72,7 @@ pub fn run_cra_docs_with_force(
     as_of: Option<&str>,
     force: bool,
     pqc: super::PqcOptions,
+    rules: &super::RuleOptions,
 ) -> Result<()> {
     if !force {
         let existing: Vec<String> = DOSSIER_FILES
@@ -96,7 +100,12 @@ pub fn run_cra_docs_with_force(
         cra_product_class.as_deref(),
         as_of,
         pqc,
+        rules,
     )?;
+    run.warn_on_unmatched_rules(
+        &[ComplianceLevel::CraPhase2],
+        "the dossier's CRA Phase 2 checks",
+    );
 
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
     let sbom = parsed.sbom();
@@ -670,6 +679,7 @@ mod tests {
             None,
             true,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
         )
         .expect("forced rerun succeeds");
         assert_ne!(std::fs::read_to_string(&doc).unwrap(), "HAND-EDITED");

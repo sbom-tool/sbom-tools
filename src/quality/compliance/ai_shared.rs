@@ -200,6 +200,7 @@ pub(crate) fn push_untyped_ml_warning(
         standard_refs: Vec::new(),
         remediation: None,
         finding_detail: None,
+        severity_override: None,
         deadline: None,
         field: None,
         observed: None,

@@ -45,9 +45,14 @@ pub enum ValidateJsonSchema {
 ///   `--fail-on-warning` is set). A standard that does not apply to the SBOM
 ///   counts as compliant unless `require_applicable` is set.
 /// - [`exit_codes::COMPLIANCE_ERRORS`] (1): one or more compliance errors
-///   found, or (with `require_applicable`) a standard did not apply
+///   found, a finding of a `fail_on` rule (`--fail-on`) at any severity, or
+///   (with `require_applicable`) a standard did not apply
 /// - [`exit_codes::COMPLIANCE_WARNINGS`] (2): warnings found with
 ///   `--fail-on-warning`
+///
+/// The codes follow the severities the rule settings (`rules`: `--rule`,
+/// the config file's `compliance.rules`) set, and a finding of a rule that
+/// is off counts toward none of them.
 ///
 /// These gate codes only apply to runs that completed a validation. A
 /// usage/configuration error surfaced from this function (unsupported output
@@ -77,6 +82,8 @@ pub fn run_validate(
     sarif_include_passes: bool,
     sarif_max_results: usize,
     pqc: super::PqcOptions,
+    rules: &super::RuleOptions,
+    fail_on: &[&'static str],
 ) -> Result<i32> {
     // `--summary` overrides `--output` (documented on the flag), so the
     // requested format is never rendered and must not be gated.
@@ -85,15 +92,17 @@ pub fn run_validate(
         super::check_sarif_flags(output, sarif_base.as_deref(), sarif_category.as_deref())?;
     }
     // The run's inputs: the pinned clock, the product class, the CRA
-    // sidecar (explicit, else found next to the SBOM) and the PQC mode,
-    // resolved like every other compliance command's. The run configuration
-    // hands each level the inputs it reads.
+    // sidecar (explicit, else found next to the SBOM), the PQC mode, the
+    // rule settings and the component scope, resolved like every other
+    // compliance command's. The run configuration hands each level the
+    // inputs it reads.
     let compliance = super::compliance_run_config_for(
         &sbom_path,
         cra_sidecar_path.as_deref(),
         cra_product_class.as_deref(),
         as_of,
         pqc,
+        rules,
     )?;
     anyhow::ensure!(
         !standards.is_empty(),
@@ -101,6 +110,8 @@ pub fn run_validate(
         StandardSelector::valid_values()
     );
     let levels = selected_levels(&standards);
+    compliance.warn_on_unmatched_rules(&levels, "the selected standards");
+    warn_on_untrippable_fail_on(fail_on, &levels, &compliance);
 
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
     let results = compliance.check_levels(&levels, parsed.sbom());
@@ -159,7 +170,13 @@ pub fn run_validate(
     // `--require-applicable`: a standard that did not evaluate the SBOM is
     // a failed gate, not a pass.
     let not_applicable = require_applicable && results.iter().any(|r| !r.is_applicable());
-    if has_errors || not_applicable {
+    // `--fail-on`: a finding of a named rule fails the run whatever its
+    // severity, so a warning or an info finding exits 1 too.
+    let fail_on_hits = fail_on_findings(&results, fail_on);
+    for (rule_id, findings) in &fail_on_hits {
+        tracing::info!("--fail-on {rule_id}: {findings} finding(s); exiting 1");
+    }
+    if has_errors || not_applicable || !fail_on_hits.is_empty() {
         return Ok(exit_codes::COMPLIANCE_ERRORS);
     }
     if fail_on_warning && has_warnings {
@@ -167,6 +184,52 @@ pub fn run_validate(
     }
 
     Ok(exit_codes::SUCCESS)
+}
+
+/// The `fail_on` rules `results` report findings of, with how many each
+/// reports, in `fail_on` order.
+fn fail_on_findings(
+    results: &[ComplianceResult],
+    fail_on: &[&'static str],
+) -> Vec<(&'static str, usize)> {
+    fail_on
+        .iter()
+        .filter_map(|rule_id| {
+            let findings = results
+                .iter()
+                .flat_map(|r| &r.violations)
+                .filter(|v| v.rule_id == *rule_id)
+                .count();
+            (findings > 0).then_some((*rule_id, findings))
+        })
+        .collect()
+}
+
+/// Warn about each `--fail-on` rule that can never fail this run: no
+/// selected standard reports it, or the run's rule settings turn it off.
+fn warn_on_untrippable_fail_on(
+    fail_on: &[&'static str],
+    levels: &[ComplianceLevel],
+    compliance: &ComplianceRunConfig,
+) {
+    for rule_id in fail_on {
+        if !levels
+            .iter()
+            .any(|level| crate::quality::rules_for_level(*level).contains(rule_id))
+        {
+            tracing::warn!(
+                "--fail-on {rule_id} can never fail this run: the selected standards report no \
+                 {rule_id} finding"
+            );
+        } else if let Some((crate::quality::RuleSetting::Off, source)) =
+            compliance.rule_settings().get(rule_id)
+        {
+            tracing::warn!(
+                "--fail-on {rule_id} can never fail this run: {} turns the rule off",
+                source.label()
+            );
+        }
+    }
 }
 
 /// The levels `standards` select, each once, in the order it was first
@@ -260,6 +323,18 @@ struct ComplianceSummary {
     errors: usize,
     warnings: usize,
     info: usize,
+    /// Findings the rule settings turned off; omitted when none.
+    #[serde(skip_serializing_if = "is_zero")]
+    suppressed: usize,
+    /// Components the package rules left out for their excluded scope;
+    /// omitted when none.
+    #[serde(skip_serializing_if = "is_zero")]
+    excluded_components: usize,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero(count: &usize) -> bool {
+    *count == 0
 }
 
 fn compliance_summary(result: &ComplianceResult) -> ComplianceSummary {
@@ -276,6 +351,8 @@ fn compliance_summary(result: &ComplianceResult) -> ComplianceSummary {
         errors: result.error_count,
         warnings: result.warning_count,
         info: result.info_count,
+        suppressed: result.suppressed_count(),
+        excluded_components: result.excluded_components,
     }
 }
 
@@ -354,10 +431,15 @@ fn passed_checks_line(result: &ComplianceResult) -> Option<String> {
 /// the finding (its severity, rule id, category, requirement and element),
 /// its message, and a `fix:` line with the remediation for the SBOM's
 /// format. Before the `fix:` line, a finding that read a value adds an
-/// `observed:` line with the value and the field it was read from, and a
+/// `observed:` line with the value and the field it was read from, a
 /// finding `--pqc-mode deadline` dates adds a `deadline:` line with the date
-/// and its source. The checks the standard did not evaluate follow the
-/// findings, under `Not evaluated:`, one line per reason.
+/// and its source, and a finding whose rule the run sets (`--rule`) adds a
+/// `severity:` line naming the setting's source and the severity the check
+/// gave it. Under the status, an `Excluded:` line counts the components
+/// left out for their excluded scope. The checks the standard did not
+/// evaluate follow the findings, under `Not evaluated:`, one line per
+/// reason, and then the rules the settings turned off, under
+/// `Suppressed by settings:`, one line per rule.
 ///
 /// Requirement, element, message, observed value and the N/A reason can
 /// carry SBOM-supplied text (component names, versions, purls), so each
@@ -391,6 +473,13 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
     if let Some(passed) = passed_checks_line(result) {
         lines.push(passed);
     }
+    if result.excluded_components > 0 {
+        lines.push(format!(
+            "Excluded: {} with scope excluded, left out of the package rules \
+             (--include-excluded-scope judges them)",
+            plural(result.excluded_components, "component", "components")
+        ));
+    }
     lines.push(String::new());
 
     if result.violations.is_empty() {
@@ -398,11 +487,7 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
     }
 
     for v in &result.violations {
-        let severity = match v.severity {
-            ViolationSeverity::Error => "ERROR",
-            ViolationSeverity::Warning => "WARN",
-            ViolationSeverity::Info => "INFO",
-        };
+        let severity = severity_label(v.severity);
         let element = v.element.as_deref().unwrap_or("-");
         lines.push(format!(
             "[{}] {} | {} | {} | {}",
@@ -431,6 +516,14 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
                 sanitize_line(&deadline.source)
             ));
         }
+        if let Some(severity_override) = &v.severity_override {
+            lines.push(format!(
+                "  severity: {} from {} (default {})",
+                severity_label(v.severity),
+                severity_override.source.label(),
+                severity_label(severity_override.default)
+            ));
+        }
         lines.push(format!(
             "  fix: {}",
             sanitize_line(&v.remediation_guidance())
@@ -438,6 +531,10 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
     }
 
     if let Some(section) = not_evaluated_lines(result) {
+        lines.push(String::new());
+        lines.extend(section);
+    }
+    if let Some(section) = suppressed_lines(result) {
         lines.push(String::new());
         lines.extend(section);
     }
@@ -468,6 +565,41 @@ fn not_evaluated_lines(result: &ComplianceResult) -> Option<Vec<String>> {
             .into_iter()
             .map(|(reason, rules)| format!("  {}: {}", rules.join(", "), sanitize_line(reason))),
     );
+    Some(lines)
+}
+
+/// The label a finding line shows for `severity`.
+const fn severity_label(severity: ViolationSeverity) -> &'static str {
+    match severity {
+        ViolationSeverity::Error => "ERROR",
+        ViolationSeverity::Warning => "WARN",
+        ViolationSeverity::Info => "INFO",
+    }
+}
+
+/// `count` and the noun for it, singular for one.
+fn plural(count: usize, one: &str, many: &str) -> String {
+    format!("{count} {}", if count == 1 { one } else { many })
+}
+
+/// The `Suppressed by settings:` section of a result whose rule settings
+/// turned findings off: one line per rule, with how many findings it
+/// dropped and where the `off` setting comes from. It follows
+/// `Not evaluated:`, the checks that did not run: a suppressed rule's check
+/// did run, and its findings exist.
+fn suppressed_lines(result: &ComplianceResult) -> Option<Vec<String>> {
+    if result.suppressed.is_empty() {
+        return None;
+    }
+    let mut lines = vec!["Suppressed by settings:".to_string()];
+    lines.extend(result.suppressed.iter().map(|rule| {
+        format!(
+            "  {}: {} turned off by {}",
+            sanitize_line(&rule.rule_id),
+            plural(rule.findings, "finding", "findings"),
+            rule.source.label()
+        )
+    }));
     Some(lines)
 }
 
@@ -655,6 +787,8 @@ mod tests {
                 false,
                 crate::reports::DEFAULT_SARIF_MAX_RESULTS,
                 crate::cli::PqcOptions::default(),
+                &crate::cli::RuleOptions::default(),
+                &[],
             )
             .expect_err("unsupported format must be rejected");
             let msg = err.to_string();
@@ -688,6 +822,8 @@ mod tests {
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
+            &[],
         )
         .expect_err("empty standard list must be rejected");
         assert!(err.to_string().contains("no compliance standard selected"));
@@ -722,6 +858,8 @@ mod tests {
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
+            &[],
         )
         .expect("--summary must override -o html instead of hard-erroring");
         let content = std::fs::read_to_string(out).unwrap();
@@ -758,6 +896,8 @@ mod tests {
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
+            &[],
         )
         .expect_err("typo'd --cra-product-class must be a hard error");
         let msg = err.to_string();
@@ -796,6 +936,8 @@ mod tests {
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
+            &[],
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
     }
@@ -838,6 +980,8 @@ mod tests {
                 false,
                 crate::reports::DEFAULT_SARIF_MAX_RESULTS,
                 crate::cli::PqcOptions::default(),
+                &crate::cli::RuleOptions::default(),
+                &[],
             )
             .expect("validate runs");
             std::fs::read_to_string(out).unwrap()
@@ -899,6 +1043,8 @@ mod tests {
             false,
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
             crate::cli::PqcOptions::default(),
+            &crate::cli::RuleOptions::default(),
+            &[],
         )
         .expect_err("broken explicit sidecar must be a hard error");
         assert!(err.to_string().contains("Failed to load CRA sidecar"));

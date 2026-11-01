@@ -1,0 +1,121 @@
+{
+  "@context": "https://spdx.org/rdf/3.0.1/spdx-context.jsonld",
+  "type": "SpdxDocument",
+  "spdxId": "urn:spdx:doc:lifecycle-scope",
+  "name": "SPDX 3.0 lifecycle-scoped dependencies",
+  "creationInfo": {
+    "specVersion": "3.0.1",
+    "created": "2026-10-01T12:00:00Z",
+    "createdBy": ["urn:spdx:agent:acme-corp"],
+    "createdUsing": ["urn:spdx:tool:test-generator"]
+  },
+  "profileConformance": ["core", "software", "simpleLicensing"],
+  "rootElement": ["urn:spdx:pkg:scoped-app"],
+  "element": [
+    {
+      "type": "Organization",
+      "spdxId": "urn:spdx:agent:acme-corp",
+      "name": "Acme Corp"
+    },
+    {
+      "type": "Organization",
+      "spdxId": "urn:spdx:agent:openjs",
+      "name": "OpenJS Foundation"
+    },
+    {
+      "type": "Tool",
+      "spdxId": "urn:spdx:tool:test-generator",
+      "name": "test-generator 1.0.0"
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "urn:spdx:pkg:scoped-app",
+      "name": "scoped-app",
+      "packageVersion": "2.0.0",
+      "packageUrl": "pkg:npm/scoped-app@2.0.0",
+      "primaryPurpose": "application",
+      "suppliedBy": ["urn:spdx:agent:acme-corp"],
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "9f2c4a6e8b0d1f3a5c7e9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "urn:spdx:pkg:express",
+      "name": "express",
+      "packageVersion": "4.18.2",
+      "packageUrl": "pkg:npm/express@4.18.2",
+      "primaryPurpose": "library",
+      "suppliedBy": ["urn:spdx:agent:openjs"],
+      "verifiedUsing": [
+        {
+          "type": "Hash",
+          "algorithm": "sha256",
+          "hashValue": "1a3c5e7f9b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a"
+        }
+      ]
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "urn:spdx:pkg:jest",
+      "name": "jest",
+      "packageVersion": "29.7.0",
+      "packageUrl": "pkg:npm/jest@29.7.0",
+      "primaryPurpose": "library"
+    },
+    {
+      "type": "software_Package",
+      "spdxId": "urn:spdx:pkg:webpack",
+      "name": "webpack",
+      "packageUrl": "pkg:npm/webpack",
+      "primaryPurpose": "library"
+    },
+    {
+      "type": "simplelicensing_LicenseExpression",
+      "spdxId": "urn:spdx:lic:mit",
+      "licenseExpression": "MIT"
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "urn:spdx:rel:app-license",
+      "relationshipType": "hasDeclaredLicense",
+      "from": "urn:spdx:pkg:scoped-app",
+      "to": ["urn:spdx:lic:mit"]
+    },
+    {
+      "type": "Relationship",
+      "spdxId": "urn:spdx:rel:express-license",
+      "relationshipType": "hasDeclaredLicense",
+      "from": "urn:spdx:pkg:express",
+      "to": ["urn:spdx:lic:mit"]
+    },
+    {
+      "type": "LifecycleScopedRelationship",
+      "spdxId": "urn:spdx:rel:app-runtime-express",
+      "relationshipType": "dependsOn",
+      "from": "urn:spdx:pkg:scoped-app",
+      "to": ["urn:spdx:pkg:express"],
+      "scope": "runtime"
+    },
+    {
+      "type": "LifecycleScopedRelationship",
+      "spdxId": "urn:spdx:rel:app-test-jest",
+      "relationshipType": "dependsOn",
+      "from": "urn:spdx:pkg:scoped-app",
+      "to": ["urn:spdx:pkg:jest"],
+      "scope": "test"
+    },
+    {
+      "type": "LifecycleScopedRelationship",
+      "spdxId": "urn:spdx:rel:app-build-webpack",
+      "relationshipType": "dependsOn",
+      "from": "urn:spdx:pkg:scoped-app",
+      "to": ["urn:spdx:pkg:webpack"],
+      "scope": "build"
+    }
+  ]
+}

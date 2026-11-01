@@ -74,17 +74,20 @@ fn load_multi_rules(rules: &MatchingRulesPathConfig) -> Option<MatchingRulesConf
     }
 }
 
-/// Build a `MultiDiffEngine` with graph diffing and matching rules wired in
-/// from CLI configuration.
+/// Build a `MultiDiffEngine` with graph diffing, matching rules and the
+/// compliance run (`--as-of`, `--cra-product-class`, the PQC flags,
+/// `--rule`, `--include-excluded-scope`) wired in from CLI configuration.
 fn build_multi_engine(
     fuzzy_config: FuzzyMatchConfig,
     include_unchanged: bool,
     graph: &GraphAwareDiffConfig,
     rules: &MatchingRulesPathConfig,
+    compliance: &crate::quality::ComplianceRunConfig,
 ) -> MultiDiffEngine {
     let mut engine = MultiDiffEngine::new()
         .with_fuzzy_config(fuzzy_config)
-        .include_unchanged(include_unchanged);
+        .include_unchanged(include_unchanged)
+        .with_compliance(compliance.clone());
     if graph.enabled {
         engine = engine.with_graph_diff(graph_diff_config_from(graph));
     }
@@ -146,6 +149,7 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
+        &config.compliance,
     );
 
     let mut result = engine.diff_multi(
@@ -217,6 +221,10 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
     // formats and unknown filter labels fail fast.
     let output_mode = resolve_multi_output(&config.output)?;
     validate_post_diff_filters(&config.filtering, &config.graph_diff)?;
+    // The compliance trend checks every standard.
+    config
+        .compliance
+        .warn_on_unmatched_rules(crate::quality::ComplianceLevel::all(), "the standards");
 
     let (sboms, _enrich_stats) =
         parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
@@ -262,6 +270,7 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
+        &config.compliance,
     );
     let mut result = engine.timeline(&sbom_refs)?;
 
@@ -336,6 +345,7 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
         config.matching.include_unchanged,
         &config.graph_diff,
         &config.rules,
+        &config.compliance,
     );
     let mut result = engine.matrix(&sbom_refs, Some(config.cluster_threshold))?;
 

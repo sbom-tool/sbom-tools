@@ -40,6 +40,8 @@
         "violations": {"type": "array", "items": {"$ref": "#/$defs/violation"}},
         "passed": {"type": "array", "description": "Checks the SBOM passed, such as an algorithm NIST approves for post-quantum use. Not violations: no severity count includes them. Empty when the standard passed no check or did not apply.", "items": {"$ref": "#/$defs/passed_check"}},
         "evaluated": {"type": "array", "description": "Checks of the standard that did not run on this SBOM, each with the reason: the format or spec version cannot carry what the check reads, the version does not parse, the run's inputs leave it out, the SBOM lists none of the components it is about, or the SBOM is too large. Absent when every check ran, and for a standard that did not apply.", "minItems": 1, "items": {"$ref": "#/$defs/rule_evaluation"}},
+        "suppressed": {"type": "array", "minItems": 1, "description": "The rules whose findings the run's rule settings (--rule, the config file's compliance.rules) turned off, by rule id. Their findings count toward no severity, the verdict or the score. Absent when no finding was turned off.", "items": {"$ref": "#/$defs/suppressed_rule"}},
+        "excluded_components": {"type": "integer", "minimum": 1, "description": "Components the package rules left out because their scope is excluded (CycloneDX `scope: excluded`, an SPDX development, build or test dependency). Absent when none, under --include-excluded-scope, and for a standard without package rules (cnsa2, pqc, eucc, ai-act, bsi-ai)."},
         "conformity_summary": {"$ref": "#/$defs/conformity_summary"}
       }
     },
@@ -54,13 +56,14 @@
     },
     "counts": {
       "type": "object",
-      "description": "Violations per severity, and passed checks.",
+      "description": "Violations per severity, passed checks, and the findings rule settings turned off.",
       "required": ["error", "warning", "info", "passed"],
       "properties": {
         "error": {"$ref": "#/$defs/count"},
         "warning": {"$ref": "#/$defs/count"},
         "info": {"$ref": "#/$defs/count"},
-        "passed": {"$ref": "#/$defs/count", "description": "Entries of `passed`."}
+        "passed": {"$ref": "#/$defs/count", "description": "Entries of `passed`."},
+        "suppressed": {"type": "integer", "minimum": 1, "description": "Findings the rule settings turned off: the sum of `suppressed[].findings`. No other count includes them. Absent when none."}
       }
     },
     "passed_check": {
@@ -86,7 +89,9 @@
       "properties": {
         "finding_id": {"type": "string", "pattern": "^sbomtools:v1:[0-9a-f]{16}$", "description": "`sbomtools:v1:` followed by the first 16 hex digits of SHA-256(finding_key)."},
         "finding_key": {"type": "string", "pattern": "^[^|]+\\|[^|]+\\|", "description": "`<standard>|<rule_id>|<subject>`, or `<standard>|<rule_id>:<finding_detail>|<subject>` with `%`, `|` and `:` in the detail percent-encoded; the subject (everything after the second `|`) is `document` or the component's canonical id, prefixed `component:` when the id itself reads `document` or starts with `edge:` or `component:`."},
-        "severity": {"enum": ["Error", "Warning", "Info"]},
+        "severity": {"enum": ["Error", "Warning", "Info"], "description": "The severity the verdict, the counts, the score and the exit code read: the one the run's rule settings give the rule, if they set it."},
+        "default_severity": {"enum": ["Error", "Warning", "Info"], "description": "When the run's rule settings set the finding's rule (--rule, the config file's compliance.rules): the severity the check gave the finding. Present exactly when `severity_source` is."},
+        "severity_source": {"enum": ["config", "cli"], "description": "Where the setting that gives the finding its `severity` comes from: `config` (the config file) or `cli` (--rule). Present exactly when `default_severity` is."},
         "category": {"type": "string", "minLength": 1, "description": "Violation category, e.g. DocumentMetadata, ComponentIdentification, SupplierInfo."},
         "message": {"type": "string"},
         "element": {"type": ["string", "null"], "description": "Human-readable label of the offending element; not unique."},
@@ -122,6 +127,16 @@
       "properties": {
         "affected": {"$ref": "#/$defs/count"},
         "total": {"$ref": "#/$defs/count"}
+      }
+    },
+    "suppressed_rule": {
+      "type": "object",
+      "description": "A rule whose findings the run turned off (--rule RULE=off).",
+      "required": ["rule_id", "findings", "source"],
+      "properties": {
+        "rule_id": {"type": "string", "minLength": 1, "description": "The rule's id."},
+        "findings": {"type": "integer", "minimum": 1, "description": "How many of its findings the run dropped."},
+        "source": {"enum": ["config", "cli"], "description": "Where the `off` setting comes from: `config` (the config file) or `cli` (--rule)."}
       }
     },
     "standard_ref": {

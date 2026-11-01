@@ -277,10 +277,10 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
 }
 
 /// The compliance run of `view`: its `--as-of`, `--cra-product-class`, CRA
-/// sidecar (`--cra-sidecar`, else the one next to the SBOM) and PQC flags,
-/// resolved by the helper `validate` uses.
+/// sidecar (`--cra-sidecar`, else the one next to the SBOM), PQC flags, rule
+/// settings and component scope, resolved by the helper `validate` uses.
 pub(crate) fn compliance_run(config: &ViewConfig) -> Result<ComplianceRunConfig> {
-    super::compliance_run_config_for(
+    let run = super::compliance_run_config_for(
         &config.sbom_path,
         config.cra_sidecar_path.as_deref(),
         config.cra_product_class.as_deref(),
@@ -290,7 +290,14 @@ pub(crate) fn compliance_run(config: &ViewConfig) -> Result<ComplianceRunConfig>
             profile: config.pqc_profile,
             cnsa_category: config.cnsa_category,
         },
-    )
+        &super::RuleOptions {
+            settings: config.rule_settings.clone(),
+            include_excluded_scope: config.include_excluded_scope,
+        },
+    )?;
+    // The compliance tab checks every standard.
+    run.warn_on_unmatched_rules(ComplianceLevel::all(), "the standards");
+    Ok(run)
 }
 
 /// Apply the view filters (`--severity`, `--ecosystem`,
@@ -543,6 +550,8 @@ mod tests {
             pqc_mode: None,
             pqc_profile: None,
             cnsa_category: None,
+            rule_settings: crate::quality::RuleSettings::new(),
+            include_excluded_scope: false,
         }
     }
 

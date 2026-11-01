@@ -895,6 +895,7 @@ mod compliance_export_tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,

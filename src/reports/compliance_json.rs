@@ -100,9 +100,19 @@ struct Counts {
     info: usize,
     /// Passed checks, which no severity count includes.
     passed: usize,
+    /// Findings the rule settings turned off (the sum of `suppressed[]`),
+    /// which no other count includes; omitted when none.
+    #[serde(skip_serializing_if = "is_zero")]
+    suppressed: usize,
     /// Any other `<kind>_count` field of the result, keyed by `<kind>`.
     #[serde(flatten)]
     other: Map<String, Value>,
+}
+
+/// Serde helper: skip a count that is zero.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero(count: &usize) -> bool {
+    *count == 0
 }
 
 /// A violation or a passed check: its own serialization behind its finding
@@ -190,6 +200,7 @@ fn envelope_result(result: &ComplianceResult) -> Result<EnvelopeResult<'_>, Repo
             warning: result.warning_count,
             info: result.info_count,
             passed: result.passed.len(),
+            suppressed: result.suppressed_count(),
             other: other_counts,
         },
         violations: result

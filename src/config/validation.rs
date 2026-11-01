@@ -184,7 +184,101 @@ impl Validatable for ComplianceConfig {
             });
         }
 
+        // Rule settings and `fail_on` name rules as `--rule` and
+        // `--fail-on` do: a typo'd id fails here, naming the closest one.
+        for (rule_id, setting) in &self.rules {
+            let result = setting
+                .parse::<crate::quality::RuleSetting>()
+                .and_then(|setting| {
+                    crate::quality::RuleSettings::new()
+                        .set(rule_id, setting, crate::quality::SettingSource::Config)
+                        .map(|_| ())
+                });
+            if let Err(message) = result {
+                errors.push(ConfigError {
+                    field: format!("compliance.rules.{rule_id}"),
+                    message,
+                });
+            }
+        }
+        for (i, rule_id) in self.fail_on.iter().enumerate() {
+            let result = crate::quality::resolve_rule_id(rule_id).and_then(|id| {
+                if crate::quality::rule_kind(id) == Some(crate::quality::RuleKind::Pass) {
+                    Err(format!(
+                        "{id} reports passed checks, never a finding, so it can never fail a run"
+                    ))
+                } else {
+                    Ok(())
+                }
+            });
+            if let Err(message) = result {
+                errors.push(ConfigError {
+                    field: format!("compliance.fail_on[{i}]"),
+                    message,
+                });
+            }
+        }
+
+        // The PQC defaults take the `--pqc-*` value names. A profile or a
+        // category is a deadline-mode default, as on the command line.
+        let pqc_mode = check_value_enum::<crate::quality::PqcMode>(
+            &mut errors,
+            "compliance.pqc_mode",
+            self.pqc_mode.as_deref(),
+        );
+        check_value_enum::<crate::quality::PqcProfile>(
+            &mut errors,
+            "compliance.pqc_profile",
+            self.pqc_profile.as_deref(),
+        );
+        check_value_enum::<crate::quality::CnsaCategory>(
+            &mut errors,
+            "compliance.cnsa_category",
+            self.cnsa_category.as_deref(),
+        );
+        if pqc_mode != Some(crate::quality::PqcMode::Deadline) {
+            for (field, value) in [
+                ("compliance.pqc_profile", &self.pqc_profile),
+                ("compliance.cnsa_category", &self.cnsa_category),
+            ] {
+                if value.is_some() {
+                    errors.push(ConfigError {
+                        field: field.to_string(),
+                        message: "applies only with `compliance.pqc_mode: deadline`".to_string(),
+                    });
+                }
+            }
+        }
+
         errors
+    }
+}
+
+/// Parse `value` as a `ValueEnum` flag value (any case), recording an error
+/// for `field` when it names none. Returns the parsed value.
+fn check_value_enum<T: clap::ValueEnum>(
+    errors: &mut Vec<ConfigError>,
+    field: &str,
+    value: Option<&str>,
+) -> Option<T> {
+    let value = value?;
+    match T::from_str(value, true) {
+        Ok(parsed) => Some(parsed),
+        Err(_) => {
+            let valid: Vec<String> = T::value_variants()
+                .iter()
+                .filter_map(|v| v.to_possible_value())
+                .map(|v| v.get_name().to_string())
+                .collect();
+            errors.push(ConfigError {
+                field: field.to_string(),
+                message: format!(
+                    "invalid value '{value}'; valid values: {}",
+                    valid.join(", ")
+                ),
+            });
+            None
+        }
     }
 }
 
@@ -636,6 +730,87 @@ mod tests {
             assert!(
                 errors.iter().any(|e| e.field == field),
                 "expected an error for {field}: {errors:?}"
+            );
+        }
+    }
+
+    /// Rule settings and `fail_on` name rules as `--rule` and `--fail-on`
+    /// do (any case), and the PQC keys take the `--pqc-*` value names.
+    #[test]
+    fn compliance_config_accepts_rule_settings_and_pqc_defaults() {
+        let config = ComplianceConfig {
+            rules: [
+                ("SBOM-NTIA-SUPPLIER", "warning"),
+                ("sbom-ntia-version", "OFF"),
+                ("SBOM-CRA-ART-24", "error"),
+            ]
+            .into_iter()
+            .map(|(id, setting)| (id.to_string(), setting.to_string()))
+            .collect(),
+            fail_on: vec!["sbom-ntia-supplier".to_string()],
+            include_excluded_scope: true,
+            pqc_mode: Some("deadline".to_string()),
+            pqc_profile: Some("federal".to_string()),
+            cnsa_category: Some("web-cloud".to_string()),
+            ..Default::default()
+        };
+        assert!(config.is_valid(), "{:?}", config.validate());
+    }
+
+    #[test]
+    fn compliance_config_rejects_bad_rule_settings_and_pqc_values() {
+        let config = ComplianceConfig {
+            rules: [
+                ("SBOM-NTIA-SUPLIER", "warning"),
+                ("SBOM-NTIA-VERSION", "warn"),
+                ("SBOM-PQC-009", "error"),
+            ]
+            .into_iter()
+            .map(|(id, setting)| (id.to_string(), setting.to_string()))
+            .collect(),
+            fail_on: vec!["SBOM-PQC-009".to_string(), "SBOM-NOPE".to_string()],
+            pqc_mode: Some("eventually".to_string()),
+            pqc_profile: Some("federal".to_string()),
+            cnsa_category: Some("toasters".to_string()),
+            ..Default::default()
+        };
+        let errors = config.validate();
+        let message = |field: &str| {
+            errors
+                .iter()
+                .find(|e| e.field == field)
+                .map(|e| e.message.clone())
+                .unwrap_or_else(|| panic!("expected an error for {field}: {errors:?}"))
+        };
+        assert!(message("compliance.rules.SBOM-NTIA-SUPLIER").contains("SBOM-NTIA-SUPPLIER"));
+        assert!(
+            message("compliance.rules.SBOM-NTIA-VERSION").contains("off, info, warning, error")
+        );
+        assert!(message("compliance.rules.SBOM-PQC-009").contains("passed checks"));
+        assert!(message("compliance.fail_on[0]").contains("never a finding"));
+        assert!(message("compliance.fail_on[1]").contains("unknown rule id"));
+        assert!(message("compliance.pqc_mode").contains("readiness, deadline"));
+        assert!(message("compliance.cnsa_category").contains("software-signing"));
+        // A profile is a deadline-mode default; the mode is invalid here.
+        assert!(message("compliance.pqc_profile").contains("pqc_mode: deadline"));
+    }
+
+    /// As on the command line, a profile or a category without deadline
+    /// mode is an error.
+    #[test]
+    fn compliance_config_rejects_pqc_profile_outside_deadline_mode() {
+        for mode in [None, Some("readiness")] {
+            let config = ComplianceConfig {
+                pqc_mode: mode.map(str::to_string),
+                pqc_profile: Some("nist".to_string()),
+                cnsa_category: Some("niche".to_string()),
+                ..Default::default()
+            };
+            let fields: Vec<String> = config.validate().into_iter().map(|e| e.field).collect();
+            assert_eq!(
+                fields,
+                ["compliance.pqc_profile", "compliance.cnsa_category"],
+                "mode {mode:?}"
             );
         }
     }

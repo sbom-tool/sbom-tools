@@ -121,11 +121,13 @@ fn a_lone_primary_component_is_an_inventory() {
 }
 
 /// Source scan: a checker loop or count over every component must either
-/// carve out non-package components (`is_package_scoped` or
-/// `package_components`) or say why its rule covers them all, with an
+/// carve out non-package components (`judges_package`, `is_package_scoped`
+/// or `package_components`) or say why its rule covers them all, with an
 /// `All components:` comment just above. The carve-out stopped halfway
 /// through the standards once (review finding V5); this keeps the next
-/// package rule from forgetting it.
+/// package rule from forgetting it. `judges_package` also leaves out the
+/// components whose scope is excluded, which `is_package_scoped` alone
+/// does not.
 #[test]
 fn whole_inventory_walks_are_scoped_or_justified() {
     fn floor(s: &str, mut i: usize) -> usize {
@@ -156,8 +158,9 @@ fn whole_inventory_walks_are_scoped_or_justified() {
                 let before = &flat[floor(&flat, at.saturating_sub(400))..at];
                 let after = &flat[at..floor(&flat, (at + 1200).min(flat.len()))];
                 let justified = before.contains("Allcomponents:");
-                let scoped =
-                    after.contains("is_package_scoped") || after.contains("package_components");
+                let scoped = after.contains("judges_package")
+                    || after.contains("is_package_scoped")
+                    || after.contains("package_components");
                 if !justified && !scoped {
                     let name = path.file_name().unwrap_or_default().to_string_lossy();
                     offenders.push(format!("{name}: …{}…", &after[..floor(after, 60)]));

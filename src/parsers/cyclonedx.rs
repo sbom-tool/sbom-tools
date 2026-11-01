@@ -239,13 +239,9 @@ impl CycloneDxParser {
                 .bom_ref
                 .clone()
                 .unwrap_or_else(|| comp.name.clone());
-            if let Some(scope_str) = &cdx_comp.scope {
-                let scope = match scope_str.to_lowercase().as_str() {
-                    "optional" => DependencyScope::Optional,
-                    "excluded" => DependencyScope::Excluded,
-                    _ => DependencyScope::Required,
-                };
-                scope_map.insert(bom_ref.clone(), scope);
+            // The component's scope also marks the dependency edges to it.
+            if let Some(scope) = &comp.scope {
+                scope_map.insert(bom_ref.clone(), scope.clone());
             }
             let canonical_id = sbom.claim_canonical_id(&mut comp);
             id_map.insert(bom_ref, canonical_id.clone());
@@ -619,6 +615,17 @@ impl CycloneDxParser {
         if let Some(purl) = &cdx.purl {
             comp = comp.with_purl(purl.clone());
         }
+
+        // Scope: whether the product needs the component at runtime. An
+        // unknown value reads as the default, `required`.
+        comp.scope = cdx
+            .scope
+            .as_deref()
+            .map(|scope| match scope.to_lowercase().as_str() {
+                "optional" => DependencyScope::Optional,
+                "excluded" => DependencyScope::Excluded,
+                _ => DependencyScope::Required,
+            });
 
         // Set component type
         comp.component_type = match cdx.component_type.as_str() {

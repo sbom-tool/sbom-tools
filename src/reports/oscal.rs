@@ -272,7 +272,9 @@ struct Check<'a> {
 impl<'a> Check<'a> {
     /// The check a violation reports. Any violation, whatever its severity,
     /// is an unmet objective; the severity is the observation's `severity`
-    /// property.
+    /// property. A finding whose rule the run sets (`--rule`) adds the
+    /// severity its check gave it and the setting's source as
+    /// `default-severity` and `severity-source`.
     fn violation(violation: &'a Violation) -> Self {
         let mut props: Vec<Value> = [
             prop("severity", severity(violation.severity)),
@@ -283,6 +285,13 @@ impl<'a> Check<'a> {
         .into_iter()
         .flatten()
         .collect();
+        if let Some(severity_override) = &violation.severity_override {
+            props.extend(prop(
+                "default-severity",
+                severity(severity_override.default),
+            ));
+            props.extend(prop("severity-source", severity_override.source.name()));
+        }
         if let Some(element) = &violation.element {
             props.extend(prop("sbom-element", element));
         }
@@ -862,6 +871,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -881,6 +891,8 @@ mod tests {
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
             elements_checked: 1,
+            suppressed: Vec::new(),
+            excluded_components: 0,
         }
     }
 
@@ -1159,6 +1171,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,

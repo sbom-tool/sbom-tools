@@ -1508,6 +1508,7 @@ mod tests {
             standard_refs: Vec::new(),
             remediation: None,
             finding_detail: None,
+            severity_override: None,
             deadline: None,
             field: None,
             observed: None,
@@ -1539,6 +1540,8 @@ mod tests {
             conformity_summary: None,
             applicability: crate::quality::Applicability::Applicable,
             elements_checked: 1,
+            suppressed: Vec::new(),
+            excluded_components: 0,
         }
     }
 

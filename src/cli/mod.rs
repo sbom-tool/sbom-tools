@@ -113,11 +113,157 @@ pub struct PqcOptions {
     pub cnsa_category: Option<crate::quality::CnsaCategory>,
 }
 
+impl PqcOptions {
+    /// The PQC inputs of a run: each flag (`mode`, `profile`,
+    /// `cnsa_category`), else the config file's default for it
+    /// (`compliance.pqc_mode`, `compliance.pqc_profile`,
+    /// `compliance.cnsa_category`). The file's profile and category are
+    /// defaults of deadline mode, so a run in readiness mode, such as one
+    /// `--pqc-mode readiness` sets, ignores them.
+    ///
+    /// # Errors
+    ///
+    /// A config-file value that names no mode, profile or category (the
+    /// config validator rejects it first).
+    pub fn with_config_defaults(
+        mode: Option<crate::quality::PqcMode>,
+        profile: Option<crate::quality::PqcProfile>,
+        cnsa_category: Option<crate::quality::CnsaCategory>,
+        file: &crate::config::ComplianceConfig,
+    ) -> anyhow::Result<Self> {
+        let mode = match mode {
+            Some(mode) => mode,
+            None => config_value("pqc_mode", file.pqc_mode.as_deref())?.unwrap_or_default(),
+        };
+        let deadline = mode == crate::quality::PqcMode::Deadline;
+        let profile = match profile {
+            Some(profile) => Some(profile),
+            None if deadline => config_value("pqc_profile", file.pqc_profile.as_deref())?,
+            None => None,
+        };
+        let cnsa_category = match cnsa_category {
+            Some(category) => Some(category),
+            None if deadline => config_value("cnsa_category", file.cnsa_category.as_deref())?,
+            None => None,
+        };
+        Ok(Self {
+            mode,
+            profile,
+            cnsa_category,
+        })
+    }
+}
+
+/// The config file's `compliance.<key>` value, parsed as the flag of the
+/// same name parses it (any case).
+fn config_value<T: clap::ValueEnum>(key: &str, value: Option<&str>) -> anyhow::Result<Option<T>> {
+    value
+        .map(|v| T::from_str(v, true).map_err(|e| anyhow::anyhow!("invalid compliance.{key}: {e}")))
+        .transpose()
+}
+
+/// The rule settings and the component scope of a run: the shared `--rule`
+/// and `--include-excluded-scope` flags over the config file's
+/// `compliance.rules` and `compliance.include_excluded_scope` (see
+/// [`RuleOptions::from_flags`]).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RuleOptions {
+    /// Per rule, off or the severity its findings get: the config file's
+    /// settings, then each `--rule`, which wins for its rule.
+    pub settings: crate::quality::RuleSettings,
+    /// Whether the package rules judge components whose scope is excluded
+    /// too; by default they leave them out.
+    pub include_excluded_scope: bool,
+}
+
+impl RuleOptions {
+    /// The rule options of a run: the config file's `compliance.rules`
+    /// (rule id → setting), then each `--rule` value of `flags`, which wins
+    /// over the file for its rule, and whether the package rules judge
+    /// components whose scope is excluded (`--include-excluded-scope`, or
+    /// the file's `compliance.include_excluded_scope`).
+    ///
+    /// # Errors
+    ///
+    /// A file entry that names no rule, a pass-only rule or no setting (the
+    /// config validator rejects it first).
+    pub fn from_flags(
+        flags: &[(&'static str, crate::quality::RuleSetting)],
+        include_excluded_scope: bool,
+        file: &crate::config::ComplianceConfig,
+    ) -> anyhow::Result<Self> {
+        use crate::quality::{RuleSettings, SettingSource};
+        let mut settings = RuleSettings::new();
+        for (rule_id, value) in &file.rules {
+            let setting = value
+                .parse()
+                .map_err(|e| anyhow::anyhow!("invalid compliance.rules.{rule_id}: {e}"))?;
+            settings
+                .set(rule_id, setting, SettingSource::Config)
+                .map_err(|e| anyhow::anyhow!("invalid compliance.rules.{rule_id}: {e}"))?;
+        }
+        for (rule_id, setting) in flags {
+            settings
+                .set(rule_id, *setting, SettingSource::Cli)
+                .map_err(|e| anyhow::anyhow!("invalid --rule {rule_id}={setting}: {e}"))?;
+        }
+        Ok(Self {
+            settings,
+            include_excluded_scope: include_excluded_scope || file.include_excluded_scope,
+        })
+    }
+}
+
+/// Parse one `--rule RULE=SETTING` value: a rule id (any case) and `off`,
+/// `info`, `warning` or `error`.
+///
+/// # Errors
+///
+/// No `=`, an unknown rule id (the message names the closest one), a
+/// pass-only rule, whose passed checks have no severity, or an unknown
+/// setting: a usage error (exit 3).
+pub fn parse_rule_setting_arg(
+    value: &str,
+) -> std::result::Result<(&'static str, crate::quality::RuleSetting), String> {
+    let Some((rule_id, setting)) = value.split_once('=') else {
+        return Err(
+            "expected RULE=SETTING, e.g. SBOM-NTIA-SUPPLIER=warning; SETTING is off, \
+                    info, warning or error"
+                .to_string(),
+        );
+    };
+    let setting: crate::quality::RuleSetting = setting.parse()?;
+    let rule_id = crate::quality::RuleSettings::new().set(
+        rule_id,
+        setting,
+        crate::quality::SettingSource::Cli,
+    )?;
+    Ok((rule_id, setting))
+}
+
+/// Parse one `--fail-on RULE` value: a rule id (any case) that reports
+/// findings.
+///
+/// # Errors
+///
+/// An unknown rule id (the message names the closest one) or a pass-only
+/// rule, which never reports a finding: a usage error (exit 3).
+pub fn parse_fail_on_arg(value: &str) -> std::result::Result<&'static str, String> {
+    let rule_id = parse_rule_id(value)?;
+    if crate::quality::rule_kind(rule_id) == Some(crate::quality::RuleKind::Pass) {
+        return Err(format!(
+            "{rule_id} reports passed checks, never a finding, so it can never fail a run"
+        ));
+    }
+    Ok(rule_id)
+}
+
 /// The compliance inputs of a run, parsed strictly from the flags every
-/// compliance-checking command shares: `--cra-product-class`, `--as-of` and
-/// the PQC flags (`pqc`). `diff` judges both of its SBOMs with these; the
-/// commands that judge one SBOM add its CRA sidecar with
-/// [`compliance_run_config_for`].
+/// compliance-checking command shares: `--cra-product-class`, `--as-of`,
+/// the PQC flags (`pqc`), and the rule settings and component scope
+/// (`rules`). `diff`, `diff-multi`, `timeline` and `matrix` judge every
+/// SBOM with these; the commands that judge one SBOM add its CRA sidecar
+/// with [`compliance_run_config_for`].
 ///
 /// # Errors
 ///
@@ -128,13 +274,17 @@ pub fn compliance_run_config(
     cra_product_class: Option<&str>,
     as_of: Option<&str>,
     pqc: PqcOptions,
+    rules: &RuleOptions,
 ) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
     anyhow::ensure!(
         pqc.mode == crate::quality::PqcMode::Deadline
             || (pqc.profile.is_none() && pqc.cnsa_category.is_none()),
         "--pqc-profile and --cnsa-category apply only with --pqc-mode deadline"
     );
-    let mut config = crate::quality::ComplianceRunConfig::new().with_pqc_mode(pqc.mode);
+    let mut config = crate::quality::ComplianceRunConfig::new()
+        .with_pqc_mode(pqc.mode)
+        .with_rule_settings(rules.settings.clone())
+        .with_include_excluded_scope(rules.include_excluded_scope);
     if let Some(as_of) = as_of.map(parse_as_of).transpose()? {
         config = config.with_as_of(as_of);
     }
@@ -163,12 +313,13 @@ pub(crate) fn compliance_run_config_for(
     cra_product_class: Option<&str>,
     as_of: Option<&str>,
     pqc: PqcOptions,
+    rules: &RuleOptions,
 ) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
-    let mut config = compliance_run_config(cra_product_class, as_of, pqc)?;
+    let mut config = compliance_run_config(cra_product_class, as_of, pqc, rules)?;
     if let Some(sidecar) = load_cra_sidecar(explicit_sidecar, sbom_path)? {
         config = config.with_sidecar(sidecar);
     }
-    config.warn_on_product_class_conflict();
+    config.warn_on_product_class_conflict(sbom_path);
     Ok(config)
 }
 
@@ -299,6 +450,87 @@ mod tests {
             "must explain the offset-less form: {err}"
         );
         assert!(err.contains("YYYY-MM-DD"), "must name the date form: {err}");
+    }
+
+    /// The config file's PQC keys are defaults: each flag wins, and the
+    /// file's profile and category reach only a run in deadline mode.
+    #[test]
+    fn pqc_options_take_the_config_file_as_defaults() {
+        use crate::quality::{CnsaCategory, PqcMode, PqcProfile};
+        let file = crate::config::ComplianceConfig {
+            pqc_mode: Some("deadline".to_string()),
+            pqc_profile: Some("federal".to_string()),
+            cnsa_category: Some("niche".to_string()),
+            ..Default::default()
+        };
+        let from_file = super::PqcOptions::with_config_defaults(None, None, None, &file).unwrap();
+        assert_eq!(
+            from_file,
+            super::PqcOptions {
+                mode: PqcMode::Deadline,
+                profile: Some(PqcProfile::Federal),
+                cnsa_category: Some(CnsaCategory::Niche),
+            }
+        );
+        let flags = super::PqcOptions::with_config_defaults(
+            None,
+            Some(PqcProfile::Nist),
+            Some(CnsaCategory::WebCloud),
+            &file,
+        )
+        .unwrap();
+        assert_eq!(flags.profile, Some(PqcProfile::Nist));
+        assert_eq!(flags.cnsa_category, Some(CnsaCategory::WebCloud));
+        // `--pqc-mode readiness` drops the file's deadline-mode defaults.
+        let readiness =
+            super::PqcOptions::with_config_defaults(Some(PqcMode::Readiness), None, None, &file)
+                .unwrap();
+        assert_eq!(readiness, super::PqcOptions::default());
+        // No file value: readiness, as before.
+        let none = super::PqcOptions::with_config_defaults(
+            None,
+            None,
+            None,
+            &crate::config::ComplianceConfig::default(),
+        )
+        .unwrap();
+        assert_eq!(none, super::PqcOptions::default());
+    }
+
+    /// The `--rule` flags win over the config file's settings for their own
+    /// rules, and each setting remembers where it comes from.
+    #[test]
+    fn rule_options_put_the_flags_over_the_file() {
+        use crate::quality::{RuleSetting, SettingSource};
+        let file = crate::config::ComplianceConfig {
+            rules: [("sbom-ntia-supplier", "off"), ("SBOM-NTIA-VERSION", "info")]
+                .into_iter()
+                .map(|(id, setting)| (id.to_string(), setting.to_string()))
+                .collect(),
+            include_excluded_scope: true,
+            ..Default::default()
+        };
+        let flag = super::parse_rule_setting_arg("SBOM-NTIA-SUPPLIER=Error").unwrap();
+        assert_eq!(flag, ("SBOM-NTIA-SUPPLIER", RuleSetting::Error));
+        let options = super::RuleOptions::from_flags(&[flag], false, &file).unwrap();
+        assert!(options.include_excluded_scope, "the file's switch applies");
+        assert_eq!(
+            options.settings.get("SBOM-NTIA-SUPPLIER"),
+            Some((RuleSetting::Error, SettingSource::Cli))
+        );
+        assert_eq!(
+            options.settings.get("SBOM-NTIA-VERSION"),
+            Some((RuleSetting::Info, SettingSource::Config))
+        );
+
+        let err = super::parse_rule_setting_arg("SBOM-NTIA-SUPPLIER:warning").unwrap_err();
+        assert!(err.contains("RULE=SETTING"), "{err}");
+        let err = super::parse_fail_on_arg("SBOM-PQC-009").unwrap_err();
+        assert!(err.contains("never a finding"), "{err}");
+        assert_eq!(
+            super::parse_fail_on_arg("sbom-ntia-supplier"),
+            Ok("SBOM-NTIA-SUPPLIER")
+        );
     }
 
     #[test]

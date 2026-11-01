@@ -76,6 +76,8 @@ fn validate_envelope(sbom: &Path, out: &Path, as_of: &str, pqc: PqcOptions) -> S
         false,
         crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         pqc,
+        &crate::cli::RuleOptions::default(),
+        &[],
     )
     .expect("validate runs");
     std::fs::read_to_string(out).expect("validate wrote the envelope")
@@ -103,6 +105,8 @@ fn view_config(sbom: &Path, as_of: &str, pqc: PqcOptions) -> ViewConfig {
         pqc_mode: Some(pqc.mode),
         pqc_profile: pqc.profile,
         cnsa_category: pqc.cnsa_category,
+        rule_settings: crate::quality::RuleSettings::new(),
+        include_excluded_scope: false,
     }
 }
 
@@ -170,8 +174,13 @@ fn validate_and_both_tuis_judge_one_run_alike() {
         .old_path(sbom_path.clone())
         .new_path(sbom_path.clone())
         .compliance(
-            compliance_run_config(Some(PRODUCT_CLASS), Some(AS_OF), PqcOptions::default())
-                .expect("diff inputs parse"),
+            compliance_run_config(
+                Some(PRODUCT_CLASS),
+                Some(AS_OF),
+                PqcOptions::default(),
+                &crate::cli::RuleOptions::default(),
+            )
+            .expect("diff inputs parse"),
         )
         .build()
         .expect("diff config");
@@ -286,8 +295,13 @@ fn deadline_mode_reaches_validate_and_both_tuis() {
         .old_path(sbom_path.clone())
         .new_path(sbom_path.clone())
         .compliance(
-            compliance_run_config(Some(PRODUCT_CLASS), Some(IN_2031), pqc)
-                .expect("diff inputs parse"),
+            compliance_run_config(
+                Some(PRODUCT_CLASS),
+                Some(IN_2031),
+                pqc,
+                &crate::cli::RuleOptions::default(),
+            )
+            .expect("diff inputs parse"),
         )
         .build()
         .expect("diff config");
@@ -367,6 +381,8 @@ fn validate_v1(sbom: &Path, out: &Path, standard: StandardSelector) -> String {
         false,
         crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         PqcOptions::default(),
+        &crate::cli::RuleOptions::default(),
+        &[],
     )
     .expect("validate runs");
     std::fs::read_to_string(out).expect("validate wrote the result")

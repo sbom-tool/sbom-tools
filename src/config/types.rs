@@ -6,6 +6,7 @@ use crate::matching::FuzzyMatchConfig;
 use crate::reports::{ReportFormat, ReportType};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 // ============================================================================
@@ -449,6 +450,12 @@ pub struct ViewConfig {
     /// `--cnsa-category`: the CNSA 2.0 equipment category deadline mode
     /// applies.
     pub cnsa_category: Option<crate::quality::CnsaCategory>,
+    /// The rule settings (`--rule`, the config file's `compliance.rules`)
+    /// the compliance checks apply, as `validate --rule` does.
+    pub rule_settings: crate::quality::RuleSettings,
+    /// Whether the compliance checks' package rules judge components whose
+    /// scope is excluded too (`--include-excluded-scope`).
+    pub include_excluded_scope: bool,
 }
 
 /// Configuration for multi-diff operations
@@ -474,6 +481,11 @@ pub struct MultiDiffConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
+    /// The compliance inputs every SBOM is judged with (`--as-of`,
+    /// `--cra-product-class`, the PQC flags, `--rule`,
+    /// `--include-excluded-scope`); the timeline's compliance trend reads
+    /// them.
+    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Configuration for timeline analysis
@@ -497,6 +509,11 @@ pub struct TimelineConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
+    /// The compliance inputs every SBOM is judged with (`--as-of`,
+    /// `--cra-product-class`, the PQC flags, `--rule`,
+    /// `--include-excluded-scope`); the timeline's compliance trend reads
+    /// them.
+    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Configuration for query operations (searching components across multiple SBOMs)
@@ -537,6 +554,11 @@ pub struct MatrixConfig {
     pub ecosystem_rules: EcosystemRulesConfig,
     /// Enrichment configuration
     pub enrichment: EnrichmentConfig,
+    /// The compliance inputs every SBOM is judged with (`--as-of`,
+    /// `--cra-product-class`, the PQC flags, `--rule`,
+    /// `--include-excluded-scope`); the timeline's compliance trend reads
+    /// them.
+    pub compliance: crate::quality::ComplianceRunConfig,
 }
 
 /// Configuration for the `vex` subcommand.
@@ -848,17 +870,20 @@ pub struct EcosystemRulesConfig {
     pub detect_typosquats: bool,
 }
 
-/// Compliance defaults for the `validate` and `quality` commands.
+/// Compliance defaults for the commands that check compliance.
 ///
 /// File-level defaults for the compliance-facing CLI flags. Explicit CLI
 /// flags always override these values (same precedence as every other
-/// section: explicit CLI > config file > built-in default).
+/// section: explicit CLI > config file > built-in default). A `--rule` flag
+/// wins over `rules` for its own rule; the file's other rule settings stay.
 ///
-/// `standards` and `profile` are stored as strings and parsed through the
-/// same alias-aware parsers the CLI uses
-/// ([`crate::quality::StandardSelector`] / [`crate::quality::ScoringProfile`]),
-/// so every CLI spelling works in the file too; invalid values are rejected
-/// at config-validation time with the list of valid options.
+/// `standards`, `profile`, the rule settings and the PQC keys are stored as
+/// strings and parsed through the same parsers the CLI uses
+/// ([`crate::quality::StandardSelector`] / [`crate::quality::ScoringProfile`],
+/// [`crate::quality::resolve_rule_id`] / [`crate::quality::RuleSetting`],
+/// the `--pqc-*` value names), so every CLI spelling works in the file too;
+/// invalid values are rejected at config-validation time with the list of
+/// valid options.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(default, deny_unknown_fields)]
 pub struct ComplianceConfig {
@@ -887,6 +912,27 @@ pub struct ComplianceConfig {
     /// included): default, important-class-1, important-class-2, critical
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cra_product_class: Option<String>,
+    /// Rule settings (`--rule`): rule id → `off`, `info`, `warning` or
+    /// `error`. Every command that checks compliance applies them; a
+    /// `--rule` flag wins for its rule
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub rules: BTreeMap<String, String>,
+    /// Default for `validate --fail-on`: rule ids whose findings fail the
+    /// run (exit 1) whatever their severity. `--fail-on` flags add to them
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub fail_on: Vec<String>,
+    /// Default for `--include-excluded-scope`: the package rules judge
+    /// components whose scope is excluded too
+    pub include_excluded_scope: bool,
+    /// Default `--pqc-mode`: readiness or deadline
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pqc_mode: Option<String>,
+    /// Default `--pqc-profile` (nist or federal); needs `pqc_mode: deadline`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pqc_profile: Option<String>,
+    /// Default `--cnsa-category`; needs `pqc_mode: deadline`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cnsa_category: Option<String>,
 }
 
 /// Enrichment configuration for vulnerability data sources.
