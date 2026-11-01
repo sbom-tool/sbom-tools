@@ -154,3 +154,21 @@ class RuleCatalog(TypedDict):
     schema: str
     tool: ToolInfo
     rules: list[RuleCatalogEntry]
+
+
+class QualityOutput(TypedDict):
+    """The document ``score_with_options_json`` returns.
+
+    It is what ``sbom-tools quality -o json`` prints: the tool and its
+    version, the SBOM's file name (``"-"`` without ``file_name``), the
+    profile as ``--profile`` names it, whether the profile applied, and the
+    quality report, whose ``overall_score`` is ``None`` and ``grade``
+    ``"N/A"`` for a profile that did not apply.
+    """
+
+    tool: str
+    version: str
+    sbom: str
+    profile: str
+    applicable: bool
+    report: dict[str, JsonValue]

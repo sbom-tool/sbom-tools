@@ -245,16 +245,6 @@ fn render(
         .map_err(|e| ReportError::SerializationError(e.to_string()))
 }
 
-/// `result` as the envelope renders each entry of its `results[]`: the
-/// standard's key and name, the verdict, the counts, and every finding and
-/// passed check behind its finding identity. The C ABI's score call reports
-/// the profile's compliance check this way, so it reads like `validate -o
-/// json`.
-pub fn compliance_result_json(result: &ComplianceResult) -> Result<Value, ReportError> {
-    serde_json::to_value(envelope_result(result)?)
-        .map_err(|e| ReportError::SerializationError(e.to_string()))
-}
-
 /// Split the fields of a result's serialization that the envelope does not
 /// render itself into extra counts (`<kind>_count`, keyed by `<kind>`) and
 /// everything else.
@@ -544,18 +534,6 @@ mod tests {
                 50 * checked / (checked + failed)
             };
             assert_eq!(entry["score"], band + within, "{level:?}: {entry}");
-        }
-    }
-
-    /// One result rendered alone is the envelope's entry for it.
-    #[test]
-    fn a_result_alone_is_its_envelope_entry() {
-        for level in [ComplianceLevel::NtiaMinimum, ComplianceLevel::Standard] {
-            let result = check(level);
-            let alone = compliance_result_json(&result).expect("renders");
-            let value = envelope(std::slice::from_ref(&result));
-            assert_eq!(alone, value["results"][0], "{level:?}");
-            assert_eq!(alone["standard"], standard_key(level));
         }
     }
 

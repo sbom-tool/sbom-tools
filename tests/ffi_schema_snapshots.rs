@@ -98,7 +98,7 @@ fn abi_contract_snapshots_are_enforced() {
     assert_required_keys(&catalog, &contract["rule_catalog_json"]["required_keys"]);
 
     let score_report = consume_result(sbom_tools_score_sbom_with_options_json(
-        new_payload_c.as_ptr(),
+        raw.as_ptr(),
         options.as_ptr(),
     ))
     .expect("score report payload");

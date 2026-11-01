@@ -142,8 +142,10 @@ Current ABI scope:
 - `detect_format` on raw content
 - Parse from file path or raw SBOM string into normalized JSON
 - Diff two normalized SBOM JSON payloads
-- Score a normalized SBOM JSON payload, by profile, or with options (a
-  pinned `as_of` and the compliance inputs)
+- Score a normalized SBOM JSON payload by profile (unchanged, for
+  compatibility), or score a raw SBOM with options: the document
+  `quality -o json` prints, byte for byte, with any `--profile`, a pinned
+  `as_of` and the compliance inputs
 - Validate a raw SBOM against compliance standards: the
   `sbom-tools/compliance/v2` envelope `validate -o json` writes, byte for
   byte, with the same inputs as options (standards, `as_of`, an inline CRA
@@ -276,9 +278,9 @@ Memory and compatibility rules:
 Typed helper APIs are available in each wrapper:
 
 - Go: `ParsePath`, `ParseString`, `Diff`, `Score`, `ScoreWithOptions`, `Validate`, `RuleCatalog` over typed payload structs
-- Swift: `parsePath`, `parseString`, `diff`, `score`, `score(_:options:)`, `validate`, `ruleCatalog` over Codable payload structs
-- Python: typed version/format results, `TypedDict` hints for the compliance envelope and the rule catalogue, and JSON-decoded parse, diff, and score values
-- Node.js: TypeScript interfaces for the compliance envelope, the rule catalogue and the score report
+- Swift: `parsePath`, `parseString`, `diff`, `score`, `scoreWithOptions`, `validate`, `ruleCatalog` over Codable payload structs
+- Python: typed version/format results, `TypedDict` hints for the compliance envelope, the rule catalogue and the quality document, and JSON-decoded parse, diff, and score values
+- Node.js: TypeScript interfaces for the compliance envelope, the rule catalogue and the quality document
 
 Compliance from a binding (Python; the other wrappers are alike):
 
@@ -896,9 +898,10 @@ Which JSON payloads are a compatibility contract, and how firm it is
   `sbom_tools_score_*`, `sbom_tools_validate_json`,
   `sbom_tools_rule_catalog_json`) and by the language bindings, and the
   `-o json` output of `diff`, `diff-multi`, `matrix`, `timeline`,
-  `validate`, `quality` and `rules`. The ABI's validate envelope and rule
-  catalogue are byte-identical to `validate -o json` and `rules -o json`,
-  pinned by `tests/ffi_compliance.rs`. Field names are `snake_case` with no serde
+  `validate`, `quality` and `rules`. The ABI's validate envelope, quality
+  document (`sbom_tools_score_sbom_with_options_json`) and rule catalogue
+  are byte-identical to `validate -o json`, `quality -o json` and
+  `rules -o json`, pinned by `tests/ffi_compliance.rs`. Field names are `snake_case` with no serde
   renames; `Option` fields serialize as `null`, except a few additive blocks
   (e.g. `crypto_properties`, `document.supplier`, `ml_model`-adjacent
   extensions) that are omitted when absent.

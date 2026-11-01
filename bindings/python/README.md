@@ -126,12 +126,14 @@ naive `datetime` is taken as UTC. An invalid option raises
 
 `rule_catalog_json()` returns the rule catalogue (`sbom-tools rules -o
 json`), every rule or those of the standards given, and
-`score_with_options_json(sbom_json, profile="cra", as_of=...)` scores with a
-pinned clock and the same run options. Its report names the profile as
-`quality --profile` does and reports the compliance check as an entry of the
-envelope's `results`. `ComplianceEnvelope`, `ComplianceSubject`,
-`ComplianceResult`, `RuleCatalog` and `RuleCatalogEntry` are `TypedDict`
-hints for these values.
+`score_with_options_json(content, profile="cra", file_name=..., as_of=...)`
+returns what `sbom-tools quality - -o json` prints for the same content and
+options (`quality <FILE>` with `file_name`), with a pinned clock and the
+same run options. An AI-readiness profile that does not apply has
+`applicable` false, a `None` score and the grade `N/A`. `score_json` keeps
+its old behaviour for compatibility. `ComplianceEnvelope`,
+`ComplianceSubject`, `ComplianceResult`, `RuleCatalog`, `RuleCatalogEntry`
+and `QualityOutput` are `TypedDict` hints for these values.
 
 ## Memory and errors
 

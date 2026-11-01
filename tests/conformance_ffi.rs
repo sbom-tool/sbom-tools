@@ -88,7 +88,7 @@ fn conformance_all_ten_abi_functions_callable() {
 
     // 9. sbom_tools_score_sbom_with_options_json(sbom, options)
     let score = consume_result(sbom_tools_score_sbom_with_options_json(
-        parsed_c.as_ptr(),
+        content_c.as_ptr(),
         options_c.as_ptr(),
     ))
     .expect("score_sbom_with_options should be callable");

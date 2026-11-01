@@ -81,6 +81,12 @@ export interface ValidateOptions extends RunOptions {
 export interface ScoreOptions extends RunOptions {
   /** A `quality --profile` name; left out, `standard`. */
   readonly profile?: string;
+  /**
+   * The file the content was read from, which the output's `sbom` names
+   * without its directory, as `quality <FILE>` does; left out, `sbom` is
+   * `-`, as for standard input.
+   */
+  readonly file_name?: string;
 }
 
 export type Severity = "Error" | "Warning" | "Info";
@@ -237,17 +243,32 @@ export interface RuleCatalog {
 }
 
 /**
- * The quality report `scoreWithOptionsJson` returns: the profile named as
- * `quality --profile` names it, and the compliance check as an entry of the
- * compliance envelope's results. The report's other fields (category scores
- * and metrics) are there too.
+ * The quality report inside a `QualityOutput`: the scorer's own fields
+ * (category scores, metrics, the profile's compliance result). For a profile
+ * that did not apply (ai-readiness on an SBOM without ML components),
+ * `overall_score` is `null` and `grade` is `N/A`.
  */
-export interface ScoreReport {
+export interface QualityOutputReport {
   readonly scoring_engine_version: string;
-  readonly overall_score: number;
+  readonly overall_score: number | null;
   readonly grade: string;
   readonly profile: string;
-  readonly compliance: ComplianceResult;
+  readonly compliance: { readonly [key: string]: JsonValue };
   readonly recommendations: readonly JsonValue[];
   readonly [field: string]: unknown;
+}
+
+/**
+ * The document `scoreWithOptionsJson` returns, as
+ * `sbom-tools quality -o json` prints it: the tool and its version, the
+ * SBOM's file name (`-` without `file_name`), the profile as `--profile`
+ * names it, whether the profile applied, and the report.
+ */
+export interface QualityOutput {
+  readonly tool: string;
+  readonly version: string;
+  readonly sbom: string;
+  readonly profile: string;
+  readonly applicable: boolean;
+  readonly report: QualityOutputReport;
 }

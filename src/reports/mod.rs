@@ -25,6 +25,7 @@ mod html;
 mod json;
 mod markdown;
 pub mod oscal;
+mod quality_json;
 mod rule_catalog_json;
 mod sarif;
 pub mod sbomqs_compat;
@@ -35,14 +36,14 @@ mod types;
 
 pub use audit::AssessedSbom;
 pub use compliance_json::{
-    COMPLIANCE_JSON_SCHEMA, compliance_result_json, generate_compliance_json,
-    generate_compliance_json_at,
+    COMPLIANCE_JSON_SCHEMA, generate_compliance_json, generate_compliance_json_at,
 };
 pub use csaf::{CsafEmitOptions, emit_csaf};
 pub use csv::CsvReporter;
 pub use html::HtmlReporter;
 pub use json::JsonReporter;
 pub use markdown::MarkdownReporter;
+pub use quality_json::generate_quality_json;
 pub use rule_catalog_json::{RULE_CATALOG_JSON_SCHEMA, generate_rule_catalog_json};
 pub use sarif::SarifReporter;
 pub use sarif::{

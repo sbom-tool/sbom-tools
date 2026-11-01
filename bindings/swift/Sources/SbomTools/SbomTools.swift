@@ -313,6 +313,10 @@ public struct ValidateOptions: Encodable, Equatable {
 public struct ScoreOptions: Encodable, Equatable {
     /// A `quality --profile` name; `nil` means `standard`.
     public var profile: String?
+    /// The file the content was read from, which the output's `sbom` names
+    /// without its directory, as `quality <FILE>` does; `nil` gives `-`, as
+    /// for standard input.
+    public var fileName: String?
     public var asOf: String?
     public var sidecar: JSONValue?
     public var productClass: String?
@@ -324,6 +328,7 @@ public struct ScoreOptions: Encodable, Equatable {
 
     public init(
         profile: String? = nil,
+        fileName: String? = nil,
         asOf: String? = nil,
         sidecar: JSONValue? = nil,
         productClass: String? = nil,
@@ -334,6 +339,7 @@ public struct ScoreOptions: Encodable, Equatable {
         includeExcludedScope: Bool? = nil
     ) {
         self.profile = profile
+        self.fileName = fileName
         self.asOf = asOf
         self.sidecar = sidecar
         self.productClass = productClass
@@ -346,6 +352,7 @@ public struct ScoreOptions: Encodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case profile
+        case fileName = "file_name"
         case asOf = "as_of"
         case sidecar
         case productClass = "product_class"
@@ -641,15 +648,31 @@ public struct RuleFormatAdvice: Codable, Equatable {
     public let field: String?
 }
 
-/// The quality report `SbomTools.score(_:options:)` returns: the profile
-/// named as `quality --profile` names it, and the compliance check as an
-/// entry of the compliance envelope's results.
-public struct ScoreReport: Codable, Equatable {
+/// The document `SbomTools.scoreWithOptions` returns, as
+/// `sbom-tools quality -o json` prints it: the tool and its version, the
+/// SBOM's file name (`-` without `ScoreOptions.fileName`), the profile as
+/// `--profile` names it, whether the profile applied, and the report.
+public struct QualityOutput: Codable, Equatable {
+    public let tool: String
+    public let version: String
+    public let sbom: String
+    public let profile: String
+    public let applicable: Bool
+    public let report: QualityOutputReport
+}
+
+/// The quality report inside a `QualityOutput`. For a profile that did not
+/// apply (ai-readiness on an SBOM without ML components), `overallScore` is
+/// `nil` and `grade` is `N/A`. `compliance` is the profile's compliance
+/// result as the report serializes it; `validate` returns typed results
+/// with finding ids.
+public struct QualityOutputReport: Codable, Equatable {
     public let scoringEngineVersion: String
-    public let overallScore: Double
+    public let overallScore: Double?
     public let grade: String
     public let profile: String
-    public let compliance: ComplianceResultPayload
+    public let compliance: [String: JSONValue]
+    public let recommendations: [JSONValue]
 
     enum CodingKeys: String, CodingKey {
         case scoringEngineVersion = "scoring_engine_version"
@@ -657,6 +680,7 @@ public struct ScoreReport: Codable, Equatable {
         case grade
         case profile
         case compliance
+        case recommendations
     }
 }
 
@@ -805,22 +829,24 @@ public enum SbomTools {
         try decode(RuleCatalog.self, from: ruleCatalogJSON(standards: standards))
     }
 
-    /// Score normalized SBOM JSON with a profile and the run options, judged
-    /// at `options.asOf`.
-    public static func scoreJSON(_ sbomJSON: String, options: ScoreOptions) throws -> String {
+    /// Score raw SBOM content with a profile and the run options, judged at
+    /// `options.asOf`, and return what `sbom-tools quality - -o json` writes
+    /// for the same content and options (`quality <FILE>` when
+    /// `options.fileName` names the file), byte for byte. `score(_:profile:)`
+    /// keeps its old behaviour for compatibility.
+    public static func scoreWithOptionsJSON(_ content: String, options: ScoreOptions = ScoreOptions()) throws -> String {
         let optionsJSON = try encode(options)
-        return try sbomJSON.withCString { sbomPointer in
+        return try content.withCString { contentPointer in
             try optionsJSON.withCString { optionsPointer in
-                try consume(sbom_tools_score_sbom_with_options_json(sbomPointer, optionsPointer))
+                try consume(sbom_tools_score_sbom_with_options_json(contentPointer, optionsPointer))
             }
         }
     }
 
-    /// Score a normalized SBOM with a profile and the run options, and
-    /// return the decoded report.
-    public static func score(_ sbom: NormalizedSbomPayload, options: ScoreOptions) throws -> ScoreReport {
-        let sbomJSON = try encode(sbom)
-        return try decode(ScoreReport.self, from: scoreJSON(sbomJSON, options: options))
+    /// Score raw SBOM content with a profile and the run options, and return
+    /// the decoded `quality -o json` document.
+    public static func scoreWithOptions(_ content: String, options: ScoreOptions = ScoreOptions()) throws -> QualityOutput {
+        try decode(QualityOutput.self, from: scoreWithOptionsJSON(content, options: options))
     }
 
     public static func decode<T: Decodable>(_ type: T.Type, from json: String) throws -> T {

@@ -1,25 +1,27 @@
 //! C-compatible ABI for the Go, Swift, Python and Node.js wrappers.
 //!
 //! Every function takes NUL-terminated UTF-8 strings and returns a
-//! [`SbomToolsStringResult`] holding JSON. The compliance calls
-//! ([`sbom_tools_validate_json`], [`sbom_tools_rule_catalog_json`],
-//! [`sbom_tools_score_sbom_with_options_json`]) take their options as a JSON
-//! object and build each run through [`ComplianceRunConfig`], with the
-//! parsers the CLI flags use, so a call judges an SBOM exactly as the
-//! command line does.
+//! [`SbomToolsStringResult`] holding JSON. The CLI-parity calls
+//! ([`sbom_tools_validate_json`], [`sbom_tools_score_sbom_with_options_json`],
+//! [`sbom_tools_rule_catalog_json`]) take their options as a JSON object,
+//! build each run through [`ComplianceRunConfig`] with the parsers the CLI
+//! flags use, and render through the writers of `validate -o json`,
+//! `quality -o json` and `rules -o json`, so a call returns the bytes the
+//! command line prints.
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
 use crate::diff::DiffEngine;
 use crate::model::{CraProductClass, CraSidecarError, CraSidecarMetadata, NormalizedSbom};
 use crate::parsers::{ParseError, detect_format, parse_sbom, parse_sbom_str};
+use crate::pipeline::STDIN_PATH;
 use crate::quality::{
-    CnsaCategory, ComplianceLevel, ComplianceRunConfig, PqcMode, PqcProfile, QualityReport,
-    QualityScorer, RuleCatalogFilter, RuleSetting, RuleSettings, ScoringProfile, SettingSource,
-    StandardSelector, parse_as_of, resolve_rule_id, rule_catalog,
+    CnsaCategory, ComplianceLevel, ComplianceRunConfig, PqcMode, PqcProfile, QualityScorer,
+    RuleCatalogFilter, RuleSetting, RuleSettings, ScoringProfile, SettingSource, StandardSelector,
+    parse_as_of, resolve_rule_id, rule_catalog,
 };
 use crate::reports::{
-    AssessedSbom, compliance_result_json, generate_compliance_json_at, generate_rule_catalog_json,
+    AssessedSbom, generate_compliance_json_at, generate_quality_json, generate_rule_catalog_json,
 };
 use crate::serialization::NormalizedSbomPayload;
 use serde::Serialize;
@@ -36,7 +38,8 @@ use std::path::Path;
 /// signature or meaning changed; an error code or enum value renumbered or
 /// removed; a JSON payload field removed, renamed or retyped, or a value
 /// renamed. Additions keep it: new functions, enum values, options, payload
-/// fields and variants, which wrappers must accept. The crate version tells
+/// fields and variants, which wrappers must accept. Additions are
+/// discoverable through the crate version (`crate_version`), which tells
 /// releases with the same ABI version apart.
 ///
 /// `2` (sbom-tools 0.4.0): the normalized payload renamed values (typed
@@ -305,8 +308,9 @@ const RUN_OPTIONS: &[&str] = &[
 /// for the rule catalogue.
 const STANDARDS_OPTION: &[&str] = &["standards"];
 
-/// The `file_name` option of validate: the name of the file the SBOM was
-/// read from, which `validate <FILE>` states in the envelope's `subject`.
+/// The `file_name` option of validate and score: the name of the file the
+/// SBOM was read from, which `validate <FILE>` states in the envelope's
+/// `subject` and `quality <FILE>` in its `sbom`.
 const FILE_NAME_OPTION: &[&str] = &["file_name"];
 
 /// The `profile` option: `quality --profile`.
@@ -470,8 +474,9 @@ impl Options {
 
     /// The rule settings option `rules` gives: rule id (any case) →
     /// `off`, `info`, `warning` or `error`, checked against the registry as
-    /// `--rule` is. The settings count as the run's own, as `--rule` does:
-    /// their findings say `severity_source: "cli"`.
+    /// `--rule` is. Like `--rule`, they are set by the invocation
+    /// ([`SettingSource::Cli`]), so their findings say
+    /// `severity_source: "cli"`.
     fn rule_settings(&self) -> Result<RuleSettings, FfiError> {
         let mut settings = RuleSettings::new();
         let Some(rules) = self.object("rules")? else {
@@ -552,10 +557,18 @@ fn rule_catalog_document(filter: &str) -> Result<String, FfiError> {
     generate_rule_catalog_json(&entries).map_err(|e| render_error("the rule catalogue", e))
 }
 
-/// The quality report of the normalized `sbom_json` scored with `options`
-/// (see [`sbom_tools_score_sbom_with_options_json`]).
-fn score_with_options(sbom_json: &str, options: &str) -> Result<String, FfiError> {
-    let options = Options::parse(options, "options_json", &[PROFILE_OPTION, RUN_OPTIONS])?;
+/// `quality`'s default profile when `--profile` is not given.
+const DEFAULT_PROFILE: ScoringProfile = ScoringProfile::Standard;
+
+/// The `quality -o json` document of `content`, the SBOM document as passed
+/// in, scored with `options` (see
+/// [`sbom_tools_score_sbom_with_options_json`]).
+fn score_with_options(content: &str, options: &str) -> Result<String, FfiError> {
+    let options = Options::parse(
+        options,
+        "options_json",
+        &[PROFILE_OPTION, FILE_NAME_OPTION, RUN_OPTIONS],
+    )?;
     let profile = options
         .string("profile")?
         .map(|name| {
@@ -563,33 +576,16 @@ fn score_with_options(sbom_json: &str, options: &str) -> Result<String, FfiError
                 .map_err(|e| invalid(format!("invalid profile: {e}")))
         })
         .transpose()?
-        .unwrap_or(ScoringProfile::Standard);
+        .unwrap_or(DEFAULT_PROFILE);
+    let file_name = options.string("file_name")?;
     let run = options.run_config()?;
-    let sbom = parse_normalized_sbom(sbom_json, "sbom_json")?;
+    let sbom = parse_sbom_str(content).map_err(map_parse_error)?;
     let report = QualityScorer::new(profile)
         .with_compliance(run)
         .score(&sbom);
-    score_report_json(&report)
-}
-
-/// `report` as the score-with-options call returns it: the report's own
-/// fields, with the profile named as `quality --profile` names it and the
-/// compliance check rendered as an entry of the `validate -o json`
-/// envelope's `results[]` (standard key, finding identities).
-fn score_report_json(report: &QualityReport) -> Result<String, FfiError> {
-    let fail = |e: &dyn std::fmt::Display| render_error("the quality report", e);
-    let Value::Object(mut fields) = serde_json::to_value(report).map_err(|e| fail(&e))? else {
-        return Err(fail(&"a quality report must serialize to a JSON object"));
-    };
-    fields.insert(
-        "profile".to_string(),
-        Value::String(report.profile.canonical_name().to_string()),
-    );
-    fields.insert(
-        "compliance".to_string(),
-        compliance_result_json(&report.compliance).map_err(|e| fail(&e))?,
-    );
-    serde_json::to_string_pretty(&Value::Object(fields)).map_err(|e| fail(&e))
+    // `quality` names the SBOM by its file name, `-` for standard input.
+    let sbom_path = Path::new(file_name.unwrap_or(STDIN_PATH));
+    generate_quality_json(&report, sbom_path).map_err(|e| render_error("the quality report", e))
 }
 
 /// Return the ABI and crate versions as JSON.
@@ -665,10 +661,11 @@ pub extern "C" fn sbom_tools_diff_sboms_json(
 
 /// Score a normalized SBOM JSON document and return a quality report as JSON.
 ///
-/// The report is the scorer's own serialization, judged at the wall clock
-/// with no compliance inputs. [`sbom_tools_score_sbom_with_options_json`]
-/// pins the clock, takes the run's inputs and names levels as the rest of
-/// the ABI does.
+/// Kept as it was for compatibility: the report is the scorer's own
+/// serialization, judged at the wall clock with no compliance inputs.
+/// [`sbom_tools_score_sbom_with_options_json`] returns what
+/// `sbom-tools quality -o json` prints, with a pinned clock and the run's
+/// inputs.
 #[unsafe(no_mangle)]
 pub extern "C" fn sbom_tools_score_sbom_json(
     sbom_json: *const c_char,
@@ -744,27 +741,30 @@ pub extern "C" fn sbom_tools_rule_catalog_json(
     })
 }
 
-/// Score a normalized SBOM JSON document with options and return a quality
-/// report as JSON.
+/// Score a raw SBOM document with options and return the document
+/// `sbom-tools quality -o json` prints: byte for byte what
+/// `sbom-tools quality - -o json` writes for the same document and inputs
+/// (`quality <FILE>` for a `file_name`).
 ///
+/// `sbom` is the document as read (any format the parse functions accept).
 /// `options_json` is a JSON object (`{}` for the defaults) with `profile`
-/// (a `quality --profile` name, default `standard`) and the run options of
-/// [`sbom_tools_validate_json`] (all but `standards`), which reach the
-/// profile's compliance check and date the time-sensitive metrics.
-///
-/// The report carries the fields [`sbom_tools_score_sbom_json`] returns,
-/// with `profile` as `quality --profile` names it and `compliance` as an
-/// entry of the validate envelope's `results[]`.
+/// (a `quality --profile` name or alias, default `standard`), `file_name`
+/// (the file the document was read from, which `sbom` names without its
+/// directory; else `-`, as for standard input) and the run options of
+/// [`sbom_tools_validate_json`], which reach the profile's compliance check
+/// and date the time-sensitive metrics. An AI-readiness profile that does
+/// not apply (no ML components) reports `applicable: false`, a `null`
+/// score and the grade `N/A`.
 #[unsafe(no_mangle)]
 pub extern "C" fn sbom_tools_score_sbom_with_options_json(
-    sbom_json: *const c_char,
+    sbom: *const c_char,
     options_json: *const c_char,
 ) -> SbomToolsStringResult {
     catch_ffi_panic(|| {
         run_text(|| {
-            let sbom_json = read_input(sbom_json, "sbom_json")?;
+            let sbom = read_input(sbom, "sbom")?;
             let options_json = read_input(options_json, "options_json")?;
-            score_with_options(&sbom_json, &options_json)
+            score_with_options(&sbom, &options_json)
         })
     })
 }

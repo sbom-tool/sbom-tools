@@ -1,12 +1,13 @@
-//! The compliance calls of the C ABI: `sbom_tools_validate_json`,
-//! `sbom_tools_rule_catalog_json` and
-//! `sbom_tools_score_sbom_with_options_json`.
+//! The CLI-parity calls of the C ABI: `sbom_tools_validate_json`,
+//! `sbom_tools_score_sbom_with_options_json` and
+//! `sbom_tools_rule_catalog_json`.
 //!
 //! The parity tests run the CLI binary on the same inputs and compare
 //! bytes: the validate envelope must be exactly what `validate - -o json`
-//! writes, and the catalogue exactly what `rules -o json` prints, so the ABI
-//! cannot drift from the command line. The SBOM reaches the CLI on standard
-//! input, as it reaches the ABI: as content, with no file name.
+//! writes, the score report what `quality - -o json` writes, and the
+//! catalogue what `rules -o json` prints, so the ABI cannot drift from the
+//! command line. The SBOM reaches the CLI on standard input, as it reaches
+//! the ABI: as content, with no file name (`file_name` cases pass the file).
 
 mod common;
 
@@ -15,8 +16,8 @@ mod json_schema;
 
 use common::ffi_helpers::{consume_result, into_c_string};
 use sbom_tools::ffi::{
-    SbomToolsErrorCode, sbom_tools_parse_sbom_str_json, sbom_tools_rule_catalog_json,
-    sbom_tools_score_sbom_with_options_json, sbom_tools_validate_json,
+    SbomToolsErrorCode, sbom_tools_rule_catalog_json, sbom_tools_score_sbom_with_options_json,
+    sbom_tools_validate_json,
 };
 use serde_json::{Value, json};
 use std::io::Write;
@@ -46,16 +47,11 @@ fn rule_catalog(filter: &Value) -> AbiResult {
     consume_result(sbom_tools_rule_catalog_json(filter.as_ptr()))
 }
 
-fn normalized(sbom: &str) -> String {
+fn score(sbom: &str, options: &Value) -> AbiResult {
     let sbom = into_c_string(sbom);
-    consume_result(sbom_tools_parse_sbom_str_json(sbom.as_ptr())).expect("fixture parses")
-}
-
-fn score(sbom_json: &str, options: &Value) -> AbiResult {
-    let sbom_json = into_c_string(sbom_json);
     let options = into_c_string(&options.to_string());
     consume_result(sbom_tools_score_sbom_with_options_json(
-        sbom_json.as_ptr(),
+        sbom.as_ptr(),
         options.as_ptr(),
     ))
 }
@@ -546,43 +542,40 @@ fn rule_catalog_rejects_bad_filters() {
     }
 }
 
-/// What `quality - <flags> -o json` reports for the SBOM `name`.
-fn cli_quality(name: &str, flags: &[&str]) -> Value {
-    let mut args = vec!["quality", "-"];
+/// What `quality <SBOM> <flags> -o json` writes, as bytes. With `-` as the
+/// SBOM, `name` is read from standard input; `-O` writes the document
+/// exactly, where stdout would add a newline.
+fn cli_quality(sbom: &str, name: &str, flags: &[&str]) -> String {
+    let dir = tempfile::tempdir().expect("temporary directory");
+    let out = dir.path().join("quality.json");
+    let out_arg = out.to_string_lossy().into_owned();
+    let mut args = vec!["quality", sbom];
     args.extend_from_slice(flags);
-    args.extend_from_slice(&["-o", "json"]);
+    args.extend_from_slice(&["-o", "json", "-O", &out_arg]);
     let output = cli(&args, fixture(name).as_bytes());
     assert!(
         output.status.success(),
         "quality {flags:?} failed on {name}: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    json(&String::from_utf8(output.stdout).expect("UTF-8 output"))
+    std::fs::read_to_string(&out).expect("quality wrote the report")
 }
 
-/// Scoring with options reports what `quality -o json` does for the same
-/// SBOM and inputs, with the profile named as `--profile` names it and the
-/// compliance check as an entry of the validate envelope.
-#[test]
-fn score_with_options_matches_quality_and_validate() {
-    let cases: &[(&str, &str, Value, Vec<&str>)] = &[
-        (
-            "demo-new.cdx.json",
-            "standard",
-            json!({"as_of": "2027-01-01"}),
-            vec!["--as-of", "2027-01-01"],
-        ),
-        (
-            "cra/cra-compliant.cdx.json",
-            "cra",
-            json!({
-                "profile": "Cyber-Resilience",
-                "sidecar": sidecar("cra/cra-compliant.cra.json"),
-                "product_class": "critical",
-                "rules": {"SBOM-CRA-SBOM-FRESHNESS": "error"},
-                "as_of": "2027-12-11",
-            }),
-            vec![
+fn score_parity_cases() -> Vec<Case> {
+    vec![
+        // The default profile (standard).
+        Case {
+            sbom: "demo-new.cdx.json",
+            flags: vec!["--as-of", "2027-01-01"],
+            options: json!({"as_of": "2027-01-01"}),
+        },
+        // An alias in another case, a sidecar, a product class and a rule
+        // setting.
+        Case {
+            sbom: "cra/cra-compliant.cdx.json",
+            flags: vec![
+                "--profile",
+                "cra",
                 "--cra-sidecar",
                 concat!(
                     env!("CARGO_MANIFEST_DIR"),
@@ -595,60 +588,150 @@ fn score_with_options_matches_quality_and_validate() {
                 "--as-of",
                 "2027-12-11",
             ],
-        ),
-        (
-            "cyclonedx/cbom-pqc-calendar.cdx.json",
-            "cbom",
-            json!({"profile": "cbom", "pqc_mode": "deadline", "as_of": "2031-06-01"}),
-            vec!["--pqc-mode", "deadline", "--as-of", "2031-06-01"],
-        ),
-    ];
-    for (name, profile, options, flags) in cases {
-        let report = json(
-            &score(&normalized(&fixture(name)), options)
-                .unwrap_or_else(|e| panic!("{name}: score failed: {e:?}")),
-        );
-        assert_eq!(report["profile"], *profile, "{name}");
+            options: json!({
+                "profile": "Cyber-Resilience",
+                "sidecar": sidecar("cra/cra-compliant.cra.json"),
+                "product_class": "critical",
+                "rules": {"SBOM-CRA-SBOM-FRESHNESS": "error"},
+                "as_of": "2027-12-11",
+            }),
+        },
+        // PQC deadline mode with the federal profile.
+        Case {
+            sbom: "cyclonedx/cbom-pqc-calendar.cdx.json",
+            flags: vec![
+                "--profile",
+                "cbom",
+                "--pqc-mode",
+                "deadline",
+                "--pqc-profile",
+                "federal",
+                "--as-of",
+                "2031-06-01",
+            ],
+            options: json!({
+                "profile": "cbom",
+                "pqc_mode": "deadline",
+                "pqc_profile": "federal",
+                "as_of": "2031-06-01",
+            }),
+        },
+        // AI readiness on an SBOM without ML components (not applicable),
+        // and on an AI-BOM.
+        Case {
+            sbom: "cyclonedx/minimal.cdx.json",
+            flags: vec!["--profile", "ai-readiness", "--as-of", "2027-01-01"],
+            options: json!({"profile": "ai-readiness", "as_of": "2027-01-01"}),
+        },
+        Case {
+            sbom: "cyclonedx/aibom-complete.cdx.json",
+            flags: vec!["--profile", "ai_readiness", "--as-of", "2027-01-01"],
+            options: json!({"profile": "ai_readiness", "as_of": "2027-01-01"}),
+        },
+        // BSI on CycloneDX XML, and components whose scope is excluded.
+        Case {
+            sbom: "cra/bsi-compliant.cdx.xml",
+            flags: vec!["--profile", "bsi", "--as-of", "2026-11-01"],
+            options: json!({"profile": "bsi", "as_of": "2026-11-01"}),
+        },
+        Case {
+            sbom: "cyclonedx/scope-excluded.cdx.json",
+            flags: vec![
+                "--profile",
+                "comprehensive",
+                "--include-excluded-scope",
+                "--as-of",
+                "2026-11-01",
+            ],
+            options: json!({
+                "profile": "comprehensive",
+                "include_excluded_scope": true,
+                "as_of": "2026-11-01",
+            }),
+        },
+        // The other profiles, on SPDX 2.3, SPDX 3 and CycloneDX 1.7.
+        Case {
+            sbom: "spdx/minimal.spdx.json",
+            flags: vec!["--profile", "security", "--as-of", "2026-11-01"],
+            options: json!({"profile": "security", "as_of": "2026-11-01"}),
+        },
+        Case {
+            sbom: "spdx3/security-profile.spdx3.json",
+            flags: vec!["--profile", "license", "--as-of", "2026-11-01"],
+            options: json!({"profile": "license", "as_of": "2026-11-01"}),
+        },
+        Case {
+            sbom: "cyclonedx/minimal-1.7.cdx.json",
+            flags: vec!["--profile", "minimal", "--as-of", "2026-11-01"],
+            options: json!({"profile": "minimal", "as_of": "2026-11-01"}),
+        },
+    ]
+}
 
-        let mut quality_flags = vec!["--profile", profile];
-        quality_flags.extend_from_slice(flags);
-        let quality = cli_quality(name, &quality_flags);
-        let Value::Object(mut expected) = quality["report"].clone() else {
-            panic!("{name}: quality -o json has a report object");
-        };
-        let Value::Object(mut got) = report.clone() else {
-            panic!("{name}: the ABI report is an object");
-        };
-        for field in ["profile", "compliance"] {
-            expected.remove(field);
-            got.remove(field);
-        }
+/// Scoring with options returns, byte for byte, what `quality - -o json`
+/// writes for the same SBOM, profile and inputs.
+#[test]
+fn score_with_options_is_byte_identical_to_quality() {
+    for case in score_parity_cases() {
+        let abi = score(&fixture(case.sbom), &case.options)
+            .unwrap_or_else(|e| panic!("{}: score failed: {e:?}", case.sbom));
+        let cli = cli_quality("-", case.sbom, &case.flags);
         assert_eq!(
-            got, expected,
-            "{name}: the ABI report and `quality -o json` diverged"
+            abi, cli,
+            "{} {:?}: the ABI report and `quality -o json` diverged",
+            case.sbom, case.flags
         );
-
-        // The compliance check reads as the validate envelope's entry for
-        // the profile's level, where `validate` can select that level.
-        let compliance = &report["compliance"];
-        assert!(compliance["standard"].is_string(), "{name}: {compliance}");
-        for finding in compliance["violations"].as_array().expect("violations") {
-            assert!(finding["finding_id"].is_string(), "{name}: {finding}");
-        }
-        if *profile == "cra" {
-            let mut validate_flags = vec!["--standard", "cra"];
-            validate_flags.extend_from_slice(flags);
-            let envelope = json(&cli_validate(name, &validate_flags));
-            assert_eq!(*compliance, envelope["results"][0], "{name}");
-        }
+        assert_eq!(json(&abi)["sbom"], "-", "{}", case.sbom);
     }
+}
+
+/// An AI-readiness profile that does not apply has no score, as in
+/// `quality -o json`, rather than a failing 0.0 and F.
+#[test]
+fn score_with_options_reports_a_profile_that_does_not_apply() {
+    let output = json(
+        &score(
+            &fixture("cyclonedx/minimal.cdx.json"),
+            &json!({"profile": "ai-readiness", "as_of": "2027-01-01"}),
+        )
+        .expect("scores"),
+    );
+    assert_eq!(output["profile"], "ai-readiness");
+    assert_eq!(output["applicable"], false);
+    assert!(output["report"]["overall_score"].is_null(), "{output}");
+    assert_eq!(output["report"]["grade"], "N/A");
+}
+
+/// With `file_name`, the report is the one `quality <FILE> -o json` writes:
+/// `sbom` names the file, without its directory.
+#[test]
+fn score_with_options_names_the_file_as_the_cli_does() {
+    let name = "cyclonedx/minimal.cdx.json";
+    let path = fixture_path(name);
+    let cli = cli_quality(
+        &path.to_string_lossy(),
+        name,
+        &["--profile", "cra", "--as-of", "2027-01-01"],
+    );
+    for file_name in [
+        path.to_string_lossy().into_owned(),
+        "minimal.cdx.json".to_string(),
+    ] {
+        let abi = score(
+            &fixture(name),
+            &json!({"profile": "cra", "file_name": file_name, "as_of": "2027-01-01"}),
+        )
+        .expect("scores");
+        assert_eq!(abi, cli, "file_name {file_name}");
+    }
+    assert_eq!(json(&cli)["sbom"], "minimal.cdx.json");
 }
 
 /// The options pin the clock: the same call twice gives the same report,
 /// and a later instant judges the SBOM's age differently.
 #[test]
 fn score_with_options_reads_the_pinned_clock() {
-    let sbom = normalized(&fixture("demo-new.cdx.json"));
+    let sbom = fixture("demo-new.cdx.json");
     let early = score(&sbom, &json!({"as_of": "2026-01-01"})).expect("scores");
     assert_eq!(
         early,
@@ -656,14 +739,14 @@ fn score_with_options_reads_the_pinned_clock() {
     );
     let late = score(&sbom, &json!({"as_of": "2036-01-01"})).expect("scores");
     assert_ne!(
-        json(&early)["provenance_metrics"],
-        json(&late)["provenance_metrics"]
+        json(&early)["report"]["provenance_metrics"],
+        json(&late)["report"]["provenance_metrics"]
     );
 }
 
 #[test]
 fn score_with_options_rejects_bad_options() {
-    let sbom = normalized(&fixture("cyclonedx/minimal.cdx.json"));
+    let sbom = fixture("cyclonedx/minimal.cdx.json");
     for (options, needle) in [
         (
             json!({"profile": "strict"}),
@@ -671,8 +754,8 @@ fn score_with_options_rejects_bad_options() {
         ),
         (json!({"standards": ["ntia"]}), "unknown option `standards`"),
         (
-            json!({"file_name": "bom.json"}),
-            "unknown option `file_name`",
+            json!({"file_name": 7}),
+            "`file_name` in options_json must be a string",
         ),
         (json!({"as_of": "tomorrow"}), "invalid as_of"),
         (
@@ -684,10 +767,6 @@ fn score_with_options_rejects_bad_options() {
         assert_eq!(code, SbomToolsErrorCode::Validation, "{options}");
         assert!(message.contains(needle), "{options}: {message}");
     }
-    let (code, message) = score("{}", &json!({})).expect_err("not a normalized SBOM");
-    assert_eq!(code, SbomToolsErrorCode::Validation);
-    assert!(
-        message.contains("invalid normalized SBOM JSON"),
-        "{message}"
-    );
+    let (code, _) = score("this is not an SBOM", &json!({})).expect_err("no SBOM");
+    assert_eq!(code, SbomToolsErrorCode::Unsupported);
 }

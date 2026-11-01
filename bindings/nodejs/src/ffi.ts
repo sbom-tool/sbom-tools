@@ -9,10 +9,10 @@ import {
   type ComplianceEnvelope,
   type DetectedFormat,
   type JsonValue,
+  type QualityOutput,
   type RuleCatalog,
   type RunOptions,
   type ScoreOptions,
-  type ScoreReport,
   type ValidateOptions,
 } from "./types.js";
 
@@ -342,34 +342,34 @@ export function ruleCatalogJson(
 }
 
 /**
- * Score a normalized SBOM JSON string with a profile and the run options,
- * judged at `options.as_of`. The report names the profile as
- * `quality --profile` does, and its `compliance` is an entry of the validate
- * envelope's results.
+ * Score raw SBOM content with a profile and the run options, judged at
+ * `options.as_of`, and return the document `sbom-tools quality - -o json`
+ * writes for the same content and options (`quality <FILE>` when
+ * `options.file_name` names the file). `scoreJson` keeps its old behaviour
+ * for compatibility.
  */
 export function scoreWithOptionsJson(
-  sbomJson: string,
+  content: string,
   options: ScoreOptions = {},
-): ScoreReport {
-  const checkedSbom = checkedInput(sbomJson, "sbomJson");
-  const { profile, ...run } = options;
-  const checkedOptions = optionsInput(
-    run,
-    profile === undefined ? {} : { profile },
-  );
+): QualityOutput {
+  const checkedContent = checkedInput(content, "content");
+  const checkedOptions = optionsInput(options, {});
   const api = native();
   const payload = objectPayload(
-    consume(api, api.scoreWithOptions(checkedSbom, checkedOptions)),
+    consume(api, api.scoreWithOptions(checkedContent, checkedOptions)),
     "scoreWithOptionsJson",
   );
   if (
-    typeof payload.overall_score !== "number" ||
-    typeof payload.profile !== "string"
+    typeof payload.profile !== "string" ||
+    typeof payload.applicable !== "boolean" ||
+    payload.report === null ||
+    typeof payload.report !== "object" ||
+    Array.isArray(payload.report)
   ) {
     throw new SbomToolsNativeError(
       "native library returned an invalid quality report",
       ErrorCode.Internal,
     );
   }
-  return payload as unknown as ScoreReport;
+  return payload as unknown as QualityOutput;
 }

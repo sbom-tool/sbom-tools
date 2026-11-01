@@ -18,15 +18,17 @@
  * NULL pointer is a SBOM_TOOLS_ERROR_VALIDATION error. Options arguments are
  * JSON objects: pass "{}" for the defaults.
  *
- * ABI version: 2 (sbom_tools_abi_version_json reports it). A release raises
- * it when it changes the contract in a way a wrapper written for the
- * previous one could misread: a function removed or its signature or
- * meaning changed, an error code or enum value renumbered or removed, or a
- * JSON payload field removed, renamed or retyped, or a value renamed.
- * Additions keep it: new functions, enum values, options, payload fields and
- * variants, which wrappers must accept. Version 2 (sbom-tools 0.4.0) follows
- * the 0.4.0 normalized payload changes and adds sbom_tools_validate_json,
- * sbom_tools_rule_catalog_json and sbom_tools_score_sbom_with_options_json.
+ * ABI version: 2 (sbom_tools_abi_version_json reports it), a single number.
+ * A release raises it when it changes the contract in a way a wrapper
+ * written for the previous one could misread: a function removed or its
+ * signature or meaning changed, an error code or enum value renumbered or
+ * removed, or a JSON payload field removed, renamed or retyped, or a value
+ * renamed. Additions keep it: new functions, enum values, options, payload
+ * fields and variants, which wrappers must accept; the crate version
+ * ("crate_version") tells which release added what. Version 2 (sbom-tools
+ * 0.4.0) follows the 0.4.0 normalized payload changes and adds
+ * sbom_tools_validate_json, sbom_tools_rule_catalog_json and
+ * sbom_tools_score_sbom_with_options_json.
  */
 
 #include <stdint.h>
@@ -89,9 +91,10 @@ SbomToolsStringResult sbom_tools_diff_sboms_json(
 );
 
 /**
- * Score an SBOM's quality using the given profile. Returns quality report as
- * JSON, judged at the wall clock with no compliance inputs (see
- * sbom_tools_score_sbom_with_options_json).
+ * Score a normalized SBOM (as JSON) using the given profile. Returns the
+ * quality report as JSON, judged at the wall clock with no compliance inputs.
+ * Kept unchanged for compatibility; sbom_tools_score_sbom_with_options_json
+ * returns what `sbom-tools quality -o json` prints.
  */
 SbomToolsStringResult sbom_tools_score_sbom_json(
     const char *sbom_json,
@@ -136,14 +139,23 @@ SbomToolsStringResult sbom_tools_validate_json(
 SbomToolsStringResult sbom_tools_rule_catalog_json(const char *filter_json);
 
 /**
- * Score a normalized SBOM (as JSON) with options: "profile" (a
- * `quality --profile` name, default "standard") and the run options of
- * sbom_tools_validate_json except "standards". Returns the quality report as
- * JSON, with "profile" named as `quality --profile` names it and
- * "compliance" as an entry of the validate envelope's "results".
+ * Score a raw SBOM document (any format the parse functions read) with
+ * options. Returns the document `sbom-tools quality -o json` prints, byte for
+ * byte what `sbom-tools quality - -o json` writes for the same document and
+ * inputs (`quality <FILE>` when "file_name" names the file).
+ *
+ * options_json keys (all optional; an unknown key is an error):
+ *   "profile"                a `quality --profile` name (default "standard")
+ *   "file_name"              the file the document was read from; "sbom"
+ *                            names it without its directory (default "-")
+ *   and the run options of sbom_tools_validate_json ("as_of", "sidecar",
+ *   "product_class", "pqc_mode", "pqc_profile", "cnsa_category", "rules",
+ *   "include_excluded_scope").
+ * An AI-readiness profile that does not apply reports "applicable": false, a
+ * null "overall_score" and the grade "N/A".
  */
 SbomToolsStringResult sbom_tools_score_sbom_with_options_json(
-    const char *sbom_json,
+    const char *sbom,
     const char *options_json
 );
 

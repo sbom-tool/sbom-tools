@@ -71,11 +71,15 @@ The envelope's `as_of` is the instant every standard was judged at (the
 and its `subject` gives the SHA-256 of the content passed in and the file
 name without its directory, which only `file_name` provides. The other
 options are `sidecar` (an object with the keys of a `.cra.json` file),
-`pqc_mode`, `pqc_profile`, `cnsa_category` and `include_excluded_scope`. An invalid option throws `SbomToolsNativeError` with
-`ErrorCode.Validation`. `scoreWithOptionsJson(sbomJson, { profile, as_of, ... })`
-scores with a pinned clock and the same run options; its report names the
-profile as `quality --profile` does and reports the compliance check as an
-entry of the envelope's `results`.
+`pqc_mode`, `pqc_profile`, `cnsa_category` and `include_excluded_scope`. An
+invalid option throws `SbomToolsNativeError` with `ErrorCode.Validation`.
+
+`scoreWithOptionsJson(content, { profile, file_name, as_of, ... })` returns
+what `sbom-tools quality - -o json` prints for the same content and options
+(`quality <FILE>` with `file_name`), typed as `QualityOutput`, with a pinned
+clock and the same run options. An AI-readiness profile that does not apply
+has `applicable: false`, a `null` score and the grade `N/A`. `scoreJson`
+keeps its old behaviour for compatibility.
 
 The package is intentionally private at version `0.0.0-dev`. Publishing
 automation is outside the current binding scope.

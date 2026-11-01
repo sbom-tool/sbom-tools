@@ -189,18 +189,35 @@ test("ruleCatalogJson lists the registry", () => {
   assert.throws(() => ruleCatalogJson(["crab"]), isValidationError);
 });
 
-test("scoreWithOptionsJson names levels and pins the clock", () => {
-  const normalized = JSON.stringify(parseStringJson(fixture));
+test("scoreWithOptionsJson returns the quality document", () => {
   const options = { profile: "cra", as_of: "2027-01-01" };
-  const report = scoreWithOptionsJson(normalized, options);
-  assert.equal(report.profile, "cra");
-  assert.equal(report.compliance.standard, "cra");
-  for (const violation of report.compliance.violations) {
-    assert.match(violation.finding_id, /^sbomtools:v1:/);
-  }
-  assert.deepEqual(scoreWithOptionsJson(normalized, options), report);
+  const output = scoreWithOptionsJson(fixture, options);
+  assert.equal(output.tool, "sbom-tools");
+  assert.equal(output.profile, "cra");
+  assert.equal(output.sbom, "-");
+  assert.equal(output.applicable, true);
+  assert.equal(typeof output.report.overall_score, "number");
+  assert.equal(typeof output.report.compliance, "object");
+  // A pinned clock gives the same document.
+  assert.deepEqual(scoreWithOptionsJson(fixture, options), output);
+
+  const named = scoreWithOptionsJson(fixture, {
+    ...options,
+    file_name: fixturePath,
+  });
+  assert.equal(named.sbom, "minimal.cdx.json");
   assert.throws(
-    () => scoreWithOptionsJson(normalized, { profile: "strict" }),
+    () => scoreWithOptionsJson(fixture, { profile: "strict" }),
     isValidationError,
   );
+});
+
+test("scoreWithOptionsJson reports a profile that does not apply", () => {
+  const output = scoreWithOptionsJson(fixture, {
+    profile: "ai-readiness",
+    as_of: "2027-01-01",
+  });
+  assert.equal(output.applicable, false);
+  assert.equal(output.report.overall_score, null);
+  assert.equal(output.report.grade, "N/A");
 });

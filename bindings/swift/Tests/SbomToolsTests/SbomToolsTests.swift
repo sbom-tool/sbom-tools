@@ -149,23 +149,44 @@ private func fixtureURL(_ name: String) -> URL {
     }
 }
 
-@Test func scoreWithOptionsPinsTheClockAndNamesLevels() throws {
-    let payload = try SbomTools.parsePath(fixtureURL("demo-new.cdx.json").path())
+@Test func scoreWithOptionsReturnsTheQualityDocument() throws {
+    let content = try String(contentsOf: fixtureURL("demo-new.cdx.json"), encoding: .utf8)
     let options = ScoreOptions(profile: "cra", asOf: "2027-01-01")
 
-    let report = try SbomTools.score(payload, options: options)
-    #expect(report.profile == "cra")
-    #expect(report.compliance.standard == "cra")
-    #expect(report.overallScore > 0)
-    #expect(report.compliance.violations.allSatisfy { !$0.findingID.isEmpty })
-    #expect(try SbomTools.score(payload, options: options) == report)
+    let output = try SbomTools.scoreWithOptions(content, options: options)
+    #expect(output.tool == "sbom-tools")
+    #expect(output.profile == "cra")
+    #expect(output.sbom == "-")
+    #expect(output.applicable)
+    #expect((output.report.overallScore ?? 0) > 0)
+    #expect(!output.report.compliance.isEmpty)
+    // A pinned clock gives the same bytes.
+    #expect(
+        try SbomTools.scoreWithOptionsJSON(content, options: options)
+            == SbomTools.scoreWithOptionsJSON(content, options: options)
+    )
+
+    var named = options
+    named.fileName = "some/dir/demo-new.cdx.json"
+    #expect(try SbomTools.scoreWithOptions(content, options: named).sbom == "demo-new.cdx.json")
 
     do {
-        _ = try SbomTools.score(payload, options: ScoreOptions(profile: "strict"))
+        _ = try SbomTools.scoreWithOptions(content, options: ScoreOptions(profile: "strict"))
         Issue.record("Expected an unknown profile to fail")
     } catch let error as SbomToolsError {
         #expect(error.code == 3)
     }
+}
+
+@Test func scoreWithOptionsReportsAProfileThatDoesNotApply() throws {
+    let content = try String(contentsOf: fixtureURL("cyclonedx/minimal.cdx.json"), encoding: .utf8)
+    let output = try SbomTools.scoreWithOptions(
+        content,
+        options: ScoreOptions(profile: "ai-readiness", asOf: "2027-01-01")
+    )
+    #expect(!output.applicable)
+    #expect(output.report.overallScore == nil)
+    #expect(output.report.grade == "N/A")
 }
 
 @Test func deduplicateInPlaceLastWins() throws {

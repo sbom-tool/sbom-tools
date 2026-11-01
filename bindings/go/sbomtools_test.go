@@ -447,36 +447,60 @@ func TestRuleCatalog(t *testing.T) {
 }
 
 func TestScoreWithOptions(t *testing.T) {
-	payload, err := ParsePath(fixturePath("demo-new.cdx.json"))
-	if err != nil {
-		t.Fatalf("ParsePath() failed: %v", err)
-	}
+	content := readFixture(t, "demo-new.cdx.json")
 	options := ScoreOptions{Profile: "cra", RunOptions: RunOptions{AsOf: "2027-01-01"}}
 
-	report, err := ScoreWithOptions(payload, options)
+	output, err := ScoreWithOptions(content, options)
 	if err != nil {
 		t.Fatalf("ScoreWithOptions() failed: %v", err)
 	}
-	if report.Profile != "cra" || report.Compliance.Standard != "cra" {
-		t.Fatalf("unexpected naming: profile %q, standard %q", report.Profile, report.Compliance.Standard)
+	if output.Tool != "sbom-tools" || output.Profile != "cra" || output.Sbom != "-" || !output.Applicable {
+		t.Fatalf("unexpected quality document: %+v", output)
 	}
-	if report.OverallScore <= 0 || len(report.Compliance.Violations) == 0 {
-		t.Fatalf("unexpected report: %+v", report)
+	if output.Report.OverallScore == nil || *output.Report.OverallScore <= 0 || output.Report.Grade == "" {
+		t.Fatalf("unexpected report: %+v", output.Report)
 	}
-	if report.Compliance.Violations[0].FindingID == "" {
-		t.Fatal("expected finding ids in the compliance check")
+	if len(output.Report.Compliance) == 0 {
+		t.Fatal("expected the profile's compliance result in the report")
 	}
 
-	again, err := ScoreWithOptions(payload, options)
+	raw, err := ScoreWithOptionsJSON(content, options)
 	if err != nil {
-		t.Fatalf("ScoreWithOptions() failed: %v", err)
+		t.Fatalf("ScoreWithOptionsJSON() failed: %v", err)
 	}
-	if again.OverallScore != report.OverallScore || again.Grade != report.Grade {
-		t.Fatal("a pinned clock must give the same report")
+	again, err := ScoreWithOptionsJSON(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptionsJSON() failed: %v", err)
+	}
+	if string(raw) != string(again) {
+		t.Fatal("a pinned clock must give the same document")
 	}
 
-	_, err = ScoreWithOptions(payload, ScoreOptions{Profile: "strict"})
+	options.FileName = filepath.Join("some", "dir", "demo-new.cdx.json")
+	named, err := ScoreWithOptions(content, options)
+	if err != nil {
+		t.Fatalf("ScoreWithOptions() with FileName failed: %v", err)
+	}
+	if named.Sbom != "demo-new.cdx.json" {
+		t.Fatalf("expected the file name without its directory, got %q", named.Sbom)
+	}
+
+	_, err = ScoreWithOptions(content, ScoreOptions{Profile: "strict"})
 	if abiErr, ok := err.(*Error); !ok || abiErr.Code != ErrorCodeValidation {
 		t.Fatalf("expected a validation error for an unknown profile, got %v", err)
+	}
+}
+
+func TestScoreWithOptionsReportsAProfileThatDoesNotApply(t *testing.T) {
+	content := readFixture(t, filepath.Join("cyclonedx", "minimal.cdx.json"))
+	output, err := ScoreWithOptions(content, ScoreOptions{
+		Profile:    "ai-readiness",
+		RunOptions: RunOptions{AsOf: "2027-01-01"},
+	})
+	if err != nil {
+		t.Fatalf("ScoreWithOptions() failed: %v", err)
+	}
+	if output.Applicable || output.Report.OverallScore != nil || output.Report.Grade != "N/A" {
+		t.Fatalf("expected a not-applicable report without a score, got %+v", output)
 	}
 }

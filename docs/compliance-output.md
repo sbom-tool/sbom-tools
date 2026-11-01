@@ -20,8 +20,9 @@ and every standard's verdict, under the names each format uses; see
 [Fields in every output](#fields-in-every-output). `sbom-tools rules`
 describes the rules themselves: which standards use each one, its references
 and its remediation; see [Rule catalogue](#rule-catalogue). The C ABI and the
-Go, Swift, Python and Node.js bindings return the same envelope and the same
-catalogue; see [From the C ABI and the bindings](#from-the-c-abi-and-the-bindings).
+Go, Swift, Python and Node.js bindings return the same envelope, the same
+catalogue and the `quality -o json` document; see
+[From the C ABI and the bindings](#from-the-c-abi-and-the-bindings).
 
 ## Envelope
 
@@ -92,7 +93,7 @@ standards' results would not say either.
 | `violations` | array | The findings, described below. |
 | `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
 | `evaluated` | array | The checks of the standard that did not run on this SBOM, each `{rule_id, status, reason}`, described [below](#checks-not-evaluated). Absent when every check ran. |
-| `suppressed` | array | The rules whose findings the [rule settings](#rule-settings) turned off, by rule id: `{rule_id, findings, source}`, where `source` is `config` or `cli`. Absent when no finding was turned off. |
+| `suppressed` | array | The rules whose findings the [rule settings](#rule-settings) turned off, by rule id: `{rule_id, findings, source}`, where `source` is `config` (the config file) or `cli` (set by the invocation: a `--rule` flag or an ABI option). Absent when no finding was turned off. |
 | `excluded_components` | integer | The components the package rules left out because their scope is excluded (see [Components whose scope is excluded](#components-whose-scope-is-excluded)). Absent when none, under `--include-excluded-scope`, and for a standard without package rules. |
 | `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for `cra` and `cra-phase1` once a product class is pinned by `--cra-product-class` or the sidecar. Never for `oss-steward`: an open-source steward (Art. 24) follows no conformity-assessment procedure. |
 
@@ -214,7 +215,7 @@ identity.
 | `finding_key` | string | `<standard>\|<rule_id>\|<subject>`, or `<standard>\|<rule_id>:<finding_detail>\|<subject>`: the readable form of the id. |
 | `severity` | string | `Error`, `Warning` or `Info`: the severity the verdict, the counts, the score and the exit code read. When the run's [rule settings](#rule-settings) set the rule, the one they set. |
 | `default_severity` | string | When the rule settings set the finding's rule: the severity the check gave it (the rule's registry default, or the one the check calibrated by product class, CRA phase or PQC deadline). Present exactly when `severity_source` is. |
-| `severity_source` | string | Where the setting comes from: `config` (the config file's `compliance.rules`) or `cli` (`--rule`, or the `rules` option of the C ABI and the bindings). Present exactly when `default_severity` is. |
+| `severity_source` | string | Where the setting comes from: `config` (the config file's `compliance.rules`) or `cli` (set by the invocation: a `--rule` flag, or the `rules` option of a C ABI or binding call). Present exactly when `default_severity` is. |
 | `category` | string | e.g. `DocumentMetadata`, `ComponentIdentification`, `SupplierInfo`. |
 | `message` | string | Human-readable explanation. Its wording may change in any release. |
 | `element` | string or null | Human-readable label of the offending element (usually a component name). Not unique. |
@@ -1090,8 +1091,8 @@ compliance through the same code as the CLI:
 | Call | Returns | CLI equivalent |
 |---|---|---|
 | `sbom_tools_validate_json(sbom, options_json)` | The `sbom-tools/compliance/v2` envelope, byte for byte | `sbom-tools validate - -o json`, or `validate <FILE>` with `file_name` |
+| `sbom_tools_score_sbom_with_options_json(sbom, options_json)` | The quality document, byte for byte | `sbom-tools quality - -o json`, or `quality <FILE>` with `file_name` |
 | `sbom_tools_rule_catalog_json(filter_json)` | The `sbom-tools/rules/v1` document, byte for byte (without the final newline) | `sbom-tools rules -o json` |
-| `sbom_tools_score_sbom_with_options_json(sbom_json, options_json)` | A quality report (see below) | `sbom-tools quality - -o json`, its `report` |
 
 `sbom` is the SBOM document as read, in any format the CLI reads. The
 envelope's [`subject`](#subject) gives the SHA-256 of exactly the bytes
@@ -1103,13 +1104,13 @@ for `validate`. The options are one JSON object, `{}` for the defaults:
 | Option | Type | Flag |
 |---|---|---|
 | `standards` | array of strings | `--standard` (validate and the catalogue). Default `["ntia"]` for validate; the catalogue lists every rule without it. |
-| `file_name` | string | Validate only: the file the SBOM was read from, the `<FILE>` of `validate <FILE>`. The subject names it without its directory. Default: no name, as for standard input. |
-| `profile` | string | `quality --profile` (score). Default `standard`. |
+| `file_name` | string | Validate and score: the file the SBOM was read from, the `<FILE>` of `validate <FILE>` and `quality <FILE>`. The subject and the quality document's `sbom` name it without its directory. Default: no name in the subject and `-` in `sbom`, as for standard input. |
+| `profile` | string | `quality --profile` (score), any name or alias. Default `standard`. |
 | `as_of` | string | `--as-of`, with the same spellings. |
 | `sidecar` | object | `--cra-sidecar`: the keys of a `.cra.json` file. The ABI reads no file, so it never finds the sidecar next to the SBOM that `validate <FILE>` discovers: pass that sidecar here. Without it, no sidecar is read. |
 | `product_class` | string | `--cra-product-class` |
 | `pqc_mode`, `pqc_profile`, `cnsa_category` | string | `--pqc-mode`, `--pqc-profile`, `--cnsa-category`. As on the command line, the last two need `pqc_mode` `deadline`. |
-| `rules` | object | `--rule`: rule id → `off`, `info`, `warning` or `error`. Its findings report `severity_source: "cli"`, as `--rule` does. Naming one rule twice (in two spellings) is an error. |
+| `rules` | object | `--rule`: rule id → `off`, `info`, `warning` or `error`. Like `--rule`, these settings are set by the invocation, so their findings report `severity_source: "cli"`. Naming one rule twice (in two spellings) is an error. |
 | `include_excluded_scope` | boolean | `--include-excluded-scope` |
 
 Each option's value is parsed as its flag's value is, in any case, and each
@@ -1119,18 +1120,22 @@ given. An unknown key, a value of the wrong type and every value the CLI
 rejects are `SBOM_TOOLS_ERROR_VALIDATION` errors, whose message names the
 option. An SBOM that does not parse fails as the parse calls do.
 
-The score call takes a normalized SBOM (the output of a parse call). Its
-report holds the fields of the quality report, sorted by name, with two
-differences from `sbom_tools_score_sbom_json`: `profile` is the
-`quality --profile` name (`standard`, not `Standard`), and `compliance` is
-the profile's compliance check as an entry of the envelope's `results[]`,
-with `standard`, `counts` and a `finding_id` on every finding. The run
-options reach that check and date the time-sensitive metrics, so a pinned
-`as_of` makes the report reproducible. `sbom_tools_score_sbom_json` still
-returns the report as before, at the wall clock.
+The score call returns what `quality -o json` prints, through the same
+writer: `tool`, `version`, `sbom` (the file name, or `-`), `profile` as
+`--profile` names it, `applicable`, and the scorer's `report`. An
+AI-readiness profile that does not apply (no ML components) has
+`applicable: false`, a `null` `overall_score` and the grade `N/A`, rather
+than a failing 0 and F. The run options reach the profile's compliance check
+and date the time-sensitive metrics, so a pinned `as_of` makes the document
+reproducible. For typed compliance results with finding ids, use validate.
 
-The test suite pins the validate envelope and the catalogue byte for byte
-against the CLI binary (`tests/ffi_compliance.rs`).
+`sbom_tools_score_sbom_json(sbom_json, profile)` keeps its old behaviour for
+compatibility: it scores a normalized SBOM (the output of a parse call) by
+an ABI profile number, at the wall clock and with no compliance inputs, and
+returns the scorer's own serialization.
+
+The test suite pins the validate envelope, the quality document and the
+catalogue byte for byte against the CLI binary (`tests/ffi_compliance.rs`).
 
 ## Text report
 

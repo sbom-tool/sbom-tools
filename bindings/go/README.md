@@ -418,24 +418,26 @@ fmt.Printf("Duplicates removed: %d components, %d edges\n",
 
 ---
 
-#### `func ScoreWithOptions(sbomPayload *NormalizedSbomPayload, options ScoreOptions) (*ScoreReport, error)`
+#### `func ScoreWithOptions(content string, options ScoreOptions) (*QualityOutput, error)`
 
-Scores an SBOM with a `quality --profile` name (`standard` when empty, and also `bsi` or `cbom`) and the compliance run options, judged at `options.AsOf`.
+Scores raw SBOM content with a `quality --profile` name (`standard` when empty, and also `bsi` or `cbom`) and the compliance run options, judged at `options.AsOf`. It returns what `sbom-tools quality - -o json` prints for the same content and options (`quality <FILE>` when `options.FileName` names the file); `ScoreWithOptionsJSON` returns those bytes unchanged. `Score` keeps its old behaviour for compatibility.
 
 ```go
-report, err := sbomtools.ScoreWithOptions(sbom, sbomtools.ScoreOptions{
+output, err := sbomtools.ScoreWithOptions(string(content), sbomtools.ScoreOptions{
  Profile:    "cra",
+ FileName:   "sbom.cdx.json",
  RunOptions: sbomtools.RunOptions{AsOf: "2027-01-01", ProductClass: "important-class-1"},
 })
 if err != nil {
  log.Fatal(err)
 }
 
-fmt.Printf("%s: %.2f (%s)\n", report.Profile, report.OverallScore, report.Grade)
-fmt.Printf("Compliance (%s): %d errors\n", report.Compliance.Standard, report.Compliance.Counts.Error)
+if output.Applicable && output.Report.OverallScore != nil {
+ fmt.Printf("%s: %.2f (%s)\n", output.Profile, *output.Report.OverallScore, output.Report.Grade)
+}
 ```
 
-`Profile` is the `--profile` name, and `Compliance` is a typed `ComplianceResult`, the shape of a `Validate` result, with a `FindingID` on every finding. `ScoreWithOptionsJSON` returns the raw JSON.
+**Returns** a `QualityOutput`: `Tool`, `Version`, `Sbom` (the file name, `-` without `FileName`), `Profile` (the `--profile` name), `Applicable` and the `Report`. For a profile that did not apply (`ai-readiness` on an SBOM without ML components), `Applicable` is false, `Report.OverallScore` is nil and `Report.Grade` is `N/A`. `Report.Compliance` is the profile's compliance result as the report serializes it; `Validate` returns typed results with finding ids.
 
 ---
 

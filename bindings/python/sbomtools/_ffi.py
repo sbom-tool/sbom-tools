@@ -17,6 +17,7 @@ from .types import (
     DetectedFormat,
     ErrorCode,
     JsonValue,
+    QualityOutput,
     RuleCatalog,
     ScoringProfile,
 )
@@ -334,9 +335,10 @@ def rule_catalog_json(standards: Sequence[str] | None = None) -> RuleCatalog:
 
 
 def score_with_options_json(
-    sbom_json: str,
+    content: str,
     *,
     profile: str | None = None,
+    file_name: str | os.PathLike[str] | None = None,
     as_of: str | date | datetime | None = None,
     sidecar: Mapping[str, JsonValue] | None = None,
     product_class: str | None = None,
@@ -345,13 +347,16 @@ def score_with_options_json(
     cnsa_category: str | None = None,
     rules: Mapping[str, str] | None = None,
     include_excluded_scope: bool | None = None,
-) -> dict[str, JsonValue]:
-    """Score a normalized SBOM JSON string with a profile and run options.
+) -> QualityOutput:
+    """Score raw SBOM content with a profile and run options.
 
-    ``profile`` is a ``quality --profile`` name (default ``standard``); the
-    other options are those of ``validate_json``. The report names the
-    profile as ``--profile`` does, and its ``compliance`` is an entry of the
-    validate envelope's ``results``.
+    Returns the decoded document ``sbom-tools quality - -o json`` writes for
+    the same content and options, or ``quality <FILE>`` when ``file_name``
+    names the file (``sbom`` is ``"-"`` without it). ``profile`` is a
+    ``quality --profile`` name (default ``standard``); the other options are
+    those of ``validate_json``. An AI-readiness profile that does not apply
+    has ``applicable`` false, a ``None`` score and the grade ``N/A``.
+    ``score_json`` keeps its old behaviour for compatibility.
     """
 
     options = _run_options(
@@ -366,12 +371,14 @@ def score_with_options_json(
     )
     if profile is not None:
         options["profile"] = profile
+    if file_name is not None:
+        options["file_name"] = os.fspath(file_name)
     library = _native()
     value = _consume(
         library,
         library.sbom_tools_score_sbom_with_options_json(
-            _encode(sbom_json, "sbom_json"),
+            _encode(content, "content"),
             _encode(json.dumps(options), "options"),
         ),
     )
-    return _mapping(value, "score_with_options")
+    return cast(QualityOutput, _mapping(value, "score_with_options"))

@@ -265,11 +265,16 @@ type ValidateOptions struct {
 	RunOptions
 }
 
-// ScoreOptions are the inputs of ScoreWithOptions: the profile and the run
-// options.
+// ScoreOptions are the inputs of ScoreWithOptions: the profile, the name of
+// the SBOM's file, and the run options.
 type ScoreOptions struct {
 	// Profile is a `quality --profile` name; empty means standard.
 	Profile string `json:"profile,omitempty"`
+
+	// FileName is the file the content was read from, which the output's
+	// Sbom names without its directory, as `quality <FILE>` does; empty
+	// gives "-", as for standard input.
+	FileName string `json:"file_name,omitempty"`
 
 	RunOptions
 }
@@ -459,12 +464,27 @@ type RuleFormatAdvice struct {
 	Field string `json:"field,omitempty"`
 }
 
-// ScoreReport is the quality report ScoreWithOptions returns: the profile
-// named as `quality --profile` names it, and the compliance check as an
-// entry of the compliance envelope's results.
-type ScoreReport struct {
+// QualityOutput is the document ScoreWithOptions returns, as
+// `sbom-tools quality -o json` prints it: the tool and its version, the
+// SBOM's file name ("-" without ScoreOptions.FileName), the profile as
+// `--profile` names it, whether the profile applied, and the report.
+type QualityOutput struct {
+	Applicable bool                `json:"applicable"`
+	Profile    string              `json:"profile"`
+	Report     QualityOutputReport `json:"report"`
+	Sbom       string              `json:"sbom"`
+	Tool       string              `json:"tool"`
+	Version    string              `json:"version"`
+}
+
+// QualityOutputReport is the quality report inside a QualityOutput. For a
+// profile that did not apply (ai-readiness on an SBOM without ML
+// components), OverallScore is nil and Grade is "N/A". Compliance is the
+// profile's compliance result as the report serializes it; Validate returns
+// typed results with finding ids.
+type QualityOutputReport struct {
 	ScoringEngineVersion string           `json:"scoring_engine_version"`
-	OverallScore         float64          `json:"overall_score"`
+	OverallScore         *float64         `json:"overall_score"`
 	Grade                string           `json:"grade"`
 	Profile              string           `json:"profile"`
 	CompletenessScore    float64          `json:"completeness_score"`
@@ -476,8 +496,9 @@ type ScoreReport struct {
 	ProvenanceScore      float64          `json:"provenance_score"`
 	LifecycleScore       *float64         `json:"lifecycle_score"`
 	CryptographyScore    *float64         `json:"cryptography_score"`
-	Compliance           ComplianceResult `json:"compliance"`
+	Compliance           map[string]any   `json:"compliance"`
 	Recommendations      []map[string]any `json:"recommendations"`
+	AIReadinessMetrics   map[string]any   `json:"ai_readiness_metrics"`
 }
 
 func Version() (*AbiVersion, error) {
@@ -698,15 +719,18 @@ func RuleCatalog(standards ...string) (*RuleCatalogDocument, error) {
 	return Decode[RuleCatalogDocument](payload)
 }
 
-// ScoreWithOptionsJSON scores normalized SBOM JSON with a profile and the
-// run options, judged at options.AsOf.
-func ScoreWithOptionsJSON(sbomJSON []byte, options ScoreOptions) ([]byte, error) {
+// ScoreWithOptionsJSON scores raw SBOM content with a profile and the run
+// options, judged at options.AsOf, and returns what
+// `sbom-tools quality - -o json` writes for the same content and options
+// (`quality <FILE>` when options.FileName names the file), byte for byte.
+// Score keeps its old behaviour for compatibility.
+func ScoreWithOptionsJSON(content string, options ScoreOptions) ([]byte, error) {
 	optionsJSON, err := json.Marshal(options)
 	if err != nil {
 		return nil, err
 	}
 
-	input, cleanup := makeCString(string(sbomJSON))
+	input, cleanup := makeCString(content)
 	defer cleanup()
 	optionsInput, optionsCleanup := makeCString(string(optionsJSON))
 	defer optionsCleanup()
@@ -714,23 +738,14 @@ func ScoreWithOptionsJSON(sbomJSON []byte, options ScoreOptions) ([]byte, error)
 	return consumeResult(C.sbom_tools_score_sbom_with_options_json(input, optionsInput))
 }
 
-// ScoreWithOptions scores a normalized SBOM with a profile and the run
-// options and returns the decoded report.
-func ScoreWithOptions(sbomPayload *NormalizedSbomPayload, options ScoreOptions) (*ScoreReport, error) {
-	if sbomPayload == nil {
-		return nil, fmt.Errorf("sbomPayload must not be nil")
-	}
-
-	sbomJSON, err := json.Marshal(sbomPayload)
+// ScoreWithOptions scores raw SBOM content with a profile and the run
+// options and returns the decoded `quality -o json` document.
+func ScoreWithOptions(content string, options ScoreOptions) (*QualityOutput, error) {
+	payload, err := ScoreWithOptionsJSON(content, options)
 	if err != nil {
 		return nil, err
 	}
-
-	payload, err := ScoreWithOptionsJSON(sbomJSON, options)
-	if err != nil {
-		return nil, err
-	}
-	return Decode[ScoreReport](payload)
+	return Decode[QualityOutput](payload)
 }
 
 func Decode[T any](payload []byte) (*T, error) {

@@ -116,7 +116,7 @@
         "finding_key": {"type": "string", "pattern": "^[^|]+\\|[^|]+\\|", "description": "`<standard>|<rule_id>|<subject>`, or `<standard>|<rule_id>:<finding_detail>|<subject>` with `%`, `|` and `:` in the detail percent-encoded; the subject (everything after the second `|`) is `document` or the component's canonical id, prefixed `component:` when the id itself reads `document` or starts with `edge:` or `component:`."},
         "severity": {"enum": ["Error", "Warning", "Info"], "description": "The severity the verdict, the counts, the score and the exit code read: the one the run's rule settings give the rule, if they set it."},
         "default_severity": {"enum": ["Error", "Warning", "Info"], "description": "When the run's rule settings set the finding's rule (--rule, the config file's compliance.rules): the severity the check gave the finding. Present exactly when `severity_source` is."},
-        "severity_source": {"enum": ["config", "cli"], "description": "Where the setting that gives the finding its `severity` comes from: `config` (the config file) or `cli` (--rule, or the `rules` option of the C ABI). Present exactly when `default_severity` is."},
+        "severity_source": {"enum": ["config", "cli"], "description": "Where the setting that gives the finding its `severity` comes from: `config` (the config file) or `cli` (set by the invocation: a --rule flag or an ABI option). Present exactly when `default_severity` is."},
         "category": {"type": "string", "minLength": 1, "description": "Violation category, e.g. DocumentMetadata, ComponentIdentification, SupplierInfo."},
         "message": {"type": "string"},
         "element": {"type": ["string", "null"], "description": "Human-readable label of the offending element; not unique."},
@@ -161,7 +161,7 @@
       "properties": {
         "rule_id": {"type": "string", "minLength": 1, "description": "The rule's id."},
         "findings": {"type": "integer", "minimum": 1, "description": "How many of its findings the run dropped."},
-        "source": {"enum": ["config", "cli"], "description": "Where the `off` setting comes from: `config` (the config file) or `cli` (--rule, or the `rules` option of the C ABI)."}
+        "source": {"enum": ["config", "cli"], "description": "Where the `off` setting comes from: `config` (the config file) or `cli` (set by the invocation: a --rule flag or an ABI option)."}
       }
     },
     "standard_ref": {

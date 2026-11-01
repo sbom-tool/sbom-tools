@@ -354,18 +354,23 @@ print("Duplicates removed: \(stats.componentsRemoved) components, \(stats.edgesR
 
 ---
 
-#### `static func score(_ sbom: NormalizedSbomPayload, options: ScoreOptions) throws -> ScoreReport`
+#### `static func scoreWithOptions(_ content: String, options: ScoreOptions = ScoreOptions()) throws -> QualityOutput`
 
-Scores an SBOM with a `quality --profile` name (`standard` by default, and also `bsi` or `cbom`) and the compliance run options, judged at `options.asOf`.
+Scores raw SBOM content with a `quality --profile` name (`standard` by default, and also `bsi` or `cbom`) and the compliance run options, judged at `options.asOf`. It returns what `sbom-tools quality - -o json` prints for the same content and options (`quality <FILE>` when `options.fileName` names the file); `scoreWithOptionsJSON(_:options:)` returns those bytes unchanged. `score(_:profile:)` keeps its old behaviour for compatibility.
 
 ```swift
-let report = try SbomTools.score(sbom, options: ScoreOptions(profile: "cra", asOf: "2027-01-01"))
+let content = try String(contentsOfFile: "sbom.cdx.json", encoding: .utf8)
+let output = try SbomTools.scoreWithOptions(
+    content,
+    options: ScoreOptions(profile: "cra", fileName: "sbom.cdx.json", asOf: "2027-01-01")
+)
 
-print("\(report.profile): \(report.overallScore) (\(report.grade))")
-print("Compliance (\(report.compliance.standard)): \(report.compliance.counts.error) errors")
+if output.applicable, let score = output.report.overallScore {
+    print("\(output.profile): \(score) (\(output.report.grade))")
+}
 ```
 
-`profile` is the `--profile` name, and `compliance` is a `ComplianceResultPayload`, the shape of a `validate` result, with a `findingID` on every finding. `scoreJSON(_:options:)` returns the raw JSON.
+**Returns** a `QualityOutput`: `tool`, `version`, `sbom` (the file name, `-` without `fileName`), `profile` (the `--profile` name), `applicable` and the `report`. For a profile that did not apply (`ai-readiness` on an SBOM without ML components), `applicable` is false, `report.overallScore` is `nil` and `report.grade` is `N/A`. `report.compliance` is the profile's compliance result as the report serializes it; `validate` returns typed results with finding ids.
 
 ---
 
