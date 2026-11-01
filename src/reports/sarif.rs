@@ -17,9 +17,9 @@ use super::{ReportConfig, ReportError, ReportFormat, ReportGenerator, ReportType
 use crate::diff::{DiffResult, SlaStatus, VulnerabilityDetail};
 use crate::model::NormalizedSbom;
 use crate::quality::{
-    ComplianceLevel, ComplianceResult, PassedCheck, StandardRef, Violation, ViolationSeverity,
-    compose_finding_key, finding_fingerprint, finding_id, generic_rule_id_for_level, rule_meta,
-    standard_key,
+    ComplianceLevel, ComplianceResult, FindingIdentity, PassedCheck, StandardRef, Violation,
+    ViolationSeverity, compose_finding_key, finding_fingerprint, finding_id,
+    generic_rule_id_for_level, rule_meta, standard_key,
 };
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -913,6 +913,17 @@ impl KeyBook {
         key
     }
 
+    /// The key of a compliance finding made of `parts`: the key itself when
+    /// the run's keys are `distinct` (no key repeats, so none is numbered and
+    /// the book is not kept), else the one [`Self::claim`] gives.
+    fn claim_parts(&mut self, distinct: bool, parts: KeyParts<'_>) -> String {
+        if distinct {
+            parts.key()
+        } else {
+            self.claim(parts.scope, parts.rule_id, parts.detail, parts.component_id)
+        }
+    }
+
     /// Take the key a result left out by the run's cap would get, so the
     /// results after it are numbered as if it were kept.
     fn reserve(
@@ -1115,48 +1126,37 @@ fn render_log(
     } = results;
     let total = pending.len();
     let mut cap = Cap::new(pending.iter().map(Pending::level), max_results);
+    // The finding key is `finding_key(level, finding)`; the key book only
+    // numbers a key that would repeat, which no checker's key does. When no
+    // key repeats, every finding's key is its own, and the book can be left
+    // out.
+    let distinct = keys_are_distinct(&pending);
     let mut results = Vec::with_capacity(cap.kept_total());
     for item in pending {
-        let keep = cap.keeps(item.level());
-        match item {
-            Pending::Built(result) => {
-                if keep {
-                    results.push(*result);
-                }
+        if !cap.keeps(item.level()) {
+            // A finding the run leaves out still takes its key, so the
+            // findings after it are numbered as when it is kept.
+            if !distinct && let Some(parts) = item.key_parts() {
+                keys.reserve(parts.scope, parts.rule_id, parts.detail, parts.component_id);
             }
+            continue;
+        }
+        results.push(match item {
+            Pending::Built(result) => *result,
             Pending::Violation {
                 result,
                 violation,
                 rule_id,
                 label,
             } => {
-                // The finding key is `finding_key(level, v)`; the key book
-                // only numbers a key that would repeat, which no checker's
-                // key does.
-                let scope = standard_key(result.level);
-                let detail = violation.finding_detail.as_deref();
-                let component = violation.component_id.as_deref();
-                if keep {
-                    let key = keys.claim(scope, violation.rule_id, detail, component);
-                    results.push(violation_result(
-                        result, violation, rule_id, label, key, artifact,
-                    ));
-                } else {
-                    keys.reserve(scope, violation.rule_id, detail, component);
-                }
+                let key = keys.claim_parts(distinct, KeyParts::of(result.level, violation));
+                violation_result(result, violation, rule_id, label, key, artifact)
             }
             Pending::Pass { result, pass } => {
-                let scope = standard_key(result.level);
-                let detail = pass.finding_detail.as_deref();
-                let component = pass.component_id.as_deref();
-                if keep {
-                    let key = keys.claim(scope, pass.rule_id, detail, component);
-                    results.push(pass_result(result, pass, key, artifact));
-                } else {
-                    keys.reserve(scope, pass.rule_id, detail, component);
-                }
+                let key = keys.claim_parts(distinct, KeyParts::of(result.level, pass));
+                pass_result(result, pass, key, artifact)
             }
-        }
+        });
     }
     let omitted = total - results.len();
     let invocations = (omitted > 0).then(|| {
@@ -1367,6 +1367,56 @@ impl Pending<'_> {
             Self::Pass { .. } => SarifLevel::None,
         }
     }
+
+    /// What a compliance finding's key is made of; `None` for a result built
+    /// as found, which claimed its key already.
+    fn key_parts(&self) -> Option<KeyParts<'_>> {
+        match self {
+            Self::Built(_) => None,
+            Self::Violation {
+                result, violation, ..
+            } => Some(KeyParts::of(result.level, *violation)),
+            Self::Pass { result, pass } => Some(KeyParts::of(result.level, *pass)),
+        }
+    }
+}
+
+/// What a compliance finding's key is made of (see `quality::finding_key`).
+#[derive(Clone, Copy)]
+struct KeyParts<'a> {
+    scope: &'static str,
+    rule_id: &'static str,
+    detail: Option<&'a str>,
+    component_id: Option<&'a str>,
+}
+
+impl<'a> KeyParts<'a> {
+    /// The parts of the key of `finding`, reported under `level`.
+    fn of(level: ComplianceLevel, finding: &'a impl FindingIdentity) -> Self {
+        Self {
+            scope: standard_key(level),
+            rule_id: finding.rule_id(),
+            detail: finding.finding_detail(),
+            component_id: finding.component_id(),
+        }
+    }
+
+    /// The key itself.
+    fn key(self) -> String {
+        compose_finding_key(self.scope, self.rule_id, self.detail, self.component_id)
+    }
+}
+
+/// Whether the compliance findings among `pending` have keys of their own,
+/// as a checker's findings do: told by the keys' 64-bit hashes, since keys
+/// with distinct hashes are distinct. A repeated hash, from a repeated key
+/// or from two keys that collide, sends the run through the key book.
+fn keys_are_distinct(pending: &[Pending<'_>]) -> bool {
+    let mut hashes = HashSet::with_capacity(pending.len());
+    pending
+        .iter()
+        .filter_map(Pending::key_parts)
+        .all(|parts| hashes.insert(xxhash_rust::xxh3::xxh3_64(parts.key().as_bytes())))
 }
 
 /// The results of one run, in report order, before its cap.
