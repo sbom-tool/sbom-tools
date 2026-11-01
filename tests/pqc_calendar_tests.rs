@@ -995,3 +995,73 @@ fn cli_quality_cbom_profile_takes_the_pqc_mode() {
         Some(3)
     );
 }
+
+/// Every command that checks compliance takes the PQC flags from the one
+/// shared definition and holds them to one rule: deadline mode with a
+/// profile and a category is accepted, and `--pqc-profile` or
+/// `--cnsa-category` without it is a usage error (exit 3), not silently
+/// ignored. (`cra-docs` reads none of them, but takes them like the rest.)
+#[test]
+fn cli_every_compliance_command_takes_the_pqc_flags() {
+    let calendar = fixture(CALENDAR);
+    let dir = tempfile::tempdir().expect("temp dir");
+    let dossier = dir.path().join("dossier");
+    let dossier = dossier.to_str().expect("UTF-8 temp path");
+    let commands: [&[&str]; 5] = [
+        &[
+            "validate",
+            &calendar,
+            "--standard",
+            "cnsa2,pqc",
+            "--summary",
+        ],
+        &["quality", &calendar, "--profile", "cbom", "-o", "json"],
+        &["view", &calendar, "-o", "json"],
+        &["diff", &calendar, &calendar, "-o", "json"],
+        &["cra-docs", &calendar, "--output", dossier, "--force"],
+    ];
+    let run = |command: &[&str], extra: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_sbom-tools"))
+            .arg("--no-color")
+            .args(command)
+            .args(["--as-of", "2031-06-01"])
+            .args(extra)
+            .env("RUST_LOG", "error")
+            .env("RUST_LOG_STYLE", "never")
+            .output()
+            .expect("command runs")
+    };
+    for command in commands {
+        let accepted = run(
+            command,
+            &[
+                "--pqc-mode",
+                "deadline",
+                "--pqc-profile",
+                "federal",
+                "--cnsa-category",
+                "niche",
+            ],
+        );
+        assert_ne!(
+            accepted.status.code(),
+            Some(3),
+            "{}: {}",
+            command[0],
+            String::from_utf8_lossy(&accepted.stderr)
+        );
+        for extra in [
+            &["--pqc-profile", "federal"][..],
+            &["--cnsa-category", "niche"][..],
+        ] {
+            let refused = run(command, extra);
+            assert_eq!(refused.status.code(), Some(3), "{} {extra:?}", command[0]);
+            let stderr = String::from_utf8_lossy(&refused.stderr);
+            assert!(
+                stderr.contains("--pqc-mode deadline"),
+                "{} {extra:?}: {stderr}",
+                command[0]
+            );
+        }
+    }
+}

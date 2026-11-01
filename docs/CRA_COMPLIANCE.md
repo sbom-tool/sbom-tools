@@ -45,7 +45,9 @@ and module-certificate checks of `CraPhase1` and `CraPhase2`.
 Every command that checks compliance (`validate`, `quality`, `view` and
 `diff` with their TUIs, `cra-docs`) hands each profile the same inputs:
 the CRA sidecar reaches the CRA, OSS-steward, EUCC and EU AI Act profiles,
-and the product class reaches the two CRA phases only. The Article 24
+the product class reaches the two CRA phases only, and the PQC flags
+(`--pqc-mode`, `--pqc-profile`, `--cnsa-category`) reach the CNSA 2.0 and
+NIST PQC profiles only. The Article 24
 steward profile gets the sidecar without its `productClass` and
 `conformityAssessmentRoute`: the class picks a manufacturer's
 conformity-assessment procedure (Art. 32), which a steward does not

@@ -424,7 +424,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--detect-typosquats` | Flag components that look like known-package typosquats |
 | `--explain-matches` | Show why each component pair was matched |
 | `--severity <level>` | Filter by minimum severity (`critical`, `high`, `medium`, `low`) |
-| `--as-of <datetime>`, `--cra-product-class <class>` | Inputs of the compliance checks on both SBOMs (the TUI's compliance tab, the reports' CRA section): the evaluation clock (RFC 3339 or a date; default: the wall clock) and the CRA product class. Each SBOM adds the CRA sidecar found next to it. Taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--pqc-mode`, `--pqc-profile`, `--cnsa-category` | Inputs of the compliance checks on both SBOMs (the TUI's compliance tab, the reports' CRA section): the evaluation clock (RFC 3339 or a date; default: the wall clock), the CRA product class and the PQC deadline mode. Each SBOM adds the CRA sidecar found next to it. Taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
@@ -478,7 +478,7 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--validate-ntia` | Validate against NTIA minimum elements |
 | `--bom-type <type>` | BOM type override (`sbom`, `cbom`, `aibom`). Auto-detected from content if omitted |
-| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>` | Inputs of the compliance checks (the TUI's compliance tab, `--validate-ntia`, the reports' CRA section), taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>`, `--pqc-mode`, `--pqc-profile`, `--cnsa-category` | Inputs of the compliance checks (the TUI's compliance tab, `--validate-ntia`, the reports' CRA section), taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
@@ -505,7 +505,6 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 | `--pqc-mode <readiness\|deadline>` | How `cnsa2` and `pqc` judge quantum-vulnerable cryptography: `readiness` (default) makes each one an error; `deadline` judges each by its migration date at `--as-of` (info, then warning, then error) and adds `deadline` and `deadline_source` to the finding; see [PQC deadline mode](docs/compliance-output.md#pqc-deadline-mode) |
 | `--pqc-profile <nist\|federal>` | With `--pqc-mode deadline`, whose dates `pqc` applies: `nist` (default, NIST IR 8547) or `federal` (EO 14412 / OMB M-26-15: PQC key establishment by 2030-12-31, signatures by 2031-12-31, TLS 1.3 by 2030-01-02) |
 | `--cnsa-category <category>` | With `--pqc-mode deadline`, the CNSA 2.0 equipment category whose timeline `cnsa2` applies: `software-signing`, `web-cloud`, `networking`, `operating-systems`, `niche`, `custom-legacy`; the strictest when unset |
-| `--as-of <datetime>` | Pin the evaluation clock (e.g. `2031-06-01`) for date-sensitive checks: CRA Art. 14 readiness, SBOM age, certificate expiry, PQC deadlines |
 | `--sarif-include-passes` | With `-o sarif`, also report every check the SBOM passed (e.g. an approved post-quantum algorithm) as a result of `kind: "pass"`, level `none`. Off by default, so code scanning shows no pass as an alert |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
@@ -701,7 +700,7 @@ sbom-tools completions fish > ~/.config/fish/completions/sbom-tools.fish
 
 ## Interactive TUI
 
-Both `diff` and `view` commands launch an interactive terminal UI by default when connected to a TTY. The compliance tab shows the verdicts `validate` reports for the same inputs: pass `--as-of` and `--cra-product-class` (and, for `view`, `--cra-sidecar`) as you would to `validate`.
+Both `diff` and `view` commands launch an interactive terminal UI by default when connected to a TTY. The compliance tab shows the verdicts `validate` reports for the same inputs: pass `--as-of`, `--cra-product-class`, the PQC flags (`--pqc-mode`, `--pqc-profile`, `--cnsa-category`) and, for `view`, `--cra-sidecar` as you would to `validate`.
 
 ### Diff Mode
 

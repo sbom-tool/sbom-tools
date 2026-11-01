@@ -1115,7 +1115,8 @@ struct MatrixArgs {
     1  Overall score below --min-score, OR (with --fail-on-noncompliant) the SBOM is non-compliant
     3  Usage error (unknown flag or value, missing argument) or operational
        error (unsupported output format, invalid --as-of /
-       --cra-product-class / --cra-sidecar, broken config file, I/O)
+       --cra-product-class / --cra-sidecar, --pqc-profile or --cnsa-category
+       without --pqc-mode deadline, broken config file, I/O)
 
     The gate codes (0/1) only apply to runs that completed an assessment —
     a nonzero exit is only a quality/compliance verdict when the expected

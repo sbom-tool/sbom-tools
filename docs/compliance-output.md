@@ -56,7 +56,7 @@ A standard that does not apply reports no violation: its verdict is
 
 ## Inputs of a run
 
-Three inputs besides the SBOM can change a verdict. Every command that checks
+These inputs besides the SBOM can change a verdict. Every command that checks
 compliance (`validate`, `quality`, `view` and `diff` with their TUIs,
 `cra-docs`) takes them the same way and hands each standard only the ones it
 reads, so the same SBOM with the same inputs gets the same verdict everywhere.
@@ -66,6 +66,9 @@ reads, so the same SBOM with the same inputs gets the same verdict everywhere.
 | Evaluation clock | `--as-of`, else the wall clock | Every standard. |
 | CRA sidecar | `--cra-sidecar`, else `<sbom>.cra.{json,yaml}` found next to the SBOM (`diff`: next to each SBOM) | `cra`, `cra-phase1`, `oss-steward`, `eucc`, `ai-act`. A sidecar is used without being asked for, so the other standards, which judge the SBOM alone, never read it. |
 | CRA product class | `--cra-product-class`; the sidecar's `productClass` wins | `cra`, `cra-phase1`. The class picks the manufacturer's conformity-assessment procedure, which `oss-steward` does not follow. |
+| PQC mode | `--pqc-mode`: `readiness` (the default) or `deadline` | `cnsa2`, `pqc` (and the NIST PQC check of `quality --profile cbom`). See [PQC deadline mode](#pqc-deadline-mode). |
+| PQC deadline profile | `--pqc-profile`, with `--pqc-mode deadline`: `nist` (the default) or `federal` | `pqc`. |
+| CNSA 2.0 equipment category | `--cnsa-category`, with `--pqc-mode deadline`; the strictest when unset | `cnsa2`. |
 
 A standard named twice is checked once, at its first position, with a
 warning on stderr: `--standard cra,cra-phase2` names CRA Phase 2 twice
@@ -156,9 +159,13 @@ no transition (MD5, DES, RSA below 2048 bits, SHA-1 signatures), one IR 8547
 does not list (DSA, SM2), one that is not CNSA 1.0 either, ECB mode, and
 every finding about evidence the checks cannot read (an unidentified
 algorithm, a missing `nistQuantumSecurityLevel`, an empty inventory).
-`--pqc-profile` and `--cnsa-category` need `--pqc-mode deadline`.
-`quality --profile cbom` takes `--pqc-mode` and `--pqc-profile` too, for its
-embedded NIST PQC check.
+`--pqc-profile` and `--cnsa-category` need `--pqc-mode deadline`; without
+it either is a usage error (exit `3`). Like the other
+[inputs of a run](#inputs-of-a-run), the three flags are taken by every
+command that checks compliance: `quality --profile cbom` applies them to its
+embedded NIST PQC check, and the compliance tabs of `view` and `diff` show
+the verdicts `validate` reports for them. `cra-docs` takes them too, though
+its CRA check reads none.
 
 ## Passed checks
 
