@@ -81,21 +81,24 @@ Upgrading can change your pass or fail result. The release fixes false passes an
 **Stricter.** These can make an SBOM that passed in 0.3 fail:
 - **Identifiers and inventory:**
   - Empty, `NOASSERTION` or scheme-less purls and CPEs no longer count as identifiers, and components that shared one are kept apart (#397).
-  - An SBOM with no package components fails NTIA, FDA, CRA, CISA 2026, EO 14028, SSDF, BSI and PCI DSS with an inventory finding (#397).
+  - An SBOM with no package components fails NTIA, FDA, CRA, CISA 2026, EO 14028, SSDF, BSI and PCI DSS with an inventory finding (#397). The `quality` profiles `minimal`, `standard` and `comprehensive` fail it too, with SBOM-QUALITY-INVENTORY, so `quality --fail-on-noncompliant` exits `1`.
   - SPDX packages with purpose `SOURCE`, `ARCHIVE` or `FILE` are checked as packages (#398).
+  - Coverage rules count packages only (#398). Where files or crypto assets carried the hashes or suppliers the packages lack, the share of packages missing them rises: SSDF PS.2 can become an Error, and the CRA transitive-supplier finding a Warning.
 - **Placeholders:**
   - `NOASSERTION` and placeholders (`TBD`, `N/A` and similar) no longer satisfy supplier, author or version rules. CISA 2026 and FSCT still accept an explicit unknown where their texts allow one (#399).
   - An empty or placeholder document name, such as `""` or `NOASSERTION`, no longer counts as a name for SBOM-FDA-NAME and SBOM-CRA-ART-13-15-PRODUCT (#428).
   - BSI/G7 SBOM-for-AI rejects placeholder model and dataset fields (#416).
-  - A licence must be a known SPDX expression or `LicenseRef-*` id in every standard. `NOASSERTION` and placeholders such as `TBD` now fail the Standard and Comprehensive licence check, as they failed CRA. CISA 2026 still accepts `NOASSERTION` as its explicit unknown, but no placeholder (#441).
+  - A licence must be a known SPDX expression or `LicenseRef-*` id in every standard. `NOASSERTION` and placeholders such as `TBD` now fail the CRA Art. 13(5), BSI, FSCT, Standard and Comprehensive licence checks (#399, #441). CISA 2026 still accepts `NOASSERTION` as its explicit unknown, but no placeholder (#441).
+  - SBOM-CRA-PRE-7-RQ-07-RE no longer counts a component with a `NOASSERTION` or placeholder supplier as vendor-supplied. Its hash coverage can rise or fall, and below 50% it is an Error under CRA Phase 2 (#416).
   - A contact must reach someone. Placeholders (`NOASSERTION`, `unknown`, `n/a`, `TBD`) and addresses at `example.com`, `example.net` or `example.org` no longer satisfy the CRA security contact, CVD policy, Art. 14 channels and Art. 24 steward floor, EO 14028 disclosure, PCI DSS vulnerability evidence or SSDF PW.6, in the SBOM or the CRA sidecar. Nor do they satisfy the FDA and BSI TR-03183-2 creator-contact checks. Addresses under the reserved `.example` TLD still count (#441).
 - **Manufacturer evidence and digests:**
   - The CRA, EO 14028 and EUCC checks that ask for the manufacturer's own evidence read it only from the product: the primary component, and any other product an SPDX document describes. They are the security contact, CVD policy, Art. 24 vulnerability handling, risk assessment, EU DoC, Annex VIII certificate and EUCC reference checks, and the `conformity_summary` rows. A dependency's own references no longer pass them, even when no dependency edge points at it. Only a document that names no product falls back to the roots of its dependency graph (#436).
   - A support link no longer counts as the vulnerability-disclosure URL in CycloneDX. In every format, the URL is the primary component's first `http://`, `https://` or `mailto:` advisories reference (#436).
   - Every hash rule counts only a plausible digest: hex digits, as many as the algorithm's output (SHA-256 64, SHA-512 128, …). An empty, non-hex or wrong-length value no longer satisfies BSI TR-03183-2 (an invalid SHA-512 is an Error), FDA, CRA, FSCT, CISA 2026, EO 14028, SSDF or BSI SBOM-for-AI, and the finding says why (#436).
 - **Cryptography:**
-  - CNSA 2.0 reports algorithms, certificate signatures and protocols it cannot identify as Errors, and PQC reports unknown algorithms as Warnings (#400).
-  - TLS 1.3 named groups and signature schemes are judged, so classical-only TLS 1.3 fails CNSA 2.0 and PQC (#419).
+  - CNSA 2.0 reports algorithms, certificate signatures and protocols it cannot identify as Errors, and PQC reports unknown algorithms as Warnings. A CBOM with no asset either profile can identify fails both, under SBOM-CNSA2-000 and SBOM-PQC-000 (#400).
+  - Names 0.3 could not classify are judged by their own rules (#411): FFDH, JCA names such as `SHA1withRSA`, bare curve names such as `prime256v1`, A5/1 and Dual_EC_DRBG, MQV, the PAKEs, and MACs and KDFs such as HMAC-SHA256. PQC passed them, and now fails a broken or quantum-vulnerable one. CNSA 2.0 warned on them, and now fails one outside its suite under that algorithm's rule, such as SBOM-CNSA2-ALG-002 for HMAC-SHA256.
+  - The TLS named groups and signature schemes a cipher suite lists are judged, in TLS 1.2 suites too, so classical-only TLS 1.3 fails CNSA 2.0 and PQC (#419).
   - `pqc` judges hash functions at the 112-bit security level. A CBOM algorithm asset that is SHA-224, SHA-512/224 or SHA3-224 is an Error under the new `SBOM-PQC-HASH-001`, and a SHA-2 asset that states no digest size is a Warning. Keyed uses (HMAC, HKDF, PBKDF2, or an asset declared a MAC, KDF or DRBG) are not judged (#444).
 - **CRA and EUCC:**
   - CRA Annex VIII, and the conformity summary's Module B and H rows, need a certification reference. An attestation alone no longer satisfies them (#416).
@@ -108,14 +111,16 @@ Upgrading can change your pass or fail result. The release fixes false passes an
 - **Signatures:** an SPDX 3 signature with an empty value no longer counts as a signature for SBOM-CISA2026-SIGNATURE (#428).
 
 **Looser.** These can make an SBOM that failed in 0.3 pass:
-- **CycloneDX XML is read like JSON:** metadata, compositions, signatures and CBOM crypto detail (#406, #412), and AI-BOM model cards (#428).
+- **CycloneDX XML is read like JSON:** metadata, compositions, signatures and CBOM crypto detail (#406, #412), and AI-BOM model cards (#428). An XML CBOM whose algorithms list `cryptoFunctions` no longer fails to parse with exit `3`: it is judged like its JSON twin (#412).
 - **Evidence references count:** CycloneDX attestation, certification-report, risk-assessment, vulnerability-assertion, exploitability-statement and build-system references, and their SPDX 3 counterparts (#416).
-- **Package rules apply only to packages:** services, crypto assets and files no longer draw package findings under EO 14028, SSDF, BSI or CRA (#398).
+- **Package rules apply only to packages:** services, crypto assets and files no longer draw package findings under EO 14028, SSDF, BSI or CRA. The dependency checks of NTIA, FDA, CISA 2026, FSCT and the Comprehensive profile count packages only too. A crypto-only CBOM fails NTIA, FDA, CISA 2026 and Comprehensive on its inventory instead of its dependencies, and FDA and FSCT drop orphan warnings that named only non-packages (#398).
 - **Components whose scope is excluded leave the package rules:** a component a CycloneDX SBOM marks `scope: excluded`, and an SPDX development, build or test dependency with what only it brings in. The package rules are the version, supplier, license, hash, identifier and dependency-graph rules of every standard. Each result counts these components in `excluded_components`, and `--include-excluded-scope` judges them as before (#443).
 - **The product names its manufacturer:** CRA Art. 13(16) and the FDA manufacturer check accept the product's manufacturer or supplier: CycloneDX `metadata.component.manufacturer` or `.supplier`, CycloneDX `metadata.supplier`, or the SPDX described package's supplier. An organization creator still counts, but only with a real name or email (#436).
 - **SPDX 3 `securityAdvisory` references** count as the vulnerability-disclosure URL (#436).
 - **A component listed twice is one component:** its entries are merged whatever their order, and a real value (supplier, author, version, licence, identifier, …) always beats an empty one or a placeholder. Until 0.4 the last entry replaced the others, so a verdict could depend on entry order (#440).
 - **CISA 2026** accepts a weak hash beside a stronger one (the cyclonedx-maven-plugin default), and no longer asks SPDX 2.x for fields it cannot express (#409).
+- **Spec versions compare as numbers:** CycloneDX 1.10 is no longer read as 1.1. It passes EO 14028's format check and draws no CRA machine-readable warning, only the newer-than-supported Warning (#401).
+- **Nested training datasets:** SBOM-AIACT-ANNEX-IV-2D-DATASETS accepts a dataset nested under the model with `data[]` evidence, as BSI SBOM-for-AI does (#416).
 - **Cryptography:** the classifier names every CycloneDX 1.7 algorithm family, JCA names and common curve aliases (#411). PQ/T hybrids are judged by their parts, not by their weakest part (#415).
 - **Justified VEX `not_affected` statements:** one with a machine-readable justification exempts its entry from SBOM-CRA-VULN-METADATA and -REMEDIATION, embedded or via `--vex` (#431). `SBOM-FDA-SECURITY` no longer counts such a vulnerability, and `SBOM-PCI-11-3-1-1-SEVERITY` asks it for no risk ranking (#441).
 - **EUCC certificate URLs:** `SBOM-EUCC-CERTREF` also accepts a `commoncriteria` URL, as CRA Annex IV does (#441).
@@ -130,6 +135,8 @@ Upgrading can change your pass or fail result. The release fixes false passes an
 - **Document integrity:** `SBOM-CRA-DOC-INTEGRITY` needs a document signature, or a hashed attestation or certification reference on the product. A serial number alone no longer satisfies it, so more SBOMs get its Info finding (#441).
 - **FSCT signatures:** `SBOM-FSCT-SIGNATURE` also reads an SPDX 3 document's `verifiedUsing` signature, so an unsigned SPDX 3 document gets its Info finding (#441).
 - **112-bit hashes:** a SHA-224, SHA-512/224 or SHA3-224 asset that declares `nistQuantumSecurityLevel` 0 is reported under `SBOM-PQC-HASH-001` instead of `SBOM-PQC-001` (#444).
+- **CRA support period:** a CRA sidecar's `supportEndDate` satisfies SBOM-CRA-ART-13-8, so its Info finding no longer appears beside it (#401).
+- **CycloneDX remediation:** `analysis.workaround` is read as remediation, and a declared update or workaround with no text draws the CRA Phase 2 Info finding SBOM-CRA-VULN-METADATA-REMEDIATION (#416).
 
 **Other commands now match `validate`.** These change what `view`, `diff`, `cra-docs` and `timeline` report, not `validate`:
 - **The TUIs and reports** (the compliance tab, summary card, policy presets and exports, the quality score, a report's CRA section and the diff's quality delta) give each standard the inputs `validate` gives it: the clock, the CRA sidecar and the product class. They used to give every standard the sidecar and read the wall clock. FDA no longer reads the sidecar's `supportEndDate` there, so `SBOM-FDA-SUPPORT` can appear where it did not (#434).
@@ -211,7 +218,7 @@ Bundled rules were split so that each check has its own id (#417), and each stan
 
 "Also" means the old id stays on the check its text describes, and the new ids take the others. A level in parentheses says where the old id was reported. `SBOM-NTIA-*` ids are unchanged under `--standard ntia`.
 
-**New rule ids** with no old one: `SBOM-PQC-PROTO-003`, the federal TLS 1.3 deadline (#437); `SBOM-PQC-HASH-001`, hash functions at 112 bits (#444); and `SBOM-QUALITY-DUPLICATE-COMPONENT`, `SBOM-NTIA-DUPLICATE-COMPONENT`, `SBOM-CRA-DUPLICATE-COMPONENT` and `SBOM-FDA-DUPLICATE-COMPONENT` (#440).
+**New rule ids** with no old one: the inventory rules `SBOM-NTIA-INVENTORY`, `SBOM-FDA-INVENTORY`, `SBOM-CRA-INVENTORY`, `SBOM-CISA2026-INVENTORY`, `SBOM-EO14028-INVENTORY`, `SBOM-SSDF-INVENTORY` and `SBOM-BSI-TR-03183-2-INVENTORY` (#397); `SBOM-PQC-ALG-UNKNOWN`, PQC's unknown-algorithm Warning (#400); `SBOM-PQC-PROTO-003`, the federal TLS 1.3 deadline (#437); `SBOM-PQC-HASH-001`, hash functions at 112 bits (#444); and `SBOM-QUALITY-DUPLICATE-COMPONENT`, `SBOM-NTIA-DUPLICATE-COMPONENT`, `SBOM-CRA-DUPLICATE-COMPONENT` and `SBOM-FDA-DUPLICATE-COMPONENT` (#440).
 
 **Changed rule texts.** Some short descriptions, requirements, remediation texts and messages changed. Anything that matches on them should match on rule ids instead:
 - the EO 14028 rules, now worded as practice: OMB M-26-05 rescinded M-22-18 and M-23-16 (#431);
@@ -284,7 +291,7 @@ Text output also gains a `fix:` line under each finding (#408) and an "N checks 
 - **New lines:** `observed:` shows the value the check read (#442), `deadline:` the deadline in deadline mode (#437), and `severity:` a severity a rule setting set (#443). Under the status, an `Excluded:` line counts the components left out for their scope (#443).
 - **New sections:** after the findings, `Not evaluated:` lists the checks the standard did not evaluate, with the reason (#442), and `Suppressed by settings:` lists the rules turned off (#443).
 
-The Markdown, HTML and TUI reports show the new compliance score (#438). The TUI violation detail shows `Field:`, `Observed:` and `Deadline:` lines, and the default severity of an overridden finding (#437, #442, #443). Scripts that read these outputs should switch to `-o json`.
+The Markdown, HTML and TUI reports show the new compliance score (#438), and the HTML footer links to the current repository (#401). The side-by-side report pads rows by characters, not bytes, so rows with `→` line up (#395). The TUI violation detail shows `Field:`, `Observed:` and `Deadline:` lines, and the default severity of an overridden finding (#437, #442, #443). Scripts that read these outputs should switch to `-o json`.
 
 ### Normalized JSON and the C ABI
 
