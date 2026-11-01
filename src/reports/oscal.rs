@@ -1247,6 +1247,63 @@ mod tests {
         );
     }
 
+    /// A finding carries what identifies and resolves it, its observation
+    /// how the check classified it and what it read, as `reports::audit`
+    /// places each field.
+    #[test]
+    fn audit_fields_land_on_the_finding_and_its_observation() {
+        let mut v = component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash");
+        v.standard_refs = v.registry_standard_refs();
+        v.field = Some("components[].supplier.name".to_string());
+        v.observed = Some("NOASSERTION".to_string());
+        let key = crate::quality::finding_key(ComplianceLevel::NtiaMinimum, &v);
+        let document = build(&[result(vec![v])]);
+        let entry = &document["assessment-results"]["results"][0];
+        let finding = &entry["findings"][1];
+        assert_eq!(prop_value(finding, "finding-key"), Some(key.as_str()));
+        assert_eq!(
+            prop_value(finding, "finding-id"),
+            Some(crate::quality::finding_id(&key).as_str())
+        );
+        assert_eq!(
+            finding["links"],
+            serde_json::json!([{
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
+            }])
+        );
+        assert!(
+            finding["remarks"]
+                .as_str()
+                .is_some_and(|r| r.starts_with("Name the supplier of every component")),
+            "the remediation: {finding}"
+        );
+        assert_eq!(prop_value(finding, "severity"), None, "on the observation");
+
+        let observation = &entry["observations"][0];
+        for (name, value) in [
+            ("severity", "error"),
+            ("requirement", "NTIA minimum elements"),
+            ("rule-id", "SBOM-NTIA-SUPPLIER"),
+            ("component-id", "pkg:npm/lodash@4.17.21"),
+            ("field", "components[].supplier.name"),
+            ("observed", "NOASSERTION"),
+        ] {
+            assert_eq!(prop_value(observation, name), Some(value), "{name}");
+        }
+        let reference = observation["props"]
+            .as_array()
+            .expect("props")
+            .iter()
+            .find(|p| p["name"] == "standard-ref")
+            .expect("a reference");
+        assert_eq!(reference["class"], "NtiaMinimum");
+        assert_eq!(reference["value"], "NTIA Minimum Elements");
+        assert_eq!(observation["links"][0]["rel"], "reference");
+        assert_eq!(observation["links"][0]["text"], "NTIA Minimum Elements");
+        assert!(observation.get("remarks").is_none());
+    }
+
     #[test]
     fn document_declares_oscal_1_2_3_and_discovery_observations() {
         let document = build(&[result(vec![violation("missing timestamp")])]);
