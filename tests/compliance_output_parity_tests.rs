@@ -32,8 +32,8 @@ use sbom_tools::quality::{
 };
 use sbom_tools::reports::oscal::generate_assessment_results_at;
 use sbom_tools::reports::{
-    AssessedSbom, SarifOptions, generate_compliance_json_at, generate_compliance_sarif_with,
-    generate_multi_compliance_sarif_with,
+    AssessedSbom, SarifArtifact, SarifArtifactLocation, SarifOptions, generate_compliance_json_at,
+    generate_compliance_sarif_with, generate_multi_compliance_sarif_with,
 };
 use serde_json::Value;
 
@@ -149,9 +149,17 @@ fn render(
 ) -> Outputs {
     let assessed = AssessedSbom::new(sbom, raw.as_bytes()).with_file_name(rel);
     let json = generate_compliance_json_at(&results, &assessed, as_of()).expect("JSON");
-    let sarif =
-        generate_multi_compliance_sarif_with(&results, &SarifOptions::new().with_passes(true))
-            .expect("SARIF");
+    // As `validate` writes it: the SBOM file the results point into, what
+    // the run judged, and the passed checks.
+    let options = SarifOptions::new()
+        .with_artifact(SarifArtifact::new(
+            SarifArtifactLocation::relative(format!("tests/fixtures/{rel}")),
+            sbom,
+            raw,
+        ))
+        .with_subject(&assessed, as_of())
+        .with_passes(true);
+    let sarif = generate_multi_compliance_sarif_with(&results, &options).expect("SARIF");
     let oscal = generate_assessment_results_at(&results, &assessed, as_of()).expect("OSCAL");
     Outputs {
         label: label.to_string(),
@@ -475,6 +483,8 @@ struct Verdict {
     name: String,
     applicable: bool,
     compliant: bool,
+    /// The error, warning, info and passed counts.
+    counts: [Option<u64>; 4],
     score: Option<u64>,
     suppressed: u64,
     excluded_components: u64,
@@ -497,6 +507,7 @@ fn json_verdicts(envelope: &Value) -> Vec<Verdict> {
             name: text(&r["name"]).expect("name"),
             applicable: r["applicable"].as_bool().expect("applicable"),
             compliant: r["compliant"].as_bool().expect("compliant"),
+            counts: ["error", "warning", "info", "passed"].map(|kind| r["counts"][kind].as_u64()),
             score: r["score"].as_u64(),
             suppressed: r["counts"]["suppressed"].as_u64().unwrap_or(0),
             excluded_components: r["excluded_components"].as_u64().unwrap_or(0),
@@ -548,6 +559,8 @@ fn sarif_verdict(v: &Value) -> Verdict {
         name: text(&v["profile"]).expect("profile"),
         applicable: v["applicable"].as_bool().expect("applicable"),
         compliant: v["compliant"].as_bool().expect("compliant"),
+        counts: ["errorCount", "warningCount", "infoCount", "passedCount"]
+            .map(|kind| v[kind].as_u64()),
         score: v["overallScore"].as_f64().map(|s| {
             assert_eq!(s.fract(), 0.0, "a whole score");
             s as u64
@@ -620,6 +633,8 @@ fn oscal_verdicts(document: &Value) -> Vec<Verdict> {
                     other => panic!("applicability {other:?}"),
                 },
                 compliant: prop(entry, "is-compliant").expect("is-compliant") == "true",
+                counts: ["error-count", "warning-count", "info-count", "passed-count"]
+                    .map(|name| prop_count(entry, name)),
                 score: prop_count(entry, "score"),
                 suppressed: prop_count(entry, "suppressed-count").unwrap_or(0),
                 excluded_components: prop_count(entry, "excluded-components").unwrap_or(0),
@@ -760,6 +775,49 @@ fn the_subject_reads_the_same_in_json_and_oscal() {
             text(&out.json["as_of"]),
             text(&out.oscal["assessment-results"]["metadata"]["last-modified"]),
             "{label}: one instant"
+        );
+    }
+}
+
+/// SARIF states the same SBOM and instant: the SBOM artifact, at the file
+/// the results point into, with the SHA-256 as its `sha-256` hash, and
+/// `asOf` and `subject` as run properties.
+#[test]
+fn the_subject_reads_the_same_in_json_and_sarif() {
+    for out in outputs() {
+        let label = &out.label;
+        let subject = &out.json["subject"];
+        let run = &out.sarif["runs"][0];
+        let artifacts = array(&run["artifacts"]);
+        assert_eq!(artifacts.len(), 1, "{label}: the SBOM is the one artifact");
+        assert_eq!(
+            artifacts[0]["hashes"]["sha-256"], subject["sha256"],
+            "{label}"
+        );
+        let uri = artifacts[0]["location"]["uri"].as_str().expect("uri");
+        let name = subject["file_name"].as_str().expect("file_name");
+        assert!(uri.ends_with(&format!("/{name}")), "{label}: {uri}");
+        for result in array(&run["results"]) {
+            assert_eq!(
+                uri, result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+                "{label}: the file the results point into"
+            );
+        }
+        let properties = &run["properties"];
+        assert_eq!(properties["asOf"], out.json["as_of"], "{label}");
+        let sarif = &properties["subject"];
+        for (json, sarif_name) in [
+            ("format", "format"),
+            ("spec_version", "specVersion"),
+            ("components", "components"),
+            ("duplicates", "duplicates"),
+            ("timestamp_unparsed", "timestampUnparsed"),
+        ] {
+            assert_eq!(sarif[sarif_name], subject[json], "{label}: {json}");
+        }
+        assert!(
+            sarif.get("sha256").is_none() && sarif.get("fileName").is_none(),
+            "{label}: the artifact carries those"
         );
     }
 }
