@@ -2,6 +2,7 @@
 # Release script for sbom-tools
 # Usage: scripts/release.sh <version>
 # Example: scripts/release.sh 0.1.11
+#          scripts/release.sh 0.4.0-rc.1   (a pre-release)
 #
 # Supports repos with branch protection: creates a PR for the version bump,
 # waits for CI, then merges (with --admin if needed), tags, and releases.
@@ -13,12 +14,23 @@ VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
     echo "Usage: scripts/release.sh <version>"
     echo "Example: scripts/release.sh 0.1.11"
+    echo "         scripts/release.sh 0.4.0-rc.1   (a pre-release)"
     exit 1
 fi
 
-if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Error: Version '$VERSION' is not valid semver (expected X.Y.Z)"
+# X.Y.Z, or a SemVer pre-release X.Y.Z-PRE such as 0.4.0-rc.1. Every version
+# accepted here also passes the tag check in .github/workflows/publish-crates.yml.
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+(\.[0-9A-Za-z]+)*)?$ ]]; then
+    echo "Error: Version '$VERSION' is not valid semver (expected X.Y.Z or X.Y.Z-rc.N)"
     exit 1
+fi
+
+# Classified as publish-crates.yml classifies it (#433): a pre-release becomes
+# a GitHub pre-release, never "Latest", and the workflow skips the Homebrew tap.
+# This script has no stable-only step of its own.
+PRERELEASE=false
+if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+- ]]; then
+    PRERELEASE=true
 fi
 
 # ── Verify signing key ─────────────────────────────────────────
@@ -53,7 +65,11 @@ if [[ "$LOCAL_SHA" != "$REMOTE_SHA" ]]; then
     exit 1
 fi
 
-echo "==> Releasing sbom-tools v$VERSION"
+if [[ "$PRERELEASE" == "true" ]]; then
+    echo "==> Releasing sbom-tools v$VERSION (pre-release)"
+else
+    echo "==> Releasing sbom-tools v$VERSION"
+fi
 
 # ── Check current version ────────────────────────────────────────
 CURRENT="$(sed -nE 's/^version = "([^"]+)"/\1/p' Cargo.toml | head -n1)"
@@ -160,5 +176,10 @@ git branch -d "$RELEASE_BRANCH" 2>/dev/null || true
 
 echo ""
 echo "Done! Tag v$VERSION pushed."
-echo "  - CI will: publish to crates.io, create GitHub Release, attach SLSA provenance."
+if [[ "$PRERELEASE" == "true" ]]; then
+    echo "  - CI will: publish to crates.io, create a GitHub pre-release (never \"Latest\"), attach SLSA provenance."
+    echo "  - It skips the Homebrew tap, which carries stable releases only."
+else
+    echo "  - CI will: publish to crates.io, create GitHub Release, attach SLSA provenance."
+fi
 echo "  - Monitor: gh run watch \$(gh run list --limit 1 --workflow publish-crates.yml --json databaseId -q '.[0].databaseId')"
