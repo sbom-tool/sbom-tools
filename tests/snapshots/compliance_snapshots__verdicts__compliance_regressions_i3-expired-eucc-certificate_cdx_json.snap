@@ -11,9 +11,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/example/hsm@5.0.0
 [NtiaMinimum] compliant · E0 W0 I1
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/hsm@5.0.0
-[CraPhase1] compliant · E0 W7 I4
+[CraPhase1] compliant · E0 W7 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -23,11 +24,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
-[CraPhase2] NON-COMPLIANT · E1 W8 I6
+[CraPhase2] NON-COMPLIANT · E1 W8 I7
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -104,7 +106,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/example/hsm@5.0.0
 
 with auto-discovered CRA sidecar:
-[CraPhase1 + sidecar] NON-COMPLIANT · E6 W3 I4
+[CraPhase1 + sidecar] NON-COMPLIANT · E6 W3 I5
   E SBOM-CRA-ANNEX-IV  -
   E SBOM-CRA-ANNEX-VIII  -
   E SBOM-CRA-ART-14-EARLY-WARNING  -
@@ -113,12 +115,13 @@ with auto-discovered CRA sidecar:
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (1/1)
   W SBOM-CRA-ART-14-ENISA  -
-[CraPhase2 + sidecar] NON-COMPLIANT · E7 W5 I5
+[CraPhase2 + sidecar] NON-COMPLIANT · E7 W5 I6
   E SBOM-CRA-ANNEX-IV  -
   E SBOM-CRA-ANNEX-V  -
   E SBOM-CRA-ANNEX-VIII  -
@@ -128,6 +131,7 @@ with auto-discovered CRA sidecar:
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/hsm@5.0.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -

@@ -10,8 +10,8 @@
         {"type": "application", "name": "sbom-tools", "version": "0.1.20"}
       ]
     },
-    "supplier": {"name": "ExampleCorp", "url": ["https://example.com"], "contact": [{"name": "Security", "email": "security@example.com"}]},
-    "manufacturer": {"name": "ExampleCorp", "contact": [{"email": "legal@example.com"}]},
+    "supplier": {"name": "ExampleCorp", "url": ["https://examplecorp.example"], "contact": [{"name": "Security", "email": "security@examplecorp.example"}]},
+    "manufacturer": {"name": "ExampleCorp", "contact": [{"email": "legal@examplecorp.example"}]},
     "component": {
       "type": "application",
       "bom-ref": "primary",
@@ -24,9 +24,9 @@
       "externalReferences": [
         {"type": "vcs", "url": "https://github.com/example/example-app"},
         {"type": "issue-tracker", "url": "https://github.com/example/example-app/issues"},
-        {"type": "advisories", "url": "https://example.com/security/advisories"},
-        {"type": "security-contact", "url": "mailto:security@example.com"},
-        {"type": "attestation", "url": "https://example.com/doc.pdf"}
+        {"type": "advisories", "url": "https://examplecorp.example/security/advisories"},
+        {"type": "security-contact", "url": "mailto:security@examplecorp.example"},
+        {"type": "attestation", "url": "https://examplecorp.example/doc.pdf"}
       ]
     }
   },

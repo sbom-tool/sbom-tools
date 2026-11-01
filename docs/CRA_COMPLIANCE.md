@@ -87,8 +87,8 @@ check.
 | `CRA Art. 13(7) / Annex I Part II (1): SBOM freshness`          | Art. 13(7); Annex I Part II (1)   | PRE-7-RQ-04         | §3.1             | regenerate SBOM on each release                           |
 | `CRA Annex I Part II (1): Machine-readable SBOM format`         | Annex I Part II (1)               | PRE-7-RQ-04         | §4               | parse-time check (CycloneDX 1.4+ / SPDX 2.3+)             |
 | `CRA Art. 13(5): Third-party due diligence (license tracking)`  | Art. 13(5)                        | PRE-7-RQ-05         | §5.2.2           | populate component `license` fields                       |
-| `CRA Art. 13(17): Vulnerability disclosure contact`             | Art. 13(17); Annex I Part II (6); Annex II (2) | RLS-2-RQ-01 | §5.2.5 (opt.) | `securityContact` / `vulnerabilityDisclosureUrl` (or a security-contact, advisories or support reference on the product, see [manufacturer evidence](#manufacturer-evidence)) |
-| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl` (or an advisories reference on the product; a support link does not count) |
+| `CRA Art. 13(17): Vulnerability disclosure contact`             | Art. 13(17); Annex I Part II (6); Annex II (2) | RLS-2-RQ-01 | §5.2.5 (opt.) | `securityContact` / `vulnerabilityDisclosureUrl` (or a security-contact, advisories or support reference on the product, see [manufacturer evidence](#manufacturer-evidence)); a [contact](#contacts) that reaches nobody does not count |
+| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` | Annex I Part II (5); Art. 13(8) | RLS-2-RQ-02      | —                | `coordinatedDisclosurePolicyUrl` (or an advisories reference on the product; a support link does not count, nor does a placeholder [contact](#contacts)) |
 | `CRA Art. 13(8): Support period / lifecycle management`         | Art. 13(8)                        | PRE-7-RQ-06         | —                | `supportEndDate` + EOL enrichment                         |
 | `CRA Art. 13(8) / 13(19): Support period disclosure`            | Art. 13(8); Art. 13(19); Annex II (7) | PRE-7-RQ-06     | —                | `supportEndDate`                                          |
 | `CRA Annex I Part II (1): Documented vulnerability information` | Annex I Part II (1)               | RLS-2-RQ-04         | —                | embedded vulnerabilities (or OSV / KEV / VEX enrichment), or a `vulnerability-assertion` / `exploitability-statement` external reference |
@@ -131,6 +131,10 @@ CycloneDX VEX document passed with `--vex` map all nine the same way, each
 to the closest of the five model justifications (see the table below). The
 CSAF reader ignores `flags` and `threats`, so a CSAF `known_not_affected`
 entry does not count yet. Before v0.4.0 every unrated vulnerability warned.
+The other standards' open-vulnerability checks skip the same statements, as
+tool policy kept the same across standards: `SBOM-FDA-SECURITY` does not
+count such a vulnerability as critical or high, and
+`SBOM-PCI-11-3-1-1-SEVERITY` does not ask it for a risk ranking.
 Sources: the FAQ as
 the Commission's Markdown conversion
 (<https://ec.europa.eu/newsroom/dae/redirection/document/123307>) and PDF
@@ -155,6 +159,10 @@ detail) in either path; it is no justification.
 | `CRA Art. 14(2)(a): 24-hour early-warning channel`          | Art. 14(2)(a) / 14(4)(a) | RLS-2-RQ-03 | `earlyWarningContact`                 |
 | `CRA Art. 14(2)(b): 72-hour notification channel`           | Art. 14(2)(b) / 14(4)(b) | RLS-2-RQ-03 | `incidentReportContact`               |
 | `CRA Art. 14(7): ENISA single reporting platform`           | Art. 14(7)     | RLS-2-RQ-03-RE      | `enisaReportingPlatformId` (the CSIRT designated as coordinator is enough) |
+
+The three channels are [contacts](#contacts): a placeholder such as `TBD`, or
+an address at `example.com`, `example.net` or `example.org`, is a missing
+channel, and the finding names it.
 
 Pre-deadline findings are emitted as `Info`; post-deadline they become
 `Warning` (or `Error` at `ImportantClass2`/`Critical` per the
@@ -195,9 +203,9 @@ of the deadline.
 | `CRA Annex I Part II / prEN 40000-1-3 [PRE-7-RQ-07-RE]: Vendor hash carry-through` | Annex I Part II | PRE-7-RQ-07-RE | a [valid](#hash-values) hash on vendor-supplied components |
 | `CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier` | Annex I         | PRE-7-RQ-07         | PURL / CPE / SWID / SWHID on each component             |
 | `CRA Annex I Part II: Supply chain transparency`            | Annex I Part II          | PRE-7-RQ-01,03      | supplier on direct + transitive deps                    |
-| `CRA Annex I Part I (2)(f): Document signature/integrity`   | Annex I Part I (2)(f)    | —                   | serial number / digital signature / attestation hash    |
+| `CRA Annex I Part I (2)(f): Document signature/integrity`   | Annex I Part I (2)(f)    | —                   | a document signature with a value, or an attestation or certification reference on the product that carries a [valid](#hash-values) hash of the referenced document (a serial number does not count) |
 | `CRA Annex I Part I (2)(f): Component integrity information (hash)` | Annex I Part I (2)(f) | —                | a [valid](#hash-values) cryptographic hash (SHA-256+) per component |
-| `CRA Annex IV: EUCC reference (Common Criteria certificate)`| Annex IV                 | —                   | sidecar EUCC evidence fields, a `Certification`/`Attestation` external ref with `eucc`/`common-criteria` URL, or a [CDXA attestation](#attestation-evidence-cyclonedx-16-declarations) naming EUCC / Common Criteria |
+| `CRA Annex IV: EUCC reference (Common Criteria certificate)`| Annex IV                 | —                   | sidecar EUCC evidence fields, a `Certification`/`Attestation` external ref whose URL contains `eucc`, `common-criteria` or `commoncriteria` (any case; the keywords `SBOM-EUCC-CERTREF` and the conformity summary read too), or a [CDXA attestation](#attestation-evidence-cyclonedx-16-declarations) naming EUCC / Common Criteria |
 | `CRA Annex VII: Technical documentation`                    | Annex VII                | —                   | run `sbom-tools cra-docs <sbom> --output dossier/`     |
 | `CRA Annex V: EU Declaration of Conformity reference`       | Annex V                  | —                   | `Attestation`/`Certification` external ref OR `ceMarkingReference` |
 | `CRA Annex VIII: <Module> certificate reference`            | Annex VIII (Module B+C/H/EUCC) | —             | `Certification` external ref (the notified-body or certification-body certificate; an `Attestation` ref does not count) |
@@ -256,10 +264,12 @@ every component).
 This scope applies to the security contact (Art. 13(17)), the CVD policy
 (Annex I Part II (5)), the risk assessment (Art. 13(2)), the EU Declaration
 of Conformity (Annex V), the module certificate (Annex VIII), the EUCC
-reference (Annex IV and `SBOM-EUCC-CERTREF`), the Art. 24 steward floors,
-the `conformity_summary` rows and `SBOM-EO14028-DISCLOSURE`. Before v0.4.0
-every component without an incoming edge counted, and the DoC, risk
-assessment, certificate and EUCC checks read every component.
+reference (Annex IV and `SBOM-EUCC-CERTREF`), the hashed attestation of the
+document-integrity check (Annex I Part I (2)(f)), the Art. 24 steward
+floors, the `conformity_summary` rows and `SBOM-EO14028-DISCLOSURE`. Before
+v0.4.0 every component without an incoming edge counted, and the DoC, risk
+assessment, certificate, EUCC and document-integrity checks read every
+component.
 
 The manufacturer (Art. 13(16), and the FDA device manufacturer) is named by
 any of:
@@ -278,6 +288,15 @@ Placeholders such as `NOASSERTION`, `TBD` or `unknown` name nobody. The
 sidecar `manufacturerName` still lowers the finding to Info. Before v0.4.0
 only an organization creator (with any name) or the sidecar counted.
 
+`sbom-tools cra-docs` names the manufacturer in the Declaration of
+Conformity from the same sources, in the same order: the sidecar's
+`manufacturerName` first (as for the product name), then the first of the
+sources above that gives a name. It writes `_TBD_` only when none does.
+The sidecar comes first because it is the manufacturer's own statement for
+the dossier, while the Art. 13(16) check only asks whether any source names
+the manufacturer, so the order changes no verdict. Before v0.4.0 it read
+only the first organization creator, whatever its name.
+
 The document's vulnerability-disclosure URL, which the CVD policy, EO 14028
 disclosure and PCI DSS checks read, comes from one rule in every format: the
 primary component's first advisories reference whose locator is a URL
@@ -287,6 +306,33 @@ becomes the disclosure URL: a helpdesk is not a disclosure policy. Before
 v0.4.0 the CycloneDX parser also took a support link or any locator, and the
 SPDX 3 parser took nothing, so the same content passed in one format and
 failed in another.
+
+### Contacts
+
+A contact counts only when it reaches someone. A placeholder (`NOASSERTION`,
+`unknown`, `n/a`, `TBD`, an empty `mailto:` and the like) does not, nor does
+an address at one of the domains RFC 2606 reserves for documentation —
+`example.com`, `example.net`, `example.org` and the hosts under them, such as
+`psirt.example.com` — with or without a `mailto:` prefix. Every check that
+reads a contact applies this, in the SBOM and in the CRA sidecar: the
+security contact (Art. 13(17)), the CVD policy, the Art. 14 channels
+(`psirtUrl`, `earlyWarningContact`, `incidentReportContact`), the Art. 24
+steward floors, `SBOM-EO14028-DISCLOSURE`, `SBOM-PCI-6-3-2-VULN-EVIDENCE`
+and `SBOM-SSDF-PW6`, and the SBOM creator's email in `SBOM-FDA-CONTACT` and
+`SBOM-BSI-TR-03183-2-5-1-CONTACT` (BSI TR-03183-2 §5.2.1, which also takes
+the address or URL a creator's name carries). The finding names the value
+that did not count. A VDR or VEX reference is a document, not a contact,
+and is judged as before. Naming the creator, the author or the manufacturer
+still takes its name: only the checks that ask for a contact judge the
+address. Before v0.4.0 these checks took any value, except that PCI DSS
+rejected placeholders in the document's own fields; so the same contact
+passed one standard and failed another.
+
+Only those three second-level domains count as documentation addresses. The
+top-level domains RFC 2606 also reserves (`.example`, `.test`, `.invalid`,
+`.localhost`) do not: test data, this project's fixtures among it, uses
+them for a stand-in real domain such as `psirt@acme.example`, and generator
+templates do not ship them.
 
 ### Hash values
 
@@ -307,8 +353,8 @@ digest instead of failing the whole document.
 
 | Requirement string                                          | CRA reference  | Cleared by                                            |
 |-------------------------------------------------------------|----------------|-------------------------------------------------------|
-| `CRA Art. 24: Vulnerability-handling process (steward floor)` | Art. 24      | `SecurityContact` / `Advisories` / `VulnerabilityAssertion` external ref OR `psirtUrl` / `vulnerabilityDisclosureUrl` |
-| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` |
+| `CRA Art. 24: Vulnerability-handling process (steward floor)` | Art. 24      | `SecurityContact` / `Advisories` / `VulnerabilityAssertion` external ref OR `psirtUrl` / `vulnerabilityDisclosureUrl` (a [contact](#contacts) that reaches nobody does not count) |
+| `CRA Annex I Part II (5): Coordinated vulnerability disclosure policy` (relaxed to Warning under steward) | Annex I Part II (5) | `Advisories` external ref OR `coordinatedDisclosurePolicyUrl` (a [contact](#contacts) that reaches nobody does not count) |
 
 Article 24 *suppresses* manufacturer-only checks (Art. 13(16) email,
 Annex V DoC, Annex VIII certificate, Article 14 channels, hardware

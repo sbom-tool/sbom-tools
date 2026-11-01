@@ -13,11 +13,12 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/openssl@3.2.1
   I SBOM-NTIA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
-[CraPhase1] compliant · E0 W10 I6
+[CraPhase1] compliant · E0 W10 I7
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
@@ -30,12 +31,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/openssl@3.2.1
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W12 I7
+[CraPhase2] NON-COMPLIANT · E1 W12 I8
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/2)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -57,7 +59,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:cargo/openssl@3.2.1
   I SBOM-FDA-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
@@ -134,8 +136,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:cargo/acme-webapp@3.1.0
   W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
 [Comprehensive] NON-COMPLIANT · E2 W2 I1
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/openssl@3.2.1
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/acme-webapp@3.1.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/openssl@3.2.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:cargo/acme-webapp@3.1.0
   W SBOM-QUALITY-HASH  pkg:cargo/acme-webapp@3.1.0
   W SBOM-QUALITY-LICENSE  pkg:cargo/acme-webapp@3.1.0

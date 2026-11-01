@@ -98,9 +98,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
   E SBOM-FDA-SUPPLIER  pkg:pypi/vllm@0-8-5
   W SBOM-FDA-CONTACT  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-NAMESPACE  -
   W SBOM-FDA-SECURITY  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I1
   E SBOM-SSDF-PS1  -
@@ -192,14 +192,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (7/7)
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E8 W9 I0
-  E SBOM-NTIA-SUPPLIER  pkg:npm/acme-ai-studio@3.3.0
-  E SBOM-NTIA-SUPPLIER  pkg:npm/axios-builder@1.2.1
-  E SBOM-NTIA-SUPPLIER  pkg:npm/axios@1.7.9
-  E SBOM-NTIA-SUPPLIER  pkg:npm/lodash@4.17.15
-  E SBOM-NTIA-SUPPLIER  pkg:npm/zod@3.23.8
-  E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
-  E SBOM-NTIA-SUPPLIER  pkg:pypi/vllm@0-8-5
   E SBOM-QUALITY-CREATOR  -
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/acme-ai-studio@3.3.0
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/axios-builder@1.2.1
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/axios@1.7.9
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/lodash@4.17.15
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/zod@3.23.8
+  E SBOM-QUALITY-SUPPLIER  pkg:pypi/vllm-plugins@99-99-99
+  E SBOM-QUALITY-SUPPLIER  pkg:pypi/vllm@0-8-5
   W SBOM-QUALITY-HASH  pkg:npm/acme-ai-studio@3.3.0
   W SBOM-QUALITY-HASH  pkg:npm/axios-builder@1.2.1
   W SBOM-QUALITY-HASH  pkg:npm/axios@1.7.9

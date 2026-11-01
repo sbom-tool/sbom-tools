@@ -42,10 +42,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-CVD-POLICY  -
-[FdaMedicalDevice] compliant · E0 W1 I3
+[FdaMedicalDevice] compliant · E0 W2 I3
   I SBOM-FDA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-FDA-ELEMENT-ID  pkg:generic/libyaml@0.2.5
   I SBOM-FDA-ELEMENT-ID  pkg:generic/zlib@1.3.1
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W1 I2
   I SBOM-SSDF-PO3  -
@@ -57,8 +58,9 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-000  -
 [NistPqc] NON-COMPLIANT · E1 W0 I0
   E SBOM-PQC-000  -
-[BsiTr03183_2] NON-COMPLIANT · E1 W0 I0
+[BsiTr03183_2] NON-COMPLIANT · E1 W1 I0
   E SBOM-BSI-TR-03183-2-4  -
+  W SBOM-BSI-TR-03183-2-5-1-CONTACT  -
 [CraOssSteward] NON-COMPLIANT · E1 W1 I3
   E SBOM-CRA-ART-24  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0

@@ -68,8 +68,15 @@ pub struct DocumentMetadata {
     pub completeness_declaration: CompletenessDeclaration,
     /// Digital signature information (from CycloneDX signature field)
     pub signature: Option<SignatureInfo>,
-    /// Distribution classification (e.g., TLP: CLEAR, GREEN, AMBER, RED)
+    /// Distribution classification: the TLP label of CycloneDX 1.7
+    /// `metadata.distributionConstraints.tlp` (CLEAR, GREEN, AMBER, RED).
     pub distribution_classification: Option<String>,
+    /// The profiles an SPDX 3 document declares in `profileConformance`
+    /// (e.g. `core`, `software`, `security`), in document order. Empty for
+    /// other formats. Until v0.4.0 the SPDX 3 parser joined them into
+    /// `distribution_classification`. Additive: skipped in JSON when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub profile_conformance: Vec<String>,
     /// Number of data provenance citations (CycloneDX 1.7+)
     pub citations_count: usize,
 }
@@ -231,6 +238,7 @@ impl Default for DocumentMetadata {
             completeness_declaration: CompletenessDeclaration::default(),
             signature: None,
             distribution_classification: None,
+            profile_conformance: Vec::new(),
             citations_count: 0,
         }
     }

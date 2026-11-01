@@ -316,21 +316,25 @@ impl ComplianceChecker {
 
         // Sec 4(e)(viii) — Vulnerability disclosure program. Component-level refs count
         // only on the described product components — a dependency's
-        // upstream advisories URL is not the vendor's disclosure process.
-        let has_security_ref = sbom.document.security_contact.is_some()
-            || sbom.document.vulnerability_disclosure_url.is_some()
+        // upstream advisories URL is not the vendor's disclosure process. A
+        // contact counts only when it reaches someone (`known_contact`), as
+        // for the CRA and PCI DSS checks: until v0.4.0 any value did.
+        let has_security_ref = known_contact(sbom.document.security_contact.as_deref())
+            || known_contact(sbom.document.vulnerability_disclosure_url.as_deref())
             || manufacturer_reference(sbom, |r| {
                 matches!(
                     r.ref_type,
                     ExternalRefType::SecurityContact | ExternalRefType::Advisories
-                )
+                ) && is_contact_reference(r)
             });
         if !has_security_ref {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::SecurityInfo,
-                message: "No security contact or vulnerability disclosure reference found"
-                    .to_string(),
+                message: format!(
+                    "No security contact or vulnerability disclosure reference found{}",
+                    unreachable_contact_note(sbom)
+                ),
                 element: None,
                 requirement: "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program"
                     .to_string(),

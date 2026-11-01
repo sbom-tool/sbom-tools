@@ -154,26 +154,21 @@ impl ComplianceChecker {
 
         // 5. EUCC Certification external ref (recommended) — checked
         // structurally; satisfied when the described product carries a
-        // Certification or Attestation ref whose URL contains "eucc" or
-        // "common-criteria" (a dependency's own certificate does not cover
-        // the product), OR when the document carries fresh, fully-resolved
-        // CDXA attestation evidence for a CRA-classified standard naming
-        // EUCC / Common Criteria (Structural/SignaturePresent level; the
-        // URL-substring scan remains the SelfDeclared fallback).
+        // Certification or Attestation ref whose URL contains "eucc",
+        // "common-criteria" or "commoncriteria" (`is_eucc_reference`, the
+        // test the CRA Annex IV check shares; a dependency's own certificate
+        // does not cover the product), OR when the document carries fresh,
+        // fully-resolved CDXA attestation evidence for a CRA-classified
+        // standard naming EUCC / Common Criteria (Structural/SignaturePresent
+        // level; the URL-substring scan remains the SelfDeclared fallback).
+        // Until v0.4.0 this check did not read "commoncriteria".
         let ctx = ComplianceContext::new(self, sbom);
         let cdxa_eucc_attested = ctx
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()
             .any(|s| standard_references_eucc(s.standard));
-        let eucc_ref_present = cdxa_eucc_attested
-            || manufacturer_reference(sbom, |r| {
-                let url = r.url.to_lowercase();
-                matches!(
-                    r.ref_type,
-                    crate::model::ExternalRefType::Certification
-                        | crate::model::ExternalRefType::Attestation
-                ) && (url.contains("eucc") || url.contains("common-criteria"))
-            });
+        let eucc_ref_present =
+            cdxa_eucc_attested || manufacturer_reference(sbom, is_eucc_reference);
         if !eucc_ref_present {
             let mut message = "[EUCC] No Certification/Attestation external reference points at an EUCC URL (recommended)".to_string();
             if let Some(note) = cdxa_note(

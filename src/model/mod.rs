@@ -36,7 +36,7 @@ pub use cra_sidecar::*;
 pub use crypto::*;
 pub use identifiers::*;
 pub use index::*;
-pub(crate) use known::{is_declared_unknown, is_known, is_placeholder};
+pub(crate) use known::{is_declared_unknown, is_known, is_known_contact, is_placeholder};
 pub use license::*;
 pub use merge::DuplicateComponent;
 pub use metadata::*;

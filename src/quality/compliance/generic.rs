@@ -240,26 +240,23 @@ impl ComplianceChecker {
             }
 
             // CRA: Security contact / vulnerability disclosure point
-            // First check document-level security contact (preferred)
-            let has_doc_security_contact = sbom.document.security_contact.is_some()
-                || sbom.document.vulnerability_disclosure_url.is_some();
+            // First check document-level security contact (preferred). A
+            // contact counts only when it reaches someone (`known_contact`):
+            // NOASSERTION, n/a or an example.com address is no contact, as
+            // for the EO 14028 and PCI DSS checks.
+            let has_doc_security_contact = known_contact(sbom.document.security_contact.as_deref())
+                || known_contact(sbom.document.vulnerability_disclosure_url.as_deref());
 
             // Fallback: check component-level external refs — but only on the
             // described product components. A third-party dependency's
             // upstream advisories or support URL is not the manufacturer's
             // contact.
-            let has_component_security_contact = manufacturer_reference(sbom, |r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::SecurityContact
-                        | ExternalRefType::Support
-                        | ExternalRefType::Advisories
-                )
-            });
+            let has_component_security_contact = manufacturer_reference(sbom, is_contact_reference);
 
             if !has_doc_security_contact && !has_component_security_contact {
                 let sidecar_has_security = self.sidecar.as_ref().is_some_and(|s| {
-                    s.security_contact.is_some() || s.vulnerability_disclosure_url.is_some()
+                    known_contact(s.security_contact.as_deref())
+                        || known_contact(s.vulnerability_disclosure_url.as_deref())
                 });
                 if sidecar_has_security {
                     violations.push(Violation {
@@ -281,7 +278,18 @@ impl ComplianceChecker {
                     violations.push(Violation {
                         severity: ViolationSeverity::Warning,
                         category: ViolationCategory::SecurityInfo,
-                        message: "[CRA Art. 13(17)] SBOM should include a security contact or vulnerability disclosure reference".to_string(),
+                        message: format!(
+                            "[CRA Art. 13(17)] SBOM should include a security contact or vulnerability disclosure reference{}{}{}",
+                            unreachable_contact_note(sbom),
+                            unreachable_sidecar_note(
+                                self.sidecar.as_ref().and_then(|s| s.security_contact.as_deref())
+                            ),
+                            unreachable_sidecar_note(
+                                self.sidecar
+                                    .as_ref()
+                                    .and_then(|s| s.vulnerability_disclosure_url.as_deref())
+                            ),
+                        ),
                         element: None,
                         requirement: "CRA Art. 13(17): Vulnerability disclosure contact"
                             .to_string(),
@@ -415,16 +423,18 @@ impl ComplianceChecker {
             // product components — a dependency's upstream advisories URL is
             // not the manufacturer's CVD policy. The disclosure URL comes from
             // the primary's URL-shaped advisories reference only: a support
-            // link is no disclosure policy.
-            let has_vuln_disclosure_policy = sbom.document.vulnerability_disclosure_url.is_some()
-                || manufacturer_reference(sbom, |r| {
-                    matches!(r.ref_type, ExternalRefType::Advisories)
-                });
+            // link is no disclosure policy. A placeholder URL is no policy
+            // either (`known_contact`).
+            let has_vuln_disclosure_policy =
+                known_contact(sbom.document.vulnerability_disclosure_url.as_deref())
+                    || manufacturer_reference(sbom, |r| {
+                        matches!(r.ref_type, ExternalRefType::Advisories) && is_contact_reference(r)
+                    });
             if !has_vuln_disclosure_policy {
                 let sidecar_has_cvd = self
                     .sidecar
                     .as_ref()
-                    .is_some_and(|s| s.vulnerability_disclosure_url.is_some());
+                    .is_some_and(|s| known_contact(s.vulnerability_disclosure_url.as_deref()));
                 if sidecar_has_cvd {
                     violations.push(Violation {
                         severity: ViolationSeverity::Info,
@@ -519,18 +529,21 @@ impl ComplianceChecker {
 
         // FDA requires the device manufacturer: an organization creator, or
         // the product's own manufacturer or supplier (see
-        // `manufacturer_identified`).
+        // `manufacturer_identified`). It reports under a rule of its own:
+        // SBOM-FDA-SUPPLIER is the per-component supplier element below
+        // (until v0.4.0 both checks shared that id).
         if matches!(self.level, ComplianceLevel::FdaMedicalDevice) {
             if !manufacturer_identified(sbom) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
                     message: "FDA: SBOM should identify the device manufacturer (an organization \
-                              creator, or the manufacturer or supplier of the primary component)"
+                              creator, the product's supplier, or the manufacturer or supplier \
+                              of the primary component)"
                         .to_string(),
                     element: None,
                     requirement: "FDA: Manufacturer identification".to_string(),
-                    rule_id: "SBOM-FDA-SUPPLIER",
+                    rule_id: "SBOM-FDA-MANUFACTURER",
                     component_id: None,
                     counts: None,
                     standard_refs: Vec::new(),
@@ -540,13 +553,23 @@ impl ComplianceChecker {
                 });
             }
 
-            // FDA recommends contact information
-            let has_contact = sbom.document.creators.iter().any(|c| c.email.is_some());
-            if !has_contact {
+            // FDA recommends contact information: a creator email that
+            // reaches someone (see `known_contact`), judged as every other
+            // contact check judges one.
+            let emails = || {
+                sbom.document
+                    .creators
+                    .iter()
+                    .filter_map(|c| c.email.as_deref())
+            };
+            if !emails().any(|email| known_contact(Some(email))) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
-                    message: "FDA: SBOM creators should include contact email".to_string(),
+                    message: format!(
+                        "FDA: SBOM creators should include contact email{}",
+                        unreachable_creator_note(emails())
+                    ),
                     element: None,
                     requirement: "FDA: Contact information".to_string(),
                     rule_id: "SBOM-FDA-CONTACT",
@@ -614,6 +637,8 @@ impl ComplianceChecker {
         // source timestamp is stored as the UNIX_EPOCH sentinel (see
         // `has_known_timestamp`), so gate on that rather than assuming it is
         // always meaningful. An invalid one is quoted, not called missing.
+        // Each level reports the check under its own family's id (until
+        // v0.4.0 FDA and Comprehensive reported SBOM-NTIA-TIMESTAMP).
         if matches!(
             self.level,
             ComplianceLevel::NtiaMinimum
@@ -621,10 +646,14 @@ impl ComplianceChecker {
                 | ComplianceLevel::Comprehensive
         ) && !sbom.document.has_known_timestamp()
         {
-            let requirement = if self.level == ComplianceLevel::FdaMedicalDevice {
-                "FDA (NTIA baseline): Timestamp".to_string()
-            } else {
-                "NTIA Minimum Elements: Timestamp".to_string()
+            let (requirement, rule_id) = match self.level {
+                ComplianceLevel::NtiaMinimum => {
+                    ("NTIA Minimum Elements: Timestamp", "SBOM-NTIA-TIMESTAMP")
+                }
+                ComplianceLevel::FdaMedicalDevice => {
+                    ("FDA (NTIA baseline): Timestamp", "SBOM-FDA-TIMESTAMP")
+                }
+                _ => ("SBOM creation timestamp", "SBOM-QUALITY-TIMESTAMP"),
             };
             let message = unparseable_timestamp(sbom).map_or_else(
                 || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
@@ -635,8 +664,8 @@ impl ComplianceChecker {
                 category: ViolationCategory::DocumentMetadata,
                 message,
                 element: None,
-                requirement,
-                rule_id: "SBOM-NTIA-TIMESTAMP",
+                requirement: requirement.to_string(),
+                rule_id,
                 component_id: None,
                 counts: None,
                 standard_refs: Vec::new(),
@@ -817,10 +846,17 @@ impl ComplianceChecker {
                         ),
                         "SBOM-CRA-COMPONENT-VERSION",
                     ),
-                    _ => (
+                    ComplianceLevel::NtiaMinimum => (
                         "NTIA: Component version".to_string(),
                         format!("Component '{}' missing version", comp.name),
                         "SBOM-NTIA-VERSION",
+                    ),
+                    // Standard and Comprehensive, whose checks report under
+                    // SBOM-QUALITY-* ids (SBOM-NTIA-VERSION until v0.4.0).
+                    _ => (
+                        "Component version".to_string(),
+                        format!("Component '{}' missing version", comp.name),
+                        "SBOM-QUALITY-VERSION",
                     ),
                 };
                 violations.push(Violation {
@@ -964,10 +1000,16 @@ impl ComplianceChecker {
                         "CRA Art. 24 (steward): Component supplier information".to_string(),
                         "SBOM-CRA-ART-24-SUPPLIER",
                     ),
-                    _ => (
+                    ComplianceLevel::NtiaMinimum => (
                         format!("Component '{}' missing supplier/manufacturer", comp.name),
                         "NTIA: Supplier information".to_string(),
                         "SBOM-NTIA-SUPPLIER",
+                    ),
+                    // Comprehensive (SBOM-NTIA-SUPPLIER until v0.4.0).
+                    _ => (
+                        format!("Component '{}' missing supplier/manufacturer", comp.name),
+                        "Component supplier information".to_string(),
+                        "SBOM-QUALITY-SUPPLIER",
                     ),
                 };
                 violations.push(Violation {
@@ -986,17 +1028,35 @@ impl ComplianceChecker {
                 });
             }
 
-            // Standard+: should have license information
+            // Standard+: should have license information. The licence test
+            // every standard shares (`has_known_license`): a sentinel such as
+            // NOASSERTION or a placeholder such as TBD names no licence, as
+            // under CRA Art. 13(5) (until v0.4.0 any value passed here).
             if matches!(
                 self.level,
                 ComplianceLevel::Standard | ComplianceLevel::Comprehensive
-            ) && comp.licenses.declared.is_empty()
-                && comp.licenses.concluded.is_none()
+            ) && !has_known_license(comp)
             {
+                let present: Vec<&str> = comp
+                    .licenses
+                    .all_licenses()
+                    .iter()
+                    .map(|l| l.expression.trim())
+                    .filter(|e| !e.is_empty())
+                    .collect();
+                let message = if present.is_empty() {
+                    format!("Component '{}' should have license information", comp.name)
+                } else {
+                    format!(
+                        "Component '{}' should have license information: '{}' names no license",
+                        comp.name,
+                        present.join("', '")
+                    )
+                };
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::LicenseInfo,
-                    message: format!("Component '{}' should have license information", comp.name),
+                    message,
                     element: Some(comp.name.clone()),
                     requirement: "License declaration".to_string(),
                     rule_id: "SBOM-QUALITY-LICENSE",
@@ -1169,7 +1229,11 @@ impl ComplianceChecker {
                 ComplianceLevel::FdaMedicalDevice => {
                     ("FDA: Dependency relationships", "SBOM-FDA-DEPENDENCY")
                 }
-                _ => ("NTIA: Dependency relationships", "SBOM-NTIA-DEPENDENCY"),
+                ComplianceLevel::NtiaMinimum => {
+                    ("NTIA: Dependency relationships", "SBOM-NTIA-DEPENDENCY")
+                }
+                // Comprehensive (SBOM-NTIA-DEPENDENCY until v0.4.0).
+                _ => ("Dependency relationships", "SBOM-QUALITY-DEPENDENCY"),
             };
 
             if has_multiple_components && !has_deps {
@@ -1367,8 +1431,16 @@ impl ComplianceChecker {
             use crate::model::Severity;
             use std::collections::HashSet;
             // Count distinct vulnerability ids — one CVE affecting five
-            // components is one vulnerability, not five.
-            let vulns = sbom.all_vulnerabilities();
+            // components is one vulnerability, not five. A vulnerability
+            // whose own VEX statement is a justified not_affected is not
+            // unresolved: it documents why the device is not affected, as
+            // the CRA Phase 2 checks below accept (`justified_not_affected`).
+            // Until v0.4.0 every entry counted, whatever its VEX state.
+            let vulns: Vec<_> = sbom
+                .all_vulnerabilities()
+                .into_iter()
+                .filter(|(_, v)| !justified_not_affected(v))
+                .collect();
             let critical = vulns
                 .iter()
                 .filter(|(_, v)| matches!(v.severity, Some(Severity::Critical)))
@@ -1708,25 +1780,4 @@ impl ComplianceChecker {
             }
         }
     }
-}
-
-/// Whether the vulnerability's own VEX statement is `not_affected` and names
-/// its justification (CycloneDX `analysis.justification`, OpenVEX
-/// `justification`, SPDX 3.0 `justificationType`).
-///
-/// The CRA FAQ (v1.4, 4.3.1) has the manufacturer judge a vulnerability's
-/// relevance for the product; where it "cannot be exploited", the
-/// manufacturer "may be expected, for example, to document the
-/// vulnerability, but may decide not to fix it with a dedicated update". A
-/// justified `not_affected` statement is that record (Annex I Part II (1)),
-/// and Annex I Part II (4), which asks for the severity and the remediation,
-/// covers fixed vulnerabilities. A bare `not_affected` claim gives no reason
-/// and counts for nothing, nor does a free-text detail without a
-/// justification. Only the vulnerability's own statement counts: the
-/// component-level VEX status sums up all of the component's statements and
-/// is no statement about this one.
-fn justified_not_affected(vuln: &crate::model::VulnerabilityRef) -> bool {
-    vuln.vex_status.as_ref().is_some_and(|vex| {
-        vex.status == crate::model::VexState::NotAffected && vex.justification.is_some()
-    })
 }

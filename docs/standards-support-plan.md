@@ -26,11 +26,13 @@ distribution constraint in `DocumentMetadata.distribution_classification`,
 `HashAlgorithm::Streebog256`/`Streebog512`, and the `Citation` / `Patent` /
 `PatentAssertion` / `PatentFamily` external-reference types.
 
-Two deviations from Part 2's model plan are worth knowing:
+SPDX 3.0 `profileConformance` has the dedicated field Part 2 planned,
+`DocumentMetadata.profile_conformance`, since v0.4.0; before, it was
+surfaced through `DocumentMetadata.distribution_classification`, the TLP
+field, so the TUI showed the profiles as a distribution classification.
 
-- SPDX 3.0 `profileConformance` is surfaced through
-  `DocumentMetadata.distribution_classification` — there is no dedicated
-  `profile_conformance` field.
+One deviation from Part 2's model plan is worth knowing:
+
 - There is no `root_elements` list; the first resolvable `rootElement`
   (following at most one collection indirection) becomes
   `primary_component_id`.

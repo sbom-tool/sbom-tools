@@ -233,11 +233,19 @@ fn bsi_ai_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.tools.clear()),
             base(),
         ),
+        // A signature object without a value is no signature, as for CISA
+        // 2026, FSCT and the CRA document-integrity check (until v0.4.0 any
+        // signature object passed here).
         RuleEntry::tested(
             "SBOM-BSIAI-META-SIGNATURE",
             Sev::Info,
             broken(|s| s.signature = None),
             base(),
+        )
+        .with_firing(
+            "signature without a value",
+            Sev::Info,
+            broken(|s| s.signature = Some(("ES256".to_string(), String::new()))),
         ),
         // ── System-Level cluster ───────────────────────────────────────────
         RuleEntry::tested(

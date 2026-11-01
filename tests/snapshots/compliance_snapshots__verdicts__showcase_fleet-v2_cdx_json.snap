@@ -79,8 +79,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:npm/fleet-app@1.1.0
   E SBOM-FDA-SUPPLIER  pkg:npm/zod@3.23.8
   W SBOM-FDA-CONTACT  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-NAMESPACE  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I2
   E SBOM-SSDF-PS1  -
@@ -162,11 +162,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-TRANSITIVE-DEPS  -
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E5 W6 I0
-  E SBOM-NTIA-SUPPLIER  pkg:npm/axios@1.7.9
-  E SBOM-NTIA-SUPPLIER  pkg:npm/express@4.19.2
-  E SBOM-NTIA-SUPPLIER  pkg:npm/fleet-app@1.1.0
-  E SBOM-NTIA-SUPPLIER  pkg:npm/zod@3.23.8
   E SBOM-QUALITY-CREATOR  -
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/axios@1.7.9
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/express@4.19.2
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/fleet-app@1.1.0
+  E SBOM-QUALITY-SUPPLIER  pkg:npm/zod@3.23.8
   W SBOM-QUALITY-HASH  pkg:npm/axios@1.7.9
   W SBOM-QUALITY-HASH  pkg:npm/express@4.19.2
   W SBOM-QUALITY-HASH  pkg:npm/fleet-app@1.1.0

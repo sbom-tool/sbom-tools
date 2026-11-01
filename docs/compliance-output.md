@@ -162,7 +162,7 @@ identity.
 | `deadline` | string | `YYYY-MM-DD`. Under `--pqc-mode deadline`, the migration milestone a `cnsa2` or `pqc` finding is judged against: the last day before its severity rises, or, for an error, the last day the algorithm was allowed (see [PQC deadline mode](#pqc-deadline-mode)). Absent in readiness mode and for a finding no schedule dates. |
 | `deadline_source` | string | The schedule that sets `deadline`, e.g. `NIST IR 8547 Table 4`. Present exactly when `deadline` is. |
 | `requirement` | string | The requirement, as text. |
-| `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. |
+| `rule_id` | string | Stable internal rule key, e.g. `SBOM-NTIA-SUPPLIER`. Every standard reports under its own family's ids (`SBOM-NTIA-*` for `ntia`, `SBOM-FDA-*` for `fda`, and the `SBOM-QUALITY-*` rules of the `quality` profiles). Until v0.4.0 the Standard and Comprehensive quality profiles reported their version, timestamp, supplier and dependency checks as `SBOM-NTIA-*`, FDA its timestamp as `SBOM-NTIA-TIMESTAMP`, and `SBOM-FDA-SUPPLIER` named both the device manufacturer and the component supplier (the manufacturer is `SBOM-FDA-MANUFACTURER` now). |
 | `sarif_rule_id` | string | The rule id `-o sarif` reports for this violation. Every check is its own SARIF rule, so this equals `rule_id` (until v0.4.0 several `rule_id`s shared one). |
 | `standard_refs` | array | `{standard, id, help_uri?}` references to the clauses the rule implements. Absent when empty. |
 

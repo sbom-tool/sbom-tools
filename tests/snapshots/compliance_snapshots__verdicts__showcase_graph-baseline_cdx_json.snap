@@ -90,8 +90,8 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:generic/auth-service@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:generic/policy-engine@1.0.0
   W SBOM-FDA-CONTACT  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-NAMESPACE  -
-  W SBOM-FDA-SUPPLIER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W3 I2
   E SBOM-SSDF-PS1  -
@@ -181,12 +181,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/5)
   W SBOM-FSCT-UPSTREAM-SBOM  -
 [Comprehensive] NON-COMPLIANT · E6 W11 I0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/acme-graph-app@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/api-gateway@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/audit-sdk@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/auth-service@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/policy-engine@1.0.0
   E SBOM-QUALITY-CREATOR  -
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/acme-graph-app@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/api-gateway@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/audit-sdk@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/auth-service@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/policy-engine@1.0.0
   W SBOM-QUALITY-HASH  pkg:generic/acme-graph-app@1.0.0
   W SBOM-QUALITY-HASH  pkg:generic/api-gateway@1.0.0
   W SBOM-QUALITY-HASH  pkg:generic/audit-sdk@1.0.0

@@ -429,31 +429,35 @@ impl ComplianceChecker {
             .components
             .values()
             .any(|c| !c.vulnerabilities.is_empty());
+        // A contact (an advisories or security-contact reference, the
+        // document's security contact or disclosure URL) counts only when it
+        // reaches someone (`known_contact`), as for the CRA and EO 14028
+        // checks; a VDR or linked BOM is a document, not a contact.
         let has_hook_ref = sbom.components.values().any(|c| {
-            c.external_refs.iter().any(|r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::Advisories
-                        | ExternalRefType::VulnerabilityAssertion
-                        | ExternalRefType::Bom
-                        | ExternalRefType::SecurityContact
-                )
+            c.external_refs.iter().any(|r| match r.ref_type {
+                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
+                    is_contact_reference(r)
+                }
+                ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
+                _ => false,
             })
         });
-        let has_contact = has_known_value(&sbom.document.security_contact)
-            || has_known_value(&sbom.document.vulnerability_disclosure_url);
+        let has_contact = known_contact(sbom.document.security_contact.as_deref())
+            || known_contact(sbom.document.vulnerability_disclosure_url.as_deref());
         if has_embedded_vulns || has_hook_ref || has_contact {
             return;
         }
         violations.push(Violation {
             severity: ViolationSeverity::Info,
             category: ViolationCategory::SecurityInfo,
-            message: "[PCI DSS TP 6.3.2.a] SBOM carries no vulnerability-management hooks (no \
-                      embedded vulnerability data, no advisories / vulnerability-assertion / \
-                      linked-VDR external reference, no security contact or disclosure URL); \
-                      this is not a Req. 6.3.2 failure — the inventory may feed an external \
-                      scanner, and actual use of the inventory is assessor-verified"
-                .to_string(),
+            message: format!(
+                "[PCI DSS TP 6.3.2.a] SBOM carries no vulnerability-management hooks (no \
+                 embedded vulnerability data, no advisories / vulnerability-assertion / \
+                 linked-VDR external reference, no security contact or disclosure URL); this \
+                 is not a Req. 6.3.2 failure — the inventory may feed an external scanner, and \
+                 actual use of the inventory is assessor-verified{}",
+                unreachable_contact_note(sbom)
+            ),
             element: None,
             requirement: "PCI DSS v4.0.1 TP 6.3.2.a: vulnerability-management hooks".to_string(),
             rule_id: "SBOM-PCI-6-3-2-VULN-EVIDENCE",
@@ -482,10 +486,19 @@ impl ComplianceChecker {
     /// is not applicable and stays silent (no vacuous pass/fail).
     fn check_pci_risk_ranking(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
         let all = sbom.all_vulnerabilities();
-        if all.is_empty() {
+        // A vulnerability whose own VEX statement is a justified
+        // not_affected does not apply to the product, so it needs no risk
+        // ranking to be managed: the CRA and FDA vulnerability checks skip
+        // it the same way (`justified_not_affected`). Until v0.4.0 every
+        // entry counted, whatever its VEX state.
+        let open: Vec<_> = all
+            .iter()
+            .filter(|(_, vuln)| !justified_not_affected(vuln))
+            .collect();
+        if open.is_empty() {
             return;
         }
-        let unranked: Vec<String> = all
+        let unranked: Vec<String> = open
             .iter()
             .filter(|(_, vuln)| {
                 !matches!(
@@ -498,6 +511,14 @@ impl ComplianceChecker {
         if unranked.is_empty() {
             return;
         }
+        let not_affected_note = match all.len() - open.len() {
+            0 => String::new(),
+            1 => "; 1 more entry has a justified not_affected VEX statement and needs none"
+                .to_string(),
+            n => format!(
+                "; {n} more entries have a justified not_affected VEX statement and need none"
+            ),
+        };
         violations.push(Violation {
             severity: ViolationSeverity::Warning,
             category: ViolationCategory::SecurityInfo,
@@ -505,9 +526,10 @@ impl ComplianceChecker {
                 "[PCI DSS 6.3.1 / 11.3.1.1] {affected}/{total} embedded vulnerability entries \
                  carry no risk ranking (no Critical/High/Medium/Low severity and no CVSS \
                  score): {list} — unranked entries cannot be managed per the entity's \
-                 Req. 6.3.1 risk rankings and the Req. 11.3.1.1 targeted risk analysis",
+                 Req. 6.3.1 risk rankings and the Req. 11.3.1.1 targeted risk \
+                 analysis{not_affected_note}",
                 affected = unranked.len(),
-                total = all.len(),
+                total = open.len(),
                 list = truncate_list(&unranked, 5),
             ),
             element: None,
@@ -517,7 +539,7 @@ impl ComplianceChecker {
             component_id: None,
             counts: Some(ViolationCounts {
                 affected: unranked.len(),
-                total: all.len(),
+                total: open.len(),
             }),
             standard_refs: Vec::new(),
             remediation: None,
@@ -1091,6 +1113,79 @@ mod tests {
                 .iter()
                 .any(|v| v.rule_id == "SBOM-PCI-11-3-1-1-SEVERITY"),
             "a severity-ranked entry is ranked"
+        );
+    }
+
+    /// An entry whose own VEX statement is a justified not_affected needs no
+    /// ranking: it is left out of the counts, and the message says how many
+    /// were. A bare not_affected claim still needs one.
+    #[test]
+    fn risk_ranking_leaves_out_justified_not_affected_entries() {
+        use crate::model::{VexJustification, VexState, VexStatus};
+        let unranked = |id: &str| {
+            let mut vuln = VulnerabilityRef::new(id.to_string(), VulnerabilitySource::Nvd);
+            vuln.severity = Some(Severity::Unknown);
+            vuln
+        };
+        let not_affected = |id: &str, justified: bool| {
+            let mut vex = VexStatus::new(VexState::NotAffected);
+            if justified {
+                vex.justification = Some(VexJustification::VulnerableCodeNotInExecutePath);
+            }
+            let mut vuln = unranked(id);
+            vuln.vex_status = Some(vex);
+            vuln
+        };
+        let finding = |vulns: Vec<VulnerabilityRef>| {
+            let mut sbom = conforming_sbom();
+            let primary_id = sbom.primary_component_id.clone().expect("primary set");
+            sbom.components
+                .get_mut(&primary_id)
+                .expect("primary resolves")
+                .vulnerabilities
+                .extend(vulns);
+            run(&sbom)
+                .into_iter()
+                .find(|v| v.rule_id == "SBOM-PCI-11-3-1-1-SEVERITY")
+        };
+
+        // Nothing is open, so nothing needs a ranking.
+        assert!(finding(vec![not_affected("CVE-2026-2000", true)]).is_none());
+
+        let bare = finding(vec![not_affected("CVE-2026-2001", false)])
+            .expect("a bare not_affected claim needs a ranking");
+        assert_eq!(
+            bare.counts,
+            Some(ViolationCounts {
+                affected: 1,
+                total: 1
+            })
+        );
+
+        let mut ranked =
+            VulnerabilityRef::new("CVE-2026-2003".to_string(), VulnerabilitySource::Nvd);
+        ranked.severity = Some(Severity::Low);
+        let mixed = finding(vec![
+            unranked("CVE-2026-2002"),
+            ranked,
+            not_affected("CVE-2026-2004", true),
+        ])
+        .expect("the open unranked entry fires");
+        assert_eq!(
+            mixed.counts,
+            Some(ViolationCounts {
+                affected: 1,
+                total: 2
+            })
+        );
+        assert!(
+            mixed.message.contains("1/2 embedded vulnerability entries")
+                && mixed.message.ends_with(
+                    "; 1 more entry has a justified not_affected VEX statement and needs none"
+                )
+                && !mixed.message.contains("CVE-2026-2004"),
+            "{}",
+            mixed.message
         );
     }
 

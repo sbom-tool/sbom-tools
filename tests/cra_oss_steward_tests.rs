@@ -25,7 +25,7 @@ fn sbom_with_security_contact() -> NormalizedSbom {
         .with_purl("pkg:cargo/foo@1.0".to_string());
     c.external_refs.push(ExternalReference {
         ref_type: ExternalRefType::SecurityContact,
-        url: "https://example.org/security".to_string(),
+        url: "https://acme.example/security".to_string(),
         comment: None,
         hashes: Vec::new(),
     });
@@ -39,7 +39,7 @@ fn sbom_with_advisories() -> NormalizedSbom {
         .with_purl("pkg:cargo/foo@1.0".to_string());
     c.external_refs.push(ExternalReference {
         ref_type: ExternalRefType::Advisories,
-        url: "https://example.org/advisories".to_string(),
+        url: "https://acme.example/advisories".to_string(),
         comment: None,
         hashes: Vec::new(),
     });
@@ -152,7 +152,7 @@ fn oss_steward_vuln_handling_satisfied_by_security_contact() {
 fn oss_steward_vuln_handling_satisfied_by_sidecar_psirt() {
     let sbom = empty_sbom();
     let sidecar = CraSidecarMetadata {
-        psirt_url: Some("https://example.org/psirt".to_string()),
+        psirt_url: Some("https://acme.example/psirt".to_string()),
         ..Default::default()
     };
     let res = checker(ComplianceLevel::CraOssSteward)
@@ -196,7 +196,7 @@ fn oss_steward_cvd_satisfied_by_sidecar_policy_url() {
     let sbom = sbom_with_security_contact();
     let sidecar = CraSidecarMetadata {
         coordinated_disclosure_policy_url: Some(
-            "https://example.org/security/cvd-policy".to_string(),
+            "https://acme.example/security/cvd-policy".to_string(),
         ),
         ..Default::default()
     };

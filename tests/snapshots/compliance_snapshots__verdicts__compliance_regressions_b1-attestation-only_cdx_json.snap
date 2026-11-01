@@ -11,9 +11,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/example/gateway@3.1.0
 [NtiaMinimum] compliant · E0 W0 I1
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
-[CraPhase1] compliant · E0 W7 I4
+[CraPhase1] compliant · E0 W7 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
@@ -23,10 +24,11 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
-[CraPhase2] NON-COMPLIANT · E1 W8 I5
+[CraPhase2] NON-COMPLIANT · E1 W8 I6
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -103,9 +105,10 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/example/gateway@3.1.0
 
 with auto-discovered CRA sidecar:
-[CraPhase1 + sidecar] compliant · E0 W8 I4
+[CraPhase1 + sidecar] compliant · E0 W8 I5
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-VIII  -
@@ -116,10 +119,11 @@ with auto-discovered CRA sidecar:
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
-[CraPhase2 + sidecar] NON-COMPLIANT · E1 W9 I5
+[CraPhase2 + sidecar] NON-COMPLIANT · E1 W9 I6
   E SBOM-CRA-PRE-7-RQ-07-RE  - (0/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/gateway@3.1.0
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -

@@ -350,8 +350,8 @@ fn documents(ts: &str) -> Vec<(&'static str, String)> {
 /// content (its matrix row pins the unparseable case).
 const TIMESTAMP_RULES: &[(ComplianceLevel, &str)] = &[
     (ComplianceLevel::NtiaMinimum, "SBOM-NTIA-TIMESTAMP"),
-    (ComplianceLevel::FdaMedicalDevice, "SBOM-NTIA-TIMESTAMP"),
-    (ComplianceLevel::Comprehensive, "SBOM-NTIA-TIMESTAMP"),
+    (ComplianceLevel::FdaMedicalDevice, "SBOM-FDA-TIMESTAMP"),
+    (ComplianceLevel::Comprehensive, "SBOM-QUALITY-TIMESTAMP"),
     (ComplianceLevel::Eo14028, "SBOM-EO14028-TIMESTAMP"),
     (ComplianceLevel::CraPhase2, "SBOM-CRA-SBOM-FRESHNESS"),
     (ComplianceLevel::BsiTr03183_2, "SBOM-BSI-TR-03183-2-5-2"),

@@ -753,22 +753,6 @@ const ADVICE_FDA_CONTACT: FormatAdvice = FormatAdvice {
     },
 };
 
-/// FDA manufacturer creator and component suppliers (both SBOM-FDA-SUPPLIER findings).
-const ADVICE_FDA_SUPPLIER: FormatAdvice = FormatAdvice {
-    cyclonedx: FieldAdvice {
-        text: "name the device manufacturer in metadata.component.manufacturer (CycloneDX 1.6+), metadata.supplier or metadata.manufacturer, and set components[].supplier.name (or manufacturer.name, or authors[].name) on each component.",
-        field: Some("components[].supplier.name"),
-    },
-    spdx2: FieldAdvice {
-        text: "name the device manufacturer as the described package's supplier or in an \"Organization: Name (email)\" creationInfo.creators[] entry, and set packages[].supplier (or packages[].originator) on each package.",
-        field: Some("packages[].supplier"),
-    },
-    spdx3: FieldAdvice {
-        text: "name the device manufacturer in suppliedBy on the root package or as an Organization in creationInfo.createdBy, and set suppliedBy on each package.",
-        field: Some("suppliedBy"),
-    },
-};
-
 /// Completeness declaration; SPDX 2.x has no field for it.
 const ADVICE_COMPLETENESS: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
@@ -809,6 +793,24 @@ const ADVICE_SIGNATURE: FormatAdvice = FormatAdvice {
     },
     spdx2: FieldAdvice {
         text: "no in-document signature field exists.",
+        field: None,
+    },
+    spdx3: FieldAdvice {
+        text: "add a verifiedUsing[] entry of type signature (algorithm, hashValue) to the SpdxDocument.",
+        field: Some("verifiedUsing[]"),
+    },
+};
+
+/// Document integrity (CRA Annex I Part I (2)(f)): an in-document signature,
+/// or an attestation or certification reference on the product that carries
+/// the hash of the referenced document.
+const ADVICE_DOC_INTEGRITY: FormatAdvice = FormatAdvice {
+    cyclonedx: FieldAdvice {
+        text: "sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+        field: Some("signature"),
+    },
+    spdx2: FieldAdvice {
+        text: "no in-document signature field exists and external references carry no hash, so the check cannot be satisfied from the document.",
         field: None,
     },
     spdx3: FieldAdvice {
@@ -1020,7 +1022,7 @@ const ADVICE_EUCC_ALT: FormatAdvice = FormatAdvice {
 /// reference whose URL names EUCC, or (CycloneDX 1.6+) a CDXA attestation.
 const ADVICE_EUCC_CERTREF: FormatAdvice = FormatAdvice {
     cyclonedx: FieldAdvice {
-        text: "add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc or common-criteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
+        text: "add an externalReferences[] entry of type certification-report (or attestation) whose URL contains eucc, common-criteria or commoncriteria, or a fresh, fully conformant attestation in declarations (CycloneDX 1.6+) of a CRA standard that names EUCC or Common Criteria.",
         field: Some("externalReferences[]"),
     },
     spdx2: FieldAdvice {
@@ -1028,7 +1030,7 @@ const ADVICE_EUCC_CERTREF: FormatAdvice = FormatAdvice {
         field: None,
     },
     spdx3: FieldAdvice {
-        text: "add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc or common-criteria.",
+        text: "add an externalRef[] entry with externalRefType certificationReport (or secureSoftwareAttestation) whose locator contains eucc, common-criteria or commoncriteria.",
         field: Some("externalRef[]"),
     },
 };
@@ -1482,7 +1484,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (ANNEX, "Annex I Part II (6)"),
                 (ANNEX, "Annex II (2)"),
             ],
-            remediation: "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info.",
+            remediation: "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. A contact must reach someone: placeholders such as NOASSERTION, unknown, n/a or TBD, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         // Vulnerability severity/remediation metadata. Anchored to the
@@ -1535,7 +1537,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
                 (CRA, "Art. 13(8)"),
                 (PREN, "RLS-2-RQ-03-RE"),
             ],
-            remediation: "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info.",
+            remediation: "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. A placeholder URL or an address at example.com, example.net or example.org does not count.",
             advice: Some(&ADVICE_CVD),
         },
         "SBOM-CRA-ART-13-8" => RuleMeta {
@@ -1686,7 +1688,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14: Public PSIRT URL that receives external vulnerability reports",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14")],
-            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         "SBOM-CRA-ART-14-EARLY-WARNING" => RuleMeta {
@@ -1695,7 +1697,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14(2)(a) / 14(4)(a): Channel for the 24-hour early warning",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(a)"), (CRA, "Art. 14(4)(a)")],
-            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         "SBOM-CRA-ART-14-NOTIFICATION" => RuleMeta {
@@ -1704,7 +1706,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 14(2)(b) / 14(4)(b): Channel for the 72-hour vulnerability and incident notifications",
             default_severity: ViolationSeverity::Warning,
             refs: &[(CRA, "Art. 14(2)(b)"), (CRA, "Art. 14(4)(b)")],
-            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar.",
+            remediation: "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
             advice: None,
         },
         // Warning once Art. 14 applies (2026-09-11), Info before, never an
@@ -1727,7 +1729,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CRA Art. 24: Open-source steward vulnerability-handling process (security contact or disclosure URL)",
             default_severity: ViolationSeverity::Error,
             refs: &[(CRA, "Art. 24")],
-            remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar.",
+            remediation: "Show the open-source steward's vulnerability-handling process (Art. 24): reference a security contact or vulnerability-disclosure URL from the product component, or set psirtUrl or vulnerabilityDisclosureUrl in the CRA sidecar. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         // ---- CRA Annexes -------------------------------------------------
@@ -1854,15 +1856,17 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
         // Document-level integrity. Formerly mis-cited Annex III (the
         // important-products class list); integrity protection is Annex I
         // Part I (2)(f). The clause covers integrity only — it does not
-        // mention authenticity.
+        // mention authenticity. A signature or a hashed attestation protects
+        // the document; a serial number only identifies it, and until v0.4.0
+        // satisfied the check alone while the signature was not read.
         "SBOM-CRA-DOC-INTEGRITY" => RuleMeta {
             sarif_id: "SBOM-CRA-DOC-INTEGRITY",
             name: "CraDocumentIntegrity",
-            short_description: "CRA Annex I Part I (2)(f): Document integrity — serial number, hash, or digital signature",
+            short_description: "CRA Annex I Part I (2)(f): Document integrity — a digital signature, or an attestation carrying a hash",
             default_severity: ViolationSeverity::Info,
             refs: &[(ANNEX, "Annex I Part I (2)(f)"), (ENISA, "§2.2.1")],
-            remediation: "Add document-level integrity metadata (Annex I Part I (2)(f)): a unique document serial number or namespace.",
-            advice: Some(&ADVICE_SERIAL),
+            remediation: "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity.",
+            advice: Some(&ADVICE_DOC_INTEGRITY),
         },
         "SBOM-CRA-ANNEX-IV" => RuleMeta {
             sarif_id: "SBOM-CRA-ANNEX-IV",
@@ -2104,7 +2108,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "SBOM quality: Every component records its license, declared or concluded",
             default_severity: ViolationSeverity::Warning,
             refs: &[],
-            remediation: "Record every component's license, declared or concluded.",
+            remediation: "Record every component's license, declared or concluded: an SPDX expression or a LicenseRef-* id. Sentinels such as NOASSERTION and placeholders such as TBD name no license.",
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-QUALITY-HASH" => RuleMeta {
@@ -2151,6 +2155,46 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             refs: &[],
             remediation: REMEDIATION_DUPLICATE_COMPONENT,
             advice: Some(&ADVICE_DUPLICATE_COMPONENT),
+        },
+        // The Standard and Comprehensive profiles' NTIA-baseline checks, with
+        // ids of the quality family. They reported as SBOM-NTIA-VERSION,
+        // -TIMESTAMP, -SUPPLIER and -DEPENDENCY until v0.4.0, so a quality
+        // run listed NTIA rules.
+        "SBOM-QUALITY-TIMESTAMP" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-TIMESTAMP",
+            name: "QualityTimestamp",
+            short_description: "SBOM quality: SBOM creation timestamp",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Record when the SBOM was created.",
+            advice: Some(&ADVICE_TIMESTAMP),
+        },
+        "SBOM-QUALITY-VERSION" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-VERSION",
+            name: "QualityComponentVersion",
+            short_description: "SBOM quality: Every component has a version",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Give every component the version its supplier assigned; placeholders such as NOASSERTION, TBD or N/A do not count.",
+            advice: Some(&ADVICE_VERSION),
+        },
+        "SBOM-QUALITY-SUPPLIER" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-SUPPLIER",
+            name: "QualityComponentSupplier",
+            short_description: "SBOM quality: Every component names its supplier",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Name the supplier of every component, the entity that creates, defines and identifies it; placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-QUALITY-DEPENDENCY" => RuleMeta {
+            sarif_id: "SBOM-QUALITY-DEPENDENCY",
+            name: "QualityDependency",
+            short_description: "SBOM quality: Dependency relationships between the components",
+            default_severity: ViolationSeverity::Error,
+            refs: &[],
+            remediation: "Declare the dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph.",
+            advice: Some(&ADVICE_DEPENDENCIES),
         },
         // ---- EUCC Substantial (reference-only profile) -------------------
         "SBOM-EUCC-PP" => RuleMeta {
@@ -2620,14 +2664,37 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             advice: Some(&ADVICE_DEPENDENCIES),
         },
         // ---- FDA ---------------------------------------------------------
+        // The supplier of every component. The document-level device
+        // manufacturer reports under SBOM-FDA-MANUFACTURER; until v0.4.0
+        // both checks shared this id.
         "SBOM-FDA-SUPPLIER" => RuleMeta {
             sarif_id: "SBOM-FDA-SUPPLIER",
             name: "FdaSupplier",
             short_description: "FDA Medical Device: Component supplier/manufacturer information",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Identify the device manufacturer, as the manufacturer or supplier of the product component or as an organization creator of the SBOM, and the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
-            advice: Some(&ADVICE_FDA_SUPPLIER),
+            remediation: "Name the supplier of every component (FDA premarket guidance, NTIA baseline); placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-FDA-MANUFACTURER" => RuleMeta {
+            sarif_id: "SBOM-FDA-MANUFACTURER",
+            name: "FdaManufacturer",
+            short_description: "FDA Medical Device: Device manufacturer identified",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Identify the device manufacturer (FDA premarket guidance): as an organization creator of the SBOM, as the supplier of the product, or as the manufacturer or supplier of the product component. Placeholders such as NOASSERTION do not count.",
+            advice: Some(&ADVICE_MANUFACTURER),
+        },
+        // The NTIA Timestamp element under FDA, which incorporates the NTIA
+        // baseline; it reported as SBOM-NTIA-TIMESTAMP until v0.4.0.
+        "SBOM-FDA-TIMESTAMP" => RuleMeta {
+            sarif_id: "SBOM-FDA-TIMESTAMP",
+            name: "FdaTimestamp",
+            short_description: "FDA Medical Device: SBOM creation timestamp (NTIA baseline element)",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::FdaPremarket, "FDA Premarket")],
+            remediation: "Record when the SBOM was created (an NTIA baseline element the FDA guidance incorporates).",
+            advice: Some(&ADVICE_TIMESTAMP),
         },
         "SBOM-FDA-SUPPORT" => RuleMeta {
             sarif_id: "SBOM-FDA-SUPPORT",
@@ -2646,7 +2713,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: SBOM creator contact email",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Give the SBOM creator a contact email (FDA premarket guidance).",
+            remediation: "Give the SBOM creator a contact email (FDA premarket guidance). A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_FDA_CONTACT),
         },
         "SBOM-FDA-NAME" => RuleMeta {
@@ -2722,7 +2789,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "FDA Medical Device: Security vulnerability information",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::FdaPremarket, "FDA Premarket")],
-            remediation: "Address every critical and high-severity vulnerability the SBOM lists before the premarket submission: upgrade the affected components, and document your assessment of any that remain. The finding counts these vulnerabilities whatever their VEX state.",
+            remediation: "Address every critical and high-severity vulnerability the SBOM lists before the premarket submission: upgrade the affected components, and document your assessment of any that remain. A vulnerability whose own VEX statement is not_affected and names a justification is not counted, as under the CRA profiles: it records why the device is not affected. A bare not_affected claim still counts.",
             advice: None,
         },
         "SBOM-FDA-INVENTORY" => RuleMeta {
@@ -3125,7 +3192,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "BSI TR-03183-2 §5.2.1: SBOM creator must carry an email address or URL",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::BsiTr03183_2, "§5.2.1")],
-            remediation: "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1.",
+            remediation: "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
             advice: Some(&ADVICE_CREATOR_CONTACT),
         },
         "SBOM-BSI-TR-03183-2-5-2" => RuleMeta {
@@ -3739,7 +3806,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA 2026: Component License — license identifier, license pointer, or explicit unknown",
             default_severity: ViolationSeverity::Error,
             refs: &[(K::CisaMinimum2026, "Component License")],
-            remediation: "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence fails.",
+            remediation: "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence and a placeholder such as TBD fail.",
             advice: Some(&ADVICE_LICENSE),
         },
         "SBOM-CISA2026-DEPENDENCY" => RuleMeta {
@@ -3855,7 +3922,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "PCI DSS TP 6.3.2.a: vulnerability-management hooks (embedded data, advisory refs, or security contact)",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::PciDss4, "TP 6.3.2.a")],
-            remediation: "Surface vulnerability-management hooks: embedded vulnerability entries, an Advisories / vulnerability-assertion / linked-VDR external reference, a security contact, or a disclosure URL. Absence is not a Req. 6.3.2 failure — the inventory may feed an external scanner; actual use of the inventory is assessor-verified.",
+            remediation: "Surface vulnerability-management hooks: embedded vulnerability entries, an Advisories / vulnerability-assertion / linked-VDR external reference, a security contact, or a disclosure URL. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count. Absence is not a Req. 6.3.2 failure — the inventory may feed an external scanner; actual use of the inventory is assessor-verified.",
             advice: Some(&ADVICE_SECURITY_CONTACT),
         },
         "SBOM-PCI-11-3-1-1-SEVERITY" => RuleMeta {
@@ -3864,7 +3931,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "PCI DSS Req. 6.3.1 / 11.3.1.1: embedded vulnerability entries carry a risk ranking",
             default_severity: ViolationSeverity::Warning,
             refs: &[(K::PciDss4, "Req. 11.3.1.1"), (K::PciDss4, "Req. 6.3.1")],
-            remediation: "Give every embedded vulnerability entry a risk ranking — a Critical/High/Medium/Low severity or a CVSS score (an entry with only Info/None/Unknown severity and no CVSS is unranked) — so non-high-risk findings can be managed per the entity's Req. 6.3.1 rankings and the 11.3.1.1 targeted risk analysis. Emitted only when vulnerability data is present (no vacuous pass/fail).",
+            remediation: "Give every embedded vulnerability entry a risk ranking — a Critical/High/Medium/Low severity or a CVSS score (an entry with only Info/None/Unknown severity and no CVSS is unranked) — so non-high-risk findings can be managed per the entity's Req. 6.3.1 rankings and the 11.3.1.1 targeted risk analysis. A vulnerability whose own VEX statement is not_affected and names a justification needs no ranking and is not counted, as under the CRA and FDA profiles: it does not apply to the product. A bare not_affected claim still needs one. Emitted only when vulnerability data is present (no vacuous pass/fail).",
             advice: Some(&ADVICE_VULN_SEVERITY),
         },
         // Generic bucket for PCI-DSS-run findings whose check site has no
@@ -4129,7 +4196,7 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
             short_description: "CISA FSCT 3e §2.4 (supplemental): SBOM carries a verifiable digital signature",
             default_severity: ViolationSeverity::Info,
             refs: &[(K::CisaFsct, "§2.4")],
-            remediation: "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute; the check runs on CycloneDX input only.",
+            remediation: "Digitally sign the SBOM so consumers can verify authenticity and integrity (requires a digital signature plus PKI). Info severity: §2.4 is a supplemental element, not a Baseline Attribute. The check runs on CycloneDX and SPDX 3 input; SPDX 2.x has no in-document signature field.",
             advice: Some(&ADVICE_SIGNATURE),
         },
         // Generic bucket for FSCT-run findings whose check site has no
@@ -4218,6 +4285,10 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
     "SBOM-QUALITY-DUPLICATE-COMPONENT",
+    "SBOM-QUALITY-TIMESTAMP",
+    "SBOM-QUALITY-VERSION",
+    "SBOM-QUALITY-SUPPLIER",
+    "SBOM-QUALITY-DEPENDENCY",
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -4268,6 +4339,8 @@ const ALL_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-SUPPLIER",
     "SBOM-NTIA-DEPENDENCY",
     "SBOM-FDA-SUPPLIER",
+    "SBOM-FDA-MANUFACTURER",
+    "SBOM-FDA-TIMESTAMP",
     "SBOM-FDA-SUPPORT",
     "SBOM-FDA-CONTACT",
     "SBOM-FDA-NAME",
@@ -4544,14 +4617,13 @@ const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// The Standard quality profile's rules (generic.rs): Minimum's, plus the
-/// serial number, component versions (an NTIA rule), unique identifiers and
-/// licenses.
+/// serial number, component versions, unique identifiers and licenses.
 const STANDARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
     "SBOM-QUALITY-NAME",
-    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-VERSION",
     "SBOM-QUALITY-IDENTIFIER",
     "SBOM-QUALITY-LICENSE",
     "SBOM-QUALITY-SPEC-VERSION",
@@ -4561,19 +4633,20 @@ const STANDARD_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// The Comprehensive quality profile's rules (generic.rs): Standard's, plus
-/// the NTIA timestamp, supplier and dependency rules and component hashes.
+/// the creation timestamp, component suppliers and hashes, and dependency
+/// relationships.
 const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
-    "SBOM-NTIA-TIMESTAMP",
+    "SBOM-QUALITY-TIMESTAMP",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
     "SBOM-QUALITY-NAME",
-    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-VERSION",
     "SBOM-QUALITY-IDENTIFIER",
-    "SBOM-NTIA-SUPPLIER",
+    "SBOM-QUALITY-SUPPLIER",
     "SBOM-QUALITY-LICENSE",
     "SBOM-QUALITY-HASH",
-    "SBOM-NTIA-DEPENDENCY",
+    "SBOM-QUALITY-DEPENDENCY",
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
@@ -4806,15 +4879,17 @@ pub const NTIA_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-NTIA-DUPLICATE-COMPONENT",
 ];
 
-/// FDA premarket SARIF rule catalogue. The FDA baseline check reuses the
-/// NTIA timestamp rule id (the FDA guidance incorporates the NTIA minimum
-/// elements).
+/// FDA premarket SARIF rule catalogue. Its NTIA-baseline checks (the
+/// guidance incorporates the NTIA minimum elements) report under FDA ids of
+/// their own, the timestamp too: it reported as SBOM-NTIA-TIMESTAMP until
+/// v0.4.0.
 pub const FDA_SARIF_RULE_IDS: &[&str] = &[
-    "SBOM-NTIA-TIMESTAMP",
+    "SBOM-FDA-TIMESTAMP",
     "SBOM-FDA-INVENTORY",
     "SBOM-FDA-CREATOR",
     "SBOM-FDA-NAMESPACE",
     "SBOM-FDA-NAME",
+    "SBOM-FDA-MANUFACTURER",
     "SBOM-FDA-SUPPLIER",
     "SBOM-FDA-HASH",
     "SBOM-FDA-IDENTIFIER",
@@ -5465,6 +5540,27 @@ mod tests {
             orphans.is_empty(),
             "rules in no level's list (add each to rules_for_level's table): {orphans:?}"
         );
+    }
+
+    /// Every level reports under its own family's rule ids, the prefix of
+    /// its fallback rule: `SBOM-QUALITY-` for the quality profiles,
+    /// `SBOM-NTIA-` for NTIA, `SBOM-FDA-` for FDA and so on. Until v0.4.0
+    /// the Standard and Comprehensive profiles reported four `SBOM-NTIA-*`
+    /// rules and FDA the NTIA timestamp, so their runs listed NTIA rules.
+    #[test]
+    fn every_level_reports_under_its_own_family() {
+        for level in ComplianceLevel::all() {
+            let fallback = super::super::generic_rule_id_for_level(*level);
+            let prefix = fallback
+                .strip_suffix("GENERAL")
+                .expect("a fallback rule id ends in GENERAL");
+            for id in rules_for_level(*level) {
+                assert!(
+                    id.starts_with(prefix),
+                    "{level:?} lists {id}, a rule outside its family {prefix}*"
+                );
+            }
+        }
     }
 
     /// Every rule a standard reports cites the clause it implements, so its

@@ -42,6 +42,7 @@ fn base_document_metadata() -> DocumentMetadata {
         completeness_declaration: CompletenessDeclaration::Unknown,
         signature: None,
         distribution_classification: None,
+        profile_conformance: Vec::new(),
         citations_count: 0,
     }
 }
@@ -373,7 +374,7 @@ const SIDECAR_PARITY_SBOM: &str = r#"{
     ]
 }"#;
 
-const SIDECAR_PARITY_SIDECAR: &str = r#"{ "securityContact": "security@example.com" }"#;
+const SIDECAR_PARITY_SIDECAR: &str = r#"{ "securityContact": "security@acme.example" }"#;
 
 /// Run `sbom-tools diff <old> <new> -o json` and return the parsed report.
 fn run_diff_json(old: &std::path::Path, new: &std::path::Path) -> serde_json::Value {

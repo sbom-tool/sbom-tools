@@ -50,6 +50,10 @@ pub use compliance::{
     finding_key, finding_subject, standard_key,
 };
 pub(crate) use compliance::{compose_finding_key, rule_family_help_uri};
+// The `cra-docs` dossier names the manufacturer the Art. 13(16) check
+// accepts.
+#[cfg(feature = "cli")]
+pub(crate) use compliance::manufacturer_name;
 pub use metrics::{
     AuditabilityMetrics, CompletenessMetrics, ComplexityFactors, ComplexityLevel,
     CryptographyMetrics, DependencyMetrics, HashQualityMetrics, IdentifierMetrics, LicenseMetrics,

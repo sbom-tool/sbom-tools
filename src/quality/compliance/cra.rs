@@ -58,14 +58,6 @@ impl ComplianceChecker {
                     .any(|n| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(n))
             })
         };
-        let any_ext_url_contains = |types: &[ExternalRefType], substr: &str| -> bool {
-            manufacturer_reference(sbom, |r| {
-                types
-                    .iter()
-                    .any(|t| std::mem::discriminant(&r.ref_type) == std::mem::discriminant(t))
-                    && r.url.to_lowercase().contains(substr)
-            })
-        };
 
         // Annex V (and the Module C statement): the manufacturer's own
         // declaration, so an attestation counts as well as a certification
@@ -84,18 +76,13 @@ impl ComplianceChecker {
         // (check_class_module_attestation).
         let certificate_present = any_ext(&[ExternalRefType::Certification]);
 
+        // The EUCC reference the Annex IV check and SBOM-EUCC-CERTREF read
+        // (`is_eucc_reference`).
         let eucc_present = self
             .sidecar
             .as_ref()
             .is_some_and(|s| s.has_live_eucc_evidence_at(self.now()))
-            || any_ext_url_contains(
-                &[ExternalRefType::Certification, ExternalRefType::Attestation],
-                "eucc",
-            )
-            || any_ext_url_contains(
-                &[ExternalRefType::Certification, ExternalRefType::Attestation],
-                "common-criteria",
-            );
+            || manufacturer_reference(sbom, is_eucc_reference);
 
         let mut evidence: Vec<ConformityEvidence> = Vec::new();
         let (satisfied, detail) = cdxa(
@@ -167,7 +154,7 @@ impl ComplianceChecker {
                 let (satisfied, detail) = cdxa(
                     eucc_present,
                     cdxa_eucc_level,
-                    "Common Criteria certificate from an EUCC-accredited ITSEF — Certification external ref whose URL references EUCC or common-criteria.",
+                    "Common Criteria certificate from an EUCC-accredited ITSEF — Certification or Attestation external ref whose URL contains eucc, common-criteria or commoncriteria.",
                 );
                 evidence.push(ConformityEvidence {
                     label: "EUCC / Common Criteria certificate".to_string(),
@@ -190,7 +177,11 @@ impl ComplianceChecker {
         // Article 14 channels are required at all conformity routes once the
         // 2026-09-11 deadline applies; surface as evidence rows for
         // notified-body checklists.
-        let psirt = self.sidecar.as_ref().is_some_and(|s| s.psirt_url.is_some());
+        // A placeholder PSIRT URL reaches nobody (`known_contact`).
+        let psirt = self
+            .sidecar
+            .as_ref()
+            .is_some_and(|s| known_contact(s.psirt_url.as_deref()));
         evidence.push(ConformityEvidence {
             label: "PSIRT contact (Art. 14)".to_string(),
             detail: "Public PSIRT URL for receiving external vulnerability reports.".to_string(),
@@ -574,26 +565,39 @@ impl ComplianceChecker {
         }
 
         // B5: Annex I Part I (2)(f) — Document signature/integrity. The
-        // clause protects the integrity of data, commands, programs and
-        // configuration (it does not mention authenticity).
-        // Check for document-level hash, signature, or attestation
-        let has_doc_integrity = sbom.document.serial_number.is_some()
-            || sbom.components.values().any(|comp| {
-                comp.external_refs.iter().any(|r| {
-                    matches!(
-                        r.ref_type,
-                        crate::model::ExternalRefType::Attestation
-                            | crate::model::ExternalRefType::Certification
-                    ) && !r.hashes.is_empty()
-                })
-            });
-        if !has_doc_integrity {
+        // clause asks to "protect the integrity of stored, transmitted or
+        // otherwise processed data ... against any manipulation or
+        // modification not authorised by the user" (it does not mention
+        // authenticity). Integrity evidence is a document signature with a
+        // value (`document_signed`), or an attestation or certification
+        // reference on the described product that carries a plausible
+        // digest of the referenced document. A serial number identifies the
+        // document but protects nothing: until v0.4.0 it satisfied the check
+        // on its own, the document signature was not read, and any
+        // component's reference with any hash value counted.
+        let hashed_attestation = manufacturer_reference(sbom, |r| {
+            matches!(
+                r.ref_type,
+                crate::model::ExternalRefType::Attestation
+                    | crate::model::ExternalRefType::Certification
+            ) && r
+                .hashes
+                .iter()
+                .any(|h| plausible_digest(&h.algorithm, &h.value))
+        });
+        if !document_signed(sbom) && !hashed_attestation {
+            let mut message = "[CRA Annex I Part I (2)(f)] SBOM carries no integrity protection: \
+                               sign the document, or reference from the product an attestation \
+                               or certification that carries its hash (a serial number \
+                               identifies the document but does not protect it)"
+                .to_string();
+            if sbom.document.signature.is_some() {
+                message.push_str("; the document signature has no value");
+            }
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::IntegrityInfo,
-                message: "[CRA Annex I Part I (2)(f)] Consider adding document-level integrity \
-                    metadata (serial number, digital signature, or attestation with hash)"
-                    .to_string(),
+                message,
                 element: None,
                 requirement: "CRA Annex I Part I (2)(f): Document signature/integrity".to_string(),
                 rule_id: "SBOM-CRA-DOC-INTEGRITY",
@@ -721,11 +725,13 @@ impl ComplianceChecker {
                 .components
                 .values()
                 .any(|c| !c.vulnerabilities.is_empty());
+            // The declared profiles (`DocumentMetadata::profile_conformance`;
+            // until v0.4.0 read from the distribution classification).
             let has_security_profile = sbom
                 .document
-                .distribution_classification
-                .as_ref()
-                .is_some_and(|p| p.to_lowercase().contains("security"));
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("security"));
 
             if has_vulns && !has_security_profile {
                 violations.push(Violation {
@@ -754,12 +760,9 @@ impl ComplianceChecker {
                 .any(|c| !c.licenses.declared.is_empty() || c.licenses.concluded.is_some());
             let has_licensing_profile = sbom
                 .document
-                .distribution_classification
-                .as_ref()
-                .is_some_and(|p| {
-                    p.to_lowercase().contains("simplelicensing")
-                        || p.to_lowercase().contains("licensing")
-                });
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("licensing"));
 
             if has_licenses && !has_licensing_profile {
                 violations.push(Violation {
@@ -862,18 +865,11 @@ impl ComplianceChecker {
             .any(|s| standard_references_eucc(s.standard));
         // A reference counts on the described product only: a
         // dependency's own EUCC certificate does not cover the product.
+        // The URL keywords are the ones SBOM-EUCC-CERTREF and the
+        // conformity summary read (`is_eucc_reference`).
         let has_eucc_ref = sidecar_has_eucc
             || cdxa_eucc_attested
-            || manufacturer_reference(sbom, |r| {
-                let url_lower = r.url.to_lowercase();
-                matches!(
-                    r.ref_type,
-                    crate::model::ExternalRefType::Certification
-                        | crate::model::ExternalRefType::Attestation
-                ) && (url_lower.contains("eucc")
-                    || url_lower.contains("common-criteria")
-                    || url_lower.contains("commoncriteria"))
-            });
+            || manufacturer_reference(sbom, is_eucc_reference);
         if !has_eucc_ref {
             let mut message = format!(
                 "[CRA Annex IV / EUCC] Product class {} requires (or strongly recommends) a reference to a Common Criteria / EUCC certificate or Target of Evaluation",
@@ -1003,8 +999,11 @@ impl ComplianceChecker {
 
         let sidecar = self.sidecar.as_ref();
 
-        let psirt_present = sidecar.is_some_and(|s| s.psirt_url.is_some());
-        if !psirt_present {
+        // A channel counts only when it reaches someone (`known_contact`):
+        // a placeholder such as TBD or an example.com address is no channel,
+        // and the finding names it (`unreachable_sidecar_note`).
+        let psirt = sidecar.and_then(|s| s.psirt_url.as_deref());
+        if !known_contact(psirt) {
             let prefix = if art_14_active {
                 "[CRA Art. 14] PSIRT URL missing — required to handle external vulnerability reports"
             } else {
@@ -1013,7 +1012,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: post_deadline_severity,
                 category: ViolationCategory::SecurityInfo,
-                message: prefix.to_string(),
+                message: format!("{prefix}{}", unreachable_sidecar_note(psirt)),
                 element: None,
                 requirement: "CRA Art. 14: PSIRT contact for external vulnerability reports"
                     .to_string(),
@@ -1027,8 +1026,8 @@ impl ComplianceChecker {
             });
         }
 
-        let ew_present = sidecar.is_some_and(|s| s.early_warning_contact.is_some());
-        if !ew_present {
+        let early_warning = sidecar.and_then(|s| s.early_warning_contact.as_deref());
+        if !known_contact(early_warning) {
             let msg = if art_14_active {
                 "[CRA Art. 14(2)(a)] 24-hour early-warning channel missing — required when an actively-exploited vulnerability is identified"
             } else {
@@ -1037,7 +1036,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: post_deadline_severity,
                 category: ViolationCategory::SecurityInfo,
-                message: msg.to_string(),
+                message: format!("{msg}{}", unreachable_sidecar_note(early_warning)),
                 element: None,
                 requirement: "CRA Art. 14(2)(a): 24-hour early-warning channel".to_string(),
                 rule_id: "SBOM-CRA-ART-14-EARLY-WARNING",
@@ -1050,8 +1049,8 @@ impl ComplianceChecker {
             });
         }
 
-        let ir_present = sidecar.is_some_and(|s| s.incident_report_contact.is_some());
-        if !ir_present {
+        let incident_report = sidecar.and_then(|s| s.incident_report_contact.as_deref());
+        if !known_contact(incident_report) {
             let msg = if art_14_active {
                 "[CRA Art. 14(2)(b) / 14(4)(b)] 72-hour notification channel missing — required for actively exploited vulnerabilities and severe incidents"
             } else {
@@ -1060,7 +1059,7 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: post_deadline_severity,
                 category: ViolationCategory::SecurityInfo,
-                message: msg.to_string(),
+                message: format!("{msg}{}", unreachable_sidecar_note(incident_report)),
                 element: None,
                 requirement: "CRA Art. 14(2)(b): 72-hour notification channel".to_string(),
                 rule_id: "SBOM-CRA-ART-14-NOTIFICATION",
@@ -1280,21 +1279,22 @@ impl ComplianceChecker {
         // Vulnerability-handling process (Annex I Part II): require either
         // a vulnerability-disclosure URL on the document or a SecurityContact
         // / Advisories / VulnerabilityAssertion external reference on the
-        // described product, OR sidecar-supplied PSIRT URL.
-        let has_vuln_handling = sbom.document.vulnerability_disclosure_url.is_some()
-            || sbom.document.security_contact.is_some()
-            || manufacturer_reference(sbom, |r| {
-                matches!(
-                    r.ref_type,
+        // described product, OR sidecar-supplied PSIRT URL. A contact
+        // counts only when it reaches someone (`known_contact`); a VDR
+        // reference is a document, not a contact.
+        let has_vuln_handling =
+            known_contact(sbom.document.vulnerability_disclosure_url.as_deref())
+                || known_contact(sbom.document.security_contact.as_deref())
+                || manufacturer_reference(sbom, |r| match r.ref_type {
                     crate::model::ExternalRefType::SecurityContact
-                        | crate::model::ExternalRefType::Advisories
-                        | crate::model::ExternalRefType::VulnerabilityAssertion
-                )
-            })
-            || self
-                .sidecar
-                .as_ref()
-                .is_some_and(|s| s.psirt_url.is_some() || s.vulnerability_disclosure_url.is_some());
+                    | crate::model::ExternalRefType::Advisories => is_contact_reference(r),
+                    crate::model::ExternalRefType::VulnerabilityAssertion => true,
+                    _ => false,
+                })
+                || self.sidecar.as_ref().is_some_and(|s| {
+                    known_contact(s.psirt_url.as_deref())
+                        || known_contact(s.vulnerability_disclosure_url.as_deref())
+                });
         if !has_vuln_handling {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
@@ -1318,10 +1318,11 @@ impl ComplianceChecker {
         // or sidecar-supplied coordinated_disclosure_policy_url.
         let has_cvd_policy = manufacturer_reference(sbom, |r| {
             matches!(r.ref_type, crate::model::ExternalRefType::Advisories)
+                && is_contact_reference(r)
         }) || self
             .sidecar
             .as_ref()
-            .is_some_and(|s| s.coordinated_disclosure_policy_url.is_some());
+            .is_some_and(|s| known_contact(s.coordinated_disclosure_policy_url.as_deref()));
         if !has_cvd_policy {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,

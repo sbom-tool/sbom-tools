@@ -11,11 +11,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-driver@1.2.0
   W SBOM-QUALITY-LICENSE  pkg:generic/acme/wifi-radio@rev-3
 [NtiaMinimum] compliant · E0 W0 I0
-[CraPhase1] compliant · E0 W8 I5
+[CraPhase1] compliant · E0 W8 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/edge-router@2.4.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-driver@1.2.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-radio@rev-3
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -
   W SBOM-CRA-ART-13-5  - (4/4)
@@ -25,13 +26,14 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (1/4)
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W9 I7
+[CraPhase2] NON-COMPLIANT · E1 W9 I8
   E SBOM-CRA-PRE-7-RQ-07-RE  - (1/4)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/edge-router@2.4.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-driver@1.2.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/acme/wifi-radio@rev-3
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ART-13-17-CONTACT  -

@@ -11,11 +11,12 @@ as_of: 2026-10-12T00:00:00Z
 [NtiaMinimum] NON-COMPLIANT · E2 W0 I0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
   E SBOM-NTIA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
-[CraPhase1] compliant · E0 W11 I5
+[CraPhase1] compliant · E0 W11 I6
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/mixed-crypto@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/noncompliant-nss-app@0.5.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   W SBOM-CRA-ART-13-16  -
@@ -28,12 +29,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W13 I6
+[CraPhase2] NON-COMPLIANT · E1 W13 I7
   E SBOM-CRA-ANNEX-I-SUPPLY-CHAIN  - (1/1)
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/mixed-crypto@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/noncompliant-nss-app@0.5.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/2)
@@ -55,7 +57,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E1 W2 I2
   E SBOM-SSDF-PS2  - (2/2)
@@ -142,8 +144,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (2/2)
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/2)
 [Comprehensive] NON-COMPLIANT · E2 W4 I0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/mixed-crypto@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/noncompliant-nss-app@0.5.0
   W SBOM-QUALITY-HASH  pkg:cargo/mixed-crypto@1.0.0
   W SBOM-QUALITY-HASH  pkg:cargo/noncompliant-nss-app@0.5.0
   W SBOM-QUALITY-LICENSE  pkg:cargo/mixed-crypto@1.0.0

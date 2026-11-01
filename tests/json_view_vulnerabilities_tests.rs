@@ -32,6 +32,7 @@ fn base_document_metadata() -> DocumentMetadata {
         completeness_declaration: CompletenessDeclaration::Unknown,
         signature: None,
         distribution_classification: None,
+        profile_conformance: Vec::new(),
         citations_count: 0,
     }
 }

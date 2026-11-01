@@ -17,11 +17,12 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-NTIA-IDENTIFIER  related-assets-service
   E SBOM-NTIA-SUPPLIER  related-assets-service
   I SBOM-NTIA-ELEMENT-ID  related-assets-service
-[CraPhase1] NON-COMPLIANT · E2 W9 I4
+[CraPhase1] NON-COMPLIANT · E2 W9 I5
   E SBOM-CRA-ANNEX-I-IDENTIFIER  related-assets-service
   E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  related-assets-service
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  related-assets-service
   I SBOM-CRA-VULN-STATEMENT  -
   W SBOM-CRA-ANNEX-I-TRACEABILITY  related-assets-service
@@ -33,12 +34,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  related-assets-service
-[CraPhase2] NON-COMPLIANT · E2 W11 I6
+[CraPhase2] NON-COMPLIANT · E2 W11 I7
   E SBOM-CRA-ANNEX-I-IDENTIFIER  related-assets-service
   E SBOM-CRA-CREATOR  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  related-assets-service
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  related-assets-service
   I SBOM-CRA-LIFECYCLE  -
   I SBOM-CRA-VULN-STATEMENT  -
@@ -60,7 +62,7 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-FDA-SUPPLIER  related-assets-service
   I SBOM-FDA-ELEMENT-ID  related-assets-service
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W4 I2
   E SBOM-SSDF-PS1  -
@@ -145,8 +147,8 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (1/1)
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/1)
 [Comprehensive] NON-COMPLIANT · E2 W3 I1
-  E SBOM-NTIA-SUPPLIER  related-assets-service
   E SBOM-QUALITY-CREATOR  -
+  E SBOM-QUALITY-SUPPLIER  related-assets-service
   I SBOM-QUALITY-ELEMENT-ID  related-assets-service
   W SBOM-QUALITY-HASH  related-assets-service
   W SBOM-QUALITY-IDENTIFIER  related-assets-service

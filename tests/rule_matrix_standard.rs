@@ -2,8 +2,8 @@
 //! (audit P3: no test anywhere instantiated the Standard profile).
 //!
 //! Standard runs on the generic checker path, and every check it runs is a
-//! rule of its own (the NTIA version rule and the `SBOM-QUALITY-*` rules
-//! below). The universe is declared locally (derived from the
+//! rule of its own, an `SBOM-QUALITY-*` rule (until v0.4.0 the version check
+//! reported as `SBOM-NTIA-VERSION`). The universe is declared locally (derived from the
 //! Standard-level match arms in src/quality/compliance/generic.rs);
 //! `run_matrix` requires it to equal the registry's list for the level
 //! (`rules_for_level`), and the matrix sweep enforces that no fixture ever
@@ -21,13 +21,13 @@ use sbom_tools::quality::{ComplianceLevel, ViolationSeverity as Sev};
 
 const LEVEL: ComplianceLevel = ComplianceLevel::Standard;
 
-/// Every SARIF rule id the Standard profile can emit (generic.rs): the NTIA
+/// Every SARIF rule id the Standard profile can emit (generic.rs): the
 /// component version (Error), document creator (Error), serial number
 /// (Warning), component inventory and name (Error), unique identifier
 /// (Warning), license (Warning), and the CycloneDX/SPDX format-specific
 /// checks.
 const STANDARD_RULE_UNIVERSE: &[&str] = &[
-    "SBOM-NTIA-VERSION",
+    "SBOM-QUALITY-VERSION",
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
@@ -82,10 +82,8 @@ fn standard_conforming_fixture_is_compliant_with_zero_violations() {
 #[test]
 fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
     let entries = vec![
-        // Standard shares the NTIA version rule id via the generic version
-        // check's fallback arm.
         RuleEntry::tested(
-            "SBOM-NTIA-VERSION",
+            "SBOM-QUALITY-VERSION",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").version = None),
             base(),
@@ -127,11 +125,31 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.component_mut("libalpha").purl = None),
             base(),
         ),
+        // The licence test every standard shares: a sentinel or a
+        // placeholder names no licence (until v0.4.0 any value passed here,
+        // while CRA Art. 13(5) failed it); a LicenseRef-* id is a licence.
         RuleEntry::tested(
             "SBOM-QUALITY-LICENSE",
             Sev::Warning,
             broken(|s| s.component_mut("libalpha").licenses.clear()),
             base(),
+        )
+        .with_firing(
+            "NOASSERTION licence",
+            Sev::Warning,
+            broken(|s| s.component_mut("libalpha").licenses = vec!["NOASSERTION".to_string()]),
+        )
+        .with_firing(
+            "placeholder licence (TBD)",
+            Sev::Warning,
+            broken(|s| s.component_mut("libalpha").licenses = vec!["TBD".to_string()]),
+        )
+        .with_silent(
+            "LicenseRef-* licence",
+            broken(|s| {
+                s.component_mut("libalpha").licenses =
+                    vec!["LicenseRef-acme-proprietary".to_string()];
+            }),
         ),
         // CycloneDX newer than the latest version read (1.7) or SPDX newer
         // than 3.0 warns; an outdated CycloneDX version is an Info. Each

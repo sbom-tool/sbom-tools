@@ -423,14 +423,16 @@ impl ComplianceChecker {
             .components
             .values()
             .any(|c| !c.vulnerabilities.is_empty());
+        // An advisories or security-contact reference counts only when it
+        // reaches someone (`known_contact`), as in every other standard; a
+        // VDR reference is a document, not a contact.
         let has_security_ref = sbom.components.values().any(|comp| {
-            comp.external_refs.iter().any(|r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::Advisories
-                        | ExternalRefType::SecurityContact
-                        | ExternalRefType::VulnerabilityAssertion
-                )
+            comp.external_refs.iter().any(|r| match r.ref_type {
+                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
+                    is_contact_reference(r)
+                }
+                ExternalRefType::VulnerabilityAssertion => true,
+                _ => false,
             })
         });
         // Both legacy satisfaction paths (embedded vulnerability data;

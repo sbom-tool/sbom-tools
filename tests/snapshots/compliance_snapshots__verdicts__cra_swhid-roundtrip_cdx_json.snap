@@ -27,7 +27,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
-[CraPhase1] NON-COMPLIANT · E1 W13 I10
+[CraPhase1] NON-COMPLIANT · E1 W13 I11
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/swhid-demo@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-content@0.1.0
@@ -35,6 +35,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-tree@2.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
@@ -52,7 +53,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:generic/lib-tree@2.0.0
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   W SBOM-CRA-SBOM-FRESHNESS  -
-[CraPhase2] NON-COMPLIANT · E1 W15 I12
+[CraPhase2] NON-COMPLIANT · E1 W15 I13
   E SBOM-CRA-ANNEX-I-DEPENDENCY  -
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:cargo/swhid-demo@1.0.0
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/lib-content@0.1.0
@@ -61,6 +62,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-CRA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
@@ -97,7 +99,7 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-FDA-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-FDA-ELEMENT-ID  pkg:generic/lib-tree@2.0.0
   W SBOM-FDA-CONTACT  -
-  W SBOM-FDA-SUPPLIER  -
+  W SBOM-FDA-MANUFACTURER  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] NON-COMPLIANT · E2 W2 I2
   E SBOM-SSDF-PS2  - (5/5)
@@ -189,12 +191,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-IDENTIFIER-MULTI  - (1/5)
   W SBOM-FSCT-LICENSE-COVERAGE  - (0/5)
 [Comprehensive] NON-COMPLIANT · E6 W10 I3
-  E SBOM-NTIA-DEPENDENCY  -
-  E SBOM-NTIA-SUPPLIER  pkg:cargo/swhid-demo@1.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/lib-content@0.1.0
-  E SBOM-NTIA-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
-  E SBOM-NTIA-SUPPLIER  pkg:generic/lib-tree@2.0.0
-  E SBOM-NTIA-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
+  E SBOM-QUALITY-DEPENDENCY  -
+  E SBOM-QUALITY-SUPPLIER  pkg:cargo/swhid-demo@1.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/lib-content@0.1.0
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/lib-multi-swhid@3.1.4
+  E SBOM-QUALITY-SUPPLIER  pkg:generic/lib-tree@2.0.0
+  E SBOM-QUALITY-SUPPLIER  pkg:github/example/lib-revision@deadbeefdeadbeefdeadbeefdeadbeefdeadbeef
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-content@0.1.0
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-multi-swhid@3.1.4
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/lib-tree@2.0.0

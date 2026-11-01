@@ -1109,6 +1109,7 @@ impl SpdxParser {
             completeness_declaration: crate::model::CompletenessDeclaration::Unknown,
             signature: None,
             distribution_classification: None,
+            profile_conformance: Vec::new(),
             citations_count: 0,
         }
     }

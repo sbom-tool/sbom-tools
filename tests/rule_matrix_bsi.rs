@@ -123,12 +123,28 @@ fn bsi_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             broken(|s| s.authors.clear()),
             base(),
         ),
-        // A creator is present but carries neither an email nor a URL.
+        // A creator is present but carries neither an email nor a URL, or
+        // only one that reaches nobody (as in every contact check).
         RuleEntry::tested(
             "SBOM-BSI-TR-03183-2-5-1-CONTACT",
             Sev::Warning,
             broken(|s| s.authors = vec![("Dana Author".to_string(), None)]),
             base(),
+        )
+        .with_firing(
+            "the creator's email is a placeholder",
+            Sev::Warning,
+            broken(|s| s.authors = vec![("Dana Author".to_string(), Some("n/a".to_string()))]),
+        )
+        .with_firing(
+            "the creator's email is at a documentation domain",
+            Sev::Warning,
+            broken(|s| {
+                s.authors = vec![(
+                    "Dana Author".to_string(),
+                    Some("dana@example.org".to_string()),
+                )];
+            }),
         )
         .case_only(
             "silent",

@@ -18,11 +18,12 @@ as_of: 2026-10-12T00:00:00Z
   I SBOM-NTIA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-NTIA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-NTIA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
-[CraPhase1] compliant · E0 W6 I8
+[CraPhase1] compliant · E0 W6 I9
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE  - (1/3)
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
@@ -33,11 +34,12 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-ART-14-NOTIFICATION  -
   W SBOM-CRA-ART-14-PSIRT  -
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
-[CraPhase2] compliant · E0 W10 I9
+[CraPhase2] compliant · E0 W10 I10
   I SBOM-CRA-ANNEX-I-INTEGRITY  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ANNEX-V  -
   I SBOM-CRA-ART-13-5  - (1/3)
   I SBOM-CRA-ART-13-8  -
+  I SBOM-CRA-DOC-INTEGRITY  -
   I SBOM-CRA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-CRA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
@@ -53,12 +55,13 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-CRA-COMPONENT-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   W SBOM-CRA-CVD-POLICY  -
   W SBOM-CRA-PRE-7-RQ-07-RE  - (1/2)
-[FdaMedicalDevice] NON-COMPLIANT · E2 W1 I3
+[FdaMedicalDevice] NON-COMPLIANT · E2 W2 I3
   E SBOM-FDA-HASH  pkg:generic/example/assistant@1.0.0
   E SBOM-FDA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-FDA-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-FDA-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-FDA-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
+  W SBOM-FDA-CONTACT  -
   W SBOM-FDA-SUPPORT  -
 [NistSsdf] compliant · E0 W3 I2
   I SBOM-SSDF-PO3  -
@@ -74,9 +77,10 @@ as_of: 2026-10-12T00:00:00Z
   E SBOM-CNSA2-000  -
 [NistPqc] NON-COMPLIANT · E1 W0 I0
   E SBOM-PQC-000  -
-[BsiTr03183_2] NON-COMPLIANT · E2 W3 I0
+[BsiTr03183_2] NON-COMPLIANT · E2 W4 I0
   E SBOM-BSI-TR-03183-2-5-4  - (2/3)
   E SBOM-BSI-TR-03183-2-LICENSE  - (1/3)
+  W SBOM-BSI-TR-03183-2-5-1-CONTACT  -
   W SBOM-BSI-TR-03183-2-5-4-MISSING  - (1/3)
   W SBOM-BSI-TR-03183-2-5-5-COMPLETENESS  -
   W SBOM-BSI-TR-03183-2-CREATOR  - (1/3)
@@ -126,7 +130,7 @@ as_of: 2026-10-12T00:00:00Z
   W SBOM-FSCT-HASH-PRIMARY-SHA2  pkg:generic/example/assistant@1.0.0
   W SBOM-FSCT-IDENTIFIER-MULTI  - (3/3)
 [Comprehensive] NON-COMPLIANT · E1 W2 I3
-  E SBOM-NTIA-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
+  E SBOM-QUALITY-SUPPLIER  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:generic/example/assistant@1.0.0
   I SBOM-QUALITY-ELEMENT-ID  pkg:huggingface/datasets/example/reviews@2026.1
   I SBOM-QUALITY-ELEMENT-ID  pkg:huggingface/example/sentiment-model@1.2.3
