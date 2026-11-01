@@ -511,14 +511,13 @@ impl ComplianceChecker {
         if unranked.is_empty() {
             return;
         }
-        let not_affected = all.len() - open.len();
-        let not_affected_note = if not_affected == 0 {
-            String::new()
-        } else {
-            format!(
-                "; {not_affected} more with a justified not_affected VEX statement need none \
-                 and are not counted"
-            )
+        let not_affected_note = match all.len() - open.len() {
+            0 => String::new(),
+            1 => "; 1 more entry has a justified not_affected VEX statement and needs none"
+                .to_string(),
+            n => format!(
+                "; {n} more entries have a justified not_affected VEX statement and need none"
+            ),
         };
         violations.push(Violation {
             severity: ViolationSeverity::Warning,
@@ -1114,6 +1113,79 @@ mod tests {
                 .iter()
                 .any(|v| v.rule_id == "SBOM-PCI-11-3-1-1-SEVERITY"),
             "a severity-ranked entry is ranked"
+        );
+    }
+
+    /// An entry whose own VEX statement is a justified not_affected needs no
+    /// ranking: it is left out of the counts, and the message says how many
+    /// were. A bare not_affected claim still needs one.
+    #[test]
+    fn risk_ranking_leaves_out_justified_not_affected_entries() {
+        use crate::model::{VexJustification, VexState, VexStatus};
+        let unranked = |id: &str| {
+            let mut vuln = VulnerabilityRef::new(id.to_string(), VulnerabilitySource::Nvd);
+            vuln.severity = Some(Severity::Unknown);
+            vuln
+        };
+        let not_affected = |id: &str, justified: bool| {
+            let mut vex = VexStatus::new(VexState::NotAffected);
+            if justified {
+                vex.justification = Some(VexJustification::VulnerableCodeNotInExecutePath);
+            }
+            let mut vuln = unranked(id);
+            vuln.vex_status = Some(vex);
+            vuln
+        };
+        let finding = |vulns: Vec<VulnerabilityRef>| {
+            let mut sbom = conforming_sbom();
+            let primary_id = sbom.primary_component_id.clone().expect("primary set");
+            sbom.components
+                .get_mut(&primary_id)
+                .expect("primary resolves")
+                .vulnerabilities
+                .extend(vulns);
+            run(&sbom)
+                .into_iter()
+                .find(|v| v.rule_id == "SBOM-PCI-11-3-1-1-SEVERITY")
+        };
+
+        // Nothing is open, so nothing needs a ranking.
+        assert!(finding(vec![not_affected("CVE-2026-2000", true)]).is_none());
+
+        let bare = finding(vec![not_affected("CVE-2026-2001", false)])
+            .expect("a bare not_affected claim needs a ranking");
+        assert_eq!(
+            bare.counts,
+            Some(ViolationCounts {
+                affected: 1,
+                total: 1
+            })
+        );
+
+        let mut ranked =
+            VulnerabilityRef::new("CVE-2026-2003".to_string(), VulnerabilitySource::Nvd);
+        ranked.severity = Some(Severity::Low);
+        let mixed = finding(vec![
+            unranked("CVE-2026-2002"),
+            ranked,
+            not_affected("CVE-2026-2004", true),
+        ])
+        .expect("the open unranked entry fires");
+        assert_eq!(
+            mixed.counts,
+            Some(ViolationCounts {
+                affected: 1,
+                total: 2
+            })
+        );
+        assert!(
+            mixed.message.contains("1/2 embedded vulnerability entries")
+                && mixed.message.ends_with(
+                    "; 1 more entry has a justified not_affected VEX statement and needs none"
+                )
+                && !mixed.message.contains("CVE-2026-2004"),
+            "{}",
+            mixed.message
         );
     }
 
