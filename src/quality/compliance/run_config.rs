@@ -189,7 +189,8 @@ impl ComplianceRunConfig {
     /// The instant a run that states it judges at: the pinned clock, else
     /// the wall clock now, to the second. `validate` and the C ABI's
     /// validate pin their run to it (`with_as_of(run.judged_at())`), so
-    /// every standard is judged at the one instant `-o json` states.
+    /// every standard is judged at the one instant `-o json` states, and
+    /// [`Self::check_levels`] judges each of its levels at it.
     #[must_use]
     pub fn judged_at(&self) -> DateTime<Utc> {
         self.as_of
@@ -386,16 +387,24 @@ impl ComplianceRunConfig {
         self.checker(level).check(sbom)
     }
 
-    /// Check `sbom` against each of `levels`, in order.
+    /// Check `sbom` against each of `levels`, and return the results in
+    /// `levels` order.
+    ///
+    /// The levels are checked in parallel, on rayon's global thread pool
+    /// (`RAYON_NUM_THREADS` sets its size). Every level is judged at one
+    /// instant, [`Self::judged_at`], so no result depends on when a thread
+    /// got to it: the results are the same whatever the number of threads.
     #[must_use]
     pub fn check_levels(
         &self,
         levels: &[ComplianceLevel],
         sbom: &NormalizedSbom,
     ) -> Vec<ComplianceResult> {
+        use rayon::prelude::*;
+        let judged_at = self.judged_at();
         levels
-            .iter()
-            .map(|level| self.check(*level, sbom))
+            .par_iter()
+            .map(|level| self.checker(*level).with_as_of(judged_at).check(sbom))
             .collect()
     }
 
