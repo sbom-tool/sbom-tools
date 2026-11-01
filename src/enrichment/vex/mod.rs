@@ -9,6 +9,7 @@ pub(crate) mod cyclonedx_vex;
 pub(crate) mod openvex;
 
 use crate::model::{NormalizedSbom, VexStatus};
+use crate::reports::escape::sanitize_path;
 use csaf::{is_csaf, parse_csaf};
 use cyclonedx_vex::{is_cyclonedx_vex, parse_cyclonedx_vex};
 use openvex::{VexParseError, extract_product_purl, parse_openvex, vex_status_from_statement};
@@ -67,7 +68,7 @@ impl VexEnricher {
                 documents_loaded += 1;
                 statements_parsed += result.statements_parsed;
                 if let Some(warning) = &result.version_warning {
-                    tracing::warn!(file = %path.display(), "{warning}");
+                    tracing::warn!(file = %sanitize_path(path), "{warning}");
                 }
                 // CSAF has no document-wide statements: every product_status
                 // entry is product-scoped. Entries whose product_id did not

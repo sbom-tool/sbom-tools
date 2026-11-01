@@ -134,6 +134,11 @@ required-features = ["ffi"]
 name = "ffi_regression"
 required-features = ["ffi"]
 
+# Compares the ABI's compliance calls with the CLI binary, so it needs both.
+[[test]]
+name = "ffi_compliance"
+required-features = ["ffi", "cli"]
+
 [package.metadata.binstall]
 pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"
 bin-dir = "{ bin }{ binary-ext }"

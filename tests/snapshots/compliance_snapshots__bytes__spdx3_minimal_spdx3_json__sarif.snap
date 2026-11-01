@@ -529,6 +529,17 @@ source: tests/compliance_snapshots.rs
           }
         }
       },
+      "artifacts": [
+        {
+          "location": {
+            "uri": "tests/fixtures/spdx3/minimal.spdx3.json",
+            "uriBaseId": "SRCROOT"
+          },
+          "hashes": {
+            "sha-256": "c53e25847e7f12617e08f71fc4543a79df0dd141033f217f2e3424f782d12b56"
+          }
+        }
+      ],
       "results": [
         {
           "ruleId": "SBOM-BSI-TR-03183-2-5-1",
@@ -563,7 +574,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
-            "field": "creationInfo.createdBy"
+            "severity": "Error",
+            "ruleId": "SBOM-BSI-TR-03183-2-5-1",
+            "field": "creationInfo.createdBy",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.1",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator. SPDX 3.0: set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -601,9 +623,25 @@ source: tests/compliance_snapshots.rs
               "https://bsi.bund.de/dok/TR-03183-en",
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-BSI-TR-03183-2-LICENSE",
             "affected": 1,
             "total": 3,
-            "field": "hasDeclaredLicense"
+            "field": "hasDeclaredLicense",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.2",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              },
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§6.1",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1). SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing_LicenseExpression element.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -639,9 +677,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSI-TR-03183-2-CREATOR",
             "affected": 2,
             "total": 3,
-            "field": "suppliedBy"
+            "field": "suppliedBy",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.2",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -677,9 +726,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-BSI-TR-03183-2-5-4",
             "affected": 2,
             "total": 3,
-            "field": "verifiedUsing[]"
+            "field": "verifiedUsing[]",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.2",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist). SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -717,9 +777,25 @@ source: tests/compliance_snapshots.rs
               "https://bsi.bund.de/dok/TR-03183-en",
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSI-TR-03183-2-5-4-MISSING",
             "affected": 1,
             "total": 3,
-            "field": "verifiedUsing[]"
+            "field": "verifiedUsing[]",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.2",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              },
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§3.2.1",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components). SPDX 3.0: add a verifiedUsing[] Hash entry with algorithm sha512.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -755,7 +831,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
-            "field": "completeness"
+            "severity": "Warning",
+            "ruleId": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+            "field": "completeness",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.2",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Clearly indicate the completeness of the dependency enumeration (complete or incomplete). SPDX 3.0: set completeness (complete or incomplete) on the dependsOn Relationship elements.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -791,9 +878,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSI-TR-03183-2-5-2-4",
             "affected": 1,
             "total": 3,
-            "field": "software_packageUrl"
+            "field": "software_packageUrl",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§5.2.4",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -829,9 +927,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://bsi.bund.de/dok/TR-03183-en"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-BSI-TR-03183-2-3-1",
             "affected": 1,
             "total": 4,
-            "field": "security_Vulnerability"
+            "field": "security_Vulnerability",
+            "standardRefs": [
+              {
+                "standard": "BsiTr03183_2",
+                "id": "§3.1",
+                "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
+              }
+            ],
+            "remediation": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2. SPDX 3.0: remove the security_Vulnerability elements and their affects and assessment Relationships.",
+            "helpUri": "https://bsi.bund.de/dok/TR-03183-en"
           }
         },
         {
@@ -867,9 +976,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.federalregister.gov/d/2021-10460"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-EO14028-IDENTIFIER",
             "affected": 1,
             "total": 3,
-            "field": "software_packageUrl"
+            "field": "software_packageUrl",
+            "standardRefs": [
+              {
+                "standard": "Eo14028",
+                "id": "EO 14028 §4",
+                "helpUri": "https://www.federalregister.gov/d/2021-10460"
+              }
+            ],
+            "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set software_packageUrl, or add an externalIdentifier[] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
+            "helpUri": "https://www.federalregister.gov/d/2021-10460"
           }
         },
         {
@@ -905,9 +1025,20 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.federalregister.gov/d/2021-10460"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-EO14028-INTEGRITY",
             "affected": 2,
             "total": 3,
-            "field": "verifiedUsing[]"
+            "field": "verifiedUsing[]",
+            "standardRefs": [
+              {
+                "standard": "Eo14028",
+                "id": "EO 14028 §4",
+                "helpUri": "https://www.federalregister.gov/d/2021-10460"
+              }
+            ],
+            "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add verifiedUsing[] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.",
+            "helpUri": "https://www.federalregister.gov/d/2021-10460"
           }
         },
         {
@@ -943,7 +1074,18 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.federalregister.gov/d/2021-10460"
             ],
-            "field": "externalRef[]"
+            "severity": "Warning",
+            "ruleId": "SBOM-EO14028-DISCLOSURE",
+            "field": "externalRef[]",
+            "standardRefs": [
+              {
+                "standard": "Eo14028",
+                "id": "EO 14028 §4",
+                "helpUri": "https://www.federalregister.gov/d/2021-10460"
+              }
+            ],
+            "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add an externalRef[] entry with externalRefType securityAdvisory to the root package.",
+            "helpUri": "https://www.federalregister.gov/d/2021-10460"
           }
         },
         {
@@ -979,26 +1121,59 @@ source: tests/compliance_snapshots.rs
             "standardHelpUris": [
               "https://www.federalregister.gov/d/2021-10460"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-EO14028-SUPPLIER",
             "affected": 2,
             "total": 3,
-            "field": "suppliedBy"
+            "field": "suppliedBy",
+            "standardRefs": [
+              {
+                "standard": "Eo14028",
+                "id": "EO 14028 §4",
+                "helpUri": "https://www.federalregister.gov/d/2021-10460"
+              }
+            ],
+            "remediation": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
+            "helpUri": "https://www.federalregister.gov/d/2021-10460"
           }
         }
       ],
       "properties": {
+        "asOf": "2026-10-12T00:00:00Z",
+        "subject": {
+          "format": "SPDX",
+          "specVersion": "3.0.1",
+          "components": 4,
+          "duplicates": {
+            "components": 0,
+            "entries": 0,
+            "conflicts": []
+          },
+          "timestampUnparsed": false
+        },
         "applicable": true,
         "standards": [
           {
+            "standard": "bsi",
             "profile": "BSI TR-03183-2",
+            "compliant": false,
             "applicable": true,
-            "overallScore": 14.0,
-            "compliant": false
+            "errorCount": 3,
+            "warningCount": 5,
+            "infoCount": 0,
+            "passedCount": 0,
+            "overallScore": 14.0
           },
           {
+            "standard": "eo14028",
             "profile": "EO 14028 Section 4",
+            "compliant": false,
             "applicable": true,
-            "overallScore": 20.0,
-            "compliant": false
+            "errorCount": 2,
+            "warningCount": 2,
+            "infoCount": 0,
+            "passedCount": 0,
+            "overallScore": 20.0
           }
         ]
       }

@@ -7,6 +7,20 @@ source: tests/compliance_snapshots.rs
     "name": "sbom-tools",
     "version": "[VERSION]"
   },
+  "as_of": "2026-10-12T00:00:00Z",
+  "subject": {
+    "sha256": "be7995c235de8f84244baf2d5cd4a217deb705904ffe2e874647f3e3c0824d96",
+    "format": "CycloneDX",
+    "spec_version": "1.5",
+    "file_name": "minimal.cdx.json",
+    "components": 3,
+    "duplicates": {
+      "components": 0,
+      "entries": 0,
+      "conflicts": []
+    },
+    "timestamp_unparsed": false
+  },
   "results": [
     {
       "standard": "ntia",

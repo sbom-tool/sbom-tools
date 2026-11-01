@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 
 use crate::pipeline::{exit_codes, read_input};
+use crate::reports::escape::sanitize_path;
 use crate::serialization::{MergeConfig, merge_sbom_json};
 
 /// Run the merge command.
@@ -27,7 +28,7 @@ pub fn run_merge(
         Some(path) => {
             std::fs::write(path, &merged)?;
             if !quiet {
-                eprintln!("Merged SBOM written to {}", path.display());
+                eprintln!("Merged SBOM written to {}", sanitize_path(path));
             }
         }
         None => {

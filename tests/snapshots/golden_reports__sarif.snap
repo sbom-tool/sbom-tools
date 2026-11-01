@@ -1867,7 +1867,23 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "field": "metadata.authors[]"
+            "severity": "Error",
+            "ruleId": "SBOM-CRA-CREATOR",
+            "field": "metadata.authors[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify who created the SBOM: a person, organization or tool. CycloneDX: add metadata.authors[] (name, email), metadata.manufacturer or metadata.tools.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1905,7 +1921,23 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.manufacturer"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ART-13-16",
+            "field": "metadata.component.manufacturer",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(16)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Identify the manufacturer (Art. 13(16)): as the manufacturer or supplier of the product component, or as an organization creator of the SBOM; placeholders such as NOASSERTION do not count. manufacturerName in the CRA sidecar lowers this to Info. CycloneDX: set metadata.component.manufacturer (CycloneDX 1.6+) or metadata.supplier, or metadata.manufacturer for the organization that created the SBOM (name, contact[].email).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1945,7 +1977,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.externalReferences[]"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ART-13-17-CONTACT",
+            "field": "metadata.component.externalReferences[]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(17)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (6)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex II (2)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give the product a single point of contact for vulnerability reports (Art. 13(17)): a security contact or vulnerability-disclosure URL referenced from the product component. securityContact or vulnerabilityDisclosureUrl in the CRA sidecar lowers the finding to Info. A contact must reach someone: placeholders such as NOASSERTION, unknown, n/a or TBD, and addresses at example.com, example.net or example.org, do not count. CycloneDX: add a metadata.component.externalReferences[] entry of type security-contact (or advisories).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -1985,7 +2038,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.properties[]"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-13-8",
+            "field": "metadata.component.properties[]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(8)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(19)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex II (7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Declare when security updates end (Art. 13(8) / 13(19)): set supportEndDate in the CRA sidecar, or record the date in the SBOM. CycloneDX: add a metadata.component.properties[] entry named end-of-support whose value is the date (RFC 3339 or YYYY-MM-DD).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2030,8 +2104,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ANNEX-I-TRACEABILITY",
             "componentId": "acme-webapp",
-            "field": "metadata.component.purl"
+            "field": "metadata.component.purl",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-07"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§3.2",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Give the primary product component a PURL or CPE so it can be traced across updates (Annex I Part II (1)); a SWHID or SWID alone does not satisfy this check. CycloneDX: set metadata.component.purl (or cpe).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2070,7 +2164,27 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.externalReferences[]"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-CVD-POLICY",
+            "field": "metadata.component.externalReferences[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (5)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(8)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "RLS-2-RQ-03-RE"
+              }
+            ],
+            "remediation": "Reference the coordinated vulnerability disclosure policy (Annex I Part II (5)) from the product component. In the CRA sidecar, coordinatedDisclosurePolicyUrl satisfies the open-source steward profile and vulnerabilityDisclosureUrl lowers the manufacturer finding to Info. A placeholder URL or an address at example.com, example.net or example.org does not count. CycloneDX: add a metadata.component.externalReferences[] entry of type advisories linking the policy.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2108,7 +2222,23 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "components[].properties[]"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-LIFECYCLE",
+            "field": "components[].properties[]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(8)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex II (7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Record component lifecycle or end-of-support status (Art. 13(8) / Annex II (7)); supportEndDate in the CRA sidecar counts too. CycloneDX: add an eol, lifecycle or end-of-support entry to components[].properties[] (or an end-of-support date to metadata.component.properties[]).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2144,7 +2274,18 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.externalReferences[]"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-V",
+            "field": "metadata.component.externalReferences[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex V",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Reference the EU Declaration of Conformity (Annex V): set ceMarkingReference in the CRA sidecar to the DoC's URL or document ID. CycloneDX: a metadata.component.externalReferences[] entry of type attestation or certification-report pointing at the DoC also counts.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2182,7 +2323,23 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "field": "serialNumber"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-SERIAL",
+            "field": "serialNumber",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Give the SBOM a unique document identifier. CycloneDX: set serialNumber (urn:uuid:…).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2229,8 +2386,33 @@ expression: "render(&SarifReporter::new())"
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Error",
+            "ruleId": "SBOM-CRA-ANNEX-I-IDENTIFIER",
             "componentId": "acme-webapp",
-            "field": "metadata.component.purl"
+            "field": "metadata.component.purl",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-07"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§3.2",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add a PURL, CPE, SWHID or SWID to each component for unique identification. PURLs are preferred (e.g., pkg:npm/lodash@4.17.21). CycloneDX: set components[].purl (or cpe, or swhid[]).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2275,8 +2457,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "acme-webapp",
-            "field": "metadata.component.supplier.name"
+            "field": "metadata.component.supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2320,8 +2522,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "acme-webapp",
-            "field": "metadata.component.hashes[]"
+            "field": "metadata.component.hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2366,8 +2584,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/lodash@4.17.21",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2411,8 +2649,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/lodash@4.17.21",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2457,8 +2711,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/express@4.18.2",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2502,8 +2776,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/express@4.18.2",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2548,8 +2838,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/dayjs@1.11.7",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2593,8 +2903,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/dayjs@1.11.7",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2639,8 +2965,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/axios@1.4.0",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2684,8 +3030,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/axios@1.4.0",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2730,8 +3092,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/react@18.2.0",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2775,8 +3157,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/react@18.2.0",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2821,8 +3219,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/typescript@5.0.4",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2866,8 +3284,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/typescript@5.0.4",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2912,8 +3346,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/zod@3.21.4",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -2957,8 +3411,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/zod@3.21.4",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3003,8 +3473,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-COMPONENT-SUPPLIER",
             "componentId": "pkg:npm/prisma@4.15.0",
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify each component's supplier; placeholders such as NOASSERTION do not count. CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3048,8 +3538,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ANNEX-I-INTEGRITY",
             "componentId": "pkg:npm/prisma@4.15.0",
-            "field": "components[].hashes[]"
+            "field": "components[].hashes[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add cryptographic hashes (SHA-256 or stronger) to components for integrity verification. CycloneDX: add components[].hashes[] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3093,8 +3599,24 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ANNEX-I-DEPENDENCY",
             "componentId": "acme-webapp",
-            "field": "dependencies[]"
+            "field": "dependencies[]",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Add dependency relationships between components: connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies[] entries (ref plus dependsOn[]); an entry with an empty dependsOn records a component that has no dependencies.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3136,9 +3658,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "acme-webapp",
             "field": "bom-ref",
-            "observed": "acme-webapp"
+            "observed": "acme-webapp",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3180,9 +3713,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/lodash@4.17.21",
             "field": "bom-ref",
-            "observed": "lodash"
+            "observed": "lodash",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3224,9 +3768,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/express@4.18.2",
             "field": "bom-ref",
-            "observed": "express"
+            "observed": "express",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3268,9 +3823,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/dayjs@1.11.7",
             "field": "bom-ref",
-            "observed": "dayjs"
+            "observed": "dayjs",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3312,9 +3878,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/axios@1.4.0",
             "field": "bom-ref",
-            "observed": "axios"
+            "observed": "axios",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3356,9 +3933,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/react@18.2.0",
             "field": "bom-ref",
-            "observed": "react"
+            "observed": "react",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3400,9 +3988,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/typescript@5.0.4",
             "field": "bom-ref",
-            "observed": "typescript"
+            "observed": "typescript",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3444,9 +4043,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/zod@3.21.4",
             "field": "bom-ref",
-            "observed": "zod"
+            "observed": "zod",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3488,9 +4098,20 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ELEMENT-ID",
             "componentId": "pkg:npm/prisma@4.15.0",
             "field": "bom-ref",
-            "observed": "prisma"
+            "observed": "prisma",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3530,7 +4151,28 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "observed": "[TIMESTAMP]"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-SBOM-FRESHNESS",
+            "observed": "[TIMESTAMP]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II (1)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§3.2",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Regenerate the SBOM when components are added, removed, or updated. CRA Art. 13(7) requires manufacturers to systematically document relevant cybersecurity aspects, and the Annex I Part II (1) SBOM must reflect the product's current components. A creation timestamp later than the evaluation date is reported like a missing one: correct the generator's clock or time zone.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3568,9 +4210,25 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-13-5",
             "affected": 1,
             "total": 9,
-            "field": "components[].licenses[]"
+            "field": "components[].licenses[]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(5)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Record license information for every component to support the Art. 13(5) due diligence on integrated third-party components. CycloneDX: add components[].licenses[] entries (license.id with an SPDX identifier, or an expression).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3610,9 +4268,33 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ANNEX-I-SUPPLY-CHAIN-TRANSITIVE",
             "affected": 9,
             "total": 9,
-            "field": "components[].supplier.name"
+            "field": "components[].supplier.name",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part II",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-01"
+              },
+              {
+                "standard": "Pren40000_1_3",
+                "id": "PRE-7-RQ-03"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.1.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Identify the suppliers of transitive dependencies as well (recommended under PRE-7-RQ-03). CycloneDX: set components[].supplier.name (or manufacturer.name, or authors[].name).",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3650,7 +4332,23 @@ expression: "render(&SarifReporter::new())"
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
             ],
-            "field": "signature"
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-DOC-INTEGRITY",
+            "field": "signature",
+            "standardRefs": [
+              {
+                "standard": "CraAnnex",
+                "id": "Annex I Part I (2)(f)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "EnisaSbomAdvisory",
+                "id": "§2.2.1",
+                "helpUri": "https://www.enisa.europa.eu/publications/enisa-technical-advisory-for-software-bill-of-materials"
+              }
+            ],
+            "remediation": "Protect the SBOM's integrity (Annex I Part I (2)(f)): sign the document, or reference from the product component an attestation or certification that carries the hash of the referenced document. A serial number identifies the document but does not protect its integrity. CycloneDX: sign the BOM (a JSF signature object at the document root in JSON, an enveloped XML-DSig <Signature> element on <bom> in XML), or add hashes[] to a metadata.component.externalReferences[] entry of type attestation or certification-report.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3686,7 +4384,18 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
             ],
-            "field": "metadata.component.externalReferences[]"
+            "severity": "Warning",
+            "ruleId": "SBOM-CRA-ART-13-2",
+            "field": "metadata.component.externalReferences[]",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 13(2)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Reference the documented cybersecurity risk assessment Art. 13(2) requires: set riskAssessmentUrl in the CRA sidecar to its URL or document reference. CycloneDX: a metadata.component.externalReferences[] entry of type risk-assessment pointing at it also counts.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3721,7 +4430,18 @@ expression: "render(&SarifReporter::new())"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-14-PSIRT",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Document the public PSIRT URL that receives external vulnerability reports (Art. 14 reporting readiness): set psirtUrl in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3758,7 +4478,23 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-14-EARLY-WARNING",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14(2)(a)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14(4)(a)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Document the channel for the 24-hour early warning of an actively exploited vulnerability or a severe incident (Art. 14(2)(a) / 14(4)(a)): set earlyWarningContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3795,7 +4531,23 @@ expression: "render(&SarifReporter::new())"
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-14-NOTIFICATION",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14(2)(b)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              },
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14(4)(b)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Document the channel for the 72-hour vulnerability and incident notifications (Art. 14(2)(b) / 14(4)(b)): set incidentReportContact in the CRA sidecar. This check reads only the sidecar; a placeholder such as TBD or an address at example.com, example.net or example.org does not count.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         },
         {
@@ -3830,7 +4582,18 @@ expression: "render(&SarifReporter::new())"
             ],
             "standardHelpUris": [
               "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
-            ]
+            ],
+            "severity": "Info",
+            "ruleId": "SBOM-CRA-ART-14-ENISA",
+            "standardRefs": [
+              {
+                "standard": "CraArticle",
+                "id": "Art. 14(7)",
+                "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+              }
+            ],
+            "remediation": "Name the CSIRT designated as coordinator in enisaReportingPlatformId in the CRA sidecar: the one Art. 14(7) assigns by the manufacturer's main establishment and every notification selects on the ENISA Single Reporting Platform (https://portal.cra-srp.enisa.europa.eu/), through which Art. 14(1), (3) and (7) route notifications since 2026-09-11. Naming that CSIRT satisfies this finding. Do not register on the platform early to clear it: no registration is needed before a notification is due, and ENISA advises registering only then. A registration already made may be recorded instead. This check reads only the sidecar.",
+            "helpUri": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
           }
         }
       ]

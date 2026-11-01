@@ -276,13 +276,11 @@ pub fn compliance_run_config(
     pqc: PqcOptions,
     rules: &RuleOptions,
 ) -> anyhow::Result<crate::quality::ComplianceRunConfig> {
-    anyhow::ensure!(
-        pqc.mode == crate::quality::PqcMode::Deadline
-            || (pqc.profile.is_none() && pqc.cnsa_category.is_none()),
-        "--pqc-profile and --cnsa-category apply only with --pqc-mode deadline"
-    );
     let mut config = crate::quality::ComplianceRunConfig::new()
-        .with_pqc_mode(pqc.mode)
+        .with_pqc_inputs(pqc.mode, pqc.profile, pqc.cnsa_category)
+        .map_err(|_| {
+            anyhow::anyhow!("--pqc-profile and --cnsa-category apply only with --pqc-mode deadline")
+        })?
         .with_rule_settings(rules.settings.clone())
         .with_include_excluded_scope(rules.include_excluded_scope);
     if let Some(as_of) = as_of.map(parse_as_of).transpose()? {
@@ -290,12 +288,6 @@ pub fn compliance_run_config(
     }
     if let Some(class) = parse_cra_product_class(cra_product_class)? {
         config = config.with_product_class(class);
-    }
-    if let Some(profile) = pqc.profile {
-        config = config.with_pqc_profile(profile);
-    }
-    if let Some(category) = pqc.cnsa_category {
-        config = config.with_cnsa_category(category);
     }
     Ok(config)
 }
@@ -392,28 +384,28 @@ pub(crate) fn sarif_artifact(
 }
 
 /// Parse an `--as-of` evaluation-clock value (shared by every command that
-/// takes the flag, through [`compliance_run_config`], so all of them accept
-/// the exact same spellings).
-///
-/// Accepted forms:
+/// takes the flag, through [`compliance_run_config`]). The spellings are the
+/// library's [`crate::quality::parse_as_of`], which the C ABI's `as_of`
+/// option reads too:
 /// - RFC 3339 datetime with offset (`2027-01-01T00:00:00Z`, `…+02:00`)
 /// - offset-less datetime, taken as UTC (`2027-01-01T00:00:00`)
 /// - bare date, meaning midnight UTC (`2027-01-01`)
 pub(crate) fn parse_as_of(raw: &str) -> anyhow::Result<chrono::DateTime<chrono::Utc>> {
-    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(raw) {
-        return Ok(dt.with_timezone(&chrono::Utc));
-    }
-    if let Ok(ndt) = raw.parse::<chrono::NaiveDateTime>() {
-        return Ok(ndt.and_utc());
-    }
-    if let Ok(d) = raw.parse::<chrono::NaiveDate>() {
-        return Ok(d.and_hms_opt(0, 0, 0).expect("midnight is valid").and_utc());
-    }
-    anyhow::bail!(
-        "invalid --as-of {raw:?}: expected an RFC 3339 datetime \
-         (e.g. 2027-01-01T00:00:00Z), an offset-less datetime taken as UTC \
-         (e.g. 2027-01-01T00:00:00), or a date YYYY-MM-DD (midnight UTC)"
-    )
+    crate::quality::parse_as_of(raw).map_err(|e| anyhow::anyhow!("invalid --as-of {raw:?}: {e}"))
+}
+
+/// `err` as the default `fn main() -> Result` termination prints it: the
+/// message, then the "Caused by:" chain. Every line is cleaned like SBOM
+/// text, since an error can quote a file name or a value from the SBOM, and
+/// both can come from a pull request. Multi-line messages keep their breaks,
+/// but no line can start a workflow command or carry a terminal escape.
+#[must_use]
+pub fn error_report(err: &anyhow::Error) -> String {
+    format!("{err:?}")
+        .split('\n')
+        .map(crate::reports::escape::sanitize_line)
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]
@@ -552,5 +544,30 @@ mod tests {
         ] {
             assert!(err.contains(valid), "must list '{valid}': {err}");
         }
+    }
+
+    /// A file name or SBOM value quoted in an error cannot start a workflow
+    /// command or send a terminal escape, and the "Caused by:" chain keeps
+    /// its layout.
+    #[test]
+    fn error_report_cleans_every_line() {
+        let err = anyhow::anyhow!("Unknown SBOM format")
+            .context("x\n::error file=a::FORGED\u{1b}[31m\u{202E}.cdx.json")
+            .context("\r::warning::FORGED at line start");
+        let report = super::error_report(&err);
+        for line in report.lines() {
+            assert!(
+                !line.trim_start().starts_with("::"),
+                "a line starts a workflow command: {line:?}\n{report}"
+            );
+        }
+        assert!(!report.contains(['\u{1b}', '\r', '\u{202E}']), "{report:?}");
+        // The CR shows as a visible `\n`, so the line starts with a backslash.
+        assert!(report.starts_with("\\n::warning::FORGED"), "{report}");
+        assert!(report.contains("\n\nCaused by:\n    0: x\n"), "{report}");
+        assert!(report.contains("\n    1: Unknown SBOM format"), "{report}");
+        // An error without hostile text prints exactly as anyhow prints it.
+        let plain = anyhow::anyhow!("inner").context("outer");
+        assert_eq!(super::error_report(&plain), format!("{plain:?}"));
     }
 }

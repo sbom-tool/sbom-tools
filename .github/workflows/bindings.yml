@@ -59,6 +59,9 @@ jobs:
       - name: Test FFI regression (PR #113 + multi-format)
         run: cargo test --locked --features ffi --test ffi_regression
 
+      - name: Test FFI compliance (validate and catalogue match the CLI byte for byte)
+        run: cargo test --locked --features ffi --test ffi_compliance
+
   go-bindings:
     name: Go Bindings (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
