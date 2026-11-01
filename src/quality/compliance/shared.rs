@@ -5,6 +5,9 @@ use crate::model::{
     Component, ComponentType, CreatorType, ExternalReference, Hash, HashAlgorithm, NormalizedSbom,
     Organization,
 };
+// The placeholder and sentinel tests every check reads live in the model,
+// which merges a component's entries with the same classification.
+pub(crate) use crate::model::{is_declared_unknown, is_placeholder};
 
 /// The components package rules apply to: everything except files,
 /// snippets, cryptographic assets and services (see
@@ -68,6 +71,37 @@ pub(crate) fn inventory_absent_violation(
         remediation: None,
         finding_detail: None,
         deadline: None,
+    })
+}
+
+/// The longest SBOM value a finding message quotes, in characters. A longer
+/// value is cut, with an ellipsis.
+const MAX_QUOTED_CHARS: usize = 64;
+
+/// `value` as a finding message quotes it: cut to [`MAX_QUOTED_CHARS`]
+/// characters.
+fn quoted(value: &str) -> String {
+    let mut chars = value.chars();
+    let head: String = chars.by_ref().take(MAX_QUOTED_CHARS).collect();
+    if chars.next().is_some() {
+        format!("'{head}…'")
+    } else {
+        format!("'{head}'")
+    }
+}
+
+/// How a timestamp check names a creation timestamp the document wrote but
+/// that is not an RFC 3339 date-time: "an unparseable creation timestamp
+/// '…', not an RFC 3339 date-time". `None` when the document's timestamp
+/// parsed or is absent: a check without a known timestamp then reports it
+/// missing, and with one it reports the value, so a user does not look for a
+/// field they did set.
+pub(crate) fn unparseable_timestamp(sbom: &NormalizedSbom) -> Option<String> {
+    sbom.document.created_unparsed.as_deref().map(|value| {
+        format!(
+            "an unparseable creation timestamp {}, not an RFC 3339 date-time",
+            quoted(value)
+        )
     })
 }
 
@@ -222,47 +256,6 @@ pub(crate) fn truncate_list(items: &[String], max: usize) -> String {
         let rest = items.len() - max;
         format!("{head}, …and {rest} more")
     }
-}
-
-/// Placeholder values generators write instead of data (`TBD`, `N/A`, …).
-/// Unlike the explicit sentinels (see [`is_declared_unknown`]) they declare
-/// nothing, so they never satisfy an element in any standard. Curated
-/// conservatively so genuine values are never flagged; CISA FSCT §2.3.1
-/// calls these "ambiguous".
-const PLACEHOLDERS: &[&str] = &[
-    "tbd",
-    "to be determined",
-    "todo",
-    "n/a",
-    "n.a.",
-    "placeholder",
-    "unspecified",
-    "not specified",
-    "not available",
-    "unavailable",
-    "null",
-    "nil",
-    "undefined",
-    "xxx",
-    "-",
-    "--",
-    "?",
-];
-
-/// Whether `value` is a placeholder that declares nothing.
-pub(crate) fn is_placeholder(value: &str) -> bool {
-    let lower = value.trim().to_ascii_lowercase();
-    PLACEHOLDERS.contains(&lower.as_str())
-}
-
-/// Whether `value` is one of the explicit sentinels SPDX and CycloneDX
-/// producers write to assert that a value is unknown or absent
-/// (`NOASSERTION`, `NONE`, `UNKNOWN`).
-pub(crate) fn is_declared_unknown(value: &str) -> bool {
-    let v = value.trim();
-    v.eq_ignore_ascii_case("NOASSERTION")
-        || v.eq_ignore_ascii_case("NONE")
-        || v.eq_ignore_ascii_case("UNKNOWN")
 }
 
 /// What a field says about a required element.

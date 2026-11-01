@@ -14,7 +14,7 @@ mod rule_matrix;
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER,
     RuleEntry, SPDX_VERSION_CASE, SPDX3_AGENT_EMAILS_NOT_READ, SPDX3_VALID_UNTIL_NOT_READ,
-    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, assert_no_violations_in,
+    SPDX23_HAS_NO_VULNERABILITIES, SbomFixture, UNPARSEABLE_TIMESTAMP, assert_no_violations_in,
     assert_spdx_version_unknown, check_in, render_violations, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, FDA_SARIF_RULE_IDS, ViolationSeverity as Sev};
@@ -104,6 +104,11 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         // The creator gate emits a fully creator-less SBOM as an Error.
         RuleEntry::tested(
@@ -366,6 +371,19 @@ fn fda_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "contact email on a person author only",
             Encoding::ALL_BUT_SPDX3,
             SPDX3_AGENT_EMAILS_NOT_READ,
+        ),
+        // A component listed twice, under a second bom-ref or under its own
+        // bom-ref again: the entries are merged, and one Info names it.
+        RuleEntry::tested(
+            "SBOM-FDA-DUPLICATE-COMPONENT",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", false)),
+            base(),
+        )
+        .with_firing(
+            "the same bom-ref twice",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", true)),
         ),
     ];
 

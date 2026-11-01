@@ -2,8 +2,9 @@
 
 use super::{
     CanonicalId, ComponentExtensions, ComponentIdentifiers, ComponentType, CryptoProperties,
-    DependencyScope, DependencyType, DocumentMetadata, Ecosystem, ExternalReference,
-    FormatExtensions, Hash, LicenseInfo, Organization, VexStatus, VulnerabilityRef,
+    DependencyScope, DependencyType, DocumentMetadata, DuplicateComponent, Ecosystem,
+    ExternalReference, FormatExtensions, Hash, LicenseInfo, Organization, VexStatus,
+    VulnerabilityRef,
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -38,7 +39,21 @@ pub struct NormalizedSbom {
     /// [`Self::described_components`]. Additive: skipped in JSON when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub described_root_ids: Vec<CanonicalId>,
-    /// Number of canonical ID collisions encountered during parsing
+    /// The components the document lists more than once, keyed by canonical
+    /// id, in the order of their first repeat: how many entries each had,
+    /// their format ids and the fields they disagree on. Each component's
+    /// entries were merged into one (see [`Self::add_component`]).
+    /// Additive: serialized as a list of records, and skipped when empty.
+    #[serde(
+        default,
+        skip_serializing_if = "IndexMap::is_empty",
+        with = "super::merge::duplicate_list"
+    )]
+    pub duplicate_components: IndexMap<CanonicalId, DuplicateComponent>,
+    /// Number of canonical ID collisions encountered during parsing: the
+    /// entries merged into a component listed before them (see
+    /// [`Self::duplicate_components`]), plus the components another of a
+    /// different name or version replaced.
     #[serde(skip)]
     pub collision_count: usize,
 }
@@ -55,6 +70,7 @@ impl NormalizedSbom {
             content_hash: 0,
             primary_component_id: None,
             described_root_ids: Vec::new(),
+            duplicate_components: IndexMap::new(),
             collision_count: 0,
         }
     }
@@ -95,43 +111,60 @@ impl NormalizedSbom {
 
     /// Add a component to the SBOM.
     ///
-    /// Returns `true` if a collision occurred (a component with the same canonical ID
-    /// was already present and has been overwritten). Collisions are logged as warnings.
+    /// A component whose canonical id is new is inserted, and `false` is
+    /// returned. One whose id a component of the same name and version
+    /// already holds is another entry of that component (the document lists
+    /// it twice; a name or version that is absent or not known, such as
+    /// `NOASSERTION`, agrees with any, see [`Component::is_same_component`]):
+    /// the two are merged ([`Component::merge_duplicate`]), so the result
+    /// does not depend on which entry came first, no entry's data is lost,
+    /// and a known value always wins over a placeholder. The duplicate is
+    /// recorded in [`Self::duplicate_components`] and counted in
+    /// [`Self::collision_count`], and `true` is returned.
+    ///
+    /// A component of a different known name or version under a taken id
+    /// replaces the one there (counted, and `true`). Parsers never pass one:
+    /// [`Self::claim_canonical_id`] gives it an id of its own first.
     pub fn add_component(&mut self, component: Component) -> bool {
         let id = component.canonical_id.clone();
-        if let Some(existing) = self.components.get(&id) {
-            // Count genuinely different components that collide on canonical ID
-            if existing.identifiers.format_id != component.identifiers.format_id
-                || existing.name != component.name
-            {
-                self.collision_count += 1;
-            }
+        let Some(existing) = self.components.get_mut(&id) else {
             self.components.insert(id, component);
-            true
-        } else {
-            self.components.insert(id, component);
-            false
+            return false;
+        };
+        self.collision_count += 1;
+        if !existing.is_same_component(&component) {
+            *existing = component;
+            return true;
         }
+        let first_format_id = existing.identifiers.format_id.clone();
+        let format_id = component.identifiers.format_id.clone();
+        let conflicts = existing.merge_duplicate(component);
+        self.duplicate_components
+            .entry(id.clone())
+            .or_insert_with(|| DuplicateComponent::first_entry(id, first_format_id))
+            .count_entry(format_id, conflicts);
+        true
     }
 
     /// Settle the canonical ID `component` will be inserted under.
     ///
     /// Parsers call this before recording the ID in their reference maps.
     /// When another component already holds the same canonical ID but has a
-    /// different name or version, the two are distinct components that share
-    /// an identifier (two versions under one version-less purl, say).
+    /// different known name or version, the two are distinct components that
+    /// share an identifier (two versions under one version-less purl, say).
     /// Inserting would overwrite — silently dropping a component from every
     /// count and check — so `component` is re-keyed to an ID that appends its
     /// format ID (bom-ref or SPDXID), and the clash is logged. A true
-    /// duplicate (same name and version) keeps the shared ID and is merged by
-    /// [`Self::add_component`] as before. Returns the ID to register.
+    /// duplicate (the same name and version, where a name or version that is
+    /// absent or not known agrees with any; see
+    /// [`Component::is_same_component`]) keeps the shared ID, and
+    /// [`Self::add_component`] merges the two entries. Returns the ID to
+    /// register.
     pub fn claim_canonical_id(&self, component: &mut Component) -> CanonicalId {
         let distinct = self
             .components
             .get(&component.canonical_id)
-            .is_some_and(|existing| {
-                existing.name != component.name || existing.version != component.version
-            });
+            .is_some_and(|existing| !existing.is_same_component(component));
         if distinct {
             let base = format!(
                 "{}#{}",
@@ -160,9 +193,11 @@ impl NormalizedSbom {
         if self.collision_count > 0 {
             tracing::info!(
                 collision_count = self.collision_count,
-                "Canonical ID collisions: {} distinct components resolved to the same ID \
-                 and were overwritten. Consider adding PURL identifiers to disambiguate.",
-                self.collision_count
+                duplicated_components = self.duplicate_components.len(),
+                "Canonical ID collisions: {} entries repeat a component listed before them \
+                 ({} components listed more than once); each component's entries were merged.",
+                self.collision_count,
+                self.duplicate_components.len()
             );
         }
     }

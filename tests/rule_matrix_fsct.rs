@@ -21,7 +21,7 @@ mod rule_matrix;
 use rule_matrix::clock::checker;
 use rule_matrix::{
     ComponentFixture, Encoding, IMPLAUSIBLE_SHA256_DIGESTS, MD5_FILLER, Outcome, RuleEntry,
-    SHA256_FILLER, SPDX23_HAS_NO_COMPLETENESS, SbomFixture, run_matrix,
+    SHA256_FILLER, SPDX23_HAS_NO_COMPLETENESS, SbomFixture, UNPARSEABLE_TIMESTAMP, run_matrix,
 };
 use sbom_tools::parsers::parse_sbom_str;
 use sbom_tools::quality::{
@@ -145,6 +145,11 @@ fn fsct_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         RuleEntry::tested(
             "SBOM-FSCT-SBOM-TYPE",

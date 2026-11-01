@@ -278,15 +278,27 @@ impl ComplianceChecker {
         // and substitute the UNIX_EPOCH sentinel for a missing/unparseable
         // source value, so the check degrades to has_known_timestamp(): the
         // element's RFC 9557 source-syntax requirement is unverifiable
-        // post-normalization and is NOT claimed to be checked here.
+        // post-normalization and is NOT claimed to be checked here. A value
+        // the parser could not read is quoted.
         if !sbom.document.has_known_timestamp() {
+            let message = unparseable_timestamp(sbom).map_or_else(
+                || {
+                    "[CISA 2026] SBOM Timestamp missing or invalid: no date/time of the \
+                     most recent update to the SBOM data (the element targets RFC 9557 \
+                     syntax; source syntax is not verified post-normalization)"
+                        .to_string()
+                },
+                |gap| {
+                    format!(
+                        "[CISA 2026] SBOM Timestamp invalid: the SBOM has {gap}, so it gives \
+                         no date/time of the most recent update to the SBOM data"
+                    )
+                },
+            );
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "[CISA 2026] SBOM Timestamp missing or invalid: no date/time of the \
-                          most recent update to the SBOM data (the element targets RFC 9557 \
-                          syntax; source syntax is not verified post-normalization)"
-                    .to_string(),
+                message,
                 element: None,
                 requirement: "CISA 2026 Minimum Elements: SBOM Timestamp".to_string(),
                 rule_id: "SBOM-CISA2026-TIMESTAMP",

@@ -139,11 +139,17 @@ impl ComplianceChecker {
         // parsers surface as the UNIX_EPOCH sentinel (see
         // DocumentMetadata::has_known_timestamp).
         if !doc.has_known_timestamp() {
+            let message = unparseable_timestamp(sbom).map_or_else(
+                || {
+                    "[BSI-AI] Metadata readiness: SBOM creation timestamp missing or invalid"
+                        .to_string()
+                },
+                |gap| format!("[BSI-AI] Metadata readiness: SBOM has {gap}"),
+            );
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "[BSI-AI] Metadata readiness: SBOM creation timestamp missing or invalid"
-                    .to_string(),
+                message,
                 element: None,
                 requirement: "BSI/G7 SBOM-for-AI — Metadata / Timestamp".to_string(),
                 rule_id: "SBOM-BSIAI-META-TIMESTAMP",

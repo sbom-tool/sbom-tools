@@ -37,7 +37,8 @@
 use super::detection::FormatDetector;
 use super::traits::ParseError;
 use crate::model::{
-    CanonicalId, Component, DependencyEdge, DocumentMetadata, FormatExtensions, NormalizedSbom,
+    CanonicalId, Component, DependencyEdge, DocumentMetadata, DuplicateComponent, FormatExtensions,
+    NormalizedSbom,
 };
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read};
@@ -186,6 +187,12 @@ pub struct ParsedMetadata {
     /// The other described components (see
     /// [`NormalizedSbom::described_root_ids`]).
     pub described_root_ids: Vec<CanonicalId>,
+    /// The components the document lists more than once (see
+    /// [`NormalizedSbom::duplicate_components`]); their entries arrive as
+    /// one merged component.
+    pub duplicate_components: Vec<DuplicateComponent>,
+    /// [`NormalizedSbom::collision_count`] of the parse.
+    pub collision_count: usize,
     pub extensions: FormatExtensions,
 }
 
@@ -310,6 +317,8 @@ impl StreamingIterator {
         let mut metadata: Option<DocumentMetadata> = None;
         let mut primary_component_id: Option<CanonicalId> = None;
         let mut described_root_ids: Vec<CanonicalId> = Vec::new();
+        let mut duplicate_components: Vec<DuplicateComponent> = Vec::new();
+        let mut collision_count = 0;
         let mut extensions: Option<FormatExtensions> = None;
         let mut components = Vec::new();
         let mut edges = Vec::new();
@@ -320,6 +329,8 @@ impl StreamingIterator {
                     metadata = Some(meta.document);
                     primary_component_id = meta.primary_component_id;
                     described_root_ids = meta.described_root_ids;
+                    duplicate_components = meta.duplicate_components;
+                    collision_count = meta.collision_count;
                     extensions = Some(meta.extensions);
                 }
                 Ok(ParseEvent::Component(comp)) => components.push(*comp),
@@ -338,6 +349,13 @@ impl StreamingIterator {
         for comp in components {
             sbom.add_component(comp);
         }
+        // The components arrive merged, one per canonical id; the parse's
+        // duplicate records and collision count come with the metadata.
+        sbom.duplicate_components = duplicate_components
+            .into_iter()
+            .map(|record| (record.canonical_id.clone(), record))
+            .collect();
+        sbom.collision_count = collision_count;
         for edge in edges {
             sbom.add_edge(edge);
         }
@@ -395,6 +413,9 @@ impl StreamingIterator {
                     let document = sbom.document.clone();
                     let primary_component_id = sbom.primary_component_id.clone();
                     let described_root_ids = sbom.described_root_ids.clone();
+                    let duplicate_components =
+                        sbom.duplicate_components.values().cloned().collect();
+                    let collision_count = sbom.collision_count;
                     let extensions = sbom.extensions.clone();
                     self.state = StreamingState::Emitting {
                         sbom,
@@ -406,6 +427,8 @@ impl StreamingIterator {
                         document,
                         primary_component_id,
                         described_root_ids,
+                        duplicate_components,
+                        collision_count,
                         extensions,
                     }))));
                 }

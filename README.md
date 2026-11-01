@@ -481,6 +481,11 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>`, `--pqc-mode`, `--pqc-profile`, `--cnsa-category` | Inputs of the compliance checks (the TUI's compliance tab, `--validate-ntia`, the reports' CRA section), taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
+`--severity`, `--vulnerable-only` and `--ecosystem` narrow the component list
+only. The compliance tab and its exports, the quality score, `--validate-ntia`
+and a report's CRA section judge the whole SBOM, so they report what
+`validate` reports; the compliance tab says when the list is filtered.
+
 </details>
 
 ### Validate
@@ -856,9 +861,12 @@ Which JSON payloads are a compatibility contract, and how firm it is
   `tests/ffi_schema_snapshots.rs`). It is the canonical model as JSON:
   `document`, `components[]` as `{canonical_id, component}` entries in SBOM
   order, `edges`, `extensions`, `content_hash`, `primary_component_id`,
-  `collision_count`, and `described_root_ids` when an SPDX document
-  describes more than one product (omitted otherwise). Lossless, and carries
-  every parsed field including `crypto_properties`.
+  `collision_count`, `described_root_ids` when an SPDX document
+  describes more than one product, and `duplicate_components` when the
+  document lists a component more than once (each omitted otherwise; see
+  [Duplicate components](docs/compliance-output.md#duplicate-components)).
+  `document.created_unparsed` keeps a creation timestamp that did not parse.
+  Lossless, and carries every parsed field including `crypto_properties`.
 
   ```sh
   sbom-tools convert --to normalized my.cbom.json | jq '.components[].component.crypto_properties'

@@ -420,18 +420,16 @@ impl CycloneDxParser {
 
     /// Convert `CycloneDX` metadata to `DocumentMetadata`
     fn convert_metadata(&self, cdx: &CycloneDxBom) -> DocumentMetadata {
-        let created = cdx
-            .metadata
-            .as_ref()
-            .and_then(|m| m.timestamp.as_ref())
-            .and_then(|t| DateTime::parse_from_rfc3339(t).ok())
-            // Deterministic fallback: a document with a missing/invalid
-            // timestamp must hash identically on every parse (created is
-            // folded into the content hash; Utc::now() here made every
-            // parse of such a document content-unique, defeating diff
-            // identity and the incremental cache). Epoch is an honest
-            // "unknown" sentinel rather than a fabricated parse time.
-            .map_or(DateTime::UNIX_EPOCH, |dt| dt.with_timezone(&Utc));
+        // Deterministic fallback: a document with a missing or invalid
+        // timestamp must hash identically on every parse (created is folded
+        // into the content hash; Utc::now() here made every parse of such a
+        // document content-unique, defeating diff identity and the
+        // incremental cache). Epoch is an honest "unknown" sentinel rather
+        // than a fabricated parse time. An invalid value is kept, so the
+        // checks report it as unparseable rather than missing.
+        let (created, created_unparsed) = DocumentMetadata::parse_created(
+            cdx.metadata.as_ref().and_then(|m| m.timestamp.as_deref()),
+        );
 
         let mut creators = Vec::new();
         if let Some(meta) = &cdx.metadata {
@@ -587,6 +585,7 @@ impl CycloneDxParser {
             // the spec, but absence is preserved as None rather than invented).
             doc_version: cdx.version,
             created,
+            created_unparsed,
             creators,
             supplier,
             name: cdx

@@ -70,7 +70,7 @@ use shared::{
     has_known_value, invalid_digest_note, inventory_absent_violation, is_declared_unknown,
     is_placeholder, is_valid_email_format, known_component_name, known_value,
     manufacturer_identified, manufacturer_reference, name_with_digest_problems, package_components,
-    truncate_list, value_state,
+    truncate_list, unparseable_timestamp, value_state,
 };
 
 /// CRA enforcement phase

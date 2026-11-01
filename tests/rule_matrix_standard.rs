@@ -37,6 +37,7 @@ const STANDARD_RULE_UNIVERSE: &[&str] = &[
     "SBOM-QUALITY-SPEC-VERSION",
     "SBOM-QUALITY-SPEC-VERSION-UNKNOWN",
     "SBOM-QUALITY-ELEMENT-ID",
+    "SBOM-QUALITY-DUPLICATE-COMPONENT",
 ];
 
 /// A component that also satisfies the Standard-level license check.
@@ -179,6 +180,19 @@ fn standard_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.dependencies = vec![("libalpha".to_string(), vec!["ref-libbeta".to_string()])];
             }),
             base(),
+        ),
+        // A component listed twice, under a second bom-ref or under its own
+        // bom-ref again: the entries are merged, and one Info names it.
+        RuleEntry::tested(
+            "SBOM-QUALITY-DUPLICATE-COMPONENT",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", false)),
+            base(),
+        )
+        .with_firing(
+            "the same bom-ref twice",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", true)),
         ),
     ];
 

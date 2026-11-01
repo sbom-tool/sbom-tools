@@ -14,7 +14,7 @@ mod rule_matrix;
 
 use rule_matrix::{
     CYCLONEDX_VERSION_CASE, ComponentFixture, Encoding, RuleEntry, SPDX_VERSION_CASE, SbomFixture,
-    assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
+    UNPARSEABLE_TIMESTAMP, assert_no_violations_in, assert_spdx_version_unknown, run_matrix,
 };
 use sbom_tools::quality::{ComplianceLevel, NTIA_SARIF_RULE_IDS, ViolationSeverity as Sev};
 
@@ -94,6 +94,17 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "NOASSERTION version",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").version = Some("NOASSERTION".to_string())),
+        )
+        // libalpha listed twice, its first entry without a version: the
+        // entries are one component, which has the known version.
+        .with_silent(
+            "first of two entries without a version",
+            broken(|s| {
+                let mut first = s.component_mut("libalpha").clone();
+                first.bom_ref = "ref-libalpha-first".to_string();
+                first.version = None;
+                s.components.insert(0, first);
+            }),
         ),
         RuleEntry::tested(
             "SBOM-NTIA-SUPPLIER",
@@ -105,6 +116,20 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             "NOASSERTION supplier",
             Sev::Error,
             broken(|s| s.component_mut("libalpha").supplier = Some("NOASSERTION".to_string())),
+        )
+        // libalpha listed twice, its first entry with a NOASSERTION supplier
+        // and its second with a supplier that sorts after it: the merged
+        // component keeps the known supplier.
+        .with_silent(
+            "first of two entries with a NOASSERTION supplier",
+            broken(|s| {
+                let alpha = s.component_mut("libalpha");
+                alpha.supplier = Some("Zeta Components Ltd".to_string());
+                let mut first = alpha.clone();
+                first.bom_ref = "ref-libalpha-first".to_string();
+                first.supplier = Some("NOASSERTION".to_string());
+                s.components.insert(0, first);
+            }),
         ),
         RuleEntry::tested(
             "SBOM-NTIA-IDENTIFIER",
@@ -140,6 +165,11 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
             Sev::Error,
             broken(|s| s.timestamp = None),
             base(),
+        )
+        .with_firing(
+            "unparseable timestamp",
+            Sev::Error,
+            broken(|s| s.timestamp = Some(UNPARSEABLE_TIMESTAMP.to_string())),
         ),
         // A CycloneDX or SPDX version newer than any this tool reads warns;
         // an outdated CycloneDX version is an Info. Each version case runs
@@ -188,6 +218,19 @@ fn ntia_rule_matrix_is_exhaustive_with_firing_and_silent_cases() {
                 s.dependencies = vec![("libalpha".to_string(), vec!["ref-libbeta".to_string()])];
             }),
             base(),
+        ),
+        // A component listed twice, under a second bom-ref or under its own
+        // bom-ref again: the entries are merged, and one Info names it.
+        RuleEntry::tested(
+            "SBOM-NTIA-DUPLICATE-COMPONENT",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", false)),
+            base(),
+        )
+        .with_firing(
+            "the same bom-ref twice",
+            Sev::Info,
+            broken(|s| s.list_twice("libalpha", true)),
         ),
     ];
 

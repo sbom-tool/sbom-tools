@@ -1170,9 +1170,19 @@ fn render_document_info(frame: &mut Frame, area: Rect, app: &ViewApp) {
         }
         lines.push(Line::from(spans));
     } else {
+        // A value the parser could not read is shown, not called unknown.
+        let created = doc.created_unparsed.as_deref().map_or_else(
+            || "unknown".to_string(),
+            |raw| {
+                format!(
+                    "unparseable '{}'",
+                    crate::tui::widgets::truncate_str(raw, 40)
+                )
+            },
+        );
         lines.push(Line::from(vec![
             Span::styled("Created: ", label_style),
-            Span::styled("unknown", Style::default().fg(scheme.warning)),
+            Span::styled(created, Style::default().fg(scheme.warning)),
         ]));
     }
 

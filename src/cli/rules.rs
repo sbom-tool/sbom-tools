@@ -406,7 +406,7 @@ mod tests {
         let text = rules_text(&filter, &entries);
         assert!(
             text.starts_with(
-                "Compliance rules: 15 rules of oss-steward (CRA OSS Steward (Art. 24))\n"
+                "Compliance rules: 16 rules of oss-steward (CRA OSS Steward (Art. 24))\n"
             ),
             "{text}"
         );

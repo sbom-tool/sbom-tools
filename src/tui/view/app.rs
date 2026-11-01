@@ -14,8 +14,15 @@ use super::views::{StandardComplianceState, compute_compliance_results};
 
 /// Main application state for single SBOM viewing.
 pub struct ViewApp {
-    /// The SBOM being viewed
+    /// The SBOM being viewed: the components the tabs list
     pub(crate) sbom: NormalizedSbom,
+
+    /// The whole SBOM, when `view --severity`, `--ecosystem` or
+    /// `--vulnerable-only` removed components from `sbom`: the compliance
+    /// tab, its exports and the quality score judge it, so they report what
+    /// `validate` reports for the same SBOM (see [`Self::judged_sbom`]).
+    /// `None` when `sbom` is whole.
+    pub(crate) unfiltered_sbom: Option<NormalizedSbom>,
 
     /// BOM profile (SBOM / CBOM) — determines tab set and mode-specific behavior
     pub(crate) bom_profile: crate::model::BomProfile,
@@ -190,12 +197,38 @@ impl ViewApp {
         bom_profile: crate::model::BomProfile,
         compliance: ComplianceRunConfig,
     ) -> Self {
+        Self::build(sbom, None, raw_content, bom_profile, compliance)
+    }
+
+    /// Create a `ViewApp` whose tabs list `shown`, the components `view`'s
+    /// display filters kept, while the compliance tab, its exports and the
+    /// quality score judge `whole`, the SBOM before filtering, with
+    /// `compliance`'s inputs: the verdicts are those `validate` reports for
+    /// the SBOM, whatever the filters hide. The compliance tab says so.
+    #[must_use]
+    pub fn new_filtered(
+        shown: NormalizedSbom,
+        whole: NormalizedSbom,
+        raw_content: &str,
+        bom_profile: crate::model::BomProfile,
+        compliance: ComplianceRunConfig,
+    ) -> Self {
+        Self::build(shown, Some(whole), raw_content, bom_profile, compliance)
+    }
+
+    fn build(
+        sbom: NormalizedSbom,
+        unfiltered_sbom: Option<NormalizedSbom>,
+        raw_content: &str,
+        bom_profile: crate::model::BomProfile,
+        compliance: ComplianceRunConfig,
+    ) -> Self {
         let stats = SbomStats::from_sbom(&sbom);
 
-        // Calculate quality score
+        // Calculate quality score, of the whole SBOM
         let scoring_profile = crate::tui::scoring_profile_for(bom_profile);
         let scorer = QualityScorer::new(scoring_profile).with_compliance(compliance.clone());
-        let quality_report = scorer.score(&sbom);
+        let quality_report = scorer.score(unfiltered_sbom.as_ref().unwrap_or(&sbom));
         let quality_state = QualityViewState::new(quality_report.recommendations.len());
 
         let compliance_state = StandardComplianceState::new();
@@ -223,6 +256,7 @@ impl ViewApp {
 
         let mut app = Self {
             sbom,
+            unfiltered_sbom,
             bom_profile,
             active_tab: initial_tab,
             tree_state,
@@ -282,11 +316,31 @@ impl ViewApp {
         app
     }
 
+    /// The SBOM the view's verdicts judge (the compliance tab and its
+    /// exports, the quality score): the whole SBOM, also when the display
+    /// filters list only part of it.
+    #[must_use]
+    pub fn judged_sbom(&self) -> &NormalizedSbom {
+        self.unfiltered_sbom.as_ref().unwrap_or(&self.sbom)
+    }
+
+    /// The components the display filters removed from the list, of how
+    /// many in the whole SBOM: `None` when nothing was removed.
+    #[must_use]
+    pub fn filtered_out(&self) -> Option<(usize, usize)> {
+        self.unfiltered_sbom.as_ref().map(|whole| {
+            let total = whole.component_count();
+            (total.saturating_sub(self.sbom.component_count()), total)
+        })
+    }
+
     /// Lazily compute compliance results for all standards when first needed.
     pub fn ensure_compliance_results(&mut self) {
         if self.compliance_results.is_none() {
-            self.compliance_results =
-                Some(compute_compliance_results(&self.sbom, &self.compliance_run));
+            self.compliance_results = Some(compute_compliance_results(
+                self.judged_sbom(),
+                &self.compliance_run,
+            ));
         }
     }
 
@@ -952,10 +1006,10 @@ impl ViewApp {
         // carry the same verdicts as the compliance tab instead of falling
         // back to a bare (sidecar-less, Default-class) checker.
         let config = ReportConfig {
-            view_cra_compliance: Some(
-                self.compliance_run
-                    .check(crate::quality::ComplianceLevel::CraPhase2, &self.sbom),
-            ),
+            view_cra_compliance: Some(self.compliance_run.check(
+                crate::quality::ComplianceLevel::CraPhase2,
+                self.judged_sbom(),
+            )),
             ..ReportConfig::with_types(vec![report_type])
         };
         let result = export_view(

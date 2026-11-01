@@ -64,6 +64,20 @@ const ELEMENT_ID_RULES: FamilyRuleIds = FamilyRuleIds {
     fda: "SBOM-FDA-ELEMENT-ID",
 };
 
+/// Components the document lists more than once: entries that share a
+/// canonical id, name and version, which the parser merged. One finding per
+/// document.
+const DUPLICATE_COMPONENT_RULES: FamilyRuleIds = FamilyRuleIds {
+    quality: "SBOM-QUALITY-DUPLICATE-COMPONENT",
+    ntia: "SBOM-NTIA-DUPLICATE-COMPONENT",
+    cra: "SBOM-CRA-DUPLICATE-COMPONENT",
+    fda: "SBOM-FDA-DUPLICATE-COMPONENT",
+};
+
+/// How many duplicated components a duplicate finding names before it
+/// counts the rest.
+const MAX_NAMED_DUPLICATES: usize = 5;
+
 impl ComplianceChecker {
     pub(crate) fn check_document_metadata(
         &self,
@@ -599,7 +613,7 @@ impl ComplianceChecker {
         // `DocumentMetadata::created` is never None, but a missing/invalid
         // source timestamp is stored as the UNIX_EPOCH sentinel (see
         // `has_known_timestamp`), so gate on that rather than assuming it is
-        // always meaningful.
+        // always meaningful. An invalid one is quoted, not called missing.
         if matches!(
             self.level,
             ComplianceLevel::NtiaMinimum
@@ -612,11 +626,14 @@ impl ComplianceChecker {
             } else {
                 "NTIA Minimum Elements: Timestamp".to_string()
             };
+            let message = unparseable_timestamp(sbom).map_or_else(
+                || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
+                |gap| format!("SBOM has {gap} (NTIA required data field)"),
+            );
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "SBOM is missing a creation timestamp (NTIA required data field)"
-                    .to_string(),
+                message,
                 element: None,
                 requirement,
                 rule_id: "SBOM-NTIA-TIMESTAMP",
@@ -1273,19 +1290,20 @@ impl ComplianceChecker {
         // CRA product-class calibration: dependency cycles undermine the
         // reliability of the SBOM's dependency graph (Annex I Part II (1)
         // requires the SBOM to cover the product's dependencies). Severity
-        // scales with the CRA product class (`ClassCheck::Cycles`).
+        // scales with the CRA product class (`ClassCheck::Cycles`). The
+        // cycles are counted in linear time over the edges, for a graph of
+        // any size: reading them from DependencyMetrics skipped (and passed)
+        // every graph above its 1,000,000-edge analysis limit.
         if self.level.is_cra() && !sbom.edges.is_empty() {
-            let dm = crate::quality::DependencyMetrics::from_sbom(sbom);
-            if !dm.graph_analysis_skipped
-                && dm.cycle_count > 0
+            let cycle_count = crate::quality::cycles::dependency_cycle_count(sbom);
+            if cycle_count > 0
                 && let Some(severity) = self.class_severity(ClassCheck::Cycles)
             {
                 violations.push(Violation {
                     severity,
                     category: ViolationCategory::DependencyInfo,
                     message: format!(
-                        "[CRA Annex I Part II (1)] Dependency graph contains {} cycle(s); cyclic dependency declarations make the component inventory ambiguous",
-                        dm.cycle_count
+                        "[CRA Annex I Part II (1)] Dependency graph contains {cycle_count} cycle(s); cyclic dependency declarations make the component inventory ambiguous"
                     ),
                     element: None,
                     requirement: "CRA Annex I Part II (1): Dependency graph consistency"
@@ -1459,6 +1477,7 @@ impl ComplianceChecker {
         sbom: &NormalizedSbom,
         violations: &mut Vec<Violation>,
     ) {
+        self.check_duplicate_components(sbom, violations);
         match sbom.document.format {
             SbomFormat::CycloneDx => {
                 self.check_cyclonedx_specific(sbom, violations);
@@ -1467,6 +1486,64 @@ impl ComplianceChecker {
                 self.check_spdx_specific(sbom, violations);
             }
         }
+    }
+
+    /// The components the document lists more than once, as one Info
+    /// finding: an entry that repeats a component's canonical id, name and
+    /// version was merged into it at parse time (see
+    /// `NormalizedSbom::add_component`), so the verdicts do not depend on
+    /// the entries' order, but the user should know. The finding names the
+    /// first [`MAX_NAMED_DUPLICATES`] such components in inventory order,
+    /// counts the rest, and lists the fields their entries disagree on.
+    fn check_duplicate_components(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+        let duplicated: Vec<&crate::model::DuplicateComponent> = sbom
+            .components
+            .keys()
+            .filter_map(|id| sbom.duplicate_components.get(id))
+            .collect();
+        if duplicated.is_empty() {
+            return;
+        }
+        let total = sbom.components.len();
+        let entries: usize = duplicated.iter().map(|d| d.entries).sum();
+        let named: Vec<String> = duplicated
+            .iter()
+            .map(|d| format!("{} ({} entries)", d.canonical_id.value(), d.entries))
+            .collect();
+        let mut message = format!(
+            "{}/{total} components are listed more than once ({entries} entries), and the \
+             entries of each were merged into one: {}",
+            duplicated.len(),
+            truncate_list(&named, MAX_NAMED_DUPLICATES)
+        );
+        let conflicts: std::collections::BTreeSet<&str> = duplicated
+            .iter()
+            .flat_map(|d| d.conflicts.iter().map(String::as_str))
+            .collect();
+        if !conflicts.is_empty() {
+            let fields: Vec<&str> = conflicts.into_iter().collect();
+            message.push_str(&format!(
+                "; the entries disagree on {}, and the value that sorts first is kept",
+                fields.join(", ")
+            ));
+        }
+        violations.push(Violation {
+            severity: ViolationSeverity::Info,
+            category: ViolationCategory::ComponentIdentification,
+            message,
+            element: None,
+            requirement: "Component inventory: each component listed once".to_string(),
+            rule_id: DUPLICATE_COMPONENT_RULES.get(self.level),
+            component_id: None,
+            counts: Some(ViolationCounts {
+                affected: duplicated.len(),
+                total,
+            }),
+            standard_refs: Vec::new(),
+            remediation: None,
+            finding_detail: None,
+            deadline: None,
+        });
     }
 
     pub(crate) fn check_cyclonedx_specific(

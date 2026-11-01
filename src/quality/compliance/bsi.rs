@@ -147,11 +147,14 @@ impl ComplianceChecker {
         // compilation. Parsers substitute the UNIX_EPOCH sentinel for a
         // missing/invalid timestamp (see `DocumentMetadata::has_known_timestamp`).
         if !sbom.document.has_known_timestamp() {
+            let message = unparseable_timestamp(sbom).map_or_else(
+                || "[BSI TR-03183-2 §5.2.1] SBOM creation timestamp missing or invalid".to_string(),
+                |gap| format!("[BSI TR-03183-2 §5.2.1] SBOM has {gap}"),
+            );
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
-                message: "[BSI TR-03183-2 §5.2.1] SBOM creation timestamp missing or invalid"
-                    .to_string(),
+                message,
                 element: None,
                 requirement: "BSI TR-03183-2 §5.2.1: Timestamp".to_string(),
                 rule_id: "SBOM-BSI-TR-03183-2-5-2",
