@@ -420,6 +420,7 @@ Compares two SBOMs and reports added, removed, and modified components with vers
 | `--detect-typosquats` | Flag components that look like known-package typosquats |
 | `--explain-matches` | Show why each component pair was matched |
 | `--severity <level>` | Filter by minimum severity (`critical`, `high`, `medium`, `low`) |
+| `--as-of <datetime>`, `--cra-product-class <class>` | Inputs of the compliance checks on both SBOMs (the TUI's compliance tab, the reports' CRA section): the evaluation clock (RFC 3339 or a date; default: the wall clock) and the CRA product class. Each SBOM adds the CRA sidecar found next to it. Taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
@@ -473,6 +474,7 @@ Launches an interactive TUI with component tree, vulnerability details, license 
 | `--enrich-eol` | Detect end-of-life status via endoflife.date API |
 | `--validate-ntia` | Validate against NTIA minimum elements |
 | `--bom-type <type>` | BOM type override (`sbom`, `cbom`, `aibom`). Auto-detected from content if omitted |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>` | Inputs of the compliance checks (the TUI's compliance tab, `--validate-ntia`, the reports' CRA section), taken as `validate` takes them; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
 
 </details>
@@ -491,7 +493,8 @@ Checks an SBOM against a compliance standard and reports missing fields or faili
 
 | Flag | Description |
 |------|-------------|
-| `--standard <std>` | Standard to validate: `ntia` (default), `cisa-2026`, `fda`, `cra` (= Phase 2), `cra-phase1`, `ssdf`, `eo14028`, `cnsa2`, `pqc`, `bsi`, `oss-steward`, `eucc`, `ai-act`, `bsi-ai`, `pci-dss`, `fsct` (comma-separated for multiple; aliases in `--help`) |
+| `--standard <std>` | Standard to validate: `ntia` (default), `cisa-2026`, `fda`, `cra` (= Phase 2), `cra-phase1`, `ssdf`, `eo14028`, `cnsa2`, `pqc`, `bsi`, `oss-steward`, `eucc`, `ai-act`, `bsi-ai`, `pci-dss`, `fsct` (comma-separated for multiple; a standard named twice is checked once; aliases in `--help`) |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>` | The evaluation clock (RFC 3339 or a date; default: the wall clock), the CRA Annex III/IV product class, and the CRA sidecar (default: `<sbom>.cra.{json,yaml}` next to the SBOM). Each standard reads only the inputs that apply to it; see [Inputs of a run](docs/compliance-output.md#inputs-of-a-run) |
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `oscal-json` |
 | `--require-applicable` | Exit `1` when a selected standard does not apply to the SBOM (e.g. `ai-act` on an SBOM without ML components); without it, such a standard is reported as N/A and exits `0` |
 | `--json-schema <v1\|v2>` | Layout of `-o json`: `v2` (default) is the `sbom-tools/compliance/v2` envelope; `v1` is the deprecated pre-0.4 layout, removed in v0.5.0 |
@@ -549,6 +552,7 @@ Documented quirks live in [`docs/STANDARDS_VERSIONS.md`](docs/STANDARDS_VERSIONS
 | `-o, --output <fmt>` | Output format: `summary` (default via `auto`), `json`, `sarif`, `sbomqs-json` |
 | `--min-score <n>` | Fail if quality score is below threshold (0–100) |
 | `--fail-on-noncompliant` | Exit with code 1 if the profile's embedded compliance check reports the SBOM as non-compliant |
+| `--as-of <datetime>`, `--cra-product-class <class>`, `--cra-sidecar <path>` | Inputs of the embedded compliance check, taken as `validate` takes them; the clock also dates the score's age and expiry metrics |
 | `--recommendations` | Show detailed improvement recommendations |
 | `--metrics` | Show detailed scoring metrics |
 | `--sarif-base <dir>`, `--sarif-category <name>`, `--sarif-max-results <n>` | Where `-o sarif` results point, the code-scanning category they report under, and the most results a run keeps (25,000 by default); see [SARIF and code scanning](#sarif-and-code-scanning) |
@@ -668,7 +672,7 @@ sbom-tools completions fish > ~/.config/fish/completions/sbom-tools.fish
 
 ## Interactive TUI
 
-Both `diff` and `view` commands launch an interactive terminal UI by default when connected to a TTY.
+Both `diff` and `view` commands launch an interactive terminal UI by default when connected to a TTY. The compliance tab shows the verdicts `validate` reports for the same inputs: pass `--as-of` and `--cra-product-class` (and, for `view`, `--cra-sidecar`) as you would to `validate`.
 
 ### Diff Mode
 

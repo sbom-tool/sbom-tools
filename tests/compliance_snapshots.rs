@@ -9,8 +9,9 @@
 //!   subject, counts), then the passed checks as `P` lines (rule ID,
 //!   subject) after a `P<n>` count on the header. Messages are left out so
 //!   rewording does not churn them. Fixtures with an auto-discovered CRA
-//!   sidecar are also run with it, for the levels the CLI feeds a sidecar
-//!   to.
+//!   sidecar are also run with it, for the levels the shared run
+//!   configuration (`ComplianceRunConfig`, which every CLI command and TUI
+//!   uses) hands a sidecar to.
 //! - **Byte snapshots** of the JSON (the v1 result array and the
 //!   `sbom-tools/compliance/v2` envelope), SARIF and OSCAL writers for six
 //!   pinned fixtures, plus a check that each writer is byte-identical across
@@ -22,10 +23,10 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
+use sbom_tools::model::CraSidecarMetadata;
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
+    ComplianceLevel, ComplianceResult, ComplianceRunConfig, StandardSelector, ViolationSeverity,
 };
 use sbom_tools::reports::oscal::generate_assessment_results_at;
 use sbom_tools::reports::{
@@ -50,31 +51,30 @@ const SBOM_DIRS: &[&str] = &[
     "spdx3",
 ];
 
-/// Levels the CLI hands a CRA sidecar to (see `cli/validate.rs`).
-const SIDECAR_LEVELS: &[ComplianceLevel] = &[
-    ComplianceLevel::CraPhase1,
-    ComplianceLevel::CraPhase2,
-    ComplianceLevel::CraOssSteward,
-    ComplianceLevel::EuccSubstantial,
-    ComplianceLevel::EuAiAct,
-];
-
 fn as_of() -> chrono::DateTime<chrono::Utc> {
     chrono::DateTime::parse_from_rfc3339(AS_OF)
         .expect("valid AS_OF")
         .with_timezone(&chrono::Utc)
 }
 
-fn check(
-    sbom: &NormalizedSbom,
-    level: ComplianceLevel,
-    sidecar: Option<&CraSidecarMetadata>,
-) -> ComplianceResult {
-    let mut checker = ComplianceChecker::new(level).with_as_of(as_of());
-    if let Some(sc) = sidecar {
-        checker = checker.with_sidecar(sc.clone());
+/// The run a snapshot is judged with: the pinned clock, plus the fixture's
+/// auto-discovered CRA sidecar when it has one. The run configuration hands
+/// each level the inputs `validate` (and every other entry point) hands it.
+fn run(sidecar: Option<&CraSidecarMetadata>) -> ComplianceRunConfig {
+    let run = ComplianceRunConfig::new().with_as_of(as_of());
+    match sidecar {
+        Some(sc) => run.with_sidecar(sc.clone()),
+        None => run,
     }
-    checker.check(sbom)
+}
+
+/// The levels a run hands a CRA sidecar to, in report order.
+fn sidecar_levels() -> Vec<ComplianceLevel> {
+    ComplianceLevel::all()
+        .iter()
+        .copied()
+        .filter(|level| ComplianceRunConfig::sidecar_applies(*level))
+        .collect()
 }
 
 /// Every file under the SBOM directories, sorted, as (relative path, path).
@@ -243,17 +243,13 @@ fn verdict_snapshots_for_every_fixture_and_level() {
             .unwrap_or_else(|e| panic!("{rel}: sidecar does not load: {e}"));
 
         let mut out = format!("fixture: {rel}\nas_of: {AS_OF}\n\n");
-        for level in ComplianceLevel::all() {
-            render_verdict(&mut out, &format!("{level:?}"), &check(&sbom, *level, None));
+        for result in run(None).check_levels(ComplianceLevel::all(), &sbom) {
+            render_verdict(&mut out, &format!("{:?}", result.level), &result);
         }
         if let Some(sc) = sidecar.as_ref() {
             out.push_str("\nwith auto-discovered CRA sidecar:\n");
-            for level in SIDECAR_LEVELS {
-                render_verdict(
-                    &mut out,
-                    &format!("{level:?} + sidecar"),
-                    &check(&sbom, *level, Some(sc)),
-                );
+            for result in run(Some(sc)).check_levels(&sidecar_levels(), &sbom) {
+                render_verdict(&mut out, &format!("{:?} + sidecar", result.level), &result);
             }
         }
         insta::assert_snapshot!(format!("verdicts__{}", snapshot_name(&rel)), out);
@@ -303,17 +299,15 @@ fn render_outputs(rel: &str, standards: &[&str]) -> [(&'static str, String); 4] 
     let raw = std::fs::read_to_string(&path).expect("fixture readable");
     let sbom = parse_sbom_str(&raw).unwrap_or_else(|e| panic!("{rel} must parse: {e}"));
     let sidecar = CraSidecarMetadata::discover_for_sbom(&path).expect("sidecar loads");
-    let results: Vec<ComplianceResult> = standards
+    let levels: Vec<ComplianceLevel> = standards
         .iter()
         .map(|name| {
-            let level = name
-                .parse::<StandardSelector>()
+            name.parse::<StandardSelector>()
                 .expect("known standard")
-                .level();
-            let sc = sidecar.as_ref().filter(|_| SIDECAR_LEVELS.contains(&level));
-            check(&sbom, level, sc)
+                .level()
         })
         .collect();
+    let results = run(sidecar.as_ref()).check_levels(&levels, &sbom);
     // The `--json-schema v1` layout predates passed checks and leaves them
     // out, as `validate` does.
     let v1: Vec<ComplianceResult> = results

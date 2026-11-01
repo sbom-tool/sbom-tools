@@ -179,6 +179,13 @@
 //! }
 //! ```
 //!
+//! To check with a run's inputs (the evaluation clock, the CRA sidecar and
+//! the product class that the CLI takes as `--as-of`, `--cra-sidecar` and
+//! `--cra-product-class`), build a
+//! [`ComplianceRunConfig`](quality::ComplianceRunConfig) and check through
+//! it: it hands each standard the inputs that standard reads, as every CLI
+//! command and TUI does.
+//!
 //! ## Feature Flags
 //!
 //! `sbom-tools` uses feature flags to manage optional functionality and dependencies.

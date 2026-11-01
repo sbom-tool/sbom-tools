@@ -172,18 +172,18 @@ pub struct DataContext {
     pub(crate) new_cra_compliance: Option<ComplianceResult>,
     pub(crate) old_compliance_results: Option<Vec<ComplianceResult>>,
     pub(crate) new_compliance_results: Option<Vec<ComplianceResult>>,
-    /// Optional CRA sidecar metadata for the old/baseline SBOM. When set,
-    /// `ensure_compliance_results` passes it to
-    /// `ComplianceChecker::with_sidecar()` for the old SBOM's checks.
-    /// Resolution is per-SBOM (each side of the diff is judged against its
-    /// own adjacent sidecar), matching the non-TUI report stage.
-    pub(crate) old_cra_sidecar: Option<crate::model::CraSidecarMetadata>,
-    /// Optional CRA sidecar metadata for the new/current SBOM. When set,
-    /// `ensure_compliance_results` passes it to
-    /// `ComplianceChecker::with_sidecar()` so high-risk AI escalation
-    /// (EU AI Act), OSS-Steward, EUCC, and Article 14 checks render the same
-    /// COMPLIANT/NON-COMPLIANT verdict the CLI produces.
-    pub(crate) new_cra_sidecar: Option<crate::model::CraSidecarMetadata>,
+    /// The old/baseline SBOM's compliance run: the shared `--as-of` and
+    /// `--cra-product-class` plus the CRA sidecar found next to that SBOM.
+    /// Every check of the old side (summary card, compliance tab, policy
+    /// presets, quality score) uses it. Resolution is per-SBOM (each side
+    /// of the diff is judged against its own adjacent sidecar), matching the
+    /// non-TUI report stage.
+    pub(crate) old_compliance_run: crate::quality::ComplianceRunConfig,
+    /// The new/current SBOM's compliance run (see `old_compliance_run`), so
+    /// high-risk AI escalation (EU AI Act), OSS-Steward, EUCC, and Article 14
+    /// checks render the same COMPLIANT/NON-COMPLIANT verdict the CLI
+    /// produces.
+    pub(crate) new_compliance_run: crate::quality::ComplianceRunConfig,
     pub(crate) matching_threshold: f64,
     #[cfg(feature = "enrichment")]
     pub(crate) enrichment_stats_old: Option<EnrichmentStats>,
@@ -270,45 +270,31 @@ impl App {
 
     /// Lazily compute compliance results for all standards when first needed.
     ///
-    /// Each SBOM's optional CRA sidecar is threaded into its checkers so
-    /// sidecar-driven verdicts — most importantly EU AI Act high-risk
-    /// escalation — match the CLI. Without it a high-risk AI SBOM the CLI
-    /// marks NON-COMPLIANT would render COMPLIANT in the diff compliance tab.
+    /// Each SBOM is checked with its own compliance run, which hands every
+    /// level the inputs `validate` gives it, so sidecar-driven verdicts —
+    /// most importantly EU AI Act high-risk escalation — match the CLI.
+    /// Without it a high-risk AI SBOM the CLI marks NON-COMPLIANT would
+    /// render COMPLIANT in the diff compliance tab.
     pub fn ensure_compliance_results(&mut self) {
+        use crate::quality::ComplianceLevel;
         if self.data.old_compliance_results.is_none()
             && let Some(old_sbom) = &self.data.old_sbom
         {
-            self.data.old_compliance_results = Some(Self::compliance_results_for(
-                old_sbom,
-                self.data.old_cra_sidecar.as_ref(),
-            ));
+            self.data.old_compliance_results = Some(
+                self.data
+                    .old_compliance_run
+                    .check_levels(ComplianceLevel::all(), old_sbom),
+            );
         }
         if self.data.new_compliance_results.is_none()
             && let Some(new_sbom) = &self.data.new_sbom
         {
-            self.data.new_compliance_results = Some(Self::compliance_results_for(
-                new_sbom,
-                self.data.new_cra_sidecar.as_ref(),
-            ));
+            self.data.new_compliance_results = Some(
+                self.data
+                    .new_compliance_run
+                    .check_levels(ComplianceLevel::all(), new_sbom),
+            );
         }
-    }
-
-    /// Run every compliance standard against `sbom`, threading the optional
-    /// CRA sidecar into each [`ComplianceChecker`].
-    fn compliance_results_for(
-        sbom: &crate::model::NormalizedSbom,
-        sidecar: Option<&crate::model::CraSidecarMetadata>,
-    ) -> Vec<crate::quality::ComplianceResult> {
-        crate::quality::ComplianceLevel::all()
-            .iter()
-            .map(|level| {
-                let mut checker = crate::quality::ComplianceChecker::new(*level);
-                if let Some(sc) = sidecar {
-                    checker = checker.with_sidecar(sc.clone());
-                }
-                checker.check(sbom)
-            })
-            .collect()
     }
 
     /// Toggle export dialog
@@ -619,7 +605,7 @@ impl App {
     /// Run a standards-based compliance check (CRA, NTIA, FDA) and convert
     /// the result into a PolicyViolation-based `ComplianceResult` for unified display.
     fn run_standards_compliance_check(&mut self, preset: super::app_states::PolicyPreset) {
-        use crate::quality::{ComplianceChecker, ViolationSeverity};
+        use crate::quality::ViolationSeverity;
         use crate::tui::security::{
             ComplianceResult as PolicyResult, PolicySeverity, PolicyViolation,
         };
@@ -628,27 +614,21 @@ impl App {
             return;
         };
 
-        // Find the SBOM to check (prefer new_sbom in diff mode, sbom in view
-        // mode) together with its adjacent CRA sidecar, mirroring
-        // `compliance_results_for` so the policy widget renders the same
-        // verdict as the compliance tab (view mode carries no sidecar).
-        let (sbom, sidecar) = match self.mode {
-            AppMode::Diff => (
-                self.data.new_sbom.as_ref(),
-                self.data.new_cra_sidecar.as_ref(),
-            ),
-            _ => (self.data.sbom.as_ref(), None),
+        // Find the SBOM to check (prefer new_sbom in diff mode, sbom in the
+        // other modes) together with its compliance run, mirroring
+        // `ensure_compliance_results` so the policy widget renders the same
+        // verdict as the compliance tab (the other modes carry no run).
+        let default_run = crate::quality::ComplianceRunConfig::default();
+        let (sbom, compliance) = match self.mode {
+            AppMode::Diff => (self.data.new_sbom.as_ref(), &self.data.new_compliance_run),
+            _ => (self.data.sbom.as_ref(), &default_run),
         };
         let Some(sbom) = sbom else {
             self.set_status_message("No SBOM loaded to check");
             return;
         };
 
-        let mut checker = ComplianceChecker::new(level);
-        if let Some(sc) = sidecar {
-            checker = checker.with_sidecar(sc.clone());
-        }
-        let std_result = checker.check(sbom);
+        let std_result = compliance.check(level, sbom);
 
         // Convert quality::Violation → PolicyViolation
         let violations: Vec<PolicyViolation> = std_result

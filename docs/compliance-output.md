@@ -32,7 +32,7 @@ document instead; see [OSCAL assessment results](#oscal-assessment-results).
 | `schema` | string | Always `sbom-tools/compliance/v2`. |
 | `tool.name` | string | Always `sbom-tools`. |
 | `tool.version` | string | The release that produced the document. |
-| `results` | array | One entry per checked standard, in `--standard` order. Never empty. |
+| `results` | array | One entry per checked standard, in `--standard` order. Never empty. A standard named twice is checked once (see [Inputs of a run](#inputs-of-a-run)). |
 
 ## Results
 
@@ -47,10 +47,28 @@ document instead; see [OSCAL assessment results](#oscal-assessment-results).
 | `counts` | object | `error`, `warning` and `info`: the number of violations of each severity. `passed`: the number of passed checks, which no severity count includes. |
 | `violations` | array | The findings, described below. |
 | `passed` | array | The checks the SBOM passed, described [below](#passed-checks). Always present; empty when the standard passed no check or did not apply. |
-| `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for the CRA standards once a product class is pinned by `--cra-product-class` or the sidecar. |
+| `conformity_summary` | object | CRA Annex VIII checklist (`product_class`, `route`, `evidence[]` of `{label, detail, satisfied}`). Present for `cra` and `cra-phase1` once a product class is pinned by `--cra-product-class` or the sidecar. Never for `oss-steward`: an open-source steward (Art. 24) follows no conformity-assessment procedure. |
 
 A standard that does not apply reports no violation: its verdict is
 `applicable: false` with the reason.
+
+## Inputs of a run
+
+Three inputs besides the SBOM can change a verdict. Every command that checks
+compliance (`validate`, `quality`, `view` and `diff` with their TUIs,
+`cra-docs`) takes them the same way and hands each standard only the ones it
+reads, so the same SBOM with the same inputs gets the same verdict everywhere.
+
+| Input | Flag | Standards that read it |
+|---|---|---|
+| Evaluation clock | `--as-of`, else the wall clock | Every standard. |
+| CRA sidecar | `--cra-sidecar`, else `<sbom>.cra.{json,yaml}` found next to the SBOM (`diff`: next to each SBOM) | `cra`, `cra-phase1`, `oss-steward`, `eucc`, `ai-act`. A sidecar is used without being asked for, so the other standards, which judge the SBOM alone, never read it. |
+| CRA product class | `--cra-product-class`; the sidecar's `productClass` wins | `cra`, `cra-phase1`. The class picks the manufacturer's conformity-assessment procedure, which `oss-steward` does not follow. |
+
+A standard named twice is checked once, at its first position, with a
+warning on stderr: `--standard cra,cra-phase2` names CRA Phase 2 twice
+(`cra-phase2` is an alias of `cra`), and checking it twice would report
+every finding twice, in SARIF as a second alert.
 
 ## Violations
 

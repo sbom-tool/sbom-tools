@@ -5,7 +5,7 @@
 use crate::model::NormalizedSbom;
 use crate::pipeline::{OutputTarget, exit_codes, parse_sbom_with_context, write_output};
 use crate::quality::{
-    ComplianceChecker, ComplianceLevel, ComplianceResult, StandardSelector, ViolationSeverity,
+    ComplianceLevel, ComplianceResult, ComplianceRunConfig, StandardSelector, ViolationSeverity,
 };
 use crate::reports::escape::sanitize_line;
 use crate::reports::{
@@ -82,70 +82,25 @@ pub fn run_validate(
         super::ensure_output_format_supported("validate", output, VALIDATE_OUTPUT_FORMATS)?;
         super::check_sarif_flags(output, sarif_base.as_deref(), sarif_category.as_deref())?;
     }
-    // Pinned evaluation clock for deadline-sensitive checks (shared parser
-    // with `quality --as-of`).
-    let as_of: Option<chrono::DateTime<chrono::Utc>> = as_of.map(super::parse_as_of).transpose()?;
+    // The run's inputs: the pinned clock, the product class and the CRA
+    // sidecar (explicit, else found next to the SBOM), resolved like every
+    // other compliance command's. The run configuration hands each level the
+    // inputs it reads.
+    let compliance = super::compliance_run_config_for(
+        &sbom_path,
+        cra_sidecar_path.as_deref(),
+        cra_product_class.as_deref(),
+        as_of,
+    )?;
     anyhow::ensure!(
         !standards.is_empty(),
         "no compliance standard selected; pass --standard (valid values: {})",
         StandardSelector::valid_values()
     );
+    let levels = selected_levels(&standards);
 
     let parsed = parse_sbom_with_context(&sbom_path, false)?;
-
-    // Load CRA sidecar — an explicit path is a hard error when broken,
-    // otherwise auto-discover next to the SBOM (best-effort).
-    let cra_sidecar = super::load_cra_sidecar(cra_sidecar_path.as_deref(), &sbom_path)?;
-
-    // Resolve effective product class: sidecar wins; otherwise CLI flag.
-    // An explicitly passed unrecognized class is a hard error (strict parse).
-    // Mismatch between explicit CLI flag and sidecar is reported as a Warning
-    // on stderr (not turned into a Violation — sidecar is authoritative).
-    let cli_class = super::parse_cra_product_class(cra_product_class.as_deref())?;
-    let sidecar_class = cra_sidecar.as_ref().and_then(|s| s.product_class);
-    if let (Some(cli), Some(side)) = (cli_class, sidecar_class)
-        && cli != side
-    {
-        tracing::warn!(
-            "CRA product class mismatch: --cra-product-class={} but sidecar says {}; using sidecar.",
-            cli.label(),
-            side.label()
-        );
-    }
-    let effective_class = sidecar_class.or(cli_class);
-
-    let mut results = Vec::new();
-
-    for selector in &standards {
-        let level = selector.level();
-        let mut checker = ComplianceChecker::new(level);
-        if let Some(now) = as_of {
-            checker = checker.with_as_of(now);
-        }
-        // Sidecar metadata feeds the CRA family (manufacturer/disclosure/
-        // lifecycle fields), EUCC (certificate references), and the AI Act
-        // profile (the is_high_risk_ai flag escalates Annex IV findings).
-        if matches!(
-            level,
-            ComplianceLevel::CraPhase1
-                | ComplianceLevel::CraPhase2
-                | ComplianceLevel::CraOssSteward
-                | ComplianceLevel::EuccSubstantial
-                | ComplianceLevel::EuAiAct
-        ) && let Some(sc) = cra_sidecar.clone()
-        {
-            checker = checker.with_sidecar(sc);
-        }
-        // Product class drives severity calibration for the CRA phase checks.
-        if matches!(
-            level,
-            ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2
-        ) && let Some(c) = effective_class
-        {
-            checker = checker.with_product_class(c);
-        }
-        results.push(checker.check(parsed.sbom()));
-    }
+    let results = compliance.check_levels(&levels, parsed.sbom());
 
     // Inputs that make machine output reproducible: OSCAL derives its UUIDs
     // from the SBOM digest and stamps the --as-of instant. It also describes
@@ -169,7 +124,7 @@ pub fn run_validate(
     let provenance = OutputProvenance {
         sbom: parsed.sbom(),
         sbom_digest: sha256_hex(parsed.raw_content.as_bytes()),
-        as_of,
+        as_of: compliance.as_of(),
         sarif,
     };
 
@@ -209,6 +164,21 @@ pub fn run_validate(
     }
 
     Ok(exit_codes::SUCCESS)
+}
+
+/// The levels `standards` select, each once, in the order it was first
+/// selected. A repeat (`--standard cra,cra-phase2` names CRA Phase 2 twice)
+/// would report every finding twice, and in SARIF as a second alert, so it is
+/// dropped with a warning on stderr.
+fn selected_levels(standards: &[StandardSelector]) -> Vec<ComplianceLevel> {
+    let (kept, repeats) = StandardSelector::dedup_by_level(standards);
+    for repeat in repeats {
+        tracing::warn!(
+            "standard {repeat} ({}) is selected more than once; checking it once",
+            repeat.level().name()
+        );
+    }
+    kept.into_iter().map(StandardSelector::level).collect()
 }
 
 /// What a machine-readable report needs to know about the run itself.
@@ -443,11 +413,11 @@ fn format_compliance_text(result: &ComplianceResult) -> String {
     lines.join("\n")
 }
 
-/// Run the engine's NtiaMinimum check and print a compact PASSED/FAILED
-/// summary. Used by `view --validate-ntia`; gating errors are listed, each
-/// with a `fix:` line, and warnings go to the log.
-pub fn print_ntia_validation(sbom: &NormalizedSbom) {
-    let result = ComplianceChecker::new(ComplianceLevel::NtiaMinimum).check(sbom);
+/// Run the engine's NtiaMinimum check with `compliance`'s inputs and print a
+/// compact PASSED/FAILED summary. Used by `view --validate-ntia`; gating
+/// errors are listed, each with a `fix:` line, and warnings go to the log.
+pub fn print_ntia_validation(sbom: &NormalizedSbom, compliance: &ComplianceRunConfig) {
+    let result = compliance.check(ComplianceLevel::NtiaMinimum, sbom);
     for v in result.violations_by_severity(ViolationSeverity::Warning) {
         tracing::warn!("{}", v.message);
     }
@@ -470,7 +440,7 @@ mod tests {
 
     #[test]
     fn print_ntia_validation_does_not_panic_on_empty_sbom() {
-        print_ntia_validation(&NormalizedSbom::default());
+        print_ntia_validation(&NormalizedSbom::default(), &ComplianceRunConfig::default());
     }
 
     /// The text report counts passed checks under the status and lists none
@@ -676,6 +646,76 @@ mod tests {
             crate::reports::DEFAULT_SARIF_MAX_RESULTS,
         )
         .expect("offset-less --as-of datetime must parse (assumed UTC)");
+    }
+
+    /// `--standard cra,cra-phase2` names CRA Phase 2 twice (clap parses both
+    /// spellings to `cra`). It is checked once: one result, and SARIF with no
+    /// repeated alert, byte-identical to `--standard cra`.
+    #[test]
+    fn a_standard_selected_twice_is_checked_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let sbom_path = dir.path().join("app.cdx.json");
+        std::fs::copy(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/cra/cra-compliant.cdx.json"
+            ),
+            &sbom_path,
+        )
+        .unwrap();
+        let twice: Vec<StandardSelector> = ["cra", "cra-phase2"]
+            .iter()
+            .map(|s| s.parse().unwrap())
+            .collect();
+        let render = |standards: Vec<StandardSelector>, output: ReportFormat, name: &str| {
+            let out = dir.path().join(name);
+            run_validate(
+                sbom_path.clone(),
+                standards,
+                output,
+                Some(out.clone()),
+                false,
+                false,
+                None,
+                None,
+                Some("2026-10-12"),
+                false,
+                ValidateJsonSchema::V2,
+                None,
+                None,
+                false,
+                crate::reports::DEFAULT_SARIF_MAX_RESULTS,
+            )
+            .expect("validate runs");
+            std::fs::read_to_string(out).unwrap()
+        };
+
+        let json = render(twice.clone(), ReportFormat::Json, "twice.json");
+        let envelope: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(envelope["results"].as_array().unwrap().len(), 1, "{json}");
+        assert_eq!(
+            json,
+            render(vec![StandardSelector::Cra], ReportFormat::Json, "once.json")
+        );
+
+        let sarif = render(twice, ReportFormat::Sarif, "twice.sarif");
+        let log: serde_json::Value = serde_json::from_str(&sarif).unwrap();
+        let results = log["runs"][0]["results"].as_array().unwrap();
+        assert!(!results.is_empty(), "the fixture has CRA findings");
+        let mut keys = std::collections::HashSet::new();
+        for result in results {
+            let key = result["properties"]["findingKey"].as_str().unwrap();
+            assert!(keys.insert(key), "repeated SARIF result {key}");
+            assert!(!key.contains("#2"), "a numbered repeat: {key}");
+        }
+        assert_eq!(
+            sarif,
+            render(
+                vec![StandardSelector::Cra],
+                ReportFormat::Sarif,
+                "once.sarif"
+            )
+        );
     }
 
     #[test]

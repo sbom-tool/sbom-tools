@@ -227,32 +227,33 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
     let effective_output = auto_detect_format(config.output.format, &output_target);
 
     if effective_output == ReportFormat::Tui {
-        // Resolve the CRA sidecars (auto-discovered next to each SBOM unless
-        // it reads from stdin) so the compliance tab applies the same
-        // sidecar-driven verdicts as the non-TUI reports — most importantly
-        // EU AI Act high-risk escalation, which otherwise renders COMPLIANT
-        // in the TUI. Resolution is per-SBOM: each side of the diff is judged
-        // against its own adjacent metadata, identically to the report stage.
-        let old_sidecar = crate::pipeline::discover_cra_sidecar(&config.paths.old)?;
-        let new_sidecar = crate::pipeline::discover_cra_sidecar(&config.paths.new)?;
+        // Each side's compliance run: the shared `--as-of` and
+        // `--cra-product-class` plus the CRA sidecar auto-discovered next to
+        // that SBOM (unless it reads from stdin), identically to the report
+        // stage. The compliance tab then shows the verdicts `validate`
+        // reports for each side — most importantly EU AI Act high-risk
+        // escalation, which otherwise renders COMPLIANT in the TUI.
+        let old_compliance =
+            crate::pipeline::side_compliance(&config.compliance, &config.paths.old)?;
+        let new_compliance =
+            crate::pipeline::side_compliance(&config.compliance, &config.paths.new)?;
 
         let (old_sbom, old_raw) = old_parsed.into_parts();
         let (new_sbom, new_raw) = new_parsed.into_parts();
+        let mut app = App::new_diff_with_compliance(
+            result,
+            old_sbom,
+            new_sbom,
+            &old_raw,
+            &new_raw,
+            old_compliance,
+            new_compliance,
+        );
 
         #[cfg(feature = "enrichment")]
-        let mut app = {
-            let app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
-            if let Some((stats_old, stats_new)) = enrichment_stats {
-                app.with_enrichment_stats(stats_old, stats_new)
-            } else {
-                app
-            }
-        };
-
-        #[cfg(not(feature = "enrichment"))]
-        let mut app = App::new_diff(result, old_sbom, new_sbom, &old_raw, &new_raw);
-
-        app = app.with_cra_sidecars(old_sidecar, new_sidecar);
+        if let Some((stats_old, stats_new)) = enrichment_stats {
+            app = app.with_enrichment_stats(stats_old, stats_new);
+        }
 
         // Set export template if configured
         app.export_template = config.output.export_template.clone();

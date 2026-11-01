@@ -337,6 +337,41 @@ fn seed_vex_enrichment(
     config
 }
 
+/// The compliance inputs every compliance-checking command takes (`validate`,
+/// `quality`, `view`, `diff`, `cra-docs`), defined once so the commands
+/// accept them identically and judge an SBOM the same way.
+#[derive(Args, Debug)]
+struct ComplianceRunArgs {
+    /// CRA Annex III/IV product class (drives severity calibration of the
+    /// CRA Phase 1 and Phase 2 checks).
+    /// One of: default, important-class-1, important-class-2, critical.
+    /// Implementing Regulation (EU) 2025/2392 gives the technical
+    /// description of each class's product categories.
+    /// A CRA sidecar's `productClass` wins over this flag.
+    #[arg(long, value_name = "CLASS")]
+    cra_product_class: Option<String>,
+
+    /// Pin the evaluation clock (RFC 3339, e.g. 2027-01-01T00:00:00Z or
+    /// 2027-01-01). Deadline-sensitive checks (CRA Art. 14 readiness, SBOM
+    /// age, EUCC certificate expiry) and the quality score evaluate against
+    /// this instant instead of the wall clock — reproducible CI runs.
+    #[arg(long, value_name = "DATETIME")]
+    as_of: Option<String>,
+}
+
+/// The CRA sidecar flag of the commands that judge one SBOM. (`diff` judges
+/// each of its SBOMs against the sidecar found next to it.)
+#[derive(Args, Debug)]
+struct CraSidecarArgs {
+    /// Path to a CRA sidecar metadata file (JSON or YAML) supplying
+    /// security_contact, manufacturer, support_end_date, ce_marking_reference,
+    /// and similar CRA fields the SBOM itself doesn't carry. It feeds the
+    /// CRA, EUCC and EU AI Act checks only.
+    /// If omitted, sbom-tools auto-discovers `<sbom>.cra.json|yaml` next to the SBOM.
+    #[arg(long, value_name = "PATH")]
+    cra_sidecar: Option<PathBuf>,
+}
+
 /// Arguments for the `diff` subcommand
 #[derive(Parser)]
 #[command(after_help = "EXIT CODES:
@@ -492,6 +527,11 @@ struct DiffArgs {
     /// Streaming threshold in MB. Files larger than this use streaming mode.
     #[arg(long, default_value = "10")]
     streaming_threshold: u64,
+
+    // The compliance inputs of both SBOMs; each SBOM adds the CRA sidecar
+    // found next to it.
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 }
 
 /// Arguments for the `view` subcommand
@@ -558,18 +598,11 @@ struct ViewArgs {
     #[arg(long, value_name = "TYPE", value_parser = parse_bom_type)]
     bom_type: Option<sbom_tools::BomProfile>,
 
-    /// Path to a CRA sidecar metadata file (JSON or YAML).
-    /// If omitted, auto-discovers `<sbom>.cra.json|yaml` next to the SBOM.
-    #[arg(long, value_name = "PATH")]
-    cra_sidecar: Option<PathBuf>,
+    #[command(flatten)]
+    cra_sidecar: CraSidecarArgs,
 
-    /// CRA Annex III/IV product class (drives severity calibration).
-    /// One of: default, important-class-1, important-class-2, critical.
-    /// Implementing Regulation (EU) 2025/2392 gives the technical
-    /// description of each class's product categories.
-    /// Sidecar `productClass` wins over this flag.
-    #[arg(long, value_name = "CLASS")]
-    cra_product_class: Option<String>,
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 
     #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
@@ -686,27 +719,11 @@ struct ValidateArgs {
     #[arg(long)]
     summary: bool,
 
-    /// Path to a CRA sidecar metadata file (JSON or YAML) supplying
-    /// security_contact, manufacturer, support_end_date, ce_marking_reference,
-    /// and similar CRA fields the SBOM itself doesn't carry.
-    /// If omitted, sbom-tools auto-discovers `<sbom>.cra.json|yaml` next to the SBOM.
-    #[arg(long, value_name = "PATH")]
-    cra_sidecar: Option<PathBuf>,
+    #[command(flatten)]
+    cra_sidecar: CraSidecarArgs,
 
-    /// CRA Annex III/IV product class (drives severity calibration).
-    /// One of: default, important-class-1, important-class-2, critical.
-    /// Implementing Regulation (EU) 2025/2392 gives the technical
-    /// description of each class's product categories.
-    /// Sidecar `productClass` wins over this flag.
-    #[arg(long, value_name = "CLASS")]
-    cra_product_class: Option<String>,
-
-    /// Pin the evaluation clock (RFC 3339, e.g. 2027-01-01T00:00:00Z or
-    /// 2027-01-01). Deadline-sensitive checks (CRA Art. 14 readiness, SBOM
-    /// age, EUCC certificate expiry) evaluate against this instant instead
-    /// of the wall clock — reproducible CI runs.
-    #[arg(long, value_name = "DATETIME")]
-    as_of: Option<String>,
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 }
 
 /// Output formats the multi-SBOM commands actually render.
@@ -1031,27 +1048,11 @@ struct QualityArgs {
     #[arg(long)]
     fail_on_noncompliant: bool,
 
-    /// Path to a CRA sidecar metadata file (JSON or YAML).
-    /// Consulted by the embedded CRA compliance check when running
-    /// `--profile cra`. Auto-discovered next to the SBOM if omitted.
-    #[arg(long, value_name = "PATH")]
-    cra_sidecar: Option<PathBuf>,
+    #[command(flatten)]
+    cra_sidecar: CraSidecarArgs,
 
-    /// CRA Annex III/IV product class (drives severity calibration).
-    /// One of: default, important-class-1, important-class-2, critical.
-    /// Implementing Regulation (EU) 2025/2392 gives the technical
-    /// description of each class's product categories.
-    /// Sidecar `productClass` wins over this flag.
-    #[arg(long, value_name = "CLASS")]
-    cra_product_class: Option<String>,
-
-    /// Pin the evaluation clock (RFC 3339, e.g. 2027-01-01T00:00:00Z or
-    /// 2027-01-01). Deadline-sensitive compliance checks embedded in the
-    /// quality report (CRA Art. 14 readiness, SBOM age, EUCC certificate
-    /// expiry) evaluate against this instant instead of the wall clock —
-    /// reproducible CI runs, mirroring `validate --as-of`.
-    #[arg(long, value_name = "DATETIME")]
-    as_of: Option<String>,
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 
     #[command(flatten)]
     enrichment: SharedEnrichmentArgs,
@@ -1698,18 +1699,11 @@ struct CraDocsArgs {
     #[arg(short, long, default_value = "cra-dossier")]
     output: PathBuf,
 
-    /// Path to a CRA sidecar metadata file (JSON or YAML).
-    /// If omitted, auto-discovers `<sbom>.cra.json|yaml` next to the SBOM.
-    #[arg(long, value_name = "PATH")]
-    cra_sidecar: Option<PathBuf>,
+    #[command(flatten)]
+    cra_sidecar: CraSidecarArgs,
 
-    /// CRA Annex III/IV product class.
-    /// One of: default, important-class-1, important-class-2, critical.
-    /// Implementing Regulation (EU) 2025/2392 gives the technical
-    /// description of each class's product categories.
-    /// Sidecar `productClass` wins.
-    #[arg(long, value_name = "CLASS")]
-    cra_product_class: Option<String>,
+    #[command(flatten)]
+    compliance: ComplianceRunArgs,
 
     /// Overwrite existing dossier files (by default a re-run refuses to
     /// clobber hand-completed documents)
@@ -2023,6 +2017,15 @@ fn run() -> Result<()> {
             if fail_on_kev {
                 enrichment.enable_kev = true;
             }
+            // The compliance inputs both SBOMs share, parsed like every other
+            // compliance command's (config-file fallback for the class).
+            let compliance = cli::compliance_run_config(
+                args.compliance
+                    .cra_product_class
+                    .or_else(|| app.compliance.cra_product_class.clone())
+                    .as_deref(),
+                args.compliance.as_of.as_deref(),
+            )?;
 
             let config = DiffConfig {
                 paths: DiffPaths {
@@ -2125,6 +2128,7 @@ fn run() -> Result<()> {
                     ),
                 },
                 enrichment,
+                compliance,
             };
 
             let exit_code = cli::run_diff(config)?;
@@ -2166,12 +2170,13 @@ fn run() -> Result<()> {
                 enrichment,
                 cra_sidecar_path: args
                     .cra_sidecar
-                    .clone()
+                    .cra_sidecar
                     .or_else(|| app.compliance.cra_sidecar.clone()),
                 cra_product_class: args
+                    .compliance
                     .cra_product_class
-                    .clone()
                     .or_else(|| app.compliance.cra_product_class.clone()),
+                as_of: args.compliance.as_of,
             };
             let exit_code = cli::run_view(config)?;
             if exit_code != 0 {
@@ -2218,10 +2223,12 @@ fn run() -> Result<()> {
                 resolve_bool(args.fail_on_warning, app.compliance.fail_on_warning),
                 args.summary,
                 args.cra_sidecar
+                    .cra_sidecar
                     .or_else(|| app.compliance.cra_sidecar.clone()),
-                args.cra_product_class
+                args.compliance
+                    .cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone()),
-                args.as_of.as_deref(),
+                args.compliance.as_of.as_deref(),
                 args.require_applicable,
                 args.json_schema,
                 args.sarif_base.or_else(|| app.output.sarif_base.clone()),
@@ -2513,10 +2520,12 @@ fn run() -> Result<()> {
                 ),
                 resolve_bool(cli.no_color, app.output.no_color),
                 args.cra_sidecar
+                    .cra_sidecar
                     .or_else(|| app.compliance.cra_sidecar.clone()),
-                args.cra_product_class
+                args.compliance
+                    .cra_product_class
                     .or_else(|| app.compliance.cra_product_class.clone()),
-                args.as_of,
+                args.compliance.as_of,
                 enrichment,
                 args.sarif_base.or_else(|| app.output.sarif_base.clone()),
                 args.sarif_category
@@ -2972,9 +2981,12 @@ fn run() -> Result<()> {
             args.sbom,
             args.output,
             args.cra_sidecar
+                .cra_sidecar
                 .or_else(|| app.compliance.cra_sidecar.clone()),
-            args.cra_product_class
+            args.compliance
+                .cra_product_class
                 .or_else(|| app.compliance.cra_product_class.clone()),
+            args.compliance.as_of.as_deref(),
             args.force,
         ),
 

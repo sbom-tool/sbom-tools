@@ -585,12 +585,25 @@ mod diff_alignment {
         // matching the CLI.
         let new = high_risk_ml_sbom();
         let old = high_risk_ml_sbom();
-        let mut app = App::new_diff(DiffResult::new(), old, new, "{}", "{}");
         let sidecar = CraSidecarMetadata {
             is_high_risk_ai: true,
             ..Default::default()
         };
-        app = app.with_cra_sidecars(Some(sidecar.clone()), Some(sidecar));
+        let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc);
+        let run = crate::quality::ComplianceRunConfig::new()
+            .with_as_of(as_of)
+            .with_sidecar(sidecar);
+        let mut app = App::new_diff_with_compliance(
+            DiffResult::new(),
+            old,
+            new,
+            "{}",
+            "{}",
+            run.clone(),
+            run,
+        );
 
         app.ensure_compliance_results();
 

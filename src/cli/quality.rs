@@ -119,14 +119,16 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
         config.sarif_category.as_deref(),
     )?;
 
-    // Pinned evaluation clock for deadline-sensitive compliance checks
-    // (shared parser with `validate --as-of`). Parsed up front so a bad
-    // value fails before the SBOM is read.
-    let as_of: Option<chrono::DateTime<chrono::Utc>> = config
-        .as_of
-        .as_deref()
-        .map(super::parse_as_of)
-        .transpose()?;
+    // The embedded compliance check's inputs, resolved like `validate`'s
+    // before the SBOM is read, so a bad value fails first: the pinned clock,
+    // the product class and the CRA sidecar (explicit, else found next to
+    // the SBOM).
+    let compliance = super::compliance_run_config_for(
+        &config.sbom_path,
+        config.cra_sidecar_path.as_deref(),
+        config.cra_product_class.as_deref(),
+        config.as_of.as_deref(),
+    )?;
 
     #[cfg_attr(not(feature = "enrichment"), allow(unused_mut))]
     let mut parsed = parse_sbom_with_context(&config.sbom_path, false)?;
@@ -155,34 +157,9 @@ fn run_quality_impl(config: QualityConfig) -> Result<i32> {
 
     tracing::info!("Running quality assessment with {:?} profile", profile);
 
-    // Honour explicit --cra-sidecar (hard error when broken); otherwise
-    // auto-discover next to the SBOM (best-effort).
-    let sidecar = super::load_cra_sidecar(config.cra_sidecar_path.as_deref(), &config.sbom_path)?;
-    // An explicitly passed unrecognized class is a hard error (strict parse).
-    let cli_class = super::parse_cra_product_class(config.cra_product_class.as_deref())?;
-    let sidecar_class = sidecar.as_ref().and_then(|s| s.product_class);
-    if let (Some(cli), Some(side)) = (cli_class, sidecar_class)
-        && cli != side
-    {
-        tracing::warn!(
-            "CRA product class mismatch: --cra-product-class={} but sidecar says {}; using sidecar.",
-            cli.label(),
-            side.label()
-        );
-    }
-    let effective_class = sidecar_class.or(cli_class);
-
-    let mut scorer = QualityScorer::new(profile);
-    if let Some(sc) = sidecar {
-        scorer = scorer.with_cra_sidecar(sc);
-    }
-    if let Some(c) = effective_class {
-        scorer = scorer.with_cra_product_class(c);
-    }
-    if let Some(t) = as_of {
-        scorer = scorer.with_as_of(t);
-    }
-    let report = scorer.score(parsed.sbom());
+    let report = QualityScorer::new(profile)
+        .with_compliance(compliance)
+        .score(parsed.sbom());
 
     // sbomqs-compat table for the human summary. Computed straight from the
     // NormalizedSbom (plus the raw document text for file-format /

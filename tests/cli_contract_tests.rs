@@ -1023,6 +1023,18 @@ fn cra_docs_rejects_typod_cra_product_class() {
 }
 
 #[test]
+fn diff_rejects_typod_cra_product_class() {
+    let output = base_command()
+        .arg("diff")
+        .arg(fixture_path("demo-old.cdx.json"))
+        .arg(fixture_path("demo-new.cdx.json"))
+        .args(["-o", "json", "--cra-product-class", "critcal"])
+        .output()
+        .expect("diff command should run");
+    assert_rejects_typod_product_class(&output, "diff");
+}
+
+#[test]
 fn validate_accepts_valid_cra_product_class() {
     // Accepting case for the strict parser: a canonical spelling still runs
     // (exit code reflects compliance, not a parse failure).
@@ -1087,6 +1099,75 @@ fn quality_accepts_as_of_like_validate() {
         Some(0),
         "quality --as-of must parse and run; stderr:\n{}",
         stderr(&output)
+    );
+}
+
+/// Every compliance-checking command takes `validate`'s `--as-of` (one
+/// shared definition and parser): `view` and `diff` (and their TUIs) and
+/// `cra-docs` pin the clock of their compliance checks with it.
+#[test]
+fn every_compliance_command_parses_as_of_like_validate() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let old = fixture_arg("demo-old.cdx.json");
+    let new = fixture_arg("demo-new.cdx.json");
+    let dossier = dir.path().join("dossier");
+    let dossier = dossier.to_str().expect("UTF-8 temp path");
+    let commands: [&[&str]; 4] = [
+        &["validate", &new, "--standard", "cra", "--summary"],
+        &["view", &new, "-o", "json"],
+        &["diff", &old, &new, "-o", "json"],
+        &["cra-docs", &new, "--output", dossier, "--force"],
+    ];
+    for args in commands {
+        let ok = base_command()
+            .args(args)
+            .args(["--as-of", "2027-01-01"])
+            .output()
+            .expect("command should run");
+        assert_ne!(
+            ok.status.code(),
+            Some(3),
+            "{}: --as-of 2027-01-01 must parse; stderr:\n{}",
+            args[0],
+            stderr(&ok)
+        );
+        let bad = base_command()
+            .args(args)
+            .args(["--as-of", "not-a-date"])
+            .output()
+            .expect("command should run");
+        assert_eq!(bad.status.code(), Some(3), "{}", args[0]);
+        let err = stderr(&bad);
+        assert!(
+            err.contains("invalid --as-of") && err.contains("RFC 3339"),
+            "{}: error must explain the accepted forms: {err}",
+            args[0]
+        );
+    }
+}
+
+/// `--standard cra,cra-phase2` names CRA Phase 2 twice: it is checked once,
+/// with a warning on stderr naming the repeat.
+#[test]
+fn validate_checks_a_twice_selected_standard_once() {
+    let output = base_command()
+        .env("RUST_LOG", "warn")
+        .arg("validate")
+        .arg(fixture_path("demo-new.cdx.json"))
+        .args(["--standard", "cra,cra-phase2", "--summary"])
+        .output()
+        .expect("validate command should run");
+
+    let json: serde_json::Value =
+        serde_json::from_str(stdout(&output).trim()).expect("summary should be JSON");
+    assert!(
+        json.is_object(),
+        "one standard checked, one summary object: {json}"
+    );
+    let err = stderr(&output);
+    assert!(
+        err.contains("standard cra") && err.contains("selected more than once"),
+        "the dropped repeat must be named on stderr: {err}"
     );
 }
 

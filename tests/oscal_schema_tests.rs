@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 
 use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ComplianceRunConfig};
 use sbom_tools::reports::oscal::{generate_assessment_results, generate_assessment_results_at};
 use serde_json::{Value, json};
 
@@ -48,15 +48,6 @@ const SBOM_DIRS: &[&str] = &[
     "showcase",
     "spdx",
     "spdx3",
-];
-
-/// Levels the CLI hands a CRA sidecar to (see `cli/validate.rs`).
-const SIDECAR_LEVELS: &[ComplianceLevel] = &[
-    ComplianceLevel::CraPhase1,
-    ComplianceLevel::CraPhase2,
-    ComplianceLevel::CraOssSteward,
-    ComplianceLevel::EuccSubstantial,
-    ComplianceLevel::EuAiAct,
 ];
 
 fn schema() -> Value {
@@ -184,16 +175,19 @@ fn fixtures() -> Vec<Fixture> {
         .collect()
 }
 
+/// `level` checked at the pinned instant through the shared run
+/// configuration, with `sidecar` where a run hands `level` one (as
+/// `validate` does).
 fn check(
     sbom: &NormalizedSbom,
     level: ComplianceLevel,
     sidecar: Option<&CraSidecarMetadata>,
 ) -> ComplianceResult {
-    let mut checker = ComplianceChecker::new(level).with_as_of(as_of());
+    let mut run = ComplianceRunConfig::new().with_as_of(as_of());
     if let Some(sc) = sidecar {
-        checker = checker.with_sidecar(sc.clone());
+        run = run.with_sidecar(sc.clone());
     }
-    checker.check(sbom)
+    run.check(level, sbom)
 }
 
 /// The reproducible OSCAL document for `results`, parsed.
@@ -435,8 +429,9 @@ fn every_level_on_every_fixture_matches_the_oscal_schema() {
         if let Some(sc) = &fixture.sidecar {
             runs.push((
                 format!("{} [sidecar levels + sidecar]", fixture.rel),
-                SIDECAR_LEVELS
+                ComplianceLevel::all()
                     .iter()
+                    .filter(|level| ComplianceRunConfig::sidecar_applies(**level))
                     .map(|level| check(&fixture.sbom, *level, Some(sc)))
                     .collect(),
             ));

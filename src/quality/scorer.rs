@@ -7,7 +7,7 @@ use crate::model::{CompletenessDeclaration, NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::compliance::{ComplianceChecker, ComplianceLevel, ComplianceResult};
+use super::compliance::{ComplianceLevel, ComplianceResult, ComplianceRunConfig};
 use super::metrics::{
     AuditabilityMetrics, CompletenessMetrics, CompletenessWeights, CryptographyMetrics,
     DependencyMetrics, HashQualityMetrics, IdentifierMetrics, LicenseMetrics, LifecycleMetrics,
@@ -550,18 +550,12 @@ pub struct QualityScorer {
     profile: ScoringProfile,
     /// Completeness weights
     completeness_weights: CompletenessWeights,
-    /// Optional CRA sidecar metadata; when set, the embedded compliance check
-    /// (used to drive recommendations under `ScoringProfile::Cra`) consults
-    /// the sidecar for fields the SBOM doesn't carry.
-    cra_sidecar: Option<crate::model::CraSidecarMetadata>,
-    /// Optional CRA Annex III/IV product class. Sidecar `productClass` (when
-    /// present on `cra_sidecar`) wins over this value at check time.
-    cra_product_class: Option<crate::model::CraProductClass>,
-    /// Optional pinned evaluation clock for the embedded compliance check.
-    /// `None` means wall clock; set it (CLI `--as-of`, tests) so deadline-
-    /// sensitive checks (CRA Art. 14 readiness, SBOM age, EUCC certificate
-    /// expiry) are reproducible across runs.
-    as_of: Option<chrono::DateTime<chrono::Utc>>,
+    /// Inputs of the embedded compliance check (see [`ComplianceRunConfig`]):
+    /// the evaluation clock, which also dates the time-sensitive metrics
+    /// (document age, certificate expiry), the CRA sidecar and the product
+    /// class. The run configuration hands the profile's level only the
+    /// inputs it reads.
+    compliance: ComplianceRunConfig,
 }
 
 impl QualityScorer {
@@ -571,9 +565,7 @@ impl QualityScorer {
         Self {
             profile,
             completeness_weights: CompletenessWeights::default(),
-            cra_sidecar: None,
-            cra_product_class: None,
-            as_of: None,
+            compliance: ComplianceRunConfig::new(),
         }
     }
 
@@ -584,30 +576,47 @@ impl QualityScorer {
         self
     }
 
-    /// Attach CRA sidecar metadata for the embedded compliance check.
+    /// Run the embedded compliance check with `compliance`'s inputs, the
+    /// ones `validate` uses: its clock (which also dates the time-sensitive
+    /// metrics), CRA sidecar and product class.
+    #[must_use]
+    pub fn with_compliance(mut self, compliance: ComplianceRunConfig) -> Self {
+        self.compliance = compliance;
+        self
+    }
+
+    /// Attach CRA sidecar metadata for the embedded compliance check
+    /// (shorthand for [`ComplianceRunConfig::with_sidecar`]).
     #[must_use]
     pub fn with_cra_sidecar(mut self, sidecar: crate::model::CraSidecarMetadata) -> Self {
-        self.cra_sidecar = Some(sidecar);
+        self.compliance = self.compliance.with_sidecar(sidecar);
         self
     }
 
     /// Set the CRA Annex III/IV product class explicitly (for severity
     /// calibration when the embedded compliance check runs under
     /// `ScoringProfile::Cra`). Sidecar `productClass` overrides this.
+    /// Shorthand for [`ComplianceRunConfig::with_product_class`].
     #[must_use]
-    pub const fn with_cra_product_class(mut self, class: crate::model::CraProductClass) -> Self {
-        self.cra_product_class = Some(class);
+    pub fn with_cra_product_class(mut self, class: crate::model::CraProductClass) -> Self {
+        self.compliance = self.compliance.with_product_class(class);
         self
     }
 
-    /// Pin the evaluation clock of the embedded compliance check (mirrors
-    /// [`ComplianceChecker::with_as_of`]). Deadline-sensitive checks (CRA
+    /// Pin the evaluation clock of the embedded compliance check and the
+    /// time-sensitive metrics (shorthand for
+    /// [`ComplianceRunConfig::with_as_of`]). Deadline-sensitive checks (CRA
     /// Art. 14 readiness, SBOM age, EUCC certificate expiry) evaluate against
     /// this instant instead of the wall clock — reproducible CI gates.
     #[must_use]
-    pub const fn with_as_of(mut self, as_of: chrono::DateTime<chrono::Utc>) -> Self {
-        self.as_of = Some(as_of);
+    pub fn with_as_of(mut self, as_of: chrono::DateTime<chrono::Utc>) -> Self {
+        self.compliance = self.compliance.with_as_of(as_of);
         self
+    }
+
+    /// The evaluation instant: the pinned clock, or the wall clock.
+    fn now(&self) -> chrono::DateTime<chrono::Utc> {
+        self.compliance.as_of().unwrap_or_else(chrono::Utc::now)
     }
 
     /// Score an SBOM
@@ -622,7 +631,7 @@ impl QualityScorer {
         let is_cyclonedx = sbom.document.format == SbomFormat::CycloneDx;
         // Time-dependent metrics (document age, certificate expiry) are
         // judged at the pinned `--as-of` instant, like the compliance checks.
-        let now = self.as_of.unwrap_or_else(chrono::Utc::now);
+        let now = self.now();
 
         // Calculate all metrics
         let completeness_metrics = CompletenessMetrics::from_sbom(sbom);
@@ -733,19 +742,9 @@ impl QualityScorer {
             total_components,
         );
 
-        // Run compliance check (with sidecar + product class + pinned clock
-        // if configured)
-        let mut compliance_checker = ComplianceChecker::new(self.profile.compliance_level());
-        if let Some(sc) = self.cra_sidecar.clone() {
-            compliance_checker = compliance_checker.with_sidecar(sc);
-        }
-        if let Some(c) = self.cra_product_class {
-            compliance_checker = compliance_checker.with_product_class(c);
-        }
-        if let Some(t) = self.as_of {
-            compliance_checker = compliance_checker.with_as_of(t);
-        }
-        let compliance = compliance_checker.check(sbom);
+        // Run compliance check with the run's inputs (clock, sidecar,
+        // product class) that the profile's level reads
+        let compliance = self.compliance.check(self.profile.compliance_level(), sbom);
 
         // Generate recommendations
         let recommendations = self.generate_recommendations(
@@ -815,18 +814,11 @@ impl QualityScorer {
         let vulnerability_metrics = VulnerabilityMetrics::from_sbom(sbom);
         let dependency_metrics = DependencyMetrics::from_sbom(sbom);
         let hash_quality_metrics = HashQualityMetrics::from_sbom(sbom);
-        let provenance_metrics =
-            ProvenanceMetrics::from_sbom_at(sbom, self.as_of.unwrap_or_else(chrono::Utc::now));
+        let provenance_metrics = ProvenanceMetrics::from_sbom_at(sbom, self.now());
         let auditability_metrics = AuditabilityMetrics::from_sbom(sbom);
         let lifecycle_metrics = LifecycleMetrics::from_sbom(sbom);
 
-        let compliance = {
-            let mut checker = ComplianceChecker::new(self.profile.compliance_level());
-            if let Some(t) = self.as_of {
-                checker = checker.with_as_of(t);
-            }
-            checker.check(sbom)
-        };
+        let compliance = self.compliance.check(self.profile.compliance_level(), sbom);
 
         let make_report = |overall_score: f32,
                            grade: QualityGrade,
