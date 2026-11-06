@@ -40,9 +40,6 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
-// Until the checkers read it (the next commits), only the tests do.
-#![cfg_attr(not(test), allow(dead_code))]
-
 mod component;
 mod document;
 mod graph;
