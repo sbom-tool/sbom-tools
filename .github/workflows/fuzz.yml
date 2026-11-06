@@ -40,6 +40,7 @@ jobs:
           - fuzz_detect_format
           - fuzz_score_sbom
           - fuzz_spdx3_json
+          - fuzz_compliance
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
