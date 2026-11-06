@@ -5,11 +5,17 @@ on:
     branches: [main]
     paths:
       - "src/parsers/**"
+      - "src/model/**"
+      - "src/quality/**"
+      - "src/reports/**"
       - "fuzz/**"
   pull_request:
     branches: [main]
     paths:
       - "src/parsers/**"
+      - "src/model/**"
+      - "src/quality/**"
+      - "src/reports/**"
       - "fuzz/**"
   schedule:
     - cron: "0 3 * * 1" # Monday 03:00 UTC
