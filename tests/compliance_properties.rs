@@ -78,6 +78,11 @@ fn config() -> ProptestConfig {
 
 // ============================================================================
 // What a generated SBOM is made of
+//
+// Every strategy is a `BoxedStrategy`, and composite strategies are boxed
+// where they are combined (tuples, `prop_oneof!`): nested strategy types
+// otherwise make symbol names of over 100,000 characters, which the MSVC
+// linker cannot write to a PDB (LNK4319). Boxing changes no generated case.
 // ============================================================================
 
 /// A field as an SBOM gives it: absent, explicitly or vaguely unknown, or a
@@ -131,27 +136,30 @@ const ODD_TEXT: &[&str] = &[
     "\u{1b}[31mred",
 ];
 
-fn field(known: impl Strategy<Value = String>) -> impl Strategy<Value = Field> {
+fn field(known: BoxedStrategy<String>) -> BoxedStrategy<Field> {
     prop_oneof![
         2 => Just(Field::Absent),
         1 => prop::sample::select(UNKNOWNS).prop_map(Field::Unknown),
         3 => known.prop_map(Field::Known),
     ]
+    .boxed()
 }
 
-fn known_name() -> impl Strategy<Value = String> {
+fn known_name() -> BoxedStrategy<String> {
     prop_oneof![
         5 => "[a-z][a-z0-9_.-]{0,12}",
         1 => prop::sample::select(ODD_TEXT).prop_map(str::to_string),
     ]
+    .boxed()
 }
 
-fn known_version() -> impl Strategy<Value = String> {
+fn known_version() -> BoxedStrategy<String> {
     prop_oneof![
         5 => "[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}",
         1 => prop::sample::select(&["v2", "2024-01-01", "1.0.0-rc.1+build.5", "r1234"][..])
             .prop_map(str::to_string),
     ]
+    .boxed()
 }
 
 /// A supplier, manufacturer or document supplier.
@@ -162,12 +170,10 @@ struct OrgSpec {
     email: bool,
 }
 
-fn org() -> impl Strategy<Value = OrgSpec> {
-    (field(known_name()), any::<bool>(), any::<bool>()).prop_map(|(name, url, email)| OrgSpec {
-        name,
-        url,
-        email,
-    })
+fn org() -> BoxedStrategy<OrgSpec> {
+    (field(known_name()), any::<bool>(), any::<bool>())
+        .prop_map(|(name, url, email)| OrgSpec { name, url, email })
+        .boxed()
 }
 
 impl OrgSpec {
@@ -198,7 +204,7 @@ enum IdSpec {
     Malformed(&'static str),
 }
 
-fn purl() -> impl Strategy<Value = IdSpec> {
+fn purl() -> BoxedStrategy<IdSpec> {
     prop_oneof![
         3 => Just(IdSpec::Absent),
         1 => prop::sample::select(&["NOASSERTION", "", "unknown"][..]).prop_map(IdSpec::Placeholder),
@@ -207,10 +213,10 @@ fn purl() -> impl Strategy<Value = IdSpec> {
             &["pkg:", "pkg:npm", "pkg:/@", "pkg:npm/%zz@1", "pkg:cargo/a b@1", "pkg:npm/x@"][..]
         )
         .prop_map(IdSpec::Malformed),
-    ]
+    ].boxed()
 }
 
-fn cpe() -> impl Strategy<Value = IdSpec> {
+fn cpe() -> BoxedStrategy<IdSpec> {
     prop_oneof![
         6 => Just(IdSpec::Absent),
         1 => Just(IdSpec::Placeholder("NOASSERTION")),
@@ -218,6 +224,7 @@ fn cpe() -> impl Strategy<Value = IdSpec> {
         1 => prop::sample::select(&["cpe:2.3:a", "cpe:/", "cpe:2.3:a:acme"][..])
             .prop_map(IdSpec::Malformed),
     ]
+    .boxed()
 }
 
 /// The ecosystems a valid purl names.
@@ -267,7 +274,7 @@ fn hash_algorithms() -> Vec<(HashAlgorithm, usize)> {
     ]
 }
 
-fn hash() -> impl Strategy<Value = HashSpec> {
+fn hash() -> BoxedStrategy<HashSpec> {
     (
         prop::sample::select(hash_algorithms()),
         prop_oneof![
@@ -279,6 +286,7 @@ fn hash() -> impl Strategy<Value = HashSpec> {
         ],
     )
         .prop_map(|((algorithm, _), digest)| HashSpec { algorithm, digest })
+        .boxed()
 }
 
 impl HashSpec {
@@ -328,7 +336,7 @@ struct LicenseSpec {
     concluded: Option<&'static str>,
 }
 
-fn licenses() -> impl Strategy<Value = LicenseSpec> {
+fn licenses() -> BoxedStrategy<LicenseSpec> {
     (
         prop::collection::vec(prop::sample::select(LICENSES), 0..3),
         prop::option::weighted(0.3, prop::sample::select(LICENSES)),
@@ -337,6 +345,7 @@ fn licenses() -> impl Strategy<Value = LicenseSpec> {
             declared,
             concluded,
         })
+        .boxed()
 }
 
 /// A cryptographic asset (CycloneDX `cryptoProperties`).
@@ -396,7 +405,7 @@ const CIPHER_SUITES: &[&str] = &[
     "not-a-suite",
 ];
 
-fn crypto() -> impl Strategy<Value = CryptoSpec> {
+fn crypto() -> BoxedStrategy<CryptoSpec> {
     prop_oneof![
         4 => (
             prop::sample::select(ALGORITHMS),
@@ -409,7 +418,8 @@ fn crypto() -> impl Strategy<Value = CryptoSpec> {
                 parameter,
                 quantum_level,
                 classical_level,
-            }),
+            })
+            .boxed(),
         1 => (
             prop::option::of(-400i64..4000),
             prop::option::of(prop::sample::select(CRYPTO_REFS)),
@@ -417,12 +427,14 @@ fn crypto() -> impl Strategy<Value = CryptoSpec> {
             .prop_map(|(expires_in_days, signature_algorithm)| CryptoSpec::Certificate {
                 expires_in_days,
                 signature_algorithm,
-            }),
+            })
+            .boxed(),
         1 => (
             prop::option::of(prop::sample::select(&[0u32, 128, 256, 1024, 2048, 4096][..])),
             prop::option::of(prop::sample::select(CRYPTO_REFS)),
         )
-            .prop_map(|(size, algorithm)| CryptoSpec::Material { size, algorithm }),
+            .prop_map(|(size, algorithm)| CryptoSpec::Material { size, algorithm })
+            .boxed(),
         2 => (
             0u8..4,
             prop::option::of(prop::sample::select(&["1.0", "1.2", "1.3", "2"][..])),
@@ -432,9 +444,10 @@ fn crypto() -> impl Strategy<Value = CryptoSpec> {
                 protocol,
                 version,
                 suites,
-            }),
-        1 => Just(CryptoSpec::Other),
-    ]
+            })
+            .boxed(),
+        1 => Just(CryptoSpec::Other).boxed(),
+    ].boxed()
 }
 
 impl CryptoSpec {
@@ -504,7 +517,7 @@ impl CryptoSpec {
 
 /// Every component type; cryptographic assets are weighted up so the crypto
 /// standards have assets to judge.
-fn component_type() -> impl Strategy<Value = ComponentType> {
+fn component_type() -> BoxedStrategy<ComponentType> {
     prop_oneof![
         6 => Just(ComponentType::Library),
         2 => Just(ComponentType::Application),
@@ -522,6 +535,7 @@ fn component_type() -> impl Strategy<Value = ComponentType> {
         1 => Just(ComponentType::Service),
         1 => Just(ComponentType::Other("custom".to_string())),
     ]
+    .boxed()
 }
 
 #[derive(Debug, Clone)]
@@ -530,7 +544,7 @@ struct VulnSpec {
     severity: Option<Severity>,
 }
 
-fn vulnerability() -> impl Strategy<Value = VulnSpec> {
+fn vulnerability() -> BoxedStrategy<VulnSpec> {
     (
         prop::sample::select(&["CVE-2024-3094", "CVE-2021-44228", "GHSA-jfh8-c2jp-5v3q"][..]),
         prop::option::of(prop::sample::select(vec![
@@ -541,11 +555,12 @@ fn vulnerability() -> impl Strategy<Value = VulnSpec> {
         ])),
     )
         .prop_map(|(id, severity)| VulnSpec { id, severity })
+        .boxed()
 }
 
 /// External references: the kinds the CRA, AI and EUCC checks read, with
 /// working, template and placeholder locators.
-fn external_ref() -> impl Strategy<Value = ExternalReference> {
+fn external_ref() -> BoxedStrategy<ExternalReference> {
     (
         prop::sample::select(vec![
             ExternalRefType::SecurityContact,
@@ -575,6 +590,7 @@ fn external_ref() -> impl Strategy<Value = ExternalReference> {
             comment: None,
             hashes: Vec::new(),
         })
+        .boxed()
 }
 
 /// One component entry.
@@ -599,7 +615,7 @@ struct ComponentSpec {
     ai: bool,
 }
 
-fn component() -> impl Strategy<Value = ComponentSpec> {
+fn component() -> BoxedStrategy<ComponentSpec> {
     let identity = (
         field(known_name()),
         field(known_version()),
@@ -607,7 +623,8 @@ fn component() -> impl Strategy<Value = ComponentSpec> {
         prop::option::weighted(0.6, org()),
         field(known_name()),
         prop::option::weighted(0.2, org()),
-    );
+    )
+        .boxed();
     let package = (
         licenses(),
         purl(),
@@ -623,42 +640,46 @@ fn component() -> impl Strategy<Value = ComponentSpec> {
             ]),
         ),
         field(known_name()),
-    );
+    )
+        .boxed();
     let extra = (
         prop::collection::vec(vulnerability(), 0..3),
         prop::collection::vec(external_ref(), 0..2),
         prop::option::weighted(0.85, crypto()),
         any::<bool>(),
-    );
-    (identity, package, extra).prop_map(
-        |(
-            (name, version, component_type, supplier, author, manufacturer),
-            (licenses, purl, purl_type, cpe, hashes, scope, copyright),
-            (vulnerabilities, external_refs, crypto, ai),
-        )| {
-            // Only a cryptographic asset carries crypto properties.
-            let crypto = crypto.filter(|_| component_type == ComponentType::Cryptographic);
-            ComponentSpec {
-                name,
-                version,
-                component_type,
-                supplier: supplier.filter(|org| !org.name.is_absent()),
-                author,
-                manufacturer: manufacturer.filter(|org| !org.name.is_absent()),
-                licenses,
-                purl,
-                purl_type,
-                cpe,
-                hashes,
-                scope,
-                copyright,
-                vulnerabilities,
-                external_refs,
-                crypto,
-                ai,
-            }
-        },
     )
+        .boxed();
+    (identity, package, extra)
+        .prop_map(
+            |(
+                (name, version, component_type, supplier, author, manufacturer),
+                (licenses, purl, purl_type, cpe, hashes, scope, copyright),
+                (vulnerabilities, external_refs, crypto, ai),
+            )| {
+                // Only a cryptographic asset carries crypto properties.
+                let crypto = crypto.filter(|_| component_type == ComponentType::Cryptographic);
+                ComponentSpec {
+                    name,
+                    version,
+                    component_type,
+                    supplier: supplier.filter(|org| !org.name.is_absent()),
+                    author,
+                    manufacturer: manufacturer.filter(|org| !org.name.is_absent()),
+                    licenses,
+                    purl,
+                    purl_type,
+                    cpe,
+                    hashes,
+                    scope,
+                    copyright,
+                    vulnerabilities,
+                    external_refs,
+                    crypto,
+                    ai,
+                }
+            },
+        )
+        .boxed()
 }
 
 impl ComponentSpec {
@@ -760,13 +781,13 @@ enum Created {
     Absent,
 }
 
-fn created() -> impl Strategy<Value = Created> {
+fn created() -> BoxedStrategy<Created> {
     prop_oneof![
         5 => (0i64..2000).prop_map(Created::Past),
         1 => (1i64..400).prop_map(Created::Future),
         1 => prop::sample::select(&["not-a-date", "2026-13-45", "yesterday"][..]).prop_map(Created::Unparsed),
         1 => Just(Created::Absent),
-    ]
+    ].boxed()
 }
 
 #[derive(Debug, Clone)]
@@ -776,18 +797,21 @@ struct CreatorSpec {
     email: bool,
 }
 
-fn creator() -> impl Strategy<Value = CreatorSpec> {
+fn creator() -> BoxedStrategy<CreatorSpec> {
     (
         prop::sample::select(vec![
             CreatorType::Person,
             CreatorType::Organization,
             CreatorType::Tool,
         ]),
-        field(prop_oneof![
-            known_name(),
-            Just("syft 1.4.2".to_string()),
-            Just("Acme Corp".to_string()),
-        ]),
+        field(
+            prop_oneof![
+                known_name(),
+                Just("syft 1.4.2".to_string()),
+                Just("Acme Corp".to_string()),
+            ]
+            .boxed(),
+        ),
         any::<bool>(),
     )
         .prop_map(|(creator_type, name, email)| CreatorSpec {
@@ -795,6 +819,7 @@ fn creator() -> impl Strategy<Value = CreatorSpec> {
             name,
             email,
         })
+        .boxed()
 }
 
 /// Document-level metadata.
@@ -814,7 +839,7 @@ struct DocSpec {
     doc_version: Option<u32>,
 }
 
-fn document() -> impl Strategy<Value = DocSpec> {
+fn document() -> BoxedStrategy<DocSpec> {
     let format = prop_oneof![
         (
             Just(SbomFormat::CycloneDx),
@@ -824,7 +849,8 @@ fn document() -> impl Strategy<Value = DocSpec> {
             Just(SbomFormat::Spdx),
             prop::sample::select(&["SPDX-2.2", "SPDX-2.3", "3.0.1", "garbage"][..]),
         ),
-    ];
+    ]
+    .boxed();
     let contact = || {
         field(
             prop::sample::select(
@@ -834,7 +860,8 @@ fn document() -> impl Strategy<Value = DocSpec> {
                     "security@example.com",
                 ][..],
             )
-            .prop_map(str::to_string),
+            .prop_map(str::to_string)
+            .boxed(),
         )
     };
     (
@@ -845,14 +872,16 @@ fn document() -> impl Strategy<Value = DocSpec> {
             prop::option::weighted(0.4, org()),
             field(known_name()),
             any::<bool>(),
-        ),
+        )
+            .boxed(),
         (
             contact(),
             contact(),
             prop::option::weighted(0.3, -200i64..4000),
             prop::option::weighted(0.2, any::<bool>()),
             prop::option::of(0u32..4),
-        ),
+        )
+            .boxed(),
     )
         .prop_map(
             |(
@@ -873,6 +902,7 @@ fn document() -> impl Strategy<Value = DocSpec> {
                 doc_version,
             },
         )
+        .boxed()
 }
 
 impl DocSpec {
@@ -937,14 +967,15 @@ struct EdgeSpec {
     relationship: DependencyType,
 }
 
-fn end() -> impl Strategy<Value = End> {
+fn end() -> BoxedStrategy<End> {
     prop_oneof![
         8 => (0usize..16).prop_map(End::Entry),
         1 => (0usize..2).prop_map(End::Dangling),
     ]
+    .boxed()
 }
 
-fn edge() -> impl Strategy<Value = EdgeSpec> {
+fn edge() -> BoxedStrategy<EdgeSpec> {
     (
         end(),
         end(),
@@ -961,6 +992,7 @@ fn edge() -> impl Strategy<Value = EdgeSpec> {
             to,
             relationship,
         })
+        .boxed()
 }
 
 /// A whole SBOM: its document, its component entries (some listed twice),
@@ -979,14 +1011,15 @@ struct SbomSpec {
 
 /// An SBOM of any shape, or one that is mostly well formed, so verdicts on
 /// both sides of every gate are common.
-fn sbom_spec() -> impl Strategy<Value = SbomSpec> {
+fn sbom_spec() -> BoxedStrategy<SbomSpec> {
     prop_oneof![
         3 => any_sbom_spec(),
         2 => good_sbom_spec(),
     ]
+    .boxed()
 }
 
-fn any_sbom_spec() -> impl Strategy<Value = SbomSpec> {
+fn any_sbom_spec() -> BoxedStrategy<SbomSpec> {
     (
         document(),
         prop::collection::vec(component(), 0..10),
@@ -1001,16 +1034,20 @@ fn any_sbom_spec() -> impl Strategy<Value = SbomSpec> {
             primary,
             edges,
         })
+        .boxed()
 }
 
 /// A mostly well-formed SBOM: a complete document (now and then any
 /// document), components that give every package field (now and then any
 /// component), the first one the primary, which depends on all the others,
 /// and a few edges of any kind.
-fn good_sbom_spec() -> impl Strategy<Value = SbomSpec> {
+fn good_sbom_spec() -> BoxedStrategy<SbomSpec> {
     (
-        prop_oneof![3 => good_document(), 1 => document()],
-        prop::collection::vec(prop_oneof![5 => good_component(), 1 => component()], 1..8),
+        prop_oneof![3 => good_document(), 1 => document()].boxed(),
+        prop::collection::vec(
+            prop_oneof![5 => good_component(), 1 => component()].boxed(),
+            1..8,
+        ),
         prop::collection::vec(edge(), 0..3),
     )
         .prop_map(|(document, components, extra_edges)| {
@@ -1030,6 +1067,7 @@ fn good_sbom_spec() -> impl Strategy<Value = SbomSpec> {
                 edges,
             }
         })
+        .boxed()
 }
 
 /// A component that gives every package field a strong value: a name, a
@@ -1037,7 +1075,7 @@ fn good_sbom_spec() -> impl Strategy<Value = SbomSpec> {
 /// SHA-256 and SHA-512 digests. It is a library or an application, or a
 /// cryptographic asset with its properties. Now and then one of the fields
 /// [`Evidence`] fills is left out.
-fn good_component() -> impl Strategy<Value = ComponentSpec> {
+fn good_component() -> BoxedStrategy<ComponentSpec> {
     (
         "[a-z][a-z0-9-]{2,10}",
         "[0-9]{1,2}\\.[0-9]{1,2}\\.[0-9]{1,2}",
@@ -1061,6 +1099,7 @@ fn good_component() -> impl Strategy<Value = ComponentSpec> {
                 component
             },
         )
+        .boxed()
 }
 
 fn good_component_of(
@@ -1126,7 +1165,7 @@ impl ComponentSpec {
 
 /// A document that gives every document field a strong value, in a
 /// current CycloneDX or SPDX version.
-fn good_document() -> impl Strategy<Value = DocSpec> {
+fn good_document() -> BoxedStrategy<DocSpec> {
     (
         prop_oneof![
             (
@@ -1169,6 +1208,7 @@ fn good_document() -> impl Strategy<Value = DocSpec> {
             signature: Some(true),
             doc_version: Some(1),
         })
+        .boxed()
 }
 
 impl SbomSpec {
@@ -1286,8 +1326,8 @@ enum Evidence {
     License,
 }
 
-fn evidence() -> impl Strategy<Value = Evidence> {
-    prop::sample::select(Evidence::ALL)
+fn evidence() -> BoxedStrategy<Evidence> {
+    prop::sample::select(Evidence::ALL).boxed()
 }
 
 impl Evidence {
@@ -1394,7 +1434,7 @@ struct RunSpec {
     product_class: Option<CraProductClass>,
 }
 
-fn run_spec() -> impl Strategy<Value = RunSpec> {
+fn run_spec() -> BoxedStrategy<RunSpec> {
     (
         prop::sample::select(vec![PqcMode::Readiness, PqcMode::Deadline]),
         any::<bool>(),
@@ -1415,6 +1455,7 @@ fn run_spec() -> impl Strategy<Value = RunSpec> {
                 product_class,
             },
         )
+        .boxed()
 }
 
 impl RunSpec {
