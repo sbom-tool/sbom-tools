@@ -211,7 +211,8 @@ impl ComplianceChecker {
         // every legacy check below remains a valid SelfDeclared-level
         // satisfaction path, and on documents without declarations
         // `attested()` is uniformly false (zero behavior change).
-        let ctx = ComplianceContext::new(self, sbom);
+        let sbom_evidence = SbomEvidence::new(sbom, self.now());
+        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let declarations = ctx.attestation_declarations();
         let ssdf_evidence = ctx.evidence_for(AttestationRuleFamily::Ssdf);
         let attested = |practice: &str| {

@@ -57,6 +57,7 @@ pub use catalog::{
 };
 pub use checker::{ClassCheck, ComplianceChecker};
 use context::{ComplianceContext, Findings, NotEvaluated, checker_for};
+use evidence::SbomEvidence;
 pub(crate) use finding::compose_finding_key;
 pub use finding::{
     DOCUMENT_SUBJECT, FINDING_ID_PREFIX, FindingIdentity, finding_fingerprint, finding_id,

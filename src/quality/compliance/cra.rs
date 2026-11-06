@@ -44,7 +44,8 @@ impl ComplianceChecker {
         // CDXA attestation evidence classified into the CRA family, fresh
         // and fully resolved at the injectable clock. Empty for documents
         // without declarations, leaving every row exactly as before.
-        let ctx = ComplianceContext::new(self, sbom);
+        let sbom_evidence = SbomEvidence::new(sbom, self.now());
+        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let cra_evidence = ctx.evidence_for(AttestationRuleFamily::Cra);
         let cdxa_level = cra_evidence.iter().map(|s| s.evidence_level).max();
         let cdxa_eucc_level = cra_evidence
@@ -950,7 +951,8 @@ impl ComplianceChecker {
         // standard naming EUCC/Common Criteria satisfies at Structural/
         // SignaturePresent level; sidecar fields and URL-substring refs
         // remain valid SelfDeclared fallbacks.
-        let ctx = ComplianceContext::new(self, sbom);
+        let sbom_evidence = SbomEvidence::new(sbom, self.now());
+        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let cdxa_eucc_attested = ctx
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()

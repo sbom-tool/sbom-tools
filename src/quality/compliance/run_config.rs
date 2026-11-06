@@ -6,6 +6,7 @@
 //! same verdicts on every surface. Which input reaches which level is
 //! decided in one place: [`ComplianceRunConfig::checker`].
 
+use super::evidence::SbomEvidence;
 use super::{
     CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, PqcMode, PqcProfile,
     RuleSettings,
@@ -394,6 +395,8 @@ impl ComplianceRunConfig {
     /// (`RAYON_NUM_THREADS` sets its size). Every level is judged at one
     /// instant, [`Self::judged_at`], so no result depends on when a thread
     /// got to it: the results are the same whatever the number of threads.
+    /// The levels share one evidence value, the facts of `sbom` at that
+    /// instant, so a fact several of them read is derived once.
     #[must_use]
     pub fn check_levels(
         &self,
@@ -402,9 +405,14 @@ impl ComplianceRunConfig {
     ) -> Vec<ComplianceResult> {
         use rayon::prelude::*;
         let judged_at = self.judged_at();
+        let evidence = SbomEvidence::new(sbom, judged_at);
         levels
             .par_iter()
-            .map(|level| self.checker(*level).with_as_of(judged_at).check(sbom))
+            .map(|level| {
+                self.checker(*level)
+                    .with_as_of(judged_at)
+                    .check_with(&evidence)
+            })
             .collect()
     }
 
