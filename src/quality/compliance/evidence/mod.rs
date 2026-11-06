@@ -44,6 +44,7 @@ mod component;
 mod document;
 mod graph;
 mod manufacturer;
+mod scope;
 mod vulns;
 
 #[cfg(test)]
