@@ -2,6 +2,7 @@
 //! share, the CRA product-class calibration, and `check()`, which runs
 //! a level's checks and completes their findings from the registry.
 
+use super::result::registry_refs;
 use super::*;
 
 /// Calibration check identifiers for `ComplianceChecker::class_severity()`.
