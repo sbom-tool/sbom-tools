@@ -36,6 +36,10 @@ pub(crate) struct StandardDescriptor {
     /// `--standard` value; the quality profiles use their lowercase level
     /// name.
     pub(crate) key: &'static str,
+    /// How `validate --standard` and `rules --standard` select the
+    /// standard; `None` for the quality profiles (Minimum, Standard,
+    /// Comprehensive), which back `quality --profile` instead.
+    pub(crate) cli: Option<CliNames>,
     /// Human-readable name.
     pub(crate) name: &'static str,
     /// Compact tab label (max ~8 chars) for terminal display.
@@ -59,6 +63,16 @@ pub(crate) struct StandardDescriptor {
     pub(crate) subjects: Subjects,
     /// Which of a run's inputs the standard's checker gets.
     pub(crate) inputs: RunInputs,
+}
+
+/// How `--standard` selects a standard. The canonical value is the
+/// standard's [`StandardDescriptor::key`].
+pub(crate) struct CliNames {
+    /// The other spellings `--standard` accepts, in the order clap lists
+    /// them.
+    pub(crate) aliases: &'static [&'static str],
+    /// The line `validate --help` shows for the value.
+    pub(crate) help: &'static str,
 }
 
 /// What a standard's checks judge, besides the document: the components
@@ -127,6 +141,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Minimum,
         key: "minimum",
+        cli: None,
         name: "Minimum",
         short_name: "Min",
         description: "Basic component identification only",
@@ -141,6 +156,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Standard,
         key: "standard",
+        cli: None,
         name: "Standard",
         short_name: "Std",
         description: "Recommended fields for general use",
@@ -155,6 +171,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::NtiaMinimum,
         key: "ntia",
+        cli: Some(CliNames {
+            aliases: &[],
+            help: "NTIA Minimum Elements for software transparency",
+        }),
         name: "NTIA Minimum Elements",
         short_name: "NTIA",
         description: "NTIA minimum elements for software transparency",
@@ -169,6 +189,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::CraPhase1,
         key: "cra-phase1",
+        cli: Some(CliNames {
+            aliases: &["cra-2026"],
+            help: "EU CRA Phase 1 — Art. 14 reporting obligations (apply from 11 Sep 2026)",
+        }),
         name: "EU CRA Phase 1 (2026)",
         short_name: "CRA-1",
         description: "CRA reporting obligations — product ID, SBOM format, manufacturer (Art. 14 applies from 11 Sep 2026)",
@@ -183,6 +207,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::CraPhase2,
         key: "cra",
+        cli: Some(CliNames {
+            aliases: &["cra-phase2"],
+            help: "EU CRA Phase 2 — full application of the regulation (from 11 Dec 2027). `cra` selects Phase 2; use `cra-phase1` for the 2026 reporting phase",
+        }),
         name: "EU CRA Phase 2 (2027)",
         short_name: "CRA-2",
         description: "Full CRA compliance — adds vulnerability metadata, lifecycle, disclosure (regulation fully applies from 11 Dec 2027)",
@@ -197,6 +225,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::FdaMedicalDevice,
         key: "fda",
+        cli: Some(CliNames {
+            aliases: &[],
+            help: "FDA premarket submission requirements for medical devices",
+        }),
         name: "FDA Medical Device",
         short_name: "FDA",
         description: "FDA premarket submission requirements for medical devices",
@@ -211,6 +243,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::NistSsdf,
         key: "ssdf",
+        cli: Some(CliNames {
+            aliases: &["nist-ssdf", "nist_ssdf"],
+            help: "NIST SP 800-218 Secure Software Development Framework",
+        }),
         name: "NIST SSDF (SP 800-218)",
         short_name: "SSDF",
         description: "Secure Software Development Framework — provenance, build integrity, VCS references",
@@ -225,6 +261,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Eo14028,
         key: "eo14028",
+        cli: Some(CliNames {
+            aliases: &["eo-14028", "eo_14028"],
+            help: "Executive Order 14028 Section 4 — software supply chain security practice (no federal mandate: OMB M-26-05 rescinded M-22-18)",
+        }),
         name: "EO 14028 Section 4",
         short_name: "EO14028",
         description: "Executive Order 14028 §4 SBOM practice (not a federal mandate since OMB M-26-05 rescinded M-22-18 and M-23-16) — machine-readable SBOM, auto-generation, supply chain security",
@@ -239,6 +279,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Cnsa2,
         key: "cnsa2",
+        cli: Some(CliNames {
+            aliases: &["cnsa-2", "cnsa_2", "cnsa2.0"],
+            help: "NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0, required for US national security systems by CNSSP 15",
+        }),
         name: "CNSA 2.0",
         short_name: "CNSA2",
         description: "CNSA 2.0 (required by CNSSP 15) — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5",
@@ -257,6 +301,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::NistPqc,
         key: "pqc",
+        cli: Some(CliNames {
+            aliases: &["nist-pqc", "nist_pqc"],
+            help: "NIST PQC readiness (IR 8547 + FIPS 203/204/205)",
+        }),
         name: "NIST PQC Readiness",
         short_name: "PQC",
         description: "NIST PQC — quantum-vulnerable algorithm detection, FIPS 203/204/205, SP 800-131A",
@@ -275,6 +323,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::BsiTr03183_2,
         key: "bsi",
+        cli: Some(CliNames {
+            aliases: &["tr-03183", "tr03183", "bsi-tr-03183-2"],
+            help: "BSI TR-03183-2 v2.1.0 (German national CRA-aligned SBOM guideline)",
+        }),
         name: "BSI TR-03183-2",
         short_name: "BSI",
         description: "BSI TR-03183-2 v2.1.0 — German national SBOM guideline (free, ENISA-cited): CycloneDX 1.6+/SPDX 3.0.1+ formats, required creator/timestamp, per-component version/licences/SHA-512 hash",
@@ -289,6 +341,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::CraOssSteward,
         key: "oss-steward",
+        cli: Some(CliNames {
+            aliases: &["cra-oss-steward", "cra-oss", "cra-art24", "art24"],
+            help: "CRA Article 24 — open-source software steward profile",
+        }),
         name: "CRA OSS Steward (Art. 24)",
         short_name: "OSS",
         description: "CRA Article 24 — Open-source software steward (lighter than full manufacturer obligations): SBOM + CVD policy + vuln-handling required, no DoC/module/manufacturer-email enforcement",
@@ -303,6 +359,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::EuccSubstantial,
         key: "eucc",
+        cli: Some(CliNames {
+            aliases: &["eucc-substantial", "common-criteria"],
+            help: "EUCC Substantial assurance level (Reg. (EU) 2024/482 as amended by 2024/3144 and 2025/2462), reference-only",
+        }),
         name: "EUCC Substantial (Reg. 2024/482)",
         short_name: "EUCC",
         description: "EUCC Substantial (Implementing Reg. (EU) 2024/482, as amended by 2024/3144 and 2025/2462) — reference-only check for Common-Criteria Protection Profile, Target of Evaluation, ITSEF, and certificate valid-until date",
@@ -317,6 +377,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::EuAiAct,
         key: "ai-act",
+        cli: Some(CliNames {
+            aliases: &["ai_act", "aiact", "eu-ai-act"],
+            help: "EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744) Annex IV documentation readiness",
+        }),
         name: "EU AI Act Annex IV Readiness",
         short_name: "AI-Act",
         description: "EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)",
@@ -331,6 +395,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::BsiSbomForAi,
         key: "bsi-ai",
+        cli: Some(CliNames {
+            aliases: &["bsi_ai", "bsiai", "sbom-for-ai", "ai-bom"],
+            help: "BSI/G7 \"SBOM for AI — Minimum Elements\" readiness",
+        }),
         name: "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
         short_name: "BSI-AI",
         description: "BSI/G7 SBOM-for-AI Minimum Elements (joint G7 final, May 2026) READINESS — scores an AI-BOM element-by-element across the Metadata, System-Level, Models, Datasets, Infrastructure, and Security clusters (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)",
@@ -345,6 +413,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Cisa2026,
         key: "cisa-2026",
+        cli: Some(CliNames {
+            aliases: &["cisa", "cisa2026", "minimum-elements-2026"],
+            help: "CISA 2026 Minimum Elements for an SBOM (v2.1, July 2026; successor to the NTIA 2021 Minimum Elements)",
+        }),
         name: "CISA 2026 Minimum Elements",
         short_name: "CISA26",
         description: "2026 Minimum Elements for an SBOM (CISA et al., July 2026) — successor to NTIA 2021: author (person/org), signature, format name+version, generation context, timestamp, tool name+version, SBOM version, and per-component producer/name/version/identifiers/hash/license/dependencies. Frequency, distribution, and update accommodation are organizational practices with no in-document evidence and carry no rules.",
@@ -359,6 +431,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::PciDss632,
         key: "pci-dss",
+        cli: Some(CliNames {
+            aliases: &["pci", "pci-dss-6-3-2", "pci-dss-4"],
+            help: "PCI DSS v4.0.1 Requirement 6.3.2 software-inventory profile",
+        }),
         name: "PCI DSS v4.0.1 Req. 6.3.2",
         short_name: "PCI",
         description: "PCI DSS v4.0.1 Req. 6.3.2 software-inventory profile (required in assessments since 31 Mar 2025) — inventory completeness, per-component name/version/supplier/identifier, freshness, and vulnerability-management usability; 6.3.1/11.3.1.1 risk-ranking checks where vulnerability data is embedded. Assessor-side testing procedures (interviews, software comparison) are out of document reach.",
@@ -373,6 +449,10 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Fsct,
         key: "fsct",
+        cli: Some(CliNames {
+            aliases: &["fsct-3", "component-transparency"],
+            help: "CISA Framing Software Component Transparency, 3rd ed. (2024)",
+        }),
         name: "CISA Framing Software Component Transparency (3rd ed.)",
         short_name: "FSCT",
         description: "CISA Framing Software Component Transparency, 3rd ed. (2024) — baseline attributes (author, timestamp, primary component, name, version, supplier, identifiers, hashes, relationships, licenses, copyright) across the Minimum Expected (Error) / Recommended Practice (Warning) / Aspirational Goal (Info) maturity tiers",
@@ -387,6 +467,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
     StandardDescriptor {
         level: ComplianceLevel::Comprehensive,
         key: "comprehensive",
+        cli: None,
         name: "Comprehensive",
         short_name: "Full",
         description: "All recommended fields and best practices",
@@ -435,8 +516,11 @@ impl ComplianceLevel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quality::{RuleCatalogFilter, all_rule_ids, rule_catalog, rule_meta};
-    use std::collections::BTreeSet;
+    use crate::quality::{
+        RuleCatalogFilter, StandardSelector, all_rule_ids, rule_catalog, rule_meta,
+    };
+    use clap::ValueEnum;
+    use std::collections::{BTreeMap, BTreeSet};
 
     /// Every level, by an exhaustive match: a new level fails to compile
     /// here until it is added, and then the test below fails until it has
@@ -563,6 +647,83 @@ mod tests {
                 d.subjects != Subjects::CertificationEvidence || d.inputs.sidecar,
                 "{level:?}"
             );
+        }
+    }
+
+    /// The keys, the aliases and the quality profiles' keys are one
+    /// namespace: `rules` and the reports name a standard by its key, and
+    /// `--standard` must never read one spelling two ways.
+    #[test]
+    fn keys_and_cli_names_are_unique() {
+        let mut seen: BTreeMap<&str, ComplianceLevel> = BTreeMap::new();
+        for d in STANDARDS {
+            let aliases = d.cli.as_ref().map_or(&[][..], |cli| cli.aliases);
+            for name in std::iter::once(d.key).chain(aliases.iter().copied()) {
+                if let Some(other) = seen.insert(name, d.level) {
+                    panic!("{name} names both {other:?} and {:?}", d.level);
+                }
+            }
+        }
+        for d in STANDARDS.iter().filter(|d| d.cli.is_none()) {
+            assert_eq!(d.key, d.name.to_lowercase(), "{:?}", d.level);
+        }
+    }
+
+    /// Every spelling of a standard parses back to its level through the
+    /// parser the CLI and the config file use (`FromStr`, which the
+    /// `--standard` value parser calls) and through clap's own `ValueEnum`
+    /// parser.
+    #[test]
+    fn every_cli_name_parses_back_to_its_level() {
+        for d in STANDARDS {
+            let Some(cli) = &d.cli else { continue };
+            for name in std::iter::once(d.key).chain(cli.aliases.iter().copied()) {
+                for spelling in [name.to_string(), name.to_uppercase()] {
+                    let parsed: StandardSelector = spelling
+                        .parse()
+                        .unwrap_or_else(|e| panic!("{spelling} must parse: {e}"));
+                    assert_eq!(parsed.level(), d.level, "{spelling}");
+                    let clap = StandardSelector::from_str(&spelling, true)
+                        .unwrap_or_else(|e| panic!("{spelling} must parse: {e}"));
+                    assert_eq!(clap, parsed, "{spelling}");
+                }
+            }
+        }
+    }
+
+    /// `--standard` offers exactly the entries with CLI names, once each,
+    /// under the entry's key, aliases and help line.
+    #[test]
+    fn the_selectors_are_the_entries_with_cli_names() {
+        let selectable: Vec<ComplianceLevel> = STANDARDS
+            .iter()
+            .filter(|d| d.cli.is_some())
+            .map(|d| d.level)
+            .collect();
+        let selected: BTreeSet<&str> = StandardSelector::value_variants()
+            .iter()
+            .map(|s| s.level().descriptor().key)
+            .collect();
+        assert_eq!(selected.len(), StandardSelector::value_variants().len());
+        assert_eq!(
+            selected,
+            selectable.iter().map(|l| l.descriptor().key).collect()
+        );
+        for selector in StandardSelector::value_variants() {
+            let d = selector.level().descriptor();
+            let cli = d.cli.as_ref().expect("a selector's level has CLI names");
+            let value = selector
+                .to_possible_value()
+                .expect("every selector is offered");
+            let names: Vec<&str> = value.get_name_and_aliases().collect();
+            let mut expected = vec![d.key];
+            expected.extend(cli.aliases);
+            assert_eq!(names, expected, "{selector:?}");
+            assert_eq!(
+                value.get_help().map(ToString::to_string).as_deref(),
+                Some(cli.help)
+            );
+            assert_eq!(selector.canonical_name(), d.key);
         }
     }
 }
