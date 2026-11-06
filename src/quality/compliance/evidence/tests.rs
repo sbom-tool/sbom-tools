@@ -62,7 +62,7 @@ fn text_keeps_the_raw_value_and_classifies_it() {
         Text::of(Some(" 1.0 ")),
         Text {
             raw: Some(" 1.0 "),
-            value: Known::Known("1.0")
+            value: Known::Value("1.0")
         }
     );
     assert_eq!(Text::of(Some("NOASSERTION")).value, Known::DeclaredUnknown);
@@ -83,7 +83,7 @@ fn version_column_reads_each_component_once_in_order() {
     let sbom = sbom_of(vec![a, b, c]);
     let ev = SbomEvidence::new(&sbom, as_of());
     let versions: Vec<_> = ev.components().map(|c| c.version()).collect();
-    assert_eq!(versions[0].value, Known::Known("1.0"));
+    assert_eq!(versions[0].value, Known::Value("1.0"));
     assert_eq!(versions[1].raw, Some("TBD"));
     assert_eq!(versions[1].value, Known::Missing);
     assert_eq!(versions[2].raw, None);

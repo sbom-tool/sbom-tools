@@ -75,7 +75,7 @@ pub(crate) use vulns::VulnFact;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Known<T> {
     /// A real value.
-    Known(T),
+    Value(T),
     /// An explicit sentinel: the author states the value is unknown.
     DeclaredUnknown,
     /// Absent, empty, or a placeholder.
@@ -86,7 +86,7 @@ impl<T> Known<T> {
     /// The value, when it is a real one.
     pub(crate) fn known(self) -> Option<T> {
         match self {
-            Self::Known(value) => Some(value),
+            Self::Value(value) => Some(value),
             Self::DeclaredUnknown | Self::Missing => None,
         }
     }
@@ -112,7 +112,7 @@ impl<'a> Text<'a> {
     /// `raw` with the state already classified (a cached column).
     fn with_state(raw: Option<&'a str>, state: ValueState) -> Self {
         let value = match state {
-            ValueState::Known => Known::Known(raw.unwrap_or_default().trim()),
+            ValueState::Known => Known::Value(raw.unwrap_or_default().trim()),
             ValueState::DeclaredUnknown => Known::DeclaredUnknown,
             ValueState::Missing => Known::Missing,
         };
