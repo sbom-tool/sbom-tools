@@ -1391,7 +1391,8 @@ impl ComplianceChecker {
     //
     // The check below runs the must-have subset and skips the rest.
 
-    pub(crate) fn check_cra_oss_steward(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+    pub(crate) fn check_cra_oss_steward(&self, ctx: &ComplianceContext, findings: &mut Findings) {
+        let sbom = ctx.sbom;
         let Findings {
             violations,
             not_evaluated,
@@ -1403,8 +1404,8 @@ impl ComplianceChecker {
         // SBOM completeness — basic structural requirements (re-uses the
         // standard component check; manufacturer-only sub-checks are gated
         // off because we don't run check_cra_gaps for stewards).
-        self.check_components(sbom, violations);
-        self.check_dependencies(sbom, violations);
+        self.check_components(ctx, violations);
+        self.check_dependencies(ctx, violations);
 
         // Vulnerability-handling process (Annex I Part II): require either
         // a vulnerability-disclosure URL on the document or a SecurityContact
@@ -1478,7 +1479,7 @@ impl ComplianceChecker {
         }
 
         // Format-specific (CycloneDX/SPDX integrity, e.g., bomFormat field)
-        self.check_format_specific(sbom, violations, not_evaluated);
+        self.check_format_specific(ctx, violations, not_evaluated);
 
         // -- Explicitly NOT enforced ----------------------------------------
         // - Manufacturer email contact (Art. 13(16))

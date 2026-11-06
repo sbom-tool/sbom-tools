@@ -27,12 +27,15 @@
 //! }
 //! ```
 
-use super::evidence::SbomEvidence;
+use super::evidence::{ComponentView, SbomEvidence};
+use super::shared::inventory_absent_finding;
 use super::{
     Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, RuleEvaluation,
     Violation,
 };
-use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequirement};
+use crate::model::{
+    AttestationDeclarations, AttestationRuleFamily, ComponentType, SupportedRequirement,
+};
 
 /// Read-only context threaded through every [`StandardChecker`].
 ///
@@ -100,6 +103,58 @@ impl<'r, 'a> ComplianceContext<'r, 'a> {
             .map_or_else(Vec::new, |declarations| {
                 declarations.evidence_for_family(family, self.ev.as_of())
             })
+    }
+
+    /// Whether the run leaves `c` out of the package rules: its scope is
+    /// excluded, the run does not judge such components, and it is not the
+    /// document's primary component (the product itself is never left out).
+    pub(crate) fn leaves_out(&self, c: &ComponentView<'_, '_>) -> bool {
+        !self.checker.include_excluded_scope && c.excluded_scope()
+    }
+
+    /// Whether the package rules judge `c`: a package-scoped component the
+    /// run does not leave out for its excluded scope (see
+    /// [`Self::leaves_out`]).
+    pub(crate) fn judges_package(&self, c: &ComponentView<'_, '_>) -> bool {
+        c.package_scoped() && !self.leaves_out(c)
+    }
+
+    /// The components the package rules apply to (see
+    /// [`Self::judges_package`]), in inventory order. Every per-component
+    /// package check iterates through this or tests [`Self::judges_package`],
+    /// so no standard can forget a carve-out.
+    pub(crate) fn package_components(&self) -> impl Iterator<Item = ComponentView<'r, 'a>> + '_ {
+        self.ev.components().filter(|c| self.judges_package(c))
+    }
+
+    /// How many components the package rules apply to.
+    pub(crate) fn package_count(&self) -> usize {
+        self.ev.package_count(self.checker.include_excluded_scope)
+    }
+
+    /// The inventory-absent finding for `rule_id`, or `None` when the
+    /// package rules judge at least one component (see
+    /// [`ComplianceChecker::inventory_absent_violation`], which reads the
+    /// SBOM for the checkers that do not read the evidence yet).
+    pub(crate) fn inventory_absent_violation(
+        &self,
+        rule_id: &'static str,
+        requirement: &str,
+    ) -> Option<Violation> {
+        if self.package_count() > 0 {
+            return None;
+        }
+        Some(inventory_absent_finding(
+            self.ev.component_count(),
+            self.ev.components().filter(|c| c.package_scoped()).count(),
+            || {
+                self.ev
+                    .components()
+                    .all(|c| *c.component_type() == ComponentType::Cryptographic)
+            },
+            rule_id,
+            requirement,
+        ))
     }
 }
 
@@ -214,19 +269,19 @@ impl StandardChecker for GenericChecker {
         } = &mut findings;
 
         // Check document-level requirements
-        checker.check_document_metadata(sbom, violations, not_evaluated);
+        checker.check_document_metadata(ctx, violations, not_evaluated);
 
         // Check component requirements
-        checker.check_components(sbom, violations);
+        checker.check_components(ctx, violations);
 
         // Check dependency requirements
-        checker.check_dependencies(sbom, violations);
+        checker.check_dependencies(ctx, violations);
 
         // Check vulnerability metadata (CRA readiness)
-        checker.check_vulnerability_metadata(sbom, violations);
+        checker.check_vulnerability_metadata(ctx, violations);
 
         // Check format-specific requirements
-        checker.check_format_specific(sbom, violations, not_evaluated);
+        checker.check_format_specific(ctx, violations, not_evaluated);
 
         // Check CRA-specific gap requirements (SBOM freshness, Art. 13(5), 13(9), Annex I Part II, document integrity)
         if checker.level.is_cra() {
@@ -240,9 +295,12 @@ impl StandardChecker for GenericChecker {
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
 /// single dedicated method on [`ComplianceChecker`]. The method takes the
-/// violations it pushes to, or, with the trailing `findings`, the whole
-/// [`Findings`] (for a standard that reports passed checks, skips a check on
-/// purpose, or can decide it does not apply).
+/// SBOM and the violations it pushes to, or, with the trailing `findings`,
+/// the SBOM and the whole [`Findings`] (for a standard that reports passed
+/// checks, skips a check on purpose, or can decide it does not apply). With
+/// the trailing `context` it takes the [`ComplianceContext`] instead of the
+/// SBOM, and the whole [`Findings`]: the form of a standard whose checks read
+/// the evidence (see [`super::evidence`]).
 macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
@@ -274,6 +332,21 @@ macro_rules! dedicated_checker {
             }
         }
     };
+    ($name:ident, $level:expr, $method:ident, context) => {
+        pub(crate) struct $name;
+
+        impl StandardChecker for $name {
+            fn level(&self) -> ComplianceLevel {
+                $level
+            }
+
+            fn check(&self, ctx: &ComplianceContext) -> Findings {
+                let mut findings = Findings::default();
+                ctx.checker.$method(ctx, &mut findings);
+                findings
+            }
+        }
+    };
 }
 
 dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
@@ -300,7 +373,7 @@ dedicated_checker!(
     CraOssStewardChecker,
     ComplianceLevel::CraOssSteward,
     check_cra_oss_steward,
-    findings
+    context
 );
 dedicated_checker!(
     EuccSubstantialChecker,

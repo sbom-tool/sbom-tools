@@ -2,7 +2,12 @@
 //! profiles (Minimum, Standard, NTIA, CRA phases, FDA, Comprehensive):
 //! document metadata, components, dependencies, vulnerability metadata,
 //! and format-specific (CycloneDX / SPDX) requirements.
+//!
+//! The checks read the run's evidence (see [`super::evidence`]), never the
+//! SBOM itself; the run's own inputs (level, sidecar, product class) come
+//! from the checker.
 
+use super::shared::{unparseable_timestamp_of, unreachable_contact_note_of};
 use super::*;
 
 /// One format-level check's rule id per profile family. The generic path
@@ -81,14 +86,16 @@ const MAX_NAMED_DUPLICATES: usize = 5;
 impl ComplianceChecker {
     pub(crate) fn check_document_metadata(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
         not_evaluated: &mut NotEvaluated,
     ) {
         use crate::model::{CreatorType, ExternalRefType};
+        let ev = ctx.ev;
+        let doc = ev.document();
 
         // All levels require creator information
-        if sbom.document.creators.is_empty() {
+        if doc.creators.is_empty() {
             let (requirement, rule_id) = match self.level {
                 ComplianceLevel::NtiaMinimum => (
                     "NTIA Minimum Elements: Author".to_string(),
@@ -138,7 +145,7 @@ impl ComplianceChecker {
                 .sidecar
                 .as_ref()
                 .is_some_and(|s| s.manufacturer_name.is_some());
-            if !manufacturer_identified(sbom) {
+            if !ev.manufacturer().identified {
                 if sidecar_has_manufacturer {
                     violations.push(Violation {
                         severity: ViolationSeverity::Info,
@@ -184,10 +191,10 @@ impl ComplianceChecker {
 
             // Validate manufacturer email format if present: one finding per
             // invalid address, told apart by the address itself.
-            for creator in &sbom.document.creators {
-                if creator.creator_type == CreatorType::Organization
-                    && let Some(email) = &creator.email
-                    && !is_valid_email_format(email)
+            for creator in &doc.creators {
+                if creator.creator.creator_type == CreatorType::Organization
+                    && creator.email_well_formed == Some(false)
+                    && let Some(email) = &creator.creator.email
                 {
                     violations.push(Violation {
                         severity: ViolationSeverity::Warning,
@@ -213,7 +220,7 @@ impl ComplianceChecker {
 
             // An empty or placeholder name names no product (an SPDX 2.x
             // document always has a DocumentName field, maybe empty).
-            if !has_known_value(&sbom.document.name) {
+            if !doc.name.is_known() {
                 let sidecar_has_product_name = self
                     .sidecar
                     .as_ref()
@@ -234,7 +241,7 @@ impl ComplianceChecker {
                         severity_override: None,
                         deadline: None,
                         field: None,
-                        observed: sbom.document.name.as_deref().and_then(observed),
+                        observed: doc.name.raw.and_then(observed),
                     });
                 } else {
                     violations.push(Violation {
@@ -253,7 +260,7 @@ impl ComplianceChecker {
                         severity_override: None,
                         deadline: None,
                         field: None,
-                        observed: sbom.document.name.as_deref().and_then(observed),
+                        observed: doc.name.raw.and_then(observed),
                     });
                 }
             }
@@ -263,14 +270,14 @@ impl ComplianceChecker {
             // contact counts only when it reaches someone (`known_contact`):
             // NOASSERTION, n/a or an example.com address is no contact, as
             // for the EO 14028 and PCI DSS checks.
-            let has_doc_security_contact = known_contact(sbom.document.security_contact.as_deref())
-                || known_contact(sbom.document.vulnerability_disclosure_url.as_deref());
+            let has_doc_security_contact =
+                doc.security_contact_reaches || doc.vulnerability_disclosure_url_reaches;
 
             // Fallback: check component-level external refs — but only on the
             // described product components. A third-party dependency's
             // upstream advisories or support URL is not the manufacturer's
             // contact.
-            let has_component_security_contact = manufacturer_reference(sbom, is_contact_reference);
+            let has_component_security_contact = ev.manufacturer().reference(is_contact_reference);
 
             if !has_doc_security_contact && !has_component_security_contact {
                 let sidecar_has_security = self.sidecar.as_ref().is_some_and(|s| {
@@ -302,7 +309,7 @@ impl ComplianceChecker {
                         category: ViolationCategory::SecurityInfo,
                         message: format!(
                             "[CRA Art. 13(17)] SBOM should include a security contact or vulnerability disclosure reference{}{}{}",
-                            unreachable_contact_note(sbom),
+                            unreachable_contact_note_of(ev.manufacturer().unreachable_contact),
                             unreachable_sidecar_note(
                                 self.sidecar.as_ref().and_then(|s| s.security_contact.as_deref())
                             ),
@@ -324,14 +331,13 @@ impl ComplianceChecker {
                         severity_override: None,
                         deadline: None,
                         field: None,
-                        observed: unreachable_contact(sbom).and_then(observed),
+                        observed: ev.manufacturer().unreachable_contact.and_then(observed),
                     });
                 }
             }
 
             // CRA: Check for primary/root product component identification
-            if sbom.primary_component_id.is_none() && self.package_components(sbom).nth(1).is_some()
-            {
+            if doc.primary_declared.is_none() && ctx.package_count() > 1 {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
@@ -356,7 +362,7 @@ impl ComplianceChecker {
             // disclosed at purchase (Art. 13(19)) and accompany the product
             // (Annex II (7)). The CRA sidecar's `supportEndDate` declares it
             // too: ignoring it asked for a date the run already had.
-            let support_end_declared = sbom.document.support_end_date.is_some()
+            let support_end_declared = doc.support_end_declared
                 || self
                     .sidecar
                     .as_ref()
@@ -390,11 +396,11 @@ impl ComplianceChecker {
             // report it defers to names.) Versions compare numerically; an
             // absent or unparseable version skips the gate instead of
             // false-failing.
-            let minimum = match sbom.document.format {
+            let minimum = match doc.format {
                 SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
                 SbomFormat::Spdx => crate::model::SpecVersion::new(2, 3, 0),
             };
-            let parsed = sbom.document.spec_version_parsed();
+            let parsed = doc.spec_version;
             if parsed.is_none() {
                 not_evaluated.push("SBOM-CRA-MACHINE-READABLE", SPEC_VERSION_UNPARSED);
             }
@@ -404,7 +410,7 @@ impl ComplianceChecker {
                     category: ViolationCategory::FormatSpecific,
                     message: format!(
                         "[CRA Annex I Part II (1)] SBOM format version {} {} may not meet the CRA machine-readable requirement; use CycloneDX 1.4+, SPDX 2.3+, or SPDX 3.0+",
-                        sbom.document.format, sbom.document.spec_version
+                        doc.format, doc.spec_version_raw
                     ),
                     element: None,
                     requirement: "CRA Annex I Part II (1): Machine-readable SBOM format"
@@ -418,32 +424,28 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed(&format!(
-                        "{} {}",
-                        sbom.document.format, sbom.document.spec_version
-                    )),
+                    observed: observed(&format!("{} {}", doc.format, doc.spec_version_raw)),
                 });
             }
 
             // CRA Annex I Part II (1): Unique product identifier traceability
             // The primary/root component should have a stable unique identifier (PURL or CPE)
             // that can be traced across software updates.
-            if let Some(ref primary_id) = sbom.primary_component_id
-                && let Some(primary) = sbom.components.get(primary_id)
-                && primary.identifiers.purl.is_none()
-                && primary.identifiers.cpe.is_empty()
+            if let Some(primary) = ev.primary()
+                && !primary.ids().purl
+                && !primary.ids().cpe
             {
                 violations.push(Violation {
                             severity: ViolationSeverity::Warning,
                             category: ViolationCategory::ComponentIdentification,
                             message: format!(
                                 "[CRA Annex I Part II (1)] Primary component '{}' missing unique identifier (PURL/CPE) for cross-update traceability",
-                                primary.name
+                                primary.name()
                             ),
-                            element: Some(primary.name.clone()),
+                            element: Some(primary.name().to_string()),
                             requirement: "CRA Annex I Part II (1): Product identifier traceability across updates".to_string(),
                             rule_id: "SBOM-CRA-ANNEX-I-TRACEABILITY",
-                            component_id: Some(primary.canonical_id.value().to_string()),
+                            component_id: Some(primary.canonical_id().value().to_string()),
                             counts: None,
                             standard_refs: Cow::Borrowed(&[]),
                             remediation: None,
@@ -466,11 +468,10 @@ impl ComplianceChecker {
             // the primary's URL-shaped advisories reference only: a support
             // link is no disclosure policy. A placeholder URL is no policy
             // either (`known_contact`).
-            let has_vuln_disclosure_policy =
-                known_contact(sbom.document.vulnerability_disclosure_url.as_deref())
-                    || manufacturer_reference(sbom, |r| {
-                        matches!(r.ref_type, ExternalRefType::Advisories) && is_contact_reference(r)
-                    });
+            let has_vuln_disclosure_policy = doc.vulnerability_disclosure_url_reaches
+                || ev.manufacturer().reference(|r| {
+                    matches!(r.ref_type, ExternalRefType::Advisories) && is_contact_reference(r)
+                });
             if !has_vuln_disclosure_policy {
                 let sidecar_has_cvd = self
                     .sidecar
@@ -519,7 +520,7 @@ impl ComplianceChecker {
             // Check whether the primary component (or any top-level component) has end-of-life
             // or lifecycle information. Currently we check support_end_date at doc level.
             // Also check for lifecycle properties on components.
-            if !self.has_support_lifecycle_evidence(sbom) {
+            if !self.has_support_lifecycle_evidence(ctx) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Info,
                     category: ViolationCategory::SecurityInfo,
@@ -543,7 +544,7 @@ impl ComplianceChecker {
             // Check for an attestation, certification, or declaration-of-conformity
             // reference on the described product: a dependency's own
             // certification or attestation is not the product's declaration.
-            let has_conformity_ref = manufacturer_reference(sbom, |r| {
+            let has_conformity_ref = ev.manufacturer().reference(|r| {
                 matches!(
                     r.ref_type,
                     ExternalRefType::Attestation | ExternalRefType::Certification
@@ -586,7 +587,7 @@ impl ComplianceChecker {
         // SBOM-FDA-SUPPLIER is the per-component supplier element below
         // (until v0.4.0 both checks shared that id).
         if matches!(self.level, ComplianceLevel::FdaMedicalDevice) {
-            if !manufacturer_identified(sbom) {
+            if !ev.manufacturer().identified {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
@@ -613,10 +614,9 @@ impl ComplianceChecker {
             // reaches someone (see `known_contact`), judged as every other
             // contact check judges one.
             let emails = || {
-                sbom.document
-                    .creators
+                doc.creators
                     .iter()
-                    .filter_map(|c| c.email.as_deref())
+                    .filter_map(|c| c.creator.email.as_deref())
             };
             if !emails().any(|email| known_contact(Some(email))) {
                 violations.push(Violation {
@@ -643,7 +643,7 @@ impl ComplianceChecker {
 
             // FDA: Document name required; an empty or placeholder name is
             // no name.
-            if !has_known_value(&sbom.document.name) {
+            if !doc.name.is_known() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
@@ -659,7 +659,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: sbom.document.name.as_deref().and_then(observed),
+                    observed: doc.name.raw.and_then(observed),
                 });
             }
 
@@ -672,7 +672,7 @@ impl ComplianceChecker {
             // evidence. (A run hands the CRA sidecar to the CRA, EUCC and AI
             // Act profiles only, see `ComplianceRunConfig::checker`, so in the
             // CLI FDA judges the SBOM's own lifecycle data.)
-            if !self.has_support_lifecycle_evidence(sbom) {
+            if !self.has_support_lifecycle_evidence(ctx) {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::SecurityInfo,
@@ -709,7 +709,7 @@ impl ComplianceChecker {
             ComplianceLevel::NtiaMinimum
                 | ComplianceLevel::FdaMedicalDevice
                 | ComplianceLevel::Comprehensive
-        ) && !sbom.document.has_known_timestamp()
+        ) && !doc.has_known_timestamp
         {
             let (requirement, rule_id) = match self.level {
                 ComplianceLevel::NtiaMinimum => {
@@ -720,7 +720,7 @@ impl ComplianceChecker {
                 }
                 _ => ("SBOM creation timestamp", "SBOM-QUALITY-TIMESTAMP"),
             };
-            let message = unparseable_timestamp(sbom).map_or_else(
+            let message = unparseable_timestamp_of(doc.created_unparsed).map_or_else(
                 || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
                 |gap| format!("SBOM has {gap} (NTIA required data field)"),
             );
@@ -739,7 +739,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed_unparsed_timestamp(sbom),
+                observed: doc.created_unparsed.and_then(observed),
             });
         }
 
@@ -751,7 +751,7 @@ impl ComplianceChecker {
                 | ComplianceLevel::CraPhase1
                 | ComplianceLevel::CraPhase2
                 | ComplianceLevel::Comprehensive
-        ) && sbom.document.serial_number.is_none()
+        ) && doc.serial_number.is_none()
         {
             let rule_id = if self.level == ComplianceLevel::FdaMedicalDevice {
                 "SBOM-FDA-NAMESPACE"
@@ -785,33 +785,20 @@ impl ComplianceChecker {
     /// lifecycle/end-of-life/end-of-support properties, or a sidecar
     /// support end date. Shared by the CRA lifecycle (Art. 13(8) /
     /// Annex II (7)) and FDA level-of-support checks.
-    fn has_support_lifecycle_evidence(&self, sbom: &NormalizedSbom) -> bool {
-        sbom.document.support_end_date.is_some()
+    fn has_support_lifecycle_evidence(&self, ctx: &ComplianceContext<'_, '_>) -> bool {
+        ctx.ev.document().support_end_declared
             || self
                 .sidecar
                 .as_ref()
                 .is_some_and(|s| s.support_end_date.is_some())
-            || sbom.components.values().any(|comp| {
-                comp.extensions.properties.iter().any(|p| {
-                    // Token-match the property name — a bare substring test
-                    // let "geolocation" satisfy the lifecycle element via
-                    // its embedded "eol" — and require a real value.
-                    let name_lower = p.name.to_lowercase();
-                    let is_lifecycle_name = name_lower
-                        .split(|c: char| !c.is_ascii_alphanumeric())
-                        .any(|t| t == "eol" || t == "lifecycle")
-                        || name_lower.contains("end-of-life")
-                        || name_lower.contains("end-of-support")
-                        || name_lower.contains("endoflife")
-                        || name_lower.contains("endofsupport");
-                    is_lifecycle_name && known_value(Some(p.value.as_str())).is_some()
-                })
-            })
+            || ctx.ev.has_lifecycle_property()
     }
 
-    pub(crate) fn check_components(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
-        use crate::model::HashAlgorithm;
-
+    pub(crate) fn check_components(
+        &self,
+        ctx: &ComplianceContext<'_, '_>,
+        violations: &mut Vec<Violation>,
+    ) {
         // No package-scoped component means the per-component rules below
         // have nothing to judge; that is a finding, not a pass.
         let (inventory_requirement, inventory_rule) = match self.level {
@@ -829,20 +816,16 @@ impl ComplianceChecker {
             ),
             _ => ("Component inventory", "SBOM-QUALITY-INVENTORY"),
         };
-        violations.extend(self.inventory_absent_violation(
-            sbom,
-            inventory_rule,
-            inventory_requirement,
-        ));
+        violations.extend(ctx.inventory_absent_violation(inventory_rule, inventory_requirement));
 
         // All components: names apply to every component; the package
         // carve-out follows the name check below.
-        for comp in sbom.components.values() {
+        for comp in ctx.ev.components() {
             // All levels: component must have a name. Whitespace-only names
             // and placeholder sentinels count as missing, but genuine
             // packages named "none"/"unknown" (corroborated by their PURL)
             // do not (see `known_component_name`).
-            if !known_component_name(comp) {
+            if !comp.name_known() {
                 let (requirement, rule_id) = match self.level {
                     ComplianceLevel::NtiaMinimum => (
                         "NTIA Minimum Elements: Component Name".to_string(),
@@ -865,10 +848,10 @@ impl ComplianceChecker {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,
                     message: "Component must have a name".to_string(),
-                    element: Some(comp.identifiers.format_id.clone()),
+                    element: Some(comp.format_id().to_string()),
                     requirement,
                     rule_id,
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -876,7 +859,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed(&comp.name),
+                    observed: observed(comp.name()),
                 });
             }
 
@@ -886,7 +869,7 @@ impl ComplianceChecker {
             // those to components). Without this carve-out, a file-cataloguing
             // SBOM emits thousands of spurious Errors and a CBOM fails on
             // package fields its algorithms and protocols cannot have.
-            if !self.judges_package(sbom, comp) {
+            if !ctx.judges_package(&comp) {
                 continue;
             }
 
@@ -902,12 +885,12 @@ impl ComplianceChecker {
                     | ComplianceLevel::CraPhase2
                     | ComplianceLevel::CraOssSteward
                     | ComplianceLevel::Comprehensive
-            ) && !has_known_value(&comp.version)
+            ) && !comp.version().is_known()
             {
                 let (req, msg, rule_id) = match self.level {
                     ComplianceLevel::FdaMedicalDevice => (
                         "FDA: Component version".to_string(),
-                        format!("Component '{}' missing version", comp.name),
+                        format!("Component '{}' missing version", comp.name()),
                         "SBOM-FDA-VERSION",
                     ),
                     ComplianceLevel::CraPhase1
@@ -916,20 +899,20 @@ impl ComplianceChecker {
                         "CRA Annex I Part II (1): Component version".to_string(),
                         format!(
                             "[CRA Annex I Part II (1)] Component '{}' missing version",
-                            comp.name
+                            comp.name()
                         ),
                         "SBOM-CRA-COMPONENT-VERSION",
                     ),
                     ComplianceLevel::NtiaMinimum => (
                         "NTIA: Component version".to_string(),
-                        format!("Component '{}' missing version", comp.name),
+                        format!("Component '{}' missing version", comp.name()),
                         "SBOM-NTIA-VERSION",
                     ),
                     // Standard and Comprehensive, whose checks report under
                     // SBOM-QUALITY-* ids (SBOM-NTIA-VERSION until v0.4.0).
                     _ => (
                         "Component version".to_string(),
-                        format!("Component '{}' missing version", comp.name),
+                        format!("Component '{}' missing version", comp.name()),
                         "SBOM-QUALITY-VERSION",
                     ),
                 };
@@ -937,10 +920,10 @@ impl ComplianceChecker {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,
                     message: msg,
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: req,
                     rule_id,
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -948,7 +931,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: comp.version.as_deref().and_then(observed),
+                    observed: comp.version().raw.and_then(observed),
                 });
             }
 
@@ -965,7 +948,7 @@ impl ComplianceChecker {
                     | ComplianceLevel::CraPhase2
                     | ComplianceLevel::CraOssSteward
                     | ComplianceLevel::Comprehensive
-            ) && !comp.identifiers.has_cra_identifier()
+            ) && !comp.ids().any()
             {
                 let severity = if matches!(
                     self.level,
@@ -983,7 +966,7 @@ impl ComplianceChecker {
                     ComplianceLevel::NtiaMinimum => (
                         format!(
                             "Component '{}' missing unique identifier (PURL/CPE/SWHID/SWID)",
-                            comp.name
+                            comp.name()
                         ),
                         "NTIA Minimum Elements: Other Unique Identifiers".to_string(),
                         "SBOM-NTIA-IDENTIFIER",
@@ -991,7 +974,7 @@ impl ComplianceChecker {
                     ComplianceLevel::FdaMedicalDevice => (
                         format!(
                             "Component '{}' missing unique identifier (PURL/CPE/SWHID/SWID)",
-                            comp.name
+                            comp.name()
                         ),
                         "FDA: Unique component identifier".to_string(),
                         "SBOM-FDA-IDENTIFIER",
@@ -1001,7 +984,7 @@ impl ComplianceChecker {
                     | ComplianceLevel::CraOssSteward => (
                         format!(
                             "[CRA Annex I, [PRE-7-RQ-07]] Component '{}' missing unique identifier (PURL/CPE/SWHID/SWID)",
-                            comp.name
+                            comp.name()
                         ),
                         "CRA Annex I / prEN 40000-1-3 [PRE-7-RQ-07]: Unique component identifier (PURL/CPE/SWHID/SWID)".to_string(),
                         "SBOM-CRA-ANNEX-I-IDENTIFIER",
@@ -1009,7 +992,7 @@ impl ComplianceChecker {
                     _ => (
                         format!(
                             "Component '{}' missing unique identifier (PURL/CPE/SWHID/SWID)",
-                            comp.name
+                            comp.name()
                         ),
                         "Standard identifier (PURL/CPE/SWHID)".to_string(),
                         "SBOM-QUALITY-IDENTIFIER",
@@ -1019,10 +1002,10 @@ impl ComplianceChecker {
                     severity,
                     category: ViolationCategory::ComponentIdentification,
                     message,
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement,
                     rule_id,
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1043,7 +1026,7 @@ impl ComplianceChecker {
                     | ComplianceLevel::CraPhase2
                     | ComplianceLevel::CraOssSteward
                     | ComplianceLevel::Comprehensive
-            ) && !has_known_producer(comp)
+            ) && !comp.producer().is_known()
             {
                 let severity = match self.level {
                     ComplianceLevel::CraPhase1
@@ -1053,7 +1036,7 @@ impl ComplianceChecker {
                 };
                 let (message, requirement, rule_id) = match self.level {
                     ComplianceLevel::FdaMedicalDevice => (
-                        format!("Component '{}' missing supplier/manufacturer", comp.name),
+                        format!("Component '{}' missing supplier/manufacturer", comp.name()),
                         "FDA: Supplier/manufacturer information".to_string(),
                         "SBOM-FDA-SUPPLIER",
                     ),
@@ -1063,7 +1046,7 @@ impl ComplianceChecker {
                     ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2 => (
                         format!(
                             "[CRA Annex I Part II (1)] Component '{}' missing supplier/manufacturer",
-                            comp.name
+                            comp.name()
                         ),
                         "CRA Annex I Part II (1): Component supplier information".to_string(),
                         "SBOM-CRA-COMPONENT-SUPPLIER",
@@ -1075,19 +1058,19 @@ impl ComplianceChecker {
                     ComplianceLevel::CraOssSteward => (
                         format!(
                             "[CRA Art. 24] Component '{}' missing supplier/manufacturer",
-                            comp.name
+                            comp.name()
                         ),
                         "CRA Art. 24 (steward): Component supplier information".to_string(),
                         "SBOM-CRA-ART-24-SUPPLIER",
                     ),
                     ComplianceLevel::NtiaMinimum => (
-                        format!("Component '{}' missing supplier/manufacturer", comp.name),
+                        format!("Component '{}' missing supplier/manufacturer", comp.name()),
                         "NTIA: Supplier information".to_string(),
                         "SBOM-NTIA-SUPPLIER",
                     ),
                     // Comprehensive (SBOM-NTIA-SUPPLIER until v0.4.0).
                     _ => (
-                        format!("Component '{}' missing supplier/manufacturer", comp.name),
+                        format!("Component '{}' missing supplier/manufacturer", comp.name()),
                         "Component supplier information".to_string(),
                         "SBOM-QUALITY-SUPPLIER",
                     ),
@@ -1096,10 +1079,10 @@ impl ComplianceChecker {
                     severity,
                     category: ViolationCategory::SupplierInfo,
                     message,
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement,
                     rule_id,
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1107,7 +1090,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed_producer(comp),
+                    observed: comp.producer().observed.and_then(observed),
                 });
             }
 
@@ -1118,21 +1101,25 @@ impl ComplianceChecker {
             if matches!(
                 self.level,
                 ComplianceLevel::Standard | ComplianceLevel::Comprehensive
-            ) && !has_known_license(comp)
+            ) && !comp.licenses().is_known()
             {
                 let present: Vec<&str> = comp
-                    .licenses
+                    .licenses()
+                    .raw
                     .all_licenses()
                     .iter()
                     .map(|l| l.expression.trim())
                     .filter(|e| !e.is_empty())
                     .collect();
                 let message = if present.is_empty() {
-                    format!("Component '{}' should have license information", comp.name)
+                    format!(
+                        "Component '{}' should have license information",
+                        comp.name()
+                    )
                 } else {
                     format!(
                         "Component '{}' should have license information: '{}' names no license",
-                        comp.name,
+                        comp.name(),
                         present.join("', '")
                     )
                 };
@@ -1140,10 +1127,10 @@ impl ComplianceChecker {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::LicenseInfo,
                     message,
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "License declaration".to_string(),
                     rule_id: "SBOM-QUALITY-LICENSE",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1155,25 +1142,31 @@ impl ComplianceChecker {
                 });
             }
 
+            // The hash checks below are the last of the loop; the other
+            // levels read no hash fact.
+            if !matches!(
+                self.level,
+                ComplianceLevel::FdaMedicalDevice | ComplianceLevel::Comprehensive
+            ) && !self.level.is_cra()
+            {
+                continue;
+            }
+
             // Only plausible digests count (see `plausible_digest`): an empty
             // or garbage value carries no integrity information, and the
             // finding names why each present hash did not count.
-            let plausible: Vec<_> = comp
-                .hashes
-                .iter()
-                .filter(|h| plausible_digest(&h.algorithm, &h.value))
-                .collect();
+            let hashes = comp.hashes();
             let no_valid_hash = |citation: &str, note: &str| {
-                if comp.hashes.is_empty() {
+                if hashes.raw.is_empty() {
                     format!(
                         "{citation}Component '{}' missing cryptographic hash{note}",
-                        comp.name
+                        comp.name()
                     )
                 } else {
                     format!(
                         "{citation}Component '{}' has no valid cryptographic hash{note}: {}",
-                        comp.name,
-                        digest_problems(&comp.hashes).join("; ")
+                        comp.name(),
+                        digest_problems(hashes.raw).join("; ")
                     )
                 }
             };
@@ -1183,7 +1176,7 @@ impl ComplianceChecker {
                 self.level,
                 ComplianceLevel::FdaMedicalDevice | ComplianceLevel::Comprehensive
             ) {
-                if plausible.is_empty() {
+                if !hashes.facts.plausible {
                     violations.push(Violation {
                         severity: if self.level == ComplianceLevel::FdaMedicalDevice {
                             ViolationSeverity::Error
@@ -1192,7 +1185,7 @@ impl ComplianceChecker {
                         },
                         category: ViolationCategory::IntegrityInfo,
                         message: no_valid_hash("", ""),
-                        element: Some(comp.name.clone()),
+                        element: Some(comp.name().to_string()),
                         requirement: if self.level == ComplianceLevel::FdaMedicalDevice {
                             "FDA: Cryptographic hash for integrity".to_string()
                         } else {
@@ -1203,7 +1196,7 @@ impl ComplianceChecker {
                         } else {
                             "SBOM-QUALITY-HASH"
                         },
-                        component_id: Some(comp.canonical_id.value().to_string()),
+                        component_id: Some(comp.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -1211,33 +1204,16 @@ impl ComplianceChecker {
                         severity_override: None,
                         deadline: None,
                         field: None,
-                        observed: observed_digest(&comp.hashes),
+                        observed: observed_digest(hashes.raw),
                     });
                 } else if self.level == ComplianceLevel::FdaMedicalDevice {
                     // FDA: Check for strong hash algorithm (SHA-256 or better)
-                    let has_strong_hash = plausible.iter().any(|h| {
-                        matches!(
-                            h.algorithm,
-                            HashAlgorithm::Sha256
-                                | HashAlgorithm::Sha384
-                                | HashAlgorithm::Sha512
-                                | HashAlgorithm::Sha3_256
-                                | HashAlgorithm::Sha3_384
-                                | HashAlgorithm::Sha3_512
-                                | HashAlgorithm::Blake2b256
-                                | HashAlgorithm::Blake2b384
-                                | HashAlgorithm::Blake2b512
-                                | HashAlgorithm::Blake3
-                                | HashAlgorithm::Streebog256
-                                | HashAlgorithm::Streebog512
-                        )
-                    });
-                    if !has_strong_hash {
+                    if !hashes.facts.plausible_strong {
                         let mut message = format!(
                             "Component '{}' has only weak hash algorithm (use SHA-256+)",
-                            comp.name
+                            comp.name()
                         );
-                        let problems = digest_problems(&comp.hashes);
+                        let problems = digest_problems(hashes.raw);
                         if !problems.is_empty() {
                             message.push_str("; ");
                             message.push_str(&problems.join("; "));
@@ -1246,11 +1222,11 @@ impl ComplianceChecker {
                             severity: ViolationSeverity::Warning,
                             category: ViolationCategory::IntegrityInfo,
                             message,
-                            element: Some(comp.name.clone()),
+                            element: Some(comp.name().to_string()),
                             requirement: "FDA: Strong cryptographic hash (SHA-256 or better)"
                                 .to_string(),
                             rule_id: "SBOM-FDA-HASH",
-                            component_id: Some(comp.canonical_id.value().to_string()),
+                            component_id: Some(comp.canonical_id().value().to_string()),
                             counts: None,
                             standard_refs: Cow::Borrowed(&[]),
                             remediation: None,
@@ -1259,8 +1235,10 @@ impl ComplianceChecker {
                             deadline: None,
                             field: None,
                             observed: observed(
-                                &plausible
+                                &hashes
+                                    .raw
                                     .iter()
+                                    .filter(|h| plausible_digest(&h.algorithm, &h.value))
                                     .map(|h| h.algorithm.to_string())
                                     .collect::<Vec<_>>()
                                     .join(", "),
@@ -1271,7 +1249,7 @@ impl ComplianceChecker {
             }
 
             // CRA: hashes are recommended for integrity verification
-            if self.level.is_cra() && plausible.is_empty() {
+            if self.level.is_cra() && !hashes.facts.plausible {
                 violations.push(Violation {
                     severity: ViolationSeverity::Info,
                     category: ViolationCategory::IntegrityInfo,
@@ -1279,12 +1257,12 @@ impl ComplianceChecker {
                         "[CRA Annex I Part I (2)(f)] ",
                         " (recommended for integrity)",
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement:
                         "CRA Annex I Part I (2)(f): Component integrity information (hash)"
                             .to_string(),
                     rule_id: "SBOM-CRA-ANNEX-I-INTEGRITY",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1292,7 +1270,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed_digest(&comp.hashes),
+                    observed: observed_digest(hashes.raw),
                 });
             }
         }
@@ -1300,9 +1278,10 @@ impl ComplianceChecker {
 
     pub(crate) fn check_dependencies(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
     ) {
+        let ev = ctx.ev;
         // NTIA & FDA require dependency relationships (the CRA levels
         // include the Art. 24 steward profile)
         if matches!(
@@ -1316,8 +1295,8 @@ impl ComplianceChecker {
         ) {
             // Dependency relationships are a package-graph element: crypto
             // assets, files and services need not appear in it.
-            let has_deps = !sbom.edges.is_empty();
-            let package_total = self.package_components(sbom).count();
+            let has_deps = ev.has_edges();
+            let package_total = ctx.package_count();
             let has_multiple_components = package_total > 1;
 
             let (requirement, rule_id) = match self.level {
@@ -1366,44 +1345,30 @@ impl ComplianceChecker {
             } else if has_multiple_components {
                 // Edges exist — check the graph is more than a token gesture.
                 // A single edge among N components used to satisfy the
-                // "dependency relationships" element for the whole SBOM.
-                use std::collections::HashSet;
-                let mut connected: HashSet<&crate::model::CanonicalId> = HashSet::new();
-                for edge in &sbom.edges {
-                    connected.insert(&edge.from);
-                    connected.insert(&edge.to);
-                }
-
-                // A component that appears in the CycloneDX dependencies
-                // array with an explicitly empty dependsOn has positively
-                // declared "no dependencies" — that is documentation, not a
-                // gap (the parser marks it with a synthetic property).
-                let declares_no_deps = |c: &crate::model::Component| {
-                    c.extensions
-                        .properties
-                        .iter()
-                        .any(|p| p.name == crate::parsers::DECLARED_NO_DEPENDENCIES_PROPERTY)
-                };
+                // "dependency relationships" element for the whole SBOM. A
+                // component that appears in the CycloneDX dependencies array
+                // with an explicitly empty dependsOn has positively declared
+                // "no dependencies" — that is documentation, not a gap (the
+                // parser marks it with a synthetic property).
 
                 // The primary product component must participate in the
                 // dependency graph — an SBOM whose root has no declared
                 // relationships does not describe the product's dependencies.
-                if let Some(primary_id) = &sbom.primary_component_id
-                    && let Some(primary) = sbom.components.get(primary_id)
-                    && !connected.contains(primary_id)
-                    && !declares_no_deps(primary)
+                if let Some(primary) = ev.primary()
+                    && !primary.touched()
+                    && !primary.declares_no_dependencies()
                 {
                     violations.push(Violation {
                         severity: ViolationSeverity::Warning,
                         category: ViolationCategory::DependencyInfo,
                         message: format!(
                             "Primary component '{}' participates in no dependency relationship",
-                            primary.name
+                            primary.name()
                         ),
-                        element: Some(primary.name.clone()),
+                        element: Some(primary.name().to_string()),
                         requirement: requirement.to_string(),
                         rule_id,
-                        component_id: Some(primary.canonical_id.value().to_string()),
+                        component_id: Some(primary.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -1420,13 +1385,13 @@ impl ComplianceChecker {
                 // when the SBOM explicitly declares an incomplete inventory.
                 use crate::model::CompletenessDeclaration as CD;
                 let declared_incomplete = matches!(
-                    sbom.document.completeness_declaration,
+                    ev.document().completeness,
                     CD::Incomplete | CD::IncompleteFirstPartyOnly | CD::IncompleteThirdPartyOnly
                 );
                 let total = package_total;
-                let orphans = self
-                    .package_components(sbom)
-                    .filter(|c| !connected.contains(&c.canonical_id) && !declares_no_deps(c))
+                let orphans = ctx
+                    .package_components()
+                    .filter(|c| !c.touched() && !c.declares_no_dependencies())
                     .count();
                 // FDA keeps the retired fast-path's any-orphan sensitivity
                 // ("each component's dependencies"); other standards warn
@@ -1469,8 +1434,8 @@ impl ComplianceChecker {
         // cycles are counted in linear time over the edges, for a graph of
         // any size: reading them from DependencyMetrics skipped (and passed)
         // every graph above its 1,000,000-edge analysis limit.
-        if self.level.is_cra() && !sbom.edges.is_empty() {
-            let cycle_count = crate::quality::cycles::dependency_cycle_count(sbom);
+        if self.level.is_cra() && ev.has_edges() {
+            let cycle_count = ev.cycle_count();
             if cycle_count > 0
                 && let Some(severity) = self.class_severity(ClassCheck::Cycles)
             {
@@ -1499,23 +1464,12 @@ impl ComplianceChecker {
 
         // CRA: warn if multiple root components (no incoming edges) and no primary component set
         if self.level.is_cra()
-            && self.package_components(sbom).nth(1).is_some()
-            && sbom.primary_component_id.is_none()
+            && ctx.package_count() > 1
+            && ev.document().primary_declared.is_none()
         {
-            use std::collections::HashSet;
-            let mut incoming: HashSet<&crate::model::CanonicalId> = HashSet::new();
-            for edge in &sbom.edges {
-                incoming.insert(&edge.to);
-            }
-            // Count roots among the components that actually exist — edges
-            // may reference ids that are not in the component map, so
-            // `len() - incoming.len()` would undercount.
-            let root_count = sbom
-                .components
-                .keys()
-                .filter(|id| !incoming.contains(id))
-                .count();
-            if root_count > 1 {
+            // Roots are counted among the components that actually exist:
+            // edges may reference ids that are not in the component map.
+            if ev.graph().root_count > 1 {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DependencyInfo,
@@ -1539,9 +1493,10 @@ impl ComplianceChecker {
 
     pub(crate) fn check_vulnerability_metadata(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
     ) {
+        let ev = ctx.ev;
         // FDA: surface unresolved critical/high vulnerabilities — premarket
         // submissions must address known vulnerabilities.
         if matches!(self.level, ComplianceLevel::FdaMedicalDevice) {
@@ -1553,21 +1508,22 @@ impl ComplianceChecker {
             // unresolved: it documents why the device is not affected, as
             // the CRA Phase 2 checks below accept (`justified_not_affected`).
             // Until v0.4.0 every entry counted, whatever its VEX state.
-            let vulns: Vec<_> = sbom
-                .all_vulnerabilities()
-                .into_iter()
-                .filter(|(_, v)| !justified_not_affected(v))
+            let vulns: Vec<_> = ev
+                .vulnerabilities()
+                .iter()
+                .filter(|f| !f.justified_not_affected)
+                .map(|f| f.vuln)
                 .collect();
             let critical = vulns
                 .iter()
-                .filter(|(_, v)| matches!(v.severity, Some(Severity::Critical)))
-                .map(|(_, v)| v.id.as_str())
+                .filter(|v| matches!(v.severity, Some(Severity::Critical)))
+                .map(|v| v.id.as_str())
                 .collect::<HashSet<_>>()
                 .len();
             let high = vulns
                 .iter()
-                .filter(|(_, v)| matches!(v.severity, Some(Severity::High)))
-                .map(|(_, v)| v.id.as_str())
+                .filter(|v| matches!(v.severity, Some(Severity::High)))
+                .map(|v| v.id.as_str())
                 .collect::<HashSet<_>>()
                 .len();
             if critical > 0 || high > 0 {
@@ -1599,13 +1555,15 @@ impl ComplianceChecker {
 
         // One finding per vulnerability of a component: the vulnerability id
         // tells a component's findings apart.
-        for (comp, vuln) in sbom.all_vulnerabilities() {
+        for fact in ev.vulnerabilities() {
             // A justified VEX `not_affected` statement documents why the
             // vulnerability needs no fix (see `justified_not_affected`), so
             // neither check below asks anything more of the entry.
-            if justified_not_affected(vuln) {
+            if fact.justified_not_affected {
                 continue;
             }
+            let comp = ev.component(fact.component);
+            let vuln = fact.vuln;
 
             if vuln.severity.is_none() && vuln.cvss.is_empty() {
                 violations.push(Violation {
@@ -1613,13 +1571,13 @@ impl ComplianceChecker {
                     category: ViolationCategory::SecurityInfo,
                     message: format!(
                         "[CRA Annex I Part II (4)] Vulnerability '{}' in '{}' lacks severity or CVSS score",
-                        vuln.id, comp.name
+                        vuln.id, comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CRA Annex I Part II (4): Vulnerability metadata completeness"
                         .to_string(),
                     rule_id: "SBOM-CRA-VULN-METADATA",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1651,12 +1609,12 @@ impl ComplianceChecker {
                         category: ViolationCategory::SecurityInfo,
                         message: format!(
                             "[CRA Annex I Part II (4)] Vulnerability '{}' in '{}' has remediation without details",
-                            vuln.id, comp.name
+                            vuln.id, comp.name()
                         ),
-                        element: Some(comp.name.clone()),
+                        element: Some(comp.name().to_string()),
                         requirement: "CRA Annex I Part II (4): Remediation detail".to_string(),
                         rule_id: "SBOM-CRA-VULN-METADATA-REMEDIATION",
-                        component_id: Some(comp.canonical_id.value().to_string()),
+                        component_id: Some(comp.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -1672,22 +1630,23 @@ impl ComplianceChecker {
 
     pub(crate) fn check_format_specific(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
         not_evaluated: &mut NotEvaluated,
     ) {
-        self.check_duplicate_components(sbom, violations);
+        self.check_duplicate_components(ctx, violations);
+        let doc = ctx.ev.document();
         // A version that does not parse cannot be placed in the range
         // sbom-tools reads.
-        if sbom.document.spec_version_parsed().is_none() {
+        if doc.spec_version.is_none() {
             not_evaluated.push(SPEC_VERSION_RULES.get(self.level), SPEC_VERSION_UNPARSED);
         }
-        match sbom.document.format {
+        match doc.format {
             SbomFormat::CycloneDx => {
-                self.check_cyclonedx_specific(sbom, violations);
+                self.check_cyclonedx_specific(ctx, violations);
             }
             SbomFormat::Spdx => {
-                self.check_spdx_specific(sbom, violations);
+                self.check_spdx_specific(ctx, violations);
             }
         }
     }
@@ -1699,16 +1658,16 @@ impl ComplianceChecker {
     /// the entries' order, but the user should know. The finding names the
     /// first [`MAX_NAMED_DUPLICATES`] such components in inventory order,
     /// counts the rest, and lists the fields their entries disagree on.
-    fn check_duplicate_components(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
-        let duplicated: Vec<&crate::model::DuplicateComponent> = sbom
-            .components
-            .keys()
-            .filter_map(|id| sbom.duplicate_components.get(id))
-            .collect();
+    fn check_duplicate_components(
+        &self,
+        ctx: &ComplianceContext<'_, '_>,
+        violations: &mut Vec<Violation>,
+    ) {
+        let duplicated = ctx.ev.duplicates();
         if duplicated.is_empty() {
             return;
         }
-        let total = sbom.components.len();
+        let total = ctx.ev.component_count();
         let entries: usize = duplicated.iter().map(|d| d.entries).sum();
         let named: Vec<String> = duplicated
             .iter()
@@ -1755,16 +1714,17 @@ impl ComplianceChecker {
 
     pub(crate) fn check_cyclonedx_specific(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
     ) {
         // CycloneDX specific checks
-        let version = &sbom.document.spec_version;
+        let doc = ctx.ev.document();
+        let version = doc.spec_version_raw;
         use crate::model::SpecVersion;
 
         // Versions compare numerically: string prefixes read "1.10" as
         // "1.1" and never flagged 1.0.
-        match sbom.document.spec_version_parsed() {
+        match doc.spec_version {
             Some(v) if v < SpecVersion::new(1, 4, 0) => {
                 violations.push(Violation {
                     severity: ViolationSeverity::Info,
@@ -1813,17 +1773,17 @@ impl ComplianceChecker {
 
         // Check for bom-ref on components (important for CycloneDX).
         // All components: every CycloneDX element should carry a bom-ref.
-        for comp in sbom.components.values() {
-            if comp.identifiers.format_id == comp.name {
+        for comp in ctx.ev.components() {
+            if comp.format_id() == comp.name() {
                 // Likely missing bom-ref
                 violations.push(Violation {
                     severity: ViolationSeverity::Info,
                     category: ViolationCategory::FormatSpecific,
-                    message: format!("Component '{}' may be missing bom-ref", comp.name),
-                    element: Some(comp.name.clone()),
+                    message: format!("Component '{}' may be missing bom-ref", comp.name()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CycloneDX: bom-ref for dependency tracking".to_string(),
                     rule_id: ELEMENT_ID_RULES.get(self.level),
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1831,7 +1791,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed(&comp.identifiers.format_id),
+                    observed: observed(comp.format_id()),
                 });
             }
         }
@@ -1839,12 +1799,13 @@ impl ComplianceChecker {
 
     pub(crate) fn check_spdx_specific(
         &self,
-        sbom: &NormalizedSbom,
+        ctx: &ComplianceContext<'_, '_>,
         violations: &mut Vec<Violation>,
     ) {
         // SPDX specific checks
-        let version = &sbom.document.spec_version;
-        let parsed = sbom.document.spec_version_parsed();
+        let doc = ctx.ev.document();
+        let version = doc.spec_version_raw;
+        let parsed = doc.spec_version;
 
         // A version newer than any this tool reads: say so once.
         if let Some(v) = parsed
@@ -1897,12 +1858,12 @@ impl ComplianceChecker {
         // SPDX 2.x uses SPDXRef- prefix; SPDX 3.0 uses URN-style IDs (e.g., urn:spdx:...)
         let is_spdx3 = parsed.is_some_and(|v| v.major == 3);
         // All components: every SPDX element needs a valid identifier.
-        for comp in sbom.components.values() {
+        for comp in ctx.ev.components() {
             let valid_id = if is_spdx3 {
                 // SPDX 3.0 uses URN/IRI identifiers
-                comp.identifiers.format_id.contains(':')
+                comp.format_id().contains(':')
             } else {
-                comp.identifiers.format_id.starts_with("SPDXRef-")
+                comp.format_id().starts_with("SPDXRef-")
             };
             if !valid_id {
                 let expected = if is_spdx3 {
@@ -1915,12 +1876,12 @@ impl ComplianceChecker {
                     category: ViolationCategory::FormatSpecific,
                     message: format!(
                         "Component '{}' has non-standard SPDX identifier format",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: expected.to_string(),
                     rule_id: ELEMENT_ID_RULES.get(self.level),
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1928,7 +1889,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed(&comp.identifiers.format_id),
+                    observed: observed(comp.format_id()),
                 });
             }
         }

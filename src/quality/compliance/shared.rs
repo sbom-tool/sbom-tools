@@ -35,55 +35,75 @@ impl super::ComplianceChecker {
         if self.package_components(sbom).next().is_some() {
             return None;
         }
-        let total = sbom.components.len();
-        let excluded = sbom
-            .components
-            .values()
-            .filter(|c| c.component_type.is_package_scoped())
-            .count();
-        let message = if total == 0 {
-            "SBOM lists no components; an empty document is not a software inventory".to_string()
-        } else if excluded > 0 {
-            format!(
-                "SBOM lists no software components besides {excluded} whose scope is excluded, \
+        Some(inventory_absent_finding(
+            sbom.components.len(),
+            sbom.components
+                .values()
+                .filter(|c| c.component_type.is_package_scoped())
+                .count(),
+            || {
+                sbom.components
+                    .values()
+                    .all(|c| c.component_type == ComponentType::Cryptographic)
+            },
+            rule_id,
+            requirement,
+        ))
+    }
+}
+
+/// The inventory-absent finding for `rule_id` (see
+/// [`super::ComplianceChecker::inventory_absent_violation`]) of a document
+/// whose package rules judge no component: it lists `total` components,
+/// `excluded` of them package-scoped (so all left out for their excluded
+/// scope), and `all_crypto` tells whether every one is a cryptographic
+/// asset.
+pub(crate) fn inventory_absent_finding(
+    total: usize,
+    excluded: usize,
+    all_crypto: impl FnOnce() -> bool,
+    rule_id: &'static str,
+    requirement: &str,
+) -> Violation {
+    let message = if total == 0 {
+        "SBOM lists no components; an empty document is not a software inventory".to_string()
+    } else if excluded > 0 {
+        format!(
+            "SBOM lists no software components besides {excluded} whose scope is excluded, \
                  which the package rules leave out (--include-excluded-scope judges them); it is \
                  not an inventory of what the product ships"
-            )
+        )
+    } else {
+        let all_crypto = all_crypto();
+        let what = if all_crypto {
+            "cryptographic assets"
         } else {
-            let all_crypto = sbom
-                .components
-                .values()
-                .all(|c| c.component_type == ComponentType::Cryptographic);
-            let what = if all_crypto {
-                "cryptographic assets"
-            } else {
-                "files, snippets, services or cryptographic assets"
-            };
-            let mut message = format!(
-                "SBOM lists no software components, only {total} {what}; it is not a software inventory"
-            );
-            if all_crypto {
-                message.push_str(" (validate a CBOM with --standard cnsa2 or pqc)");
-            }
-            message
+            "files, snippets, services or cryptographic assets"
         };
-        Some(Violation {
-            severity: ViolationSeverity::Error,
-            severity_override: None,
-            category: ViolationCategory::DocumentMetadata,
-            message,
-            element: None,
-            requirement: requirement.to_string(),
-            rule_id,
-            component_id: None,
-            counts: None,
-            standard_refs: Cow::Borrowed(&[]),
-            remediation: None,
-            finding_detail: None,
-            deadline: None,
-            field: None,
-            observed: None,
-        })
+        let mut message = format!(
+            "SBOM lists no software components, only {total} {what}; it is not a software inventory"
+        );
+        if all_crypto {
+            message.push_str(" (validate a CBOM with --standard cnsa2 or pqc)");
+        }
+        message
+    };
+    Violation {
+        severity: ViolationSeverity::Error,
+        severity_override: None,
+        category: ViolationCategory::DocumentMetadata,
+        message,
+        element: None,
+        requirement: requirement.to_string(),
+        rule_id,
+        component_id: None,
+        counts: None,
+        standard_refs: Cow::Borrowed(&[]),
+        remediation: None,
+        finding_detail: None,
+        deadline: None,
+        field: None,
+        observed: None,
     }
 }
 
@@ -110,7 +130,13 @@ fn quoted(value: &str) -> String {
 /// missing, and with one it reports the value, so a user does not look for a
 /// field they did set.
 pub(crate) fn unparseable_timestamp(sbom: &NormalizedSbom) -> Option<String> {
-    sbom.document.created_unparsed.as_deref().map(|value| {
+    unparseable_timestamp_of(sbom.document.created_unparsed.as_deref())
+}
+
+/// [`unparseable_timestamp`] of `created_unparsed`, the timestamp value the
+/// document wrote but that does not parse.
+pub(crate) fn unparseable_timestamp_of(created_unparsed: Option<&str>) -> Option<String> {
+    created_unparsed.map(|value| {
         format!(
             "an unparseable creation timestamp {}, not an RFC 3339 date-time",
             quoted(value)
@@ -495,7 +521,13 @@ pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
 /// The clause a contact finding appends when the SBOM gives a contact that
 /// reaches nobody (see [`unreachable_contact`]), or an empty string.
 pub(crate) fn unreachable_contact_note(sbom: &NormalizedSbom) -> String {
-    unreachable_contact(sbom).map_or_else(String::new, |value| {
+    unreachable_contact_note_of(unreachable_contact(sbom))
+}
+
+/// [`unreachable_contact_note`] for `contact`, the first contact the SBOM
+/// gives that reaches nobody, if any.
+pub(crate) fn unreachable_contact_note_of(contact: Option<&str>) -> String {
+    contact.map_or_else(String::new, |value| {
         format!(
             "; the contact '{}' reaches nobody (a placeholder, or an address at example.com, \
              example.net or example.org)",
