@@ -11,6 +11,14 @@
 //! of [`ComplianceLevel::all`] and of every list of standards shown to
 //! users. A compile-time check below holds the order.
 
+use super::registry::{
+    AIACT_SARIF_RULE_IDS, BSI_SARIF_RULE_IDS, BSIAI_SARIF_RULE_IDS, CISA2026_SARIF_RULE_IDS,
+    CNSA2_SARIF_RULE_IDS, COMPREHENSIVE_SARIF_RULE_IDS, CRA_OSS_STEWARD_SARIF_RULE_IDS,
+    CRA_PHASE1_SARIF_RULE_IDS, CRA_PHASE2_SARIF_RULE_IDS, EO14028_SARIF_RULE_IDS,
+    EUCC_SARIF_RULE_IDS, FDA_SARIF_RULE_IDS, FSCT_SARIF_RULE_IDS, MINIMUM_SARIF_RULE_IDS,
+    NTIA_SARIF_RULE_IDS, PCIDSS_SARIF_RULE_IDS, PQC_SARIF_RULE_IDS, SSDF_SARIF_RULE_IDS,
+    STANDARD_SARIF_RULE_IDS,
+};
 use super::{ComplianceLevel, CraPhase};
 
 /// What sbom-tools knows about one standard, apart from its checks.
@@ -37,6 +45,9 @@ pub(crate) struct StandardDescriptor {
     /// The family fallback rule: the SARIF rule a finding without a
     /// registry mapping is filed under. A registered self-descriptor.
     pub(crate) fallback_rule: &'static str,
+    /// The rules the standard's checks can report, in display order. The
+    /// lists are in `registry/mod.rs`, with the comment that explains them.
+    pub(crate) rules: &'static [&'static str],
 }
 
 /// One descriptor per [`ComplianceLevel`]; entry `i` describes the level
@@ -51,6 +62,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
+        rules: MINIMUM_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Standard,
@@ -61,6 +73,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
+        rules: STANDARD_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::NtiaMinimum,
@@ -71,6 +84,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-NTIA-GENERAL",
+        rules: NTIA_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase1,
@@ -81,6 +95,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: true,
         cra_phase: Some(CraPhase::Phase1),
         fallback_rule: "SBOM-CRA-GENERAL",
+        rules: CRA_PHASE1_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase2,
@@ -91,6 +106,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: true,
         cra_phase: Some(CraPhase::Phase2),
         fallback_rule: "SBOM-CRA-GENERAL",
+        rules: CRA_PHASE2_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::FdaMedicalDevice,
@@ -101,6 +117,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-FDA-GENERAL",
+        rules: FDA_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistSsdf,
@@ -111,6 +128,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-SSDF-GENERAL",
+        rules: SSDF_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Eo14028,
@@ -121,6 +139,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-EO14028-GENERAL",
+        rules: EO14028_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cnsa2,
@@ -131,6 +150,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-CNSA2-GENERAL",
+        rules: CNSA2_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistPqc,
@@ -141,6 +161,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-PQC-GENERAL",
+        rules: PQC_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiTr03183_2,
@@ -151,6 +172,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-BSI-TR-03183-2-GENERAL",
+        rules: BSI_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraOssSteward,
@@ -161,6 +183,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: true,
         cra_phase: None,
         fallback_rule: "SBOM-CRA-GENERAL",
+        rules: CRA_OSS_STEWARD_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuccSubstantial,
@@ -171,6 +194,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-EUCC-GENERAL",
+        rules: EUCC_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuAiAct,
@@ -181,6 +205,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-AIACT-GENERAL",
+        rules: AIACT_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiSbomForAi,
@@ -191,6 +216,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-BSIAI-GENERAL",
+        rules: BSIAI_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cisa2026,
@@ -201,6 +227,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-CISA2026-GENERAL",
+        rules: CISA2026_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::PciDss632,
@@ -211,6 +238,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-PCI-GENERAL",
+        rules: PCIDSS_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Fsct,
@@ -221,6 +249,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-FSCT-GENERAL",
+        rules: FSCT_SARIF_RULE_IDS,
     },
     StandardDescriptor {
         level: ComplianceLevel::Comprehensive,
@@ -231,6 +260,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra: false,
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
+        rules: COMPREHENSIVE_SARIF_RULE_IDS,
     },
 ];
 
@@ -269,7 +299,7 @@ impl ComplianceLevel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::quality::{RuleCatalogFilter, rule_catalog};
+    use crate::quality::{RuleCatalogFilter, all_rule_ids, rule_catalog, rule_meta};
     use std::collections::BTreeSet;
 
     /// Every level, by an exhaustive match: a new level fails to compile
@@ -343,5 +373,26 @@ mod tests {
             .collect();
         let keys: BTreeSet<String> = STANDARDS.iter().map(|d| d.key.to_string()).collect();
         assert_eq!(named, keys);
+    }
+
+    /// Each level's rules are registered, its fallback rule is a registered
+    /// self-descriptor in no list, and every registered rule is in some
+    /// level's list or is a fallback.
+    #[test]
+    fn every_level_has_a_registered_rule_list() {
+        let mut covered = BTreeSet::new();
+        for d in STANDARDS {
+            assert!(!d.rules.is_empty(), "{:?} has no rules", d.level);
+            for id in d.rules {
+                assert!(rule_meta(id).is_some(), "{id} of {:?}", d.level);
+                covered.insert(*id);
+            }
+            let fallback = rule_meta(d.fallback_rule).expect("registered fallback");
+            assert_eq!(fallback.sarif_id, d.fallback_rule);
+            assert!(!d.rules.contains(&d.fallback_rule), "{:?}", d.level);
+            covered.insert(d.fallback_rule);
+        }
+        let registered: BTreeSet<&str> = all_rule_ids().iter().copied().collect();
+        assert_eq!(covered, registered);
     }
 }
