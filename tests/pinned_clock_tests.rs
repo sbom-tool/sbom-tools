@@ -185,6 +185,56 @@ fn module_file(parent: &Path, name: &str) -> Option<PathBuf> {
     .find(|p| p.is_file())
 }
 
+/// The names of the out-of-line modules (`mod name;`, with any visibility
+/// and attributes) a masked src/ file declares.
+fn declared_modules(code: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in code.lines() {
+        let mut rest = line.trim();
+        for vis in ["pub(crate)", "pub(super)", "pub"] {
+            rest = rest.strip_prefix(vis).unwrap_or(rest).trim_start();
+        }
+        if let Some(decl) = rest.strip_prefix("mod ")
+            && let Some(name) = decl.trim().strip_suffix(';')
+            && !name.is_empty()
+            && name.chars().all(|ch| ch.is_alphanumeric() || ch == '_')
+        {
+            names.push(name.to_string());
+        }
+    }
+    names
+}
+
+/// The src/ files that are test code as a whole: the file of every
+/// out-of-line `#[cfg(test)] mod name;`, and every module such a file
+/// declares, at any depth. A test module's submodules exist only in test
+/// builds, whether or not they carry `#[cfg(test)]` of their own.
+fn test_module_files(src: &[(PathBuf, String)]) -> BTreeSet<PathBuf> {
+    let mut files: BTreeSet<PathBuf> = src
+        .iter()
+        .flat_map(|(path, code)| {
+            let (_, out_of_line) = cfg_test_modules(code);
+            out_of_line
+                .into_iter()
+                .filter_map(|name| module_file(path, &name))
+        })
+        .collect();
+    let mut queue: Vec<PathBuf> = files.iter().cloned().collect();
+    while let Some(file) = queue.pop() {
+        let Some((_, code)) = src.iter().find(|(path, _)| *path == file) else {
+            continue;
+        };
+        for name in declared_modules(code) {
+            if let Some(child) = module_file(&file, &name)
+                && files.insert(child.clone())
+            {
+                queue.push(child);
+            }
+        }
+    }
+    files
+}
+
 /// Count the `ComplianceChecker::new(` and `ComplianceRunConfig::new(` calls
 /// inside `regions` of masked `code`, and return the lines of those whose
 /// expression does not also call `.with_as_of(`, in line order.
@@ -234,8 +284,9 @@ fn masked(path: &Path) -> String {
 
 /// Every `ComplianceChecker::new(` in test code pins the clock in the same
 /// expression. Test code is every file under tests/, and the `#[cfg(test)]`
-/// modules under src/ (production code reads the wall clock by design;
-/// `--as-of` pins it). Doc examples are comments, so they are not scanned.
+/// modules under src/ with every module below an out-of-line one (see
+/// [`test_module_files`]); production code reads the wall clock by design
+/// (`--as-of` pins it). Doc examples are comments, so they are not scanned.
 #[test]
 fn every_test_checker_pins_the_clock() {
     let root = Path::new(ROOT);
@@ -267,16 +318,9 @@ fn every_test_checker_pins_the_clock() {
             (path, code)
         })
         .collect();
-    // An out-of-line `#[cfg(test)] mod name;` makes its whole file test code.
-    let test_module_files: BTreeSet<PathBuf> = src
-        .iter()
-        .flat_map(|(path, code)| {
-            let (_, out_of_line) = cfg_test_modules(code);
-            out_of_line
-                .into_iter()
-                .filter_map(|name| module_file(path, &name))
-        })
-        .collect();
+    // An out-of-line `#[cfg(test)] mod name;` makes its whole file test
+    // code, and the files of the modules below it.
+    let test_module_files = test_module_files(&src);
     for (path, code) in &src {
         if test_module_files.contains(path) {
             scan(path, code, &[(0, code.len())]);
@@ -290,6 +334,12 @@ fn every_test_checker_pins_the_clock() {
     assert!(
         calls >= 10,
         "the lint saw only {calls} ComplianceChecker::new calls; is it scanning?"
+    );
+    // The modules of src/quality/compliance/tests/ are declared without a
+    // `#[cfg(test)]` of their own: the lint must still read them as tests.
+    assert!(
+        test_module_files.contains(&root.join("src/quality/compliance/tests/check.rs")),
+        "the lint does not read the submodules of a test module as test code"
     );
     assert!(
         offenders.is_empty(),
@@ -321,15 +371,7 @@ fn production_checkers_come_from_the_run_configuration() {
             (path, code)
         })
         .collect();
-    let test_module_files: BTreeSet<PathBuf> = src
-        .iter()
-        .flat_map(|(path, code)| {
-            let (_, out_of_line) = cfg_test_modules(code);
-            out_of_line
-                .into_iter()
-                .filter_map(|name| module_file(path, &name))
-        })
-        .collect();
+    let test_module_files = test_module_files(&src);
 
     let (mut run_config_calls, mut offenders) = (0, Vec::new());
     for (path, code) in &src {
@@ -404,6 +446,11 @@ mod render_tests;
     let code = mask(sample);
     let (inline, out_of_line) = cfg_test_modules(&code);
     assert_eq!(out_of_line, ["render_tests"]);
+    assert_eq!(
+        declared_modules(&code),
+        ["render_tests"],
+        "an inline module is no file of its own"
+    );
     let (calls, unpinned) = unpinned_calls(&code, &inline);
     assert_eq!(
         calls, 7,
