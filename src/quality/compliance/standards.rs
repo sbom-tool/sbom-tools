@@ -63,6 +63,10 @@ pub(crate) struct StandardDescriptor {
     pub(crate) subjects: Subjects,
     /// Which of a run's inputs the standard's checker gets.
     pub(crate) inputs: RunInputs,
+    /// Whether the TUI's policy view offers the standard as a preset
+    /// (`tui::PolicyPreset`). A test there holds the presets to this flag.
+    #[cfg_attr(not(all(test, feature = "tui")), allow(dead_code))]
+    pub(crate) in_tui_presets: bool,
 }
 
 /// How `--standard` selects a standard. The canonical value is the
@@ -152,6 +156,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::Standard,
@@ -167,6 +172,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::NtiaMinimum,
@@ -185,6 +191,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase1,
@@ -203,6 +210,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::CRA_PHASE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase2,
@@ -221,6 +229,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::CRA_PHASE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::FdaMedicalDevice,
@@ -239,6 +248,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistSsdf,
@@ -257,6 +267,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: NistSsdfChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::Eo14028,
@@ -275,6 +286,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: Eo14028Checker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cnsa2,
@@ -297,6 +309,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
             cnsa_category: true,
             ..RunInputs::NONE
         },
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistPqc,
@@ -319,6 +332,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
             pqc_profile: true,
             ..RunInputs::NONE
         },
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiTr03183_2,
@@ -337,6 +351,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: BsiTr03183Checker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraOssSteward,
@@ -355,6 +370,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: CraOssStewardChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::SIDECAR,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuccSubstantial,
@@ -373,6 +389,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: EuccSubstantialChecker::boxed,
         subjects: Subjects::CertificationEvidence,
         inputs: RunInputs::SIDECAR,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuAiAct,
@@ -391,6 +408,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: EuAiActChecker::boxed,
         subjects: Subjects::AiBom,
         inputs: RunInputs::SIDECAR,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiSbomForAi,
@@ -409,6 +427,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: BsiSbomForAiChecker::boxed,
         subjects: Subjects::AiBom,
         inputs: RunInputs::NONE,
+        in_tui_presets: true,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cisa2026,
@@ -427,6 +446,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: Cisa2026Checker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::PciDss632,
@@ -445,6 +465,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: PciDss632Checker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::Fsct,
@@ -463,6 +484,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: FsctChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
     StandardDescriptor {
         level: ComplianceLevel::Comprehensive,
@@ -478,6 +500,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         checker: GenericChecker::boxed,
         subjects: Subjects::Packages,
         inputs: RunInputs::NONE,
+        in_tui_presets: false,
     },
 ];
 
