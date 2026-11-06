@@ -5338,7 +5338,7 @@ mod tests {
     /// new arm cannot land without being enumerated.
     #[test]
     fn all_rule_ids_matches_the_registry() {
-        let src = include_str!("registry.rs");
+        let src = include_str!("mod.rs");
         let mut match_arms = Vec::new();
         for line in src.lines() {
             let t = line.trim();
