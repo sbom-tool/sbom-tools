@@ -55,6 +55,70 @@ pub(crate) struct StandardDescriptor {
     pub(crate) rules: &'static [&'static str],
     /// Builds the checker that runs the standard.
     pub(crate) checker: fn(ComplianceLevel) -> Box<dyn StandardChecker>,
+    /// What the standard's checks judge.
+    pub(crate) subjects: Subjects,
+    /// Which of a run's inputs the standard's checker gets.
+    pub(crate) inputs: RunInputs,
+}
+
+/// What a standard's checks judge, besides the document: the components
+/// its score counts ([`ComplianceResult::elements_checked`]).
+///
+/// [`ComplianceResult::elements_checked`]: super::ComplianceResult::elements_checked
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Subjects {
+    /// The software packages: the components the package rules judge. The
+    /// only standards with package rules, so the only ones whose results
+    /// change with `--include-excluded-scope`.
+    Packages,
+    /// The cryptographic assets (CNSA 2.0, NIST PQC).
+    CryptographicAssets,
+    /// The ML models and datasets of an AI-BOM (the AI profiles).
+    AiBom,
+    /// The certification evidence in the CRA sidecar (EUCC): no component.
+    CertificationEvidence,
+}
+
+/// The inputs of a run that reach a standard's checker, besides the clock
+/// and the rule settings, which reach every standard.
+/// [`ComplianceRunConfig::checker`] explains each row.
+///
+/// [`ComplianceRunConfig::checker`]: super::ComplianceRunConfig::checker
+pub(crate) struct RunInputs {
+    /// The CRA sidecar.
+    pub(crate) sidecar: bool,
+    /// The CRA product class (and the sidecar's class and route).
+    pub(crate) product_class: bool,
+    /// The PQC mode.
+    pub(crate) pqc_mode: bool,
+    /// The PQC profile.
+    pub(crate) pqc_profile: bool,
+    /// The CNSA 2.0 category.
+    pub(crate) cnsa_category: bool,
+}
+
+impl RunInputs {
+    /// None of the inputs.
+    const NONE: Self = Self {
+        sidecar: false,
+        product_class: false,
+        pqc_mode: false,
+        pqc_profile: false,
+        cnsa_category: false,
+    };
+
+    /// The sidecar alone.
+    const SIDECAR: Self = Self {
+        sidecar: true,
+        ..Self::NONE
+    };
+
+    /// The CRA phases' inputs: the sidecar and the product class.
+    const CRA_PHASE: Self = Self {
+        sidecar: true,
+        product_class: true,
+        ..Self::NONE
+    };
 }
 
 /// One descriptor per [`ComplianceLevel`]; entry `i` describes the level
@@ -71,6 +135,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: MINIMUM_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Standard,
@@ -83,6 +149,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: STANDARD_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::NtiaMinimum,
@@ -95,6 +163,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-NTIA-GENERAL",
         rules: NTIA_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase1,
@@ -107,6 +177,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_PHASE1_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::CRA_PHASE,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase2,
@@ -119,6 +191,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_PHASE2_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::CRA_PHASE,
     },
     StandardDescriptor {
         level: ComplianceLevel::FdaMedicalDevice,
@@ -131,6 +205,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-FDA-GENERAL",
         rules: FDA_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistSsdf,
@@ -143,6 +219,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-SSDF-GENERAL",
         rules: SSDF_SARIF_RULE_IDS,
         checker: NistSsdfChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Eo14028,
@@ -155,6 +233,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-EO14028-GENERAL",
         rules: EO14028_SARIF_RULE_IDS,
         checker: Eo14028Checker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cnsa2,
@@ -167,6 +247,12 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-CNSA2-GENERAL",
         rules: CNSA2_SARIF_RULE_IDS,
         checker: Cnsa2Checker::boxed,
+        subjects: Subjects::CryptographicAssets,
+        inputs: RunInputs {
+            pqc_mode: true,
+            cnsa_category: true,
+            ..RunInputs::NONE
+        },
     },
     StandardDescriptor {
         level: ComplianceLevel::NistPqc,
@@ -179,6 +265,12 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-PQC-GENERAL",
         rules: PQC_SARIF_RULE_IDS,
         checker: NistPqcChecker::boxed,
+        subjects: Subjects::CryptographicAssets,
+        inputs: RunInputs {
+            pqc_mode: true,
+            pqc_profile: true,
+            ..RunInputs::NONE
+        },
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiTr03183_2,
@@ -191,6 +283,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-BSI-TR-03183-2-GENERAL",
         rules: BSI_SARIF_RULE_IDS,
         checker: BsiTr03183Checker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraOssSteward,
@@ -203,6 +297,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_OSS_STEWARD_SARIF_RULE_IDS,
         checker: CraOssStewardChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::SIDECAR,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuccSubstantial,
@@ -215,6 +311,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-EUCC-GENERAL",
         rules: EUCC_SARIF_RULE_IDS,
         checker: EuccSubstantialChecker::boxed,
+        subjects: Subjects::CertificationEvidence,
+        inputs: RunInputs::SIDECAR,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuAiAct,
@@ -227,6 +325,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-AIACT-GENERAL",
         rules: AIACT_SARIF_RULE_IDS,
         checker: EuAiActChecker::boxed,
+        subjects: Subjects::AiBom,
+        inputs: RunInputs::SIDECAR,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiSbomForAi,
@@ -239,6 +339,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-BSIAI-GENERAL",
         rules: BSIAI_SARIF_RULE_IDS,
         checker: BsiSbomForAiChecker::boxed,
+        subjects: Subjects::AiBom,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cisa2026,
@@ -251,6 +353,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-CISA2026-GENERAL",
         rules: CISA2026_SARIF_RULE_IDS,
         checker: Cisa2026Checker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::PciDss632,
@@ -263,6 +367,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-PCI-GENERAL",
         rules: PCIDSS_SARIF_RULE_IDS,
         checker: PciDss632Checker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Fsct,
@@ -275,6 +381,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-FSCT-GENERAL",
         rules: FSCT_SARIF_RULE_IDS,
         checker: FsctChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
     StandardDescriptor {
         level: ComplianceLevel::Comprehensive,
@@ -287,6 +395,8 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: COMPREHENSIVE_SARIF_RULE_IDS,
         checker: GenericChecker::boxed,
+        subjects: Subjects::Packages,
+        inputs: RunInputs::NONE,
     },
 ];
 
@@ -426,6 +536,33 @@ mod tests {
     fn each_entry_builds_the_checker_of_its_level() {
         for d in STANDARDS {
             assert_eq!((d.checker)(d.level).level(), d.level);
+        }
+    }
+
+    /// The facts that depend on each other agree.
+    #[test]
+    fn related_facts_agree() {
+        for d in STANDARDS {
+            let level = d.level;
+            // A CRA phase is a CRA check; the product class calibrates the
+            // phase checks, and the sidecar carries it.
+            assert!(d.cra_phase.is_none() || d.cra, "{level:?}");
+            assert_eq!(d.inputs.product_class, d.cra_phase.is_some(), "{level:?}");
+            assert!(!d.inputs.product_class || d.inputs.sidecar, "{level:?}");
+            // Only the crypto standards read the PQC inputs; the profile
+            // and the category apply in deadline mode.
+            assert_eq!(
+                d.inputs.pqc_mode,
+                d.subjects == Subjects::CryptographicAssets,
+                "{level:?}"
+            );
+            assert!(!d.inputs.pqc_profile || d.inputs.pqc_mode, "{level:?}");
+            assert!(!d.inputs.cnsa_category || d.inputs.pqc_mode, "{level:?}");
+            // EUCC judges the sidecar's certification evidence.
+            assert!(
+                d.subjects != Subjects::CertificationEvidence || d.inputs.sidecar,
+                "{level:?}"
+            );
         }
     }
 }

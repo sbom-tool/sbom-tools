@@ -4,8 +4,10 @@
 //! diff reports and the timeline all build their checkers through a
 //! [`ComplianceRunConfig`], so the same SBOM with the same inputs gets the
 //! same verdicts on every surface. Which input reaches which level is
-//! decided in one place: [`ComplianceRunConfig::checker`].
+//! applied in one place, [`ComplianceRunConfig::checker`], from the levels'
+//! entries in the standards table.
 
+use super::standards::Subjects;
 use super::{
     CnsaCategory, ComplianceChecker, ComplianceLevel, ComplianceResult, PqcMode, PqcProfile,
     RuleSettings,
@@ -266,45 +268,35 @@ impl ComplianceRunConfig {
     /// [`Self::checker`] for why.
     #[must_use]
     pub const fn sidecar_applies(level: ComplianceLevel) -> bool {
-        matches!(
-            level,
-            ComplianceLevel::CraPhase1
-                | ComplianceLevel::CraPhase2
-                | ComplianceLevel::CraOssSteward
-                | ComplianceLevel::EuccSubstantial
-                | ComplianceLevel::EuAiAct
-        )
+        level.descriptor().inputs.sidecar
     }
 
     /// Whether a run hands the CRA product class to `level`'s checker. See
     /// [`Self::checker`] for why.
     #[must_use]
     pub const fn product_class_applies(level: ComplianceLevel) -> bool {
-        matches!(
-            level,
-            ComplianceLevel::CraPhase1 | ComplianceLevel::CraPhase2
-        )
+        level.descriptor().inputs.product_class
     }
 
     /// Whether a run hands the PQC mode to `level`'s checker. See
     /// [`Self::checker`] for why.
     #[must_use]
     pub const fn pqc_mode_applies(level: ComplianceLevel) -> bool {
-        matches!(level, ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc)
+        level.descriptor().inputs.pqc_mode
     }
 
     /// Whether a run hands the PQC profile to `level`'s checker. See
     /// [`Self::checker`] for why.
     #[must_use]
     pub const fn pqc_profile_applies(level: ComplianceLevel) -> bool {
-        matches!(level, ComplianceLevel::NistPqc)
+        level.descriptor().inputs.pqc_profile
     }
 
     /// Whether a run hands the CNSA 2.0 category to `level`'s checker. See
     /// [`Self::checker`] for why.
     #[must_use]
     pub const fn cnsa_category_applies(level: ComplianceLevel) -> bool {
-        matches!(level, ComplianceLevel::Cnsa2)
+        level.descriptor().inputs.cnsa_category
     }
 
     /// Whether a run hands its choice about components whose scope is
@@ -312,19 +304,13 @@ impl ComplianceRunConfig {
     /// See [`Self::checker`] for why.
     #[must_use]
     pub const fn excluded_scope_applies(level: ComplianceLevel) -> bool {
-        !matches!(
-            level,
-            ComplianceLevel::Cnsa2
-                | ComplianceLevel::NistPqc
-                | ComplianceLevel::EuccSubstantial
-                | ComplianceLevel::EuAiAct
-                | ComplianceLevel::BsiSbomForAi
-        )
+        matches!(level.descriptor().subjects, Subjects::Packages)
     }
 
     /// The checker for `level`, given the inputs of this run that `level`
-    /// reads. This is the one place that decides which input reaches which
-    /// level:
+    /// reads. This is the one place that applies which input reaches which
+    /// level; each level's entry in the standards table (`standards.rs`,
+    /// its `inputs` and `subjects`) says which it reads:
     ///
     /// | Input | Levels | Why |
     /// |---|---|---|
