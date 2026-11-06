@@ -14,6 +14,7 @@ use crate::tui::test_support::{
     AIBOM_BSI, DEMO_NEW, SIZES, aibom_single, demo_single, pin_theme, render_to_text,
 };
 use crate::tui::view::events::handle_key_event;
+use std::borrow::Cow;
 
 /// Build a `ViewApp` from the demo fixture with a deterministic tab.
 ///
@@ -544,7 +545,7 @@ fn compliance_verdict_counts_passed_checks_and_lists_none() {
         component_id: Some(format!("crypto/algorithm/{name}")),
         finding_detail: None,
         requirement: "FIPS 203/204/205: approved".to_string(),
-        standard_refs: Vec::new(),
+        standard_refs: Cow::Borrowed(&[]),
     };
     let mut app = demo_view_app(ViewTab::Compliance);
     let pqc_idx = ComplianceLevel::all()
@@ -1674,7 +1675,7 @@ fn pqc_cnsa_cell_ignores_non_error_violations() {
                     rule_id: "TEST-CNSA-PROBE",
                     component_id: None,
                     counts: None,
-                    standard_refs: Vec::new(),
+                    standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
                     finding_detail: None,
                     severity_override: None,

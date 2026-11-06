@@ -8,7 +8,7 @@
 //! `fullDescription`, a `help` text in plain text and Markdown, and a
 //! `helpUri` when the rule has a canonical home.
 
-use super::{SarifConfiguration, SarifLevel, SarifMessage, SarifResult};
+use super::{Pending, SarifConfiguration, SarifLevel, SarifMessage};
 use crate::quality::{
     ComplianceLevel, RemediationFormat, RuleMeta, StandardRef, ViolationSeverity, rule_meta,
     rules_for_level,
@@ -506,27 +506,27 @@ const fn severity_level(severity: ViolationSeverity) -> SarifLevel {
 /// the order the results first name them, so the catalogue is deterministic.
 pub(super) fn complete_rule_catalogue(
     mut rules: Vec<SarifRule>,
-    results: &[SarifResult],
+    results: &[Pending<'_>],
 ) -> Vec<SarifRule> {
     let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     rules.retain(|r| seen.insert(r.id.clone()));
     for res in results {
-        if seen.contains(&res.rule_id) {
+        let rule_id = res.rule_id();
+        if seen.contains(rule_id) {
             continue;
         }
-        seen.insert(res.rule_id.clone());
+        seen.insert(rule_id.to_string());
         // Prefer the registry's descriptor identity when the emitted ruleId
         // is a registered self-descriptor (a rule in no per-standard slice,
         // such as the quality profiles' checks or a family fallback rule).
-        if let Some(meta) = rule_meta(&res.rule_id)
-            && meta.sarif_id == res.rule_id
+        if let Some(meta) = rule_meta(rule_id)
+            && meta.sarif_id == rule_id
         {
-            rules.push(registry_sarif_rule(&res.rule_id, &meta));
+            rules.push(registry_sarif_rule(rule_id, &meta));
             continue;
         }
         // CamelCase-ish name derived from the id (SBOM-EO14028-NAME → SbomEo14028Name)
-        let name: String = res
-            .rule_id
+        let name: String = rule_id
             .split(|c: char| !c.is_ascii_alphanumeric())
             .filter(|seg| !seg.is_empty())
             .map(|seg| {
@@ -537,10 +537,10 @@ pub(super) fn complete_rule_catalogue(
             })
             .collect();
         rules.push(SarifRule::tool(
-            &res.rule_id,
+            rule_id,
             &name,
-            &format!("Compliance rule {}", res.rule_id),
-            res.level,
+            &format!("Compliance rule {rule_id}"),
+            res.level(),
             "A compliance finding whose rule is not in the sbom-tools rule registry.",
             "No specific guidance exists for this rule: fix the element its requirement and message name.",
         ));

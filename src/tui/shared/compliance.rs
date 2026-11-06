@@ -134,7 +134,7 @@ pub fn render_violation_detail_overlay(
             "References:",
             Style::default().fg(scheme.muted),
         )));
-        for r in &violation.standard_refs {
+        for r in violation.standard_refs.iter() {
             let mut spans = vec![
                 Span::styled("  • ", Style::default().fg(scheme.muted)),
                 Span::styled(
@@ -257,7 +257,7 @@ mod tests {
             counts: None,
             requirement: "EU AI Act Annex IV".to_string(),
             rule_id: "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
-            standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")],
+            standard_refs: vec![StandardRef::new(StandardKind::EuAiAct, "Annex IV §2(d)")].into(),
             remediation: None,
             finding_detail: None,
             severity_override: None,
@@ -308,11 +308,13 @@ mod tests {
                 StandardRef::new(StandardKind::CraAnnex, "Annex I Part II"),
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-01"),
                 StandardRef::new(StandardKind::Pren40000_1_3, "PRE-7-RQ-03"),
-            ],
+            ]
+            .into(),
             remediation: Some(
                 crate::quality::rule_meta("SBOM-CRA-ANNEX-I-SUPPLY-CHAIN")
                     .expect("registered rule")
-                    .remediation_for(crate::quality::RemediationFormat::CycloneDx),
+                    .remediation_for(crate::quality::RemediationFormat::CycloneDx)
+                    .into(),
             ),
             finding_detail: None,
             severity_override: None,
@@ -426,7 +428,7 @@ mod tests {
         );
 
         let mut violation = ai_act_violation();
-        violation.field = Some("components[].supplier.name".to_string());
+        violation.field = Some("components[].supplier.name".into());
         violation.observed = Some("NOASSERTION".to_string());
         let text = render_to_text(100, 24, |frame| {
             super::render_violation_detail_overlay(frame, frame.area(), &violation);
@@ -449,7 +451,7 @@ mod tests {
     #[test]
     fn overlay_omits_references_when_empty() {
         let mut violation = ai_act_violation();
-        violation.standard_refs.clear();
+        violation.standard_refs = Vec::new().into();
         let text = render_to_text(100, 24, |frame| {
             super::render_violation_detail_overlay(frame, frame.area(), &violation);
         });

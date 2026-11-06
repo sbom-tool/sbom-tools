@@ -1537,6 +1537,7 @@ fn get_selected_diff_violation<'a>(ctx: &'a RenderContext) -> Option<&'a Violati
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::borrow::Cow;
 
     fn mk_violation(
         severity: ViolationSeverity,
@@ -1553,7 +1554,7 @@ mod tests {
             rule_id: "SBOM-CRA-GENERAL",
             component_id: None,
             counts: None,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
             finding_detail: None,
             severity_override: None,

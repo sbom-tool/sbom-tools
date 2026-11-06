@@ -25,6 +25,8 @@
 //! separately so the profiles stay applicable and can surface a mistyped-ML
 //! warning instead of letting "untype your models" evade the assessment.
 
+use std::borrow::Cow;
+
 use super::{Violation, ViolationCategory, ViolationSeverity, truncate_list};
 use crate::model::{Component, ComponentType, DependencyType, ExternalRefType, NormalizedSbom};
 
@@ -197,7 +199,7 @@ pub(crate) fn push_untyped_ml_warning(
         rule_id,
         component_id: None,
         counts: None,
-        standard_refs: Vec::new(),
+        standard_refs: Cow::Borrowed(&[]),
         remediation: None,
         finding_detail: None,
         severity_override: None,

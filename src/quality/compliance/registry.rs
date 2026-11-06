@@ -1,8 +1,18 @@
 //! Compliance rule registry: the single source of truth for SARIF rule
 //! IDs, harmonised-standard cross-references, and remediation text, keyed
 //! by the stable internal `Violation::rule_id`.
+//!
+//! Each rule is declared once, as a match arm of `declared_rule_meta`. The
+//! rule index reads every declaration once, on first use, and keeps the
+//! rules sorted by id with what every finding of a rule carries: its
+//! remediation for each format and its standard references, rendered once.
+//! [`rule_meta`] and the checker's per-finding lookups are binary searches
+//! of that index, so a finding borrows its rule's text instead of copying
+//! it.
 
-use super::{ComplianceLevel, StandardKind, ViolationSeverity};
+use std::sync::OnceLock;
+
+use super::{ComplianceLevel, StandardKind, StandardRef, ViolationSeverity};
 use crate::model::{DocumentMetadata, SbomFormat};
 
 /// Static metadata attached to a compliance rule. The `rule_id` on every
@@ -129,6 +139,15 @@ impl RemediationFormat {
             Self::CycloneDx => "CycloneDX",
             Self::Spdx2 => "SPDX 2.x",
             Self::Spdx3 => "SPDX 3.0",
+        }
+    }
+
+    /// The position of this format in [`Self::ALL`].
+    const fn position(self) -> usize {
+        match self {
+            Self::CycloneDx => 0,
+            Self::Spdx2 => 1,
+            Self::Spdx3 => 2,
         }
     }
 }
@@ -1424,8 +1443,108 @@ const ADVICE_DIGEST_SIZE: FormatAdvice = FormatAdvice {
 /// `None` for unregistered keys — the exhaustive test
 /// `every_emitted_violation_has_a_registered_rule_id` guarantees no live check
 /// site emits an unregistered key.
+///
+/// A binary search of the rule index (see the module docs), not a pass over
+/// the declarations.
 #[must_use]
 pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
+    indexed_rule(rule_id).map(|rule| rule.meta)
+}
+
+/// A registered rule as the rule index keeps it: its id, its metadata, and
+/// what every finding of the rule carries, rendered once from them.
+#[derive(Debug)]
+pub(crate) struct IndexedRule {
+    /// The stable internal rule key.
+    pub(crate) id: &'static str,
+    /// The rule's declared metadata.
+    pub(crate) meta: RuleMeta,
+    /// What the rule reports.
+    pub(crate) kind: RuleKind,
+    /// The rule's standard references, in registry order, each with its
+    /// URL (see [`StandardRef::new`]).
+    pub(crate) refs: Vec<StandardRef>,
+    /// [`RuleMeta::remediation_for`] each format, in
+    /// [`RemediationFormat::ALL`] order.
+    remediation: [String; 3],
+    /// [`RuleMeta::remediation_all_formats`].
+    pub(crate) remediation_all_formats: String,
+    /// Where the field the rule checks lives in a CycloneDX document's
+    /// primary component: the CycloneDX field, with `metadata.component` in
+    /// place of `components[]`. `None` when the field is not under
+    /// `components[]`.
+    primary_field: Option<String>,
+}
+
+impl IndexedRule {
+    fn new(id: &'static str, meta: RuleMeta) -> Self {
+        let primary_field = meta
+            .field_for(RemediationFormat::CycloneDx)
+            .and_then(|field| field.strip_prefix("components[]"))
+            .map(|rest| format!("metadata.component{rest}"));
+        Self {
+            id,
+            kind: if PASS_RULE_IDS.contains(&id) {
+                RuleKind::Pass
+            } else {
+                RuleKind::Finding
+            },
+            refs: meta
+                .refs
+                .iter()
+                .map(|(kind, clause)| StandardRef::new(*kind, *clause))
+                .collect(),
+            remediation: RemediationFormat::ALL.map(|format| meta.remediation_for(format)),
+            remediation_all_formats: meta.remediation_all_formats(),
+            primary_field,
+            meta,
+        }
+    }
+
+    /// [`RuleMeta::remediation_for`] `format`.
+    pub(crate) fn remediation(&self, format: RemediationFormat) -> &str {
+        &self.remediation[format.position()]
+    }
+
+    /// Where the field the rule checks lives in an SBOM of `format`: the
+    /// [`RuleMeta::field_for`] that format. A CycloneDX document keeps its
+    /// primary component at `metadata.component`, so for a finding
+    /// `about_primary` a field under `components[]` is named there.
+    pub(crate) fn field(&self, format: RemediationFormat, about_primary: bool) -> Option<&str> {
+        match &self.primary_field {
+            Some(field) if about_primary && format == RemediationFormat::CycloneDx => Some(field),
+            _ => self.meta.field_for(format),
+        }
+    }
+}
+
+/// The rule index: every rule of [`ALL_RULE_IDS`] with its declared
+/// metadata, sorted by id, built on first use.
+fn rule_index() -> &'static [IndexedRule] {
+    static INDEX: OnceLock<Vec<IndexedRule>> = OnceLock::new();
+    INDEX.get_or_init(|| {
+        let mut rules: Vec<IndexedRule> = ALL_RULE_IDS
+            .iter()
+            .filter_map(|id| declared_rule_meta(id).map(|meta| IndexedRule::new(id, meta)))
+            .collect();
+        rules.sort_unstable_by_key(|rule| rule.id);
+        rules
+    })
+}
+
+/// The indexed rule `rule_id` names; `None` for an unregistered id.
+pub(crate) fn indexed_rule(rule_id: &str) -> Option<&'static IndexedRule> {
+    let rules = rule_index();
+    rules
+        .binary_search_by(|rule| rule.id.cmp(rule_id))
+        .ok()
+        .map(|at| &rules[at])
+}
+
+/// The declared [`RuleMeta`] of `rule_id`: one match arm per registered
+/// rule. The rule index reads each once; every lookup goes through
+/// [`indexed_rule`].
+fn declared_rule_meta(rule_id: &str) -> Option<RuleMeta> {
     use StandardKind as K;
     const CRA: K = K::CraArticle;
     const ANNEX: K = K::CraAnnex;
@@ -4263,9 +4382,10 @@ pub fn rule_meta(rule_id: &str) -> Option<RuleMeta> {
     Some(meta)
 }
 
-/// Every stable internal rule key with a `rule_meta` match arm, in match-arm
-/// order. Kept adjacent to [`rule_meta`]; the `all_rule_ids_matches_the_registry`
-/// test asserts the list and the match arms stay in lockstep.
+/// Every stable internal rule key with a `declared_rule_meta` match arm, in
+/// match-arm order: the rules the rule index holds. Kept adjacent to the
+/// declarations; the `all_rule_ids_matches_the_registry` test asserts the
+/// list and the match arms stay in lockstep.
 const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ART-13-2",
     "SBOM-CRA-SBOM-FRESHNESS",
@@ -4581,12 +4701,7 @@ pub const PASS_RULE_IDS: &[&str] = &["SBOM-PQC-009", "SBOM-PQC-010"];
 /// The kind of the registered rule `rule_id`; `None` for an unregistered id.
 #[must_use]
 pub fn rule_kind(rule_id: &str) -> Option<RuleKind> {
-    rule_meta(rule_id)?;
-    Some(if PASS_RULE_IDS.contains(&rule_id) {
-        RuleKind::Pass
-    } else {
-        RuleKind::Finding
-    })
+    indexed_rule(rule_id).map(|rule| rule.kind)
 }
 
 /// Map an owned rule-id string back to the registry's `&'static str` key.
@@ -4595,7 +4710,7 @@ pub fn rule_kind(rule_id: &str) -> Option<RuleKind> {
 /// to the generic default.
 #[must_use]
 pub(crate) fn lookup_static_rule_id(rule_id: &str) -> Option<&'static str> {
-    ALL_RULE_IDS.iter().find(|k| **k == rule_id).copied()
+    indexed_rule(rule_id).map(|rule| rule.id)
 }
 
 /// The registry's spelling of the rule id `value`, ignoring case and

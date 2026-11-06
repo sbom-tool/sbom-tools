@@ -222,7 +222,12 @@ fn every_finding_names_its_rules_field() {
                     }
                     _ => field.to_string(),
                 });
-                assert_eq!(v.field, expected, "{rel} [{level:?}] {}", v.rule_id);
+                assert_eq!(
+                    v.field.as_deref(),
+                    expected.as_deref(),
+                    "{rel} [{level:?}] {}",
+                    v.rule_id
+                );
                 fields += usize::from(v.field.is_some());
             }
         }

@@ -296,6 +296,7 @@ impl RuleSettings {
 mod tests {
     use super::*;
     use crate::quality::ViolationCategory;
+    use std::borrow::Cow;
 
     fn finding(rule_id: &'static str, severity: ViolationSeverity) -> Violation {
         Violation {
@@ -312,7 +313,7 @@ mod tests {
             observed: None,
             requirement: "requirement".to_string(),
             rule_id,
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
             remediation: None,
         }
     }

@@ -54,7 +54,6 @@
 
 use super::{ComplianceLevel, Violation};
 use std::borrow::Cow;
-use std::fmt::Write as _;
 
 /// The parts of a reported check that its finding key is built from: the
 /// rule, the detail that tells the rule's findings on one subject apart, and
@@ -267,10 +266,10 @@ pub(crate) fn number_repeated_details<F: NumberedDetail>(findings: &mut [F]) {
 /// first 16 lowercase hex digits of SHA-256 of the key's UTF-8 bytes.
 #[must_use]
 pub fn finding_id(finding_key: &str) -> String {
-    let fingerprint = finding_fingerprint(finding_key);
+    let digest = key_digest(finding_key);
     let mut id = String::with_capacity(FINDING_ID_PREFIX.len() + 16);
     id.push_str(FINDING_ID_PREFIX);
-    id.push_str(&fingerprint[..16]);
+    push_hex(&mut id, &digest[..8]);
     id
 }
 
@@ -280,13 +279,24 @@ pub fn finding_id(finding_key: &str) -> String {
 /// digits behind a prefix.
 #[must_use]
 pub fn finding_fingerprint(finding_key: &str) -> String {
-    use sha2::{Digest, Sha256};
-    let digest = Sha256::digest(finding_key.as_bytes());
     let mut hex = String::with_capacity(64);
-    for byte in digest {
-        let _ = write!(hex, "{byte:02x}");
-    }
+    push_hex(&mut hex, &key_digest(finding_key));
     hex
+}
+
+/// SHA-256 of a finding key's UTF-8 bytes.
+fn key_digest(finding_key: &str) -> [u8; 32] {
+    use sha2::{Digest, Sha256};
+    Sha256::digest(finding_key.as_bytes()).into()
+}
+
+/// Append `bytes` to `out` as lowercase hex, two digits a byte.
+fn push_hex(out: &mut String, bytes: &[u8]) {
+    const DIGITS: &[u8; 16] = b"0123456789abcdef";
+    for byte in bytes {
+        out.push(char::from(DIGITS[usize::from(byte >> 4)]));
+        out.push(char::from(DIGITS[usize::from(byte & 0x0f)]));
+    }
 }
 
 #[cfg(test)]
@@ -539,7 +549,7 @@ mod tests {
             component_id: Some("crypto/algorithm/ml-kem-1024".to_string()),
             finding_detail: detail.map(str::to_string),
             requirement: "FIPS 203/204/205: approved".to_string(),
-            standard_refs: Vec::new(),
+            standard_refs: Cow::Borrowed(&[]),
         };
         assert_eq!(
             finding_key(ComplianceLevel::NistPqc, &pass(None)),
@@ -633,7 +643,7 @@ mod tests {
         edited.severity = ViolationSeverity::Info;
         edited.element = Some("another label".to_string());
         edited.requirement = "another requirement".to_string();
-        edited.standard_refs.clear();
+        edited.standard_refs = Cow::Borrowed(&[]);
         edited.counts = None;
         let edited_key = finding_key(ComplianceLevel::NtiaMinimum, &edited);
         assert_eq!(edited_key, key);

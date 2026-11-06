@@ -12,17 +12,27 @@
 //! * `sarif_locator_50k` — the `-o sarif` locator pass (SBOM ids to source
 //!   lines) on a 50,000-component CycloneDX JSON document, minified and
 //!   pretty-printed, against parsing the same text.
+//! * `all_standards_50k` — every `validate --standard` on a 50,000-component
+//!   CycloneDX JSON document: checking them all
+//!   (`ComplianceRunConfig::check_levels`), and rendering their results as
+//!   `-o json` and `-o sarif` do (SARIF with its default cap of 25,000
+//!   results).
 //!
 //! Fixtures come from the shared, deterministic `benches/support` generators.
 
 mod support;
 
+use clap::ValueEnum as _;
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use sbom_tools::model::{Component, DependencyEdge, DependencyType, NormalizedSbom};
 use sbom_tools::parsers::parse_sbom_str;
-use sbom_tools::quality::{ComplianceChecker, ComplianceLevel};
+use sbom_tools::quality::{
+    ComplianceChecker, ComplianceLevel, ComplianceRunConfig, StandardSelector,
+};
 use sbom_tools::reports::{
-    SarifArtifact, SarifArtifactLocation, SarifOptions, SbomLocator, generate_compliance_sarif_with,
+    AssessedSbom, SarifArtifact, SarifArtifactLocation, SarifOptions, SbomLocator,
+    generate_compliance_json_at, generate_compliance_sarif_with,
+    generate_multi_compliance_sarif_with,
 };
 use std::hint::black_box;
 use support::{Topology, cyclonedx_json, generate_flat_sbom, generate_graph_sbom};
@@ -118,10 +128,43 @@ fn bench_sarif_locator(c: &mut Criterion) {
     group.finish();
 }
 
+/// All 16 standards `validate --standard` selects, on a 50,000-component
+/// CycloneDX document, judged at one pinned instant: `check` runs them all,
+/// `json` and `sarif` render the results as `validate -o json` and `-o
+/// sarif` do.
+fn bench_all_standards(c: &mut Criterion) {
+    let text = cyclonedx_json(50_000);
+    let sbom = parse_sbom_str(&text).expect("generated SBOM parses");
+    let levels: Vec<ComplianceLevel> = StandardSelector::value_variants()
+        .iter()
+        .map(|standard| standard.level())
+        .collect();
+    let as_of = chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let run = ComplianceRunConfig::new().with_as_of(as_of);
+    let results = run.check_levels(&levels, &sbom);
+    let assessed = AssessedSbom::new(&sbom, text.as_bytes());
+    let sarif = SarifOptions::new();
+    let mut group = c.benchmark_group("all_standards_50k");
+    group.sample_size(10);
+    group.bench_function("check", |b| {
+        b.iter(|| black_box(run.check_levels(black_box(&levels), black_box(&sbom))));
+    });
+    group.bench_function("json", |b| {
+        b.iter(|| black_box(generate_compliance_json_at(&results, &assessed, as_of)));
+    });
+    group.bench_function("sarif", |b| {
+        b.iter(|| black_box(generate_multi_compliance_sarif_with(&results, &sarif)));
+    });
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_all_levels,
     bench_fsct_wide,
-    bench_sarif_locator
+    bench_sarif_locator,
+    bench_all_standards
 );
 criterion_main!(benches);
