@@ -11,6 +11,11 @@
 //! of [`ComplianceLevel::all`] and of every list of standards shown to
 //! users. A compile-time check below holds the order.
 
+use super::context::{
+    BsiSbomForAiChecker, BsiTr03183Checker, Cisa2026Checker, Cnsa2Checker, CraOssStewardChecker,
+    Eo14028Checker, EuAiActChecker, EuccSubstantialChecker, FsctChecker, GenericChecker,
+    NistPqcChecker, NistSsdfChecker, PciDss632Checker, StandardChecker,
+};
 use super::registry::{
     AIACT_SARIF_RULE_IDS, BSI_SARIF_RULE_IDS, BSIAI_SARIF_RULE_IDS, CISA2026_SARIF_RULE_IDS,
     CNSA2_SARIF_RULE_IDS, COMPREHENSIVE_SARIF_RULE_IDS, CRA_OSS_STEWARD_SARIF_RULE_IDS,
@@ -48,6 +53,8 @@ pub(crate) struct StandardDescriptor {
     /// The rules the standard's checks can report, in display order. The
     /// lists are in `registry/mod.rs`, with the comment that explains them.
     pub(crate) rules: &'static [&'static str],
+    /// Builds the checker that runs the standard.
+    pub(crate) checker: fn(ComplianceLevel) -> Box<dyn StandardChecker>,
 }
 
 /// One descriptor per [`ComplianceLevel`]; entry `i` describes the level
@@ -63,6 +70,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: MINIMUM_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Standard,
@@ -74,6 +82,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: STANDARD_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::NtiaMinimum,
@@ -85,6 +94,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-NTIA-GENERAL",
         rules: NTIA_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase1,
@@ -96,6 +106,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: Some(CraPhase::Phase1),
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_PHASE1_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraPhase2,
@@ -107,6 +118,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: Some(CraPhase::Phase2),
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_PHASE2_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::FdaMedicalDevice,
@@ -118,6 +130,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-FDA-GENERAL",
         rules: FDA_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistSsdf,
@@ -129,6 +142,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-SSDF-GENERAL",
         rules: SSDF_SARIF_RULE_IDS,
+        checker: NistSsdfChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Eo14028,
@@ -140,6 +154,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-EO14028-GENERAL",
         rules: EO14028_SARIF_RULE_IDS,
+        checker: Eo14028Checker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cnsa2,
@@ -151,6 +166,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-CNSA2-GENERAL",
         rules: CNSA2_SARIF_RULE_IDS,
+        checker: Cnsa2Checker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::NistPqc,
@@ -162,6 +178,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-PQC-GENERAL",
         rules: PQC_SARIF_RULE_IDS,
+        checker: NistPqcChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiTr03183_2,
@@ -173,6 +190,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-BSI-TR-03183-2-GENERAL",
         rules: BSI_SARIF_RULE_IDS,
+        checker: BsiTr03183Checker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::CraOssSteward,
@@ -184,6 +202,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-CRA-GENERAL",
         rules: CRA_OSS_STEWARD_SARIF_RULE_IDS,
+        checker: CraOssStewardChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuccSubstantial,
@@ -195,6 +214,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-EUCC-GENERAL",
         rules: EUCC_SARIF_RULE_IDS,
+        checker: EuccSubstantialChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::EuAiAct,
@@ -206,6 +226,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-AIACT-GENERAL",
         rules: AIACT_SARIF_RULE_IDS,
+        checker: EuAiActChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::BsiSbomForAi,
@@ -217,6 +238,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-BSIAI-GENERAL",
         rules: BSIAI_SARIF_RULE_IDS,
+        checker: BsiSbomForAiChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Cisa2026,
@@ -228,6 +250,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-CISA2026-GENERAL",
         rules: CISA2026_SARIF_RULE_IDS,
+        checker: Cisa2026Checker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::PciDss632,
@@ -239,6 +262,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-PCI-GENERAL",
         rules: PCIDSS_SARIF_RULE_IDS,
+        checker: PciDss632Checker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Fsct,
@@ -250,6 +274,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-FSCT-GENERAL",
         rules: FSCT_SARIF_RULE_IDS,
+        checker: FsctChecker::boxed,
     },
     StandardDescriptor {
         level: ComplianceLevel::Comprehensive,
@@ -261,6 +286,7 @@ pub(crate) const STANDARDS: &[StandardDescriptor] = &[
         cra_phase: None,
         fallback_rule: "SBOM-QUALITY-GENERAL",
         rules: COMPREHENSIVE_SARIF_RULE_IDS,
+        checker: GenericChecker::boxed,
     },
 ];
 
@@ -394,5 +420,12 @@ mod tests {
         }
         let registered: BTreeSet<&str> = all_rule_ids().iter().copied().collect();
         assert_eq!(covered, registered);
+    }
+
+    #[test]
+    fn each_entry_builds_the_checker_of_its_level() {
+        for d in STANDARDS {
+            assert_eq!((d.checker)(d.level).level(), d.level);
+        }
     }
 }
