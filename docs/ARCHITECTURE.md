@@ -134,7 +134,9 @@ Color is resolved once at startup by `theme::startup_theme(no_color_flag, prefs_
   records them in `duplicate_components`. Parsers settle each entry's id
   with `NormalizedSbom::claim_canonical_id` first: a different component
   under a taken id is re-keyed to `<id>#<format id>`, and a later entry of
-  it under the same format id gets that id too. One placeholder classification
+  it, under any format id, gets that id too, found through an index of the
+  re-keyed components (`src/model/rekey.rs`), so parsing stays linear with
+  any number of components under one id. One placeholder classification
   (`src/model/known.rs`) serves the merge and every compliance check.
 - DiffResult summary values are derived from change lists.
 - Similarity/deviation scales are fixed and test-pinned: `DiffResult.semantic_score` is **0-100** (single-diff scale), `MatrixResult::similarity_scores` is **0-1** (`semantic_score / 100`), and multi-SBOM `deviation_scores`/`max_deviation` are **0-1** (`1 - similarity`).

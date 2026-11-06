@@ -1883,6 +1883,40 @@
           }
         }
       ]
+    },
+    {
+      "id": "q4-repeat-two-refs",
+      "review_id": "Q4",
+      "fixture": "q4-repeat-two-refs.cdx.json",
+      "note": "q4-repeat-after-other with the two entries of left-pad-fork under two bom-refs, left-pad-fork-1 (no supplier) and left-pad-fork-2 (with one). left-pad keeps the purl's id and the first entry is re-keyed to <purl>#left-pad-fork-1. The second entry was re-keyed under its own bom-ref, to <purl>#left-pad-fork-2, and kept as a third component, so the first failed NTIA, EO 14028 and CISA 2026 for its supplier; with left-pad-fork first the two merged. The second entry now finds the first, whatever its bom-ref.",
+      "checks": [
+        {
+          "standard": "ntia",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-NTIA-DUPLICATE-COMPONENT",
+                "severity": "info"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eo14028",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "errors": 6
+          }
+        }
+      ]
     }
   ]
 }

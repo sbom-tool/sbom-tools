@@ -27,6 +27,7 @@ mod known;
 mod license;
 mod merge;
 mod metadata;
+mod rekey;
 mod sbom;
 mod vulnerability;
 
@@ -40,5 +41,6 @@ pub(crate) use known::{is_declared_unknown, is_known, is_known_contact, is_place
 pub use license::*;
 pub use merge::DuplicateComponent;
 pub use metadata::*;
+pub(crate) use rekey::RekeyIndex;
 pub use sbom::*;
 pub use vulnerability::*;

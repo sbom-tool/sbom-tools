@@ -4,8 +4,8 @@
 //! bom-refs, or one bom-ref repeated. Parsers settle each entry's canonical
 //! id with [`NormalizedSbom::claim_canonical_id`], which keeps entries of a
 //! different known name or version apart, and gives a repeat the id its
-//! first entry got, also when that entry was re-keyed under the same
-//! bom-ref or SPDXID. Entries that share an id are one component
+//! first entry got, also when that entry was re-keyed, under any bom-ref or
+//! SPDXID. Entries that share an id are one component
 //! ([`Component::is_same_component`]).
 //! [`NormalizedSbom::add_component`] merges them with
 //! [`Component::merge_duplicate`] and records the duplicate as a
@@ -896,6 +896,126 @@ mod tests {
         );
         assert_eq!(sbom.components.len(), 3);
         assert_eq!(sbom.duplicate_components.len(), 1);
+    }
+
+    /// Entries in document order, each claimed and added as the parsers do.
+    fn parse_entries(entries: Vec<Component>) -> NormalizedSbom {
+        let mut sbom = NormalizedSbom::default();
+        for mut c in entries {
+            sbom.claim_canonical_id(&mut c);
+            sbom.add_component(c);
+        }
+        sbom
+    }
+
+    /// A component listed under two bom-refs, beside a different component
+    /// under the same purl, is one component in every order: its second
+    /// entry finds the first one where it was re-keyed, whatever its own
+    /// bom-ref. It used to be re-keyed under its own bom-ref and kept as a
+    /// third component.
+    #[test]
+    fn a_repeat_under_another_bom_ref_merges_in_every_order() {
+        const PURL: &str = "pkg:npm/x";
+        let a = Component::new("a".to_string(), "a".to_string()).with_purl(PURL.to_string());
+        let mut b1 = Component::new("b".to_string(), "b-1".to_string()).with_purl(PURL.to_string());
+        b1.description = Some("first entry".to_string());
+        let mut b2 = Component::new("b".to_string(), "b-2".to_string()).with_purl(PURL.to_string());
+        b2.supplier = Some(Organization::new("Acme".to_string()));
+        for order in permutations(&[a, b1, b2]) {
+            let refs: Vec<&str> = order
+                .iter()
+                .map(|c| c.identifiers.format_id.as_str())
+                .collect();
+            let sbom = parse_entries(order.clone());
+            assert_eq!(sbom.components.len(), 2, "{refs:?}: a and b");
+            let b = sbom
+                .components
+                .values()
+                .find(|c| c.name == "b")
+                .expect("b is kept");
+            assert_eq!(b.description.as_deref(), Some("first entry"), "{refs:?}");
+            assert!(b.supplier.is_some(), "{refs:?}: both entries merged");
+            assert_eq!(sbom.duplicate_components[&b.canonical_id].entries, 2);
+            assert_eq!(sbom.duplicate_components.len(), 1, "{refs:?}");
+        }
+    }
+
+    /// An entry that agrees with several components re-keyed from its id
+    /// merges into the one re-keyed first, and one that a merge taught its
+    /// version no longer takes an entry of another version.
+    #[test]
+    fn a_repeat_takes_the_first_rekeyed_component_it_agrees_with() {
+        const PURL: &str = "pkg:npm/x";
+        let entry = |name: &str, version: Option<&str>, format_id: &str| {
+            let mut c =
+                Component::new(name.to_string(), format_id.to_string()).with_purl(PURL.to_string());
+            if let Some(version) = version {
+                c = c.with_version(version.to_string());
+            }
+            c
+        };
+        // `a` holds the purl's id; b@1 and b@2 are re-keyed, in that order.
+        // An unversioned `b` agrees with both and goes to b@1.
+        let sbom = parse_entries(vec![
+            entry("a", None, "a"),
+            entry("b", Some("1"), "b-1"),
+            entry("b", Some("2"), "b-2"),
+            entry("b", None, "b-3"),
+        ]);
+        assert_eq!(sbom.components.len(), 3);
+        let merged = &sbom.components[&CanonicalId::from_format_id("pkg:npm/x#b-1")];
+        assert_eq!(merged.version.as_deref(), Some("1"));
+        assert_eq!(sbom.duplicate_components.len(), 1);
+
+        // An unversioned `c` is re-keyed, then learns version 1 from a
+        // merge: a `c@2` after it is another component, and a `c@1` merges.
+        let sbom = parse_entries(vec![
+            entry("a", None, "a"),
+            entry("c", None, "c-1"),
+            entry("c", Some("1"), "c-2"),
+            entry("c", Some("2"), "c-3"),
+            entry("c", Some("1"), "c-4"),
+        ]);
+        assert_eq!(sbom.components.len(), 3, "a, c@1 and c@2");
+        let c1 = &sbom.components[&CanonicalId::from_format_id("pkg:npm/x#c-1")];
+        assert_eq!(c1.version.as_deref(), Some("1"));
+        assert_eq!(sbom.duplicate_components[&c1.canonical_id].entries, 3);
+    }
+
+    /// Tens of thousands of different components under one purl, under one
+    /// bom-ref or one each, with a repeat of some of them: each entry finds
+    /// its id without a scan of the others, so parsing stays linear. A scan
+    /// took about 15 s for 20,000 entries under one bom-ref in a release
+    /// build.
+    #[test]
+    fn many_components_under_one_purl_parse_in_linear_time() {
+        const N: usize = 20_000;
+        const REPEATS: usize = 100;
+        for same_ref in [true, false] {
+            let entry = |i: usize, again: bool| {
+                let format_id = match (same_ref, again) {
+                    (true, _) => "x".to_string(),
+                    (false, false) => format!("c{i}"),
+                    (false, true) => format!("c{i}-again"),
+                };
+                Component::new(format!("c{i}"), format_id)
+                    .with_version("1.0.0".to_string())
+                    .with_purl("pkg:npm/x@1.0.0".to_string())
+            };
+            let entries: Vec<Component> = (0..N)
+                .map(|i| entry(i, false))
+                .chain((0..REPEATS).map(|i| entry(i, true)))
+                .collect();
+            let start = std::time::Instant::now();
+            let sbom = parse_entries(entries);
+            let elapsed = start.elapsed();
+            assert_eq!(sbom.components.len(), N, "same bom-ref: {same_ref}");
+            assert_eq!(sbom.duplicate_components.len(), REPEATS);
+            assert!(
+                elapsed < std::time::Duration::from_secs(5),
+                "{N} entries under one purl (same bom-ref: {same_ref}) took {elapsed:?}"
+            );
+        }
     }
 
     #[test]
