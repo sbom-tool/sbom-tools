@@ -8,6 +8,7 @@ use anyhow::Result;
 
 use crate::parsers::parse_sbom_str;
 use crate::pipeline::{exit_codes, read_input};
+use crate::reports::escape::sanitize_path;
 use crate::serialization::{TailorConfig, tailor_sbom_json};
 
 /// Run the tailor command.
@@ -27,7 +28,7 @@ pub fn run_tailor(
         Some(path) => {
             std::fs::write(path, &tailored)?;
             if !quiet {
-                eprintln!("Tailored SBOM written to {}", path.display());
+                eprintln!("Tailored SBOM written to {}", sanitize_path(path));
             }
         }
         None => {

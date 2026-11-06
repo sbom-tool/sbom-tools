@@ -394,6 +394,20 @@ pub(crate) fn parse_as_of(raw: &str) -> anyhow::Result<chrono::DateTime<chrono::
     crate::quality::parse_as_of(raw).map_err(|e| anyhow::anyhow!("invalid --as-of {raw:?}: {e}"))
 }
 
+/// `err` as the default `fn main() -> Result` termination prints it: the
+/// message, then the "Caused by:" chain. Every line is cleaned like SBOM
+/// text, since an error can quote a file name or a value from the SBOM, and
+/// both can come from a pull request. Multi-line messages keep their breaks,
+/// but no line can start a workflow command or carry a terminal escape.
+#[must_use]
+pub fn error_report(err: &anyhow::Error) -> String {
+    format!("{err:?}")
+        .split('\n')
+        .map(crate::reports::escape::sanitize_line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use chrono::{TimeZone, Utc};
@@ -530,5 +544,30 @@ mod tests {
         ] {
             assert!(err.contains(valid), "must list '{valid}': {err}");
         }
+    }
+
+    /// A file name or SBOM value quoted in an error cannot start a workflow
+    /// command or send a terminal escape, and the "Caused by:" chain keeps
+    /// its layout.
+    #[test]
+    fn error_report_cleans_every_line() {
+        let err = anyhow::anyhow!("Unknown SBOM format")
+            .context("x\n::error file=a::FORGED\u{1b}[31m\u{202E}.cdx.json")
+            .context("\r::warning::FORGED at line start");
+        let report = super::error_report(&err);
+        for line in report.lines() {
+            assert!(
+                !line.trim_start().starts_with("::"),
+                "a line starts a workflow command: {line:?}\n{report}"
+            );
+        }
+        assert!(!report.contains(['\u{1b}', '\r', '\u{202E}']), "{report:?}");
+        // The CR shows as a visible `\n`, so the line starts with a backslash.
+        assert!(report.starts_with("\\n::warning::FORGED"), "{report}");
+        assert!(report.contains("\n\nCaused by:\n    0: x\n"), "{report}");
+        assert!(report.contains("\n    1: Unknown SBOM format"), "{report}");
+        // An error without hostile text prints exactly as anyhow prints it.
+        let plain = anyhow::anyhow!("inner").context("outer");
+        assert_eq!(super::error_report(&plain), format!("{plain:?}"));
     }
 }

@@ -10,6 +10,7 @@ use anyhow::Result;
 
 use crate::parsers::parse_sbom_str;
 use crate::pipeline::{exit_codes, read_input};
+use crate::reports::escape::sanitize_path;
 use crate::serialization::emit::{self, EmitError, EmitTarget};
 
 /// Run the convert command.
@@ -67,7 +68,7 @@ pub fn run_convert(
         Some(path) => {
             std::fs::write(path, &output)?;
             if !quiet {
-                eprintln!("Converted SBOM written to {}", path.display());
+                eprintln!("Converted SBOM written to {}", sanitize_path(path));
             }
         }
         None => {
