@@ -80,13 +80,18 @@ fn redacted_settings() -> insta::Settings {
     // Human-formatted timestamps (`YYYY-MM-DD HH:MM:SS UTC`) in Markdown / HTML.
     settings.add_filter(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC", "[TIMESTAMP]");
     // Tool version: `"version": "0.1.21"` (pretty JSON / SARIF) or
-    // `"version":"0.1.21"` (compact NDJSON). Match with optional space.
+    // `"version":"0.1.21"` (compact NDJSON). Match with optional space. A
+    // SemVer pre-release or build suffix (`0.4.0-rc.1`) is part of the version.
     settings.add_filter(
-        r#""version": ?"\d+\.\d+\.\d+""#,
+        r#""version": ?"\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?""#,
         r#""version": "[VERSION]""#,
     );
-    // Tool version embedded in Markdown / HTML prose, e.g. `sbom-tools v0.1.21`.
-    settings.add_filter(r"v\d+\.\d+\.\d+", "v[VERSION]");
+    // Tool version embedded in Markdown / HTML prose, e.g. `sbom-tools v0.1.21`
+    // or `sbom-tools v0.4.0-rc.1`.
+    settings.add_filter(
+        r"v\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
+        "v[VERSION]",
+    );
     // Time-relative SLA / age strings, e.g. `12d old`, `3d overdue`, `5d remaining`.
     settings.add_filter(r"\d+d (old|overdue|remaining)", "[N]d $1");
     // Spelled-out age strings, e.g. the CRA SBOM-freshness check's

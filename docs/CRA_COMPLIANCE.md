@@ -29,6 +29,8 @@ ENISA / industry guidance. Use it to:
 | 2026-09-11    | Article 14 reporting obligations apply (`ComplianceLevel::CraPhase1`) — Art. 71(2) |
 | 2027-12-11    | Regulation applies in full (`ComplianceLevel::CraPhase2`) — Art. 71(2)             |
 
+You choose the phase by name, and sbom-tools never infers it from the date: `--standard cra-phase1` checks Phase 1 and `--standard cra` (or `cra-phase2`) checks Phase 2, while `--as-of` moves only the date-gated checks within the phase you chose.
+
 ## Compliance levels
 
 | `ComplianceLevel`           | sbom-tools `--standard` alias                                                                       | Scope                                                                                                            |

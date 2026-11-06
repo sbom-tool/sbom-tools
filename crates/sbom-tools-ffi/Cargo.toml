@@ -1,6 +1,6 @@
 [package]
 name = "sbom-tools-ffi"
-version = "0.3.0"
+version = "0.4.0-rc.1"
 edition = "2024"
 rust-version = "1.88"
 description = "C ABI bindings for sbom-tools (Go, Swift, Python consumers)"
@@ -19,4 +19,4 @@ bench = false
 #
 # `version` is required for `cargo publish` (crates.io rejects path deps without
 # one) and is kept in lockstep with the root crate by scripts/release.sh.
-sbom-tools = { path = "../..", version = "=0.3.0", default-features = false, features = ["ffi"] }
+sbom-tools = { path = "../..", version = "=0.4.0-rc.1", default-features = false, features = ["ffi"] }
