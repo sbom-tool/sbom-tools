@@ -3,7 +3,8 @@
 //!
 //! What sbom-tools knows about a standard apart from its checks is one
 //! entry here, and the code that needs such a fact reads the entry instead
-//! of matching on the level.
+//! of matching on the level. Adding a standard starts with its entry (see
+//! "Adding a standard" in CONTRIBUTING.md).
 //!
 //! Entry `i` describes the level whose discriminant is `i`, so a lookup is
 //! an index and the level's `const fn`s stay `const`. The table order is

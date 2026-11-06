@@ -672,8 +672,9 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
   `properties.standardIds`.
 - `rules_for_level()` in `src/quality/compliance/registry/mod.rs` — the rules
   each profile's checks can report (Phase 1, Phase 2 and the steward have
-  lists of their own). Drives SARIF `rules[]` and `sbom-tools rules
-  --standard`; the rule matrices prove each list.
+  lists of their own), read from the profile's entry in the standards table
+  (`src/quality/compliance/standards.rs`). Drives SARIF `rules[]` and
+  `sbom-tools rules --standard`; the rule matrices prove each list.
 - `rule_catalog()` in `src/quality/compliance/catalog.rs` — the catalogue
   `sbom-tools rules` prints: each rule's standards, references with URLs,
   remediation and per-format field advice.
@@ -686,9 +687,10 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 - `ComplianceChecker::class_severity()` in `src/quality/compliance/checker.rs` —
   P3.2 calibration table.
 - `ComplianceRunConfig::checker()` in `src/quality/compliance/run_config.rs` —
-  which of a run's inputs (`--as-of`, CRA sidecar, product class, PQC
-  flags, rule settings, excluded scope) each profile gets; every command and
-  TUI builds its checkers there.
+  hands each profile the run's inputs (`--as-of`, CRA sidecar, product
+  class, PQC flags, rule settings, excluded scope) that its entry in the
+  standards table says it reads; every command and TUI builds its checkers
+  there.
 - `cli::run_cra_docs` in `src/cli/cra_docs.rs` — Annex V DoC + Annex VII tech-doc dossier
   generator.
 - `AttestationRuleFamily::classify()` in `src/model/attestation.rs` —
