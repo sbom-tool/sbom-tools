@@ -125,6 +125,35 @@ impl ComplianceRunConfig {
         self
     }
 
+    /// Set the PQC inputs of a run together, as the shared flags give them:
+    /// the mode (`--pqc-mode`), and the PQC profile (`--pqc-profile`) and
+    /// CNSA 2.0 category (`--cnsa-category`) that only deadline mode reads.
+    /// Every entry point that takes them sets them here, so they accept the
+    /// same combinations.
+    ///
+    /// # Errors
+    ///
+    /// A profile or a category outside deadline mode, which would change
+    /// nothing in the run.
+    pub fn with_pqc_inputs(
+        self,
+        mode: PqcMode,
+        profile: Option<PqcProfile>,
+        cnsa_category: Option<CnsaCategory>,
+    ) -> Result<Self, PqcInputsError> {
+        if mode != PqcMode::Deadline && (profile.is_some() || cnsa_category.is_some()) {
+            return Err(PqcInputsError);
+        }
+        let mut config = self.with_pqc_mode(mode);
+        if let Some(profile) = profile {
+            config = config.with_pqc_profile(profile);
+        }
+        if let Some(category) = cnsa_category {
+            config = config.with_cnsa_category(category);
+        }
+        Ok(config)
+    }
+
     /// The rule settings (`--rule`, the config file's `compliance.rules`):
     /// per rule, off or the severity its findings get. They are applied
     /// after the checks, so the verdict, the counts, the score and the exit
@@ -155,6 +184,16 @@ impl ComplianceRunConfig {
     #[must_use]
     pub const fn as_of(&self) -> Option<DateTime<Utc>> {
         self.as_of
+    }
+
+    /// The instant a run that states it judges at: the pinned clock, else
+    /// the wall clock now, to the second. `validate` and the C ABI's
+    /// validate pin their run to it (`with_as_of(run.judged_at())`), so
+    /// every standard is judged at the one instant `-o json` states.
+    #[must_use]
+    pub fn judged_at(&self) -> DateTime<Utc> {
+        self.as_of
+            .unwrap_or_else(|| chrono::SubsecRound::trunc_subsecs(Utc::now(), 0))
     }
 
     /// The attached CRA sidecar.
@@ -389,6 +428,43 @@ impl ComplianceRunConfig {
     }
 }
 
+/// [`ComplianceRunConfig::with_pqc_inputs`] was given a PQC profile or a
+/// CNSA 2.0 category outside deadline mode, which reads neither. Each entry
+/// point names its own inputs in the message it reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[error("a PQC profile or a CNSA 2.0 category applies only in deadline mode")]
+#[non_exhaustive]
+pub struct PqcInputsError;
+
+/// Parse an evaluation-clock value (`--as-of`, the C ABI's `as_of`
+/// option), so every entry point accepts the same spellings:
+///
+/// - an RFC 3339 datetime with an offset (`2027-01-01T00:00:00Z`, `…+02:00`)
+/// - an offset-less datetime, taken as UTC (`2027-01-01T00:00:00`)
+/// - a bare date, meaning midnight UTC (`2027-01-01`)
+///
+/// # Errors
+///
+/// Any other value. The message names the accepted forms; the caller
+/// names its input and the value.
+pub fn parse_as_of(raw: &str) -> Result<DateTime<Utc>, String> {
+    if let Ok(dt) = DateTime::parse_from_rfc3339(raw) {
+        return Ok(dt.with_timezone(&Utc));
+    }
+    if let Ok(ndt) = raw.parse::<chrono::NaiveDateTime>() {
+        return Ok(ndt.and_utc());
+    }
+    if let Ok(d) = raw.parse::<chrono::NaiveDate>() {
+        return Ok(d.and_hms_opt(0, 0, 0).expect("midnight is valid").and_utc());
+    }
+    Err(
+        "expected an RFC 3339 datetime (e.g. 2027-01-01T00:00:00Z), an offset-less \
+         datetime taken as UTC (e.g. 2027-01-01T00:00:00), or a date YYYY-MM-DD \
+         (midnight UTC)"
+            .to_string(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -606,6 +682,70 @@ mod tests {
                 Some(super::super::ViolationSeverity::Error)
             );
         }
+    }
+
+    /// The PQC inputs set together: a profile and a category reach the run
+    /// in deadline mode, and are an error in readiness mode.
+    #[test]
+    fn pqc_inputs_take_a_profile_and_category_only_in_deadline_mode() {
+        let run = ComplianceRunConfig::new()
+            .with_as_of(as_of())
+            .with_pqc_inputs(
+                PqcMode::Deadline,
+                Some(PqcProfile::Federal),
+                Some(CnsaCategory::Niche),
+            )
+            .expect("deadline mode reads both");
+        assert_eq!(run.pqc_mode(), PqcMode::Deadline);
+        assert_eq!(run.pqc_profile(), PqcProfile::Federal);
+        assert_eq!(run.cnsa_category(), Some(CnsaCategory::Niche));
+
+        let readiness = ComplianceRunConfig::new()
+            .with_as_of(as_of())
+            .with_pqc_inputs(PqcMode::Readiness, None, None)
+            .expect("readiness alone is fine");
+        assert_eq!(readiness.pqc_mode(), PqcMode::Readiness);
+        assert_eq!(readiness.pqc_profile(), PqcProfile::Nist);
+        assert_eq!(readiness.cnsa_category(), None);
+
+        for (profile, category) in [
+            (Some(PqcProfile::Nist), None),
+            (None, Some(CnsaCategory::WebCloud)),
+        ] {
+            assert_eq!(
+                ComplianceRunConfig::new()
+                    .with_as_of(as_of())
+                    .with_pqc_inputs(PqcMode::Readiness, profile, category)
+                    .map(|_| ()),
+                Err(PqcInputsError)
+            );
+        }
+    }
+
+    /// A pinned run judges at its clock; an unpinned one at the wall clock,
+    /// to the second.
+    #[test]
+    fn judged_at_is_the_pinned_clock_or_now_to_the_second() {
+        let pinned = ComplianceRunConfig::new().with_as_of(as_of());
+        assert_eq!(pinned.judged_at(), as_of());
+
+        let before = chrono::SubsecRound::trunc_subsecs(Utc::now(), 0);
+        let now = ComplianceRunConfig::default().judged_at();
+        assert!(now >= before && now <= Utc::now(), "{now}");
+        assert_eq!(chrono::Timelike::nanosecond(&now), 0, "{now}");
+    }
+
+    #[test]
+    fn parse_as_of_accepts_the_three_forms() {
+        let midnight = as_of();
+        assert_eq!(parse_as_of("2026-10-12T02:00:00+02:00"), Ok(midnight));
+        assert_eq!(parse_as_of("2026-10-12T00:00:00"), Ok(midnight));
+        assert_eq!(parse_as_of("2026-10-12"), Ok(midnight));
+        let err = parse_as_of("12/10/2026").unwrap_err();
+        assert!(
+            err.contains("RFC 3339") && err.contains("offset-less") && err.contains("YYYY-MM-DD"),
+            "{err}"
+        );
     }
 
     #[test]

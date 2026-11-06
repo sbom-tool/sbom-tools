@@ -86,7 +86,8 @@ impl std::str::FromStr for RuleSetting {
 pub enum SettingSource {
     /// The config file's `compliance.rules`.
     Config,
-    /// A `--rule` flag, which wins over the config file.
+    /// Set by the invocation: a `--rule` flag, or the `rules` option of a C
+    /// ABI call. It wins over the config file.
     Cli,
 }
 

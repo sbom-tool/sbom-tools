@@ -4,4 +4,7 @@ SbomToolsStringResult sbom_tools_parse_sbom_path_json(const char *path);
 SbomToolsStringResult sbom_tools_parse_sbom_str_json(const char *content);
 SbomToolsStringResult sbom_tools_diff_sboms_json(
 SbomToolsStringResult sbom_tools_score_sbom_json(
+SbomToolsStringResult sbom_tools_validate_json(
+SbomToolsStringResult sbom_tools_rule_catalog_json(const char *filter_json);
+SbomToolsStringResult sbom_tools_score_sbom_with_options_json(
 void sbom_tools_string_result_free(SbomToolsStringResult result);

@@ -25,6 +25,7 @@ mod html;
 mod json;
 mod markdown;
 pub mod oscal;
+mod quality_json;
 mod rule_catalog_json;
 mod sarif;
 pub mod sbomqs_compat;
@@ -42,6 +43,7 @@ pub use csv::CsvReporter;
 pub use html::HtmlReporter;
 pub use json::JsonReporter;
 pub use markdown::MarkdownReporter;
+pub use quality_json::generate_quality_json;
 pub use rule_catalog_json::{RULE_CATALOG_JSON_SCHEMA, generate_rule_catalog_json};
 pub use sarif::SarifReporter;
 pub use sarif::{

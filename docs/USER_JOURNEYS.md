@@ -86,8 +86,23 @@ for entry in bom["components"]:
 ```
 
 Use `score_json` and `diff_json` when an application needs the same readiness
-and comparison semantics as the CLI. The binding README documents the complete
-preview API and native-library lookup order.
+and comparison semantics as the CLI, and `validate_json` for the compliance
+verdicts `sbom-tools validate -o json` prints, with the same options:
+
+```python
+from pathlib import Path
+
+from sbomtools import validate_json
+
+content = Path("../../tests/fixtures/cyclonedx/minimal-mlbom.cdx.json").read_text(encoding="utf-8")
+envelope = validate_json(content, standards=["ai-act", "bsi-ai"], as_of="2027-01-01")
+
+for result in envelope["results"]:
+    print(result["standard"], result["applicable"], result["counts"])
+```
+
+The binding README documents the complete preview API and native-library
+lookup order.
 
 ## Developer or security engineer: make BOM analysis actionable
 
@@ -410,6 +425,9 @@ values are 78.899, 0.78899, and 0.21101.
 | TypeScript service or tool | Node.js Koffi binding | Developer preview; private package and native library required |
 | Another language | C ABI | Supported foundation for a thin binding |
 
-The bindings expose parse, detect, diff, and score operations. CLI-only
-features, enrichment providers, the TUI, and non-JSON reports are not part of
-the current C ABI.
+The bindings expose parse, detect, diff, score, compliance validation and the
+rule catalogue. Validation returns the `validate -o json` envelope byte for
+byte and takes the CLI's compliance inputs as options (see
+[docs/compliance-output.md](compliance-output.md#from-the-c-abi-and-the-bindings)).
+Other CLI-only features, enrichment providers, the TUI, and non-JSON reports
+are not part of the current C ABI.

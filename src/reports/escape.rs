@@ -357,7 +357,9 @@ pub(crate) fn markdown_link_destination(url: &str) -> String {
 
 /// A value for Markdown that may be a URL: an `http://` or `https://` URL
 /// becomes an autolink (see [`markdown_link_destination`]), so it stays
-/// clickable and byte-exact; anything else is escaped as inline text.
+/// clickable and byte-exact; anything else is escaped as inline text. Only
+/// the `cra-docs` dossier calls it, so a build without the CLI does not.
+#[cfg_attr(not(feature = "cli"), allow(dead_code))]
 pub(crate) fn markdown_url_or_text(s: &str) -> String {
     let trimmed = s.trim();
     if trimmed.starts_with("https://") || trimmed.starts_with("http://") {

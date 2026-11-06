@@ -10,7 +10,9 @@ use common::ffi_helpers::{consume_result, into_c_string};
 use sbom_tools::ffi::{
     SbomToolsErrorCode, SbomToolsScoringProfile, sbom_tools_abi_version_json,
     sbom_tools_detect_format_json, sbom_tools_diff_sboms_json, sbom_tools_parse_sbom_path_json,
-    sbom_tools_parse_sbom_str_json, sbom_tools_score_sbom_json, sbom_tools_string_result_free,
+    sbom_tools_parse_sbom_str_json, sbom_tools_rule_catalog_json, sbom_tools_score_sbom_json,
+    sbom_tools_score_sbom_with_options_json, sbom_tools_string_result_free,
+    sbom_tools_validate_json,
 };
 use std::ffi::CStr;
 use std::path::Path;
@@ -25,9 +27,9 @@ fn fixture_path(name: &str) -> std::path::PathBuf {
 // spec → runtime: Declared surface is callable at runtime
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Conformance: all 7 extern "C" functions are callable with valid inputs.
+/// Conformance: all 10 extern "C" functions are callable with valid inputs.
 #[test]
-fn conformance_all_seven_abi_functions_callable() {
+fn conformance_all_ten_abi_functions_callable() {
     // 1. sbom_tools_abi_version_json()
     let version =
         consume_result(sbom_tools_abi_version_json()).expect("abi_version should be callable");
@@ -69,7 +71,30 @@ fn conformance_all_seven_abi_functions_callable() {
     .expect("score_sbom should be callable");
     assert!(!score.is_empty());
 
-    // 7. sbom_tools_string_result_free(result) — already tested via consume_result
+    // 7. sbom_tools_validate_json(sbom, options)
+    let options_c = into_c_string(r#"{"as_of": "2027-01-01"}"#);
+    let envelope = consume_result(sbom_tools_validate_json(
+        content_c.as_ptr(),
+        options_c.as_ptr(),
+    ))
+    .expect("validate should be callable");
+    assert!(!envelope.is_empty());
+
+    // 8. sbom_tools_rule_catalog_json(filter)
+    let filter_c = into_c_string("{}");
+    let catalog = consume_result(sbom_tools_rule_catalog_json(filter_c.as_ptr()))
+        .expect("rule_catalog should be callable");
+    assert!(!catalog.is_empty());
+
+    // 9. sbom_tools_score_sbom_with_options_json(sbom, options)
+    let score = consume_result(sbom_tools_score_sbom_with_options_json(
+        content_c.as_ptr(),
+        options_c.as_ptr(),
+    ))
+    .expect("score_sbom_with_options should be callable");
+    assert!(!score.is_empty());
+
+    // 10. sbom_tools_string_result_free(result) — already tested via consume_result
 }
 
 /// Conformance: all 6 scoring profiles return valid JSON with positive scores.
@@ -151,16 +176,18 @@ fn conformance_all_error_codes_are_reachable() {
     // but conformance is verified by exhaustive error handling in src/ffi.rs.
 }
 
-/// Conformance: ABI version is stable at "1".
+/// Conformance: the ABI version is "2" (sbom-tools 0.4.0). It is the
+/// stability contract: a release that changes the contract incompatibly
+/// raises it (see `ABI_VERSION` in src/ffi.rs), so this test changes with it.
 #[test]
-fn conformance_abi_version_is_stable_at_1() {
+fn conformance_abi_version_is_2() {
     let payload =
         consume_result(sbom_tools_abi_version_json()).expect("abi_version should succeed");
     let value: serde_json::Value =
         serde_json::from_str(&payload).expect("abi_version JSON is valid");
     assert_eq!(
-        value["abi_version"], "1",
-        "ABI version is the stability contract; must remain at 1"
+        value["abi_version"], "2",
+        "ABI version is the stability contract; raise it only by its rules"
     );
 }
 
@@ -243,7 +270,7 @@ fn conformance_required_keys_present_for_all_operations() {
     }
 }
 
-/// Conformance: C header file contains all 7 function signatures.
+/// Conformance: C header file contains all 10 function signatures.
 #[test]
 fn conformance_c_header_contains_all_function_signatures() {
     let header_path =
@@ -255,7 +282,7 @@ fn conformance_c_header_contains_all_function_signatures() {
 
     let header = std::fs::read_to_string(&header_path).expect("header should load");
 
-    // Check all 7 function signatures are present
+    // Check all 10 function signatures are present
     let expected_sigs = vec![
         "sbom_tools_abi_version_json",
         "sbom_tools_detect_format_json",
@@ -263,6 +290,9 @@ fn conformance_c_header_contains_all_function_signatures() {
         "sbom_tools_parse_sbom_str_json",
         "sbom_tools_diff_sboms_json",
         "sbom_tools_score_sbom_json",
+        "sbom_tools_validate_json",
+        "sbom_tools_rule_catalog_json",
+        "sbom_tools_score_sbom_with_options_json",
         "sbom_tools_string_result_free",
     ];
 

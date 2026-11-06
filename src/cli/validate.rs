@@ -110,9 +110,7 @@ pub fn run_validate(
     // One instant for the whole run: `--as-of`, else the wall clock now, to
     // the second. Every standard is judged at it, and the machine outputs
     // state it (`as_of` in -o json, the OSCAL timestamps).
-    let judged_at = compliance
-        .as_of()
-        .unwrap_or_else(|| chrono::SubsecRound::trunc_subsecs(chrono::Utc::now(), 0));
+    let judged_at = compliance.judged_at();
     let compliance = compliance.with_as_of(judged_at);
     anyhow::ensure!(
         !standards.is_empty(),
