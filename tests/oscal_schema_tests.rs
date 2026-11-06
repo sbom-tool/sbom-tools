@@ -22,6 +22,7 @@ use std::path::{Path, PathBuf};
 use sbom_tools::model::{CraSidecarMetadata, NormalizedSbom};
 use sbom_tools::parse_sbom_str;
 use sbom_tools::quality::{ComplianceLevel, ComplianceResult, ComplianceRunConfig};
+use sbom_tools::reports::AssessedSbom;
 use sbom_tools::reports::oscal::{generate_assessment_results, generate_assessment_results_at};
 use serde_json::{Value, json};
 
@@ -125,10 +126,10 @@ fn is_non_sbom(rel: &str) -> bool {
     .any(|suffix| rel.ends_with(suffix))
 }
 
-/// A parseable SBOM fixture with its digest and auto-discovered sidecar.
+/// A parseable SBOM fixture with its text and auto-discovered sidecar.
 struct Fixture {
     rel: String,
-    digest: String,
+    raw: String,
     sbom: NormalizedSbom,
     sidecar: Option<CraSidecarMetadata>,
 }
@@ -167,7 +168,7 @@ fn fixtures() -> Vec<Fixture> {
                 .unwrap_or_else(|e| panic!("{rel}: sidecar does not load: {e}"));
             Some(Fixture {
                 rel,
-                digest: sha256_hex(raw.as_bytes()),
+                raw,
                 sbom,
                 sidecar,
             })
@@ -192,9 +193,10 @@ fn check(
 
 /// The reproducible OSCAL document for `results`, parsed.
 fn oscal(fixture: &Fixture, results: &[ComplianceResult]) -> Value {
+    let assessed =
+        AssessedSbom::new(&fixture.sbom, fixture.raw.as_bytes()).with_file_name(&fixture.rel);
     let text =
-        generate_assessment_results_at(results, &fixture.sbom, &fixture.digest, Some(as_of()))
-            .expect("OSCAL serializes");
+        generate_assessment_results_at(results, &assessed, as_of()).expect("OSCAL serializes");
     serde_json::from_str(&text).expect("OSCAL is JSON")
 }
 
@@ -519,8 +521,12 @@ fn hostile_sbom_text_keeps_every_level_schema_valid_and_inert() {
         .map(|level| check(&sbom, *level, None))
         .collect();
     let digest = sha256_hex(HOSTILE_SBOM.as_bytes());
-    let text = generate_assessment_results_at(&results, &sbom, &digest, Some(as_of()))
-        .expect("OSCAL serializes");
+    let text = generate_assessment_results_at(
+        &results,
+        &AssessedSbom::new(&sbom, HOSTILE_SBOM.as_bytes()),
+        as_of(),
+    )
+    .expect("OSCAL serializes");
     let document: Value = serde_json::from_str(&text).expect("OSCAL is JSON");
     assert_valid(&schema(), &document, "hostile SBOM");
     // Includes assert_markup_is_inert and assert_rlink.

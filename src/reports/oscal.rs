@@ -4,9 +4,10 @@
 //! ([`ComplianceResult`]), so a multi-standard validation no longer flattens
 //! into a single anonymous assessment: each entry carries the standard's
 //! identity in its title/description and a per-result `props` block with the
-//! machine-readable verdict (standard id, `is_compliant`, applicability,
-//! severity counts, score). A fully compliant standard still gets its result
-//! entry, with a satisfied roll-up finding.
+//! machine-readable verdict (the standard's canonical key, compliance,
+//! applicability, severity counts, score, and what the run did not evaluate
+//! or kept out). A fully compliant standard still gets its result entry,
+//! with a satisfied roll-up finding.
 //!
 //! Each rule a standard checked against the SBOM becomes an observation and
 //! the finding that judges it (a `Check`): a violation is a `not-satisfied`
@@ -16,6 +17,12 @@
 //! and, when the check is about a component, that component, defined in the
 //! result's `local-definitions`.
 //!
+//! The SBOM resource, each result, and each finding and its observation
+//! carry the audit fields `-o json` and `-o sarif` carry too
+//! (`reports::audit`): the finding its identity, remediation and help link,
+//! the observation the rule, the severity, what the check read and the
+//! standard references.
+//!
 //! OSCAL titles, descriptions and remarks are Markdown that viewers render,
 //! so every such field that carries SBOM text (violation messages, component
 //! and document names, versions) is Markdown-escaped; see `markup_text`.
@@ -23,11 +30,14 @@
 
 use std::collections::HashMap;
 
+use super::audit::{self, AssessedSbom, AuditField, AuditValue, OscalPart, instant_text, token};
 use super::escape::escape_markdown_inline;
 use crate::model::{Component, ComponentType, NormalizedSbom};
-use crate::quality::{Applicability, ComplianceResult, PassedCheck, Violation, ViolationSeverity};
+use crate::quality::{
+    ComplianceLevel, ComplianceResult, PassedCheck, Violation, ViolationSeverity, standard_key,
+};
 use anyhow::Result;
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Utc};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -46,57 +56,47 @@ const PROP_NS: &str = "https://sbom.tools/ns/oscal";
 /// the label its findings give it. Prefer [`generate_assessment_results_at`],
 /// which is reproducible and describes the SBOM and its components.
 pub fn generate_assessment_results(results: &[ComplianceResult]) -> Result<String> {
-    build_assessment_results(
-        results,
-        Assessed::default(),
-        Utc::now(),
-        &mut RandomUuids::default(),
-    )
+    build_assessment_results(results, None, Utc::now(), &mut RandomUuids::default())
 }
 
-/// Generate an OSCAL 1.2.3 assessment-results JSON document for `sbom` that
-/// is reproducible for a given input.
+/// Generate an OSCAL 1.2.3 assessment-results JSON document about
+/// `assessed`, the SBOM the results judge, that is reproducible for a given
+/// input.
 ///
-/// `sbom` is the parsed document the results were computed from and
-/// `sbom_digest` the lowercase hex SHA-256 of its bytes. Together they
-/// describe the subjects observations name: the SBOM document (a back-matter
-/// resource with the digest, format and serial number) and the components
-/// findings are about (local definitions with name, version and canonical
-/// id).
+/// `assessed` holds the parsed document the results were computed from, the
+/// SHA-256 of its bytes and its file name. They describe the subjects
+/// observations name: the SBOM document (a back-matter resource with the
+/// digest, format, serial number and file name, and how the document was
+/// read) and the components findings are about (local definitions with
+/// name, version and canonical id).
 ///
-/// The `collected` and `last-modified` timestamps are `as_of` (the `--as-of`
-/// evaluation instant), or the current time when none is given. Every UUID
-/// is a UUIDv5. Those that identify the assessment (the document, each
-/// result, observation and finding) derive from `sbom_digest`, that
-/// timestamp, the checked standards and their position in the document: the
-/// same SBOM evaluated against the same standards at the same instant always
-/// yields the same bytes, while a different SBOM, instant or standard set
-/// never reuses one. Those that identify a subject derive from `sbom_digest`
-/// and the subject alone (for a component, its canonical id), so a subject
-/// keeps its UUID across instants, standard sets and results, as OSCAL asks
-/// of per-subject identifiers.
+/// The `collected`, `start` and `last-modified` timestamps are `as_of`, the
+/// instant the results were judged at. Every UUID is a UUIDv5. Those that
+/// identify the assessment (the document, each result, observation and
+/// finding) derive from the SBOM's SHA-256, that instant, the checked
+/// standards and their position in the document: the same SBOM evaluated
+/// against the same standards at the same instant always yields the same
+/// bytes, while a different SBOM, instant or standard set never reuses one.
+/// Those that identify a subject derive from the SHA-256 and the subject
+/// alone (for a component, its canonical id), so a subject keeps its UUID
+/// across instants, standard sets and results, as OSCAL asks of per-subject
+/// identifiers.
 pub fn generate_assessment_results_at(
     results: &[ComplianceResult],
-    sbom: &NormalizedSbom,
-    sbom_digest: &str,
-    as_of: Option<DateTime<Utc>>,
+    assessed: &AssessedSbom<'_>,
+    as_of: DateTime<Utc>,
 ) -> Result<String> {
-    let timestamp = as_of.unwrap_or_else(Utc::now);
-    let assessed = Assessed {
-        sbom: Some(sbom),
-        digest: Some(sbom_digest),
-    };
-    let mut uuids = DerivedUuids::new(results, sbom_digest, timestamp);
-    build_assessment_results(results, assessed, timestamp, &mut uuids)
+    let mut uuids = DerivedUuids::new(results, assessed.sha256(), as_of);
+    build_assessment_results(results, Some(assessed), as_of, &mut uuids)
 }
 
 fn build_assessment_results(
     results: &[ComplianceResult],
-    assessed: Assessed<'_>,
+    assessed: Option<&AssessedSbom<'_>>,
     timestamp: DateTime<Utc>,
     uuids: &mut impl UuidSource,
 ) -> Result<String> {
-    let collected = timestamp.to_rfc3339_opts(SecondsFormat::Secs, true);
+    let collected = instant_text(timestamp);
     let subjects = Subjects::new(assessed, uuids);
     let mut result_entries: Vec<Value> = results
         .iter()
@@ -162,12 +162,12 @@ struct DerivedUuids {
 
 impl DerivedUuids {
     fn new(results: &[ComplianceResult], sbom_digest: &str, timestamp: DateTime<Utc>) -> Self {
-        let standards: Vec<String> = results.iter().map(standard_id).collect();
+        let standards: Vec<&str> = results.iter().map(|r| standard_key(r.level)).collect();
         Self {
             namespace: Uuid::new_v5(&Uuid::NAMESPACE_URL, UUID_NAMESPACE_NAME.as_bytes()),
             assessment_seed: format!(
                 "{sbom_digest}|{}|{}",
-                timestamp.to_rfc3339_opts(SecondsFormat::Secs, true),
+                instant_text(timestamp),
                 standards.join(",")
             ),
             subject_seed: sbom_digest.to_string(),
@@ -265,68 +265,38 @@ struct Check<'a> {
     /// The SBOM's label for that component (usually its name): its title
     /// when the SBOM itself is not at hand.
     label: Option<&'a str>,
-    /// The observation's properties.
-    props: Vec<Value>,
+    /// The finding's audit fields (`reports::audit`): the finding carries
+    /// its identity, remediation and help link, the observation the rest.
+    fields: Vec<AuditField<'a>>,
 }
 
 impl<'a> Check<'a> {
-    /// The check a violation reports. Any violation, whatever its severity,
-    /// is an unmet objective; the severity is the observation's `severity`
-    /// property. A finding whose rule the run sets (`--rule`) adds the
-    /// severity its check gave it and the setting's source as
-    /// `default-severity` and `severity-source`.
-    fn violation(violation: &'a Violation) -> Self {
-        let mut props: Vec<Value> = [
-            prop("severity", severity(violation.severity)),
-            prop("standard-reference", &violation.requirement),
-            prop("rule-id", violation.rule_id),
-            prop("sarif-rule-id", violation.sarif_rule_id()),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        if let Some(severity_override) = &violation.severity_override {
-            props.extend(prop(
-                "default-severity",
-                severity(severity_override.default),
-            ));
-            props.extend(prop("severity-source", severity_override.source.name()));
-        }
-        if let Some(element) = &violation.element {
-            props.extend(prop("sbom-element", element));
-        }
+    /// The check a violation reported under `level` reports. Any violation,
+    /// whatever its severity, is an unmet objective; the severity is the
+    /// observation's `severity` property, and a finding whose rule the run
+    /// sets (`--rule`) adds the severity its check gave it and the setting's
+    /// source as `default-severity` and `severity-source`.
+    fn violation(level: ComplianceLevel, violation: &'a Violation) -> Self {
         Self {
             rule_id: violation.rule_id,
             message: &violation.message,
             objective: Objective::NotSatisfied,
             component_id: violation.component_id.as_deref(),
             label: violation.element.as_deref(),
-            props,
+            fields: audit::violation_fields(level, violation),
         }
     }
 
-    /// The check a passed check reports: a met objective. A pass has no
-    /// severity, so its observation carries the violation's properties but
-    /// `severity`.
-    fn pass(pass: &'a PassedCheck) -> Self {
-        let mut props: Vec<Value> = [
-            prop("standard-reference", &pass.requirement),
-            prop("rule-id", pass.rule_id),
-            prop("sarif-rule-id", pass.sarif_rule_id()),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        if let Some(element) = &pass.element {
-            props.extend(prop("sbom-element", element));
-        }
+    /// The check a check passed under `level` reports: a met objective. A
+    /// pass has no severity, remediation or help link.
+    fn pass(level: ComplianceLevel, pass: &'a PassedCheck) -> Self {
         Self {
             rule_id: pass.rule_id,
             message: &pass.message,
             objective: Objective::Satisfied,
             component_id: pass.component_id.as_deref(),
             label: pass.element.as_deref(),
-            props,
+            fields: audit::pass_fields(level, pass),
         }
     }
 
@@ -335,6 +305,131 @@ impl<'a> Check<'a> {
     /// Its own wording renders unchanged; only the raw JSON gains backslashes.
     fn description(&self) -> String {
         markup_text(self.message).unwrap_or_default()
+    }
+
+    /// What the audit fields of `part` (the finding, or its observation)
+    /// give that part.
+    fn rendered(&self, part: OscalPart) -> Rendered {
+        Rendered::of(self.fields.iter().filter(|field| field.name.part == part))
+    }
+}
+
+/// The properties, links and remarks that audit fields give one part of
+/// the document (see `reports::audit`). Every property is in our
+/// namespace; a property or link left with no text is left out.
+#[derive(Default)]
+struct Rendered {
+    props: Vec<Value>,
+    links: Vec<Value>,
+    remarks: Option<String>,
+}
+
+impl Rendered {
+    fn of<'f, 'a: 'f>(fields: impl IntoIterator<Item = &'f AuditField<'a>>) -> Self {
+        let mut rendered = Self::default();
+        for field in fields {
+            rendered.add(field);
+        }
+        rendered
+    }
+
+    fn add(&mut self, field: &AuditField<'_>) {
+        let name = field.name.oscal;
+        match &field.value {
+            AuditValue::Text(text) => self.props.extend(prop(name, text)),
+            AuditValue::Count(count) => self.props.extend(prop(name, &count.to_string())),
+            AuditValue::Flag(flag) => self.props.extend(prop(name, &flag.to_string())),
+            AuditValue::Applicability(applicable) => self.props.extend(prop(
+                name,
+                if *applicable {
+                    "applicable"
+                } else {
+                    "not-applicable"
+                },
+            )),
+            AuditValue::Score(score) => self.props.extend(prop(name, &score.to_string())),
+            AuditValue::Severity(value) => self.props.extend(prop(name, severity(*value))),
+            AuditValue::Words(words) => self
+                .props
+                .extend(words.iter().filter_map(|word| prop(name, word))),
+            AuditValue::Link(uri) => self.links.extend(link(uri, name, None)),
+            AuditValue::Guidance(text) => self.remarks = markup_text(text),
+            // A reference is its clause, classed by the standard (as `-o
+            // json` names it), and a link to the standard when it has a URL.
+            AuditValue::References(refs) => {
+                for reference in *refs {
+                    let standard = token(&reference.standard);
+                    self.props.extend(prop_with(
+                        name,
+                        &reference.id,
+                        PropDetail {
+                            class: Some(&standard),
+                            ..PropDetail::default()
+                        },
+                    ));
+                    if let Some(uri) = &reference.help_uri {
+                        self.links
+                            .extend(link(uri, "reference", Some(&reference.citation())));
+                    }
+                }
+            }
+            // A check not evaluated is its rule, with the reason as remarks.
+            AuditValue::NotEvaluated(checks) => {
+                for check in *checks {
+                    self.props.extend(prop_with(
+                        name,
+                        check.rule_id,
+                        PropDetail {
+                            remarks: Some(&check.reason),
+                            ..PropDetail::default()
+                        },
+                    ));
+                }
+            }
+            // A rule turned off is three properties of one group: the rule,
+            // how many findings it dropped and where the setting comes from.
+            AuditValue::Suppressed(rules) => {
+                for (n, rule) in rules.iter().enumerate() {
+                    let group = format!("{name}-{}", n + 1);
+                    for (part, value) in [
+                        ("rule", rule.rule_id.clone()),
+                        ("findings", rule.findings.to_string()),
+                        ("source", rule.source.name().to_string()),
+                    ] {
+                        self.props.extend(prop_with(
+                            &format!("{name}-{part}"),
+                            &value,
+                            PropDetail {
+                                group: Some(&group),
+                                ..PropDetail::default()
+                            },
+                        ));
+                    }
+                }
+            }
+            // The product class, the route, and each piece of evidence:
+            // its label, classed `satisfied` or `not-satisfied` as an
+            // objective is, with its detail as remarks.
+            AuditValue::Conformity(summary) => {
+                self.props.extend(prop(
+                    &format!("{name}-product-class"),
+                    &token(&summary.product_class),
+                ));
+                self.props
+                    .extend(prop(&format!("{name}-route"), &token(&summary.route)));
+                for evidence in &summary.evidence {
+                    self.props.extend(prop_with(
+                        &format!("{name}-evidence"),
+                        &evidence.label,
+                        PropDetail {
+                            class: Some(Objective::from_met(evidence.satisfied).state()),
+                            remarks: Some(&evidence.detail),
+                            ..PropDetail::default()
+                        },
+                    ));
+                }
+            }
+        }
     }
 }
 
@@ -347,12 +442,6 @@ fn reviewed_controls() -> Value {
     })
 }
 
-/// Stable machine identifier for a standard (the serde variant name, e.g.
-/// `NtiaMinimum`, `CraPhase2`).
-fn standard_id(result: &ComplianceResult) -> String {
-    format!("{:?}", result.level)
-}
-
 /// Build the `results[]` entry for one checked standard.
 fn standard_result(
     result: &ComplianceResult,
@@ -361,47 +450,11 @@ fn standard_result(
     uuids: &mut impl UuidSource,
 ) -> Value {
     let standard_name = result.level.name();
-    let mut props: Vec<Value> = [
-        prop("standard", &standard_id(result)),
-        prop("standard-name", standard_name),
-        prop("is-compliant", &result.is_compliant.to_string()),
-        prop(
-            "applicability",
-            if result.is_applicable() {
-                "applicable"
-            } else {
-                "not-applicable"
-            },
-        ),
-        prop("error-count", &result.error_count.to_string()),
-        prop("warning-count", &result.warning_count.to_string()),
-        prop("info-count", &result.info_count.to_string()),
-        prop("passed-count", &result.passed.len().to_string()),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-    if let Applicability::NotApplicable(reason) = &result.applicability {
-        props.extend(prop("not-applicable-reason", reason));
-    }
-    if let Some(score) = result.score() {
-        props.extend(prop("score", &score.to_string()));
-    }
-    // What the run's inputs kept out of the findings, when anything: the
-    // findings its rule settings turned off and the components the package
-    // rules left out for their excluded scope.
-    if result.suppressed_count() > 0 {
-        props.extend(prop(
-            "suppressed-count",
-            &result.suppressed_count().to_string(),
-        ));
-    }
-    if result.excluded_components > 0 {
-        props.extend(prop(
-            "excluded-components",
-            &result.excluded_components.to_string(),
-        ));
-    }
+    // The verdict: the standard's key and name, its compliance and
+    // applicability, the counts and score, and the checks it did not
+    // evaluate, the findings the run's settings turned off and the
+    // components it left out, with the CRA conformity summary.
+    let props = Rendered::of(&audit::result_fields(result)).props;
 
     // The violations, then the passed checks. A standard that did not apply
     // reports neither: the applicability props above carry that verdict
@@ -410,8 +463,13 @@ fn standard_result(
     let checks = result
         .violations
         .iter()
-        .map(Check::violation)
-        .chain(result.passed.iter().map(Check::pass));
+        .map(|violation| Check::violation(result.level, violation))
+        .chain(
+            result
+                .passed
+                .iter()
+                .map(|pass| Check::pass(result.level, pass)),
+        );
 
     let mut observations = Vec::new();
     let mut findings = Vec::new();
@@ -448,7 +506,8 @@ fn standard_result(
 }
 
 /// Standard-level roll-up finding: `satisfied` when the standard evaluated
-/// the SBOM and found no blocking violation, `not-satisfied` otherwise.
+/// the SBOM and found no blocking violation, `not-satisfied` otherwise. Its
+/// objective is named by the standard's canonical key (`cra-compliance`).
 fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) -> Value {
     // The passed checks are named only when there are some, so a result
     // that passes none keeps its description.
@@ -465,13 +524,17 @@ fn rollup_finding(result: &ComplianceResult, standard_name: &str, uuid: Uuid) ->
         ),
         "target": {
             "type": "objective-id",
-            "target-id": format!("{}-compliance", standard_id(result).to_ascii_lowercase()),
+            "target-id": format!("{}-compliance", standard_key(result.level)),
             "status": { "state": Objective::from_met(result.is_compliant).state() }
         }
     })
 }
 
+/// The observation behind a check: the evidence, with the audit fields of
+/// the observation (the rule, the severity, what the check read, the
+/// references and their links).
 fn observation(check: Check<'_>, uuid: Uuid, collected: &str, subjects: Vec<Value>) -> Value {
+    let Rendered { props, links, .. } = check.rendered(OscalPart::Observation);
     let mut observation = json!({
         "uuid": uuid,
         "title": check.rule_id,
@@ -481,12 +544,21 @@ fn observation(check: Check<'_>, uuid: Uuid, collected: &str, subjects: Vec<Valu
         "subjects": subjects,
         "collected": collected,
     });
-    set_array(&mut observation, "props", check.props);
+    set_array(&mut observation, "props", props);
+    set_array(&mut observation, "links", links);
     observation
 }
 
+/// The finding that judges a check, with the audit fields of the finding:
+/// its identity (`finding-id`, `finding-key`), the link to its rule's
+/// documentation and the remediation as remarks.
 fn finding(check: &Check<'_>, observation_uuid: Uuid, uuid: Uuid) -> Value {
-    json!({
+    let Rendered {
+        props,
+        links,
+        remarks,
+    } = check.rendered(OscalPart::Finding);
+    let mut finding = json!({
         "uuid": uuid,
         "title": check.rule_id,
         "description": check.description(),
@@ -496,9 +568,17 @@ fn finding(check: &Check<'_>, observation_uuid: Uuid, uuid: Uuid) -> Value {
             "status": { "state": check.objective.state() }
         },
         "related-observations": [{ "observation-uuid": observation_uuid }]
-    })
+    });
+    set_array(&mut finding, "props", props);
+    set_array(&mut finding, "links", links);
+    if let Some(remarks) = remarks {
+        finding["remarks"] = Value::String(remarks);
+    }
+    finding
 }
 
+/// OSCAL's word for a severity: lowercase, as the properties have always
+/// carried it.
 const fn severity(value: ViolationSeverity) -> &'static str {
     match value {
         ViolationSeverity::Error => "error",
@@ -511,22 +591,14 @@ const fn severity(value: ViolationSeverity) -> &'static str {
 // Subjects: the SBOM document and its components
 // ---------------------------------------------------------------------------
 
-/// What the writer knows about the assessed SBOM.
-#[derive(Clone, Copy, Default)]
-struct Assessed<'a> {
-    /// The parsed document: names, versions and identifiers of subjects.
-    sbom: Option<&'a NormalizedSbom>,
-    /// Lowercase hex SHA-256 of the SBOM bytes.
-    digest: Option<&'a str>,
-}
-
 /// Subject key of the SBOM document; a component's is `component|<id>`.
 const DOCUMENT_SUBJECT_KEY: &str = "document";
 
 /// The subjects observations name: the SBOM document, described once as a
 /// back-matter resource, and the components checks are about.
 struct Subjects<'a> {
-    assessed: Assessed<'a>,
+    /// The assessed SBOM, when the writer is given it.
+    assessed: Option<&'a AssessedSbom<'a>>,
     /// The SBOM's components by canonical id.
     components: HashMap<&'a str, &'a Component>,
     document_uuid: Uuid,
@@ -534,9 +606,9 @@ struct Subjects<'a> {
 }
 
 impl<'a> Subjects<'a> {
-    fn new(assessed: Assessed<'a>, uuids: &mut impl UuidSource) -> Self {
-        let components = assessed
-            .sbom
+    fn new(assessed: Option<&'a AssessedSbom<'a>>, uuids: &mut impl UuidSource) -> Self {
+        let sbom = assessed.map(AssessedSbom::sbom);
+        let components = sbom
             .map(|sbom| {
                 sbom.components
                     .values()
@@ -548,32 +620,31 @@ impl<'a> Subjects<'a> {
             assessed,
             components,
             document_uuid: uuids.subject(DOCUMENT_SUBJECT_KEY),
-            document_title: document_title(assessed.sbom),
+            document_title: document_title(sbom),
         }
     }
 
     /// The back-matter resource describing the SBOM document: an `artifact`
-    /// in OSCAL's resource vocabulary, with the SHA-256 of its bytes, its
-    /// format and specification version, and its serial number (CycloneDX)
-    /// or document namespace (SPDX) as a document id. When that id is a URI
-    /// (`urn:uuid:…`, `https://…`), it is also the resource's `rlink`, with
-    /// the SHA-256 in `hashes` so the document can be checked against it.
+    /// in OSCAL's resource vocabulary, with the audit fields of the SBOM (the
+    /// SHA-256 of its bytes, its format and specification version, its file
+    /// name, and how its document was read) and its serial number
+    /// (CycloneDX) or document namespace (SPDX) as a document id. When that
+    /// id is a URI (`urn:uuid:…`, `https://…`), it is also the resource's
+    /// `rlink`, with the SHA-256 in `hashes` so the document can be checked
+    /// against it.
     fn document_resource(&self) -> Value {
         let mut props: Vec<Value> = oscal_prop("type", "artifact").into_iter().collect();
         let mut document_ids = Vec::new();
         let mut rlinks = Vec::new();
-        if let Some(digest) = self.assessed.digest {
-            props.extend(prop("sha256", digest));
-        }
-        if let Some(sbom) = self.assessed.sbom {
-            let document = &sbom.document;
-            props.extend(prop("format", &document.format.to_string()));
-            props.extend(prop("spec-version", &document.spec_version));
+        if let Some(assessed) = self.assessed {
+            props.extend(Rendered::of(&audit::subject_fields(assessed)).props);
+            let digest = assessed.sha256();
+            let document = &assessed.sbom().document;
             if let Some(serial) = document.serial_number.as_deref().and_then(oscal_string) {
                 if is_absolute_uri(&serial) {
                     let mut rlink = json!({ "href": serial });
                     // OSCAL checks a SHA-256 value is 64 hex digits.
-                    if let Some(digest) = self.assessed.digest.filter(|d| is_sha256_hex(d)) {
+                    if is_sha256_hex(digest) {
                         rlink["hashes"] = json!([{ "algorithm": "SHA-256", "value": digest }]);
                     }
                     rlinks.push(rlink);
@@ -759,6 +830,60 @@ fn oscal_prop(name: &str, value: &str) -> Option<Value> {
     Some(json!({ "name": name, "value": value }))
 }
 
+/// What a property can say besides its value.
+#[derive(Default)]
+struct PropDetail<'a> {
+    /// A sub-type of the property's name (a token), such as the standard a
+    /// reference cites.
+    class: Option<&'a str>,
+    /// A token that relates properties to each other.
+    group: Option<&'a str>,
+    /// Commentary, as markup.
+    remarks: Option<&'a str>,
+}
+
+/// A property in our namespace with `detail`, or `None` when `value` holds
+/// no text. A class or group that is no OSCAL token is left out, and so are
+/// remarks with no text.
+fn prop_with(name: &str, value: &str, detail: PropDetail<'_>) -> Option<Value> {
+    let mut prop = prop(name, value)?;
+    if let Some(class) = detail.class.filter(|class| is_token(class)) {
+        prop["class"] = Value::from(class);
+    }
+    if let Some(group) = detail.group.filter(|group| is_token(group)) {
+        prop["group"] = Value::from(group);
+    }
+    if let Some(remarks) = detail.remarks.and_then(markup_text) {
+        prop["remarks"] = Value::from(remarks);
+    }
+    Some(prop)
+}
+
+/// A link to `href` with the relation `rel` and, when there is one, `text`
+/// (escaped, as markup). `None` when `href` is no absolute URI: OSCAL
+/// validators check a link's `href` is a URI reference, and a relative one
+/// would resolve against the document's own location.
+fn link(href: &str, rel: &str, text: Option<&str>) -> Option<Value> {
+    if !is_absolute_uri(href) {
+        return None;
+    }
+    let mut link = json!({ "href": href, "rel": rel });
+    if let Some(text) = text.and_then(markup_text) {
+        link["text"] = Value::from(text);
+    }
+    Some(link)
+}
+
+/// Whether `text` is an OSCAL token (an XML NCName) in ASCII: a letter or
+/// `_`, then letters, digits, `.`, `-` and `_`.
+fn is_token(text: &str) -> bool {
+    let mut chars = text.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+}
+
 /// `text` as an OSCAL `string`, or `None` when nothing is left of it.
 ///
 /// OSCAL property values (and the identifiers and versions it types as
@@ -865,7 +990,7 @@ const fn is_line_terminator(c: char) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Assessed, DerivedUuids, build_assessment_results};
+    use super::{AssessedSbom, DerivedUuids, build_assessment_results};
     use crate::model::{Component, DocumentMetadata, NormalizedSbom};
     use crate::quality::{
         ComplianceLevel, ComplianceResult, Violation, ViolationCategory, ViolationSeverity,
@@ -929,12 +1054,9 @@ mod tests {
         digest: &str,
     ) -> serde_json::Value {
         let timestamp = instant(2026, 7, 1);
-        let assessed = Assessed {
-            sbom,
-            digest: Some(digest),
-        };
+        let assessed = sbom.map(|sbom| AssessedSbom::with_sha256(sbom, digest));
         let mut uuids = DerivedUuids::new(results, digest, timestamp);
-        let json = build_assessment_results(results, assessed, timestamp, &mut uuids)
+        let json = build_assessment_results(results, assessed.as_ref(), timestamp, &mut uuids)
             .expect("OSCAL serialization");
         serde_json::from_str(&json).expect("valid JSON")
     }
@@ -998,7 +1120,7 @@ mod tests {
                 .contains("NTIA Minimum Elements"),
             "per-standard entry must carry the standard name in its title"
         );
-        assert_eq!(prop_value(assessment, "standard"), Some("NtiaMinimum"));
+        assert_eq!(prop_value(assessment, "standard"), Some("ntia"));
         assert_eq!(prop_value(assessment, "is-compliant"), Some("true"));
         assert_eq!(prop_value(assessment, "applicability"), Some("applicable"));
         assert_eq!(prop_value(assessment, "error-count"), Some("0"));
@@ -1049,9 +1171,9 @@ mod tests {
             .as_array()
             .expect("results");
         assert_eq!(entries.len(), 2, "one results[] entry per standard");
-        assert_eq!(prop_value(&entries[0], "standard"), Some("NtiaMinimum"));
+        assert_eq!(prop_value(&entries[0], "standard"), Some("ntia"));
         assert_eq!(prop_value(&entries[0], "is-compliant"), Some("false"));
-        assert_eq!(prop_value(&entries[1], "standard"), Some("CraPhase2"));
+        assert_eq!(prop_value(&entries[1], "standard"), Some("cra"));
         assert_eq!(prop_value(&entries[1], "is-compliant"), Some("true"));
         assert!(
             entries[1]["title"]
@@ -1123,6 +1245,63 @@ mod tests {
             prop_value(obs, "sarif-rule-id"),
             Some("SBOM-NTIA-TIMESTAMP")
         );
+    }
+
+    /// A finding carries what identifies and resolves it, its observation
+    /// how the check classified it and what it read, as `reports::audit`
+    /// places each field.
+    #[test]
+    fn audit_fields_land_on_the_finding_and_its_observation() {
+        let mut v = component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash");
+        v.standard_refs = v.registry_standard_refs();
+        v.field = Some("components[].supplier.name".to_string());
+        v.observed = Some("NOASSERTION".to_string());
+        let key = crate::quality::finding_key(ComplianceLevel::NtiaMinimum, &v);
+        let document = build(&[result(vec![v])]);
+        let entry = &document["assessment-results"]["results"][0];
+        let finding = &entry["findings"][1];
+        assert_eq!(prop_value(finding, "finding-key"), Some(key.as_str()));
+        assert_eq!(
+            prop_value(finding, "finding-id"),
+            Some(crate::quality::finding_id(&key).as_str())
+        );
+        assert_eq!(
+            finding["links"],
+            serde_json::json!([{
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
+            }])
+        );
+        assert!(
+            finding["remarks"]
+                .as_str()
+                .is_some_and(|r| r.starts_with("Name the supplier of every component")),
+            "the remediation: {finding}"
+        );
+        assert_eq!(prop_value(finding, "severity"), None, "on the observation");
+
+        let observation = &entry["observations"][0];
+        for (name, value) in [
+            ("severity", "error"),
+            ("requirement", "NTIA minimum elements"),
+            ("rule-id", "SBOM-NTIA-SUPPLIER"),
+            ("component-id", "pkg:npm/lodash@4.17.21"),
+            ("field", "components[].supplier.name"),
+            ("observed", "NOASSERTION"),
+        ] {
+            assert_eq!(prop_value(observation, name), Some(value), "{name}");
+        }
+        let reference = observation["props"]
+            .as_array()
+            .expect("props")
+            .iter()
+            .find(|p| p["name"] == "standard-ref")
+            .expect("a reference");
+        assert_eq!(reference["class"], "NtiaMinimum");
+        assert_eq!(reference["value"], "NTIA Minimum Elements");
+        assert_eq!(observation["links"][0]["rel"], "reference");
+        assert_eq!(observation["links"][0]["text"], "NTIA Minimum Elements");
+        assert!(observation.get("remarks").is_none());
     }
 
     #[test]
@@ -1218,9 +1397,10 @@ mod tests {
             violation("missing timestamp"),
             component_violation("SBOM-NTIA-SUPPLIER", "pkg:npm/lodash@4.17.21", "lodash"),
         ])];
-        let first = generate_assessment_results_at(&results, &sbom, "abc123", Some(as_of))
+        let assessed = AssessedSbom::with_sha256(&sbom, "abc123");
+        let first = generate_assessment_results_at(&results, &assessed, as_of)
             .expect("OSCAL serialization");
-        let second = generate_assessment_results_at(&results, &sbom, "abc123", Some(as_of))
+        let second = generate_assessment_results_at(&results, &assessed, as_of)
             .expect("OSCAL serialization");
         assert_eq!(
             first, second,
@@ -1239,8 +1419,12 @@ mod tests {
         // OSCAL's uuid datatype accepts only RFC 4122 version 4 or 5.
         assert_eq!(parsed.get_version_num(), 5, "document UUID version");
 
-        let other_sbom = generate_assessment_results_at(&results, &sbom, "def456", Some(as_of))
-            .expect("OSCAL serialization");
+        let other_sbom = generate_assessment_results_at(
+            &results,
+            &AssessedSbom::with_sha256(&sbom, "def456"),
+            as_of,
+        )
+        .expect("OSCAL serialization");
         let other: serde_json::Value = serde_json::from_str(&other_sbom).expect("valid JSON");
         assert_ne!(
             document["assessment-results"]["uuid"], other["assessment-results"]["uuid"],
@@ -1402,8 +1586,9 @@ mod tests {
         )]);
         let mut cra = ntia.clone();
         cra.level = ComplianceLevel::CraPhase2;
+        let assessed = AssessedSbom::with_sha256(&sbom, "abc123");
         let render = |results: &[ComplianceResult], as_of| -> serde_json::Value {
-            let text = generate_assessment_results_at(results, &sbom, "abc123", Some(as_of))
+            let text = generate_assessment_results_at(results, &assessed, as_of)
                 .expect("OSCAL serialization");
             serde_json::from_str(&text).expect("valid JSON")
         };
@@ -1454,18 +1639,15 @@ mod tests {
         use super::{Check, LocalComponents, Objective, Subjects, finding, observation};
         let sbom = lodash_sbom();
         let mut uuids = DerivedUuids::new(&[], "abc123", instant(2026, 7, 1));
-        let assessed = Assessed {
-            sbom: Some(&sbom),
-            digest: Some("abc123"),
-        };
-        let subjects_index = Subjects::new(assessed, &mut uuids);
+        let assessed = AssessedSbom::with_sha256(&sbom, "abc123");
+        let subjects_index = Subjects::new(Some(&assessed), &mut uuids);
         let check = Check {
             rule_id: "SBOM-NTIA-SUPPLIER",
             message: "Component 'lodash' names its supplier",
             objective: Objective::Satisfied,
             component_id: Some("pkg:npm/lodash@4.17.21"),
             label: Some("lodash"),
-            props: Vec::new(),
+            fields: Vec::new(),
         };
         let mut local = LocalComponents::default();
         let named = subjects_index.references(&check, &mut local, &mut uuids);
@@ -1526,7 +1708,7 @@ mod tests {
         assert_eq!(prop_value(passed, "rule-id"), Some("SBOM-PQC-009"));
         assert_eq!(prop_value(passed, "sarif-rule-id"), Some("SBOM-PQC-009"));
         assert_eq!(
-            prop_value(passed, "standard-reference"),
+            prop_value(passed, "requirement"),
             Some("FIPS 203/204/205: approved")
         );
         assert_eq!(prop_value(passed, "sbom-element"), Some("ML-KEM-1024"));

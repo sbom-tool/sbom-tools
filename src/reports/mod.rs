@@ -16,6 +16,7 @@
 //! be escaped before embedding in HTML or Markdown reports.
 
 pub mod analyst;
+mod audit;
 mod compliance_json;
 pub mod csaf;
 mod csv;
@@ -32,7 +33,10 @@ pub mod streaming;
 mod summary;
 mod types;
 
-pub use compliance_json::{COMPLIANCE_JSON_SCHEMA, generate_compliance_json};
+pub use audit::AssessedSbom;
+pub use compliance_json::{
+    COMPLIANCE_JSON_SCHEMA, generate_compliance_json, generate_compliance_json_at,
+};
 pub use csaf::{CsafEmitOptions, emit_csaf};
 pub use csv::CsvReporter;
 pub use html::HtmlReporter;

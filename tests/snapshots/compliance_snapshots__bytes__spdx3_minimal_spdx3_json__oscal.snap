@@ -31,6 +31,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "3.0.1"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "minimal.spdx3.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "4"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "rlinks": [
@@ -68,19 +93,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "bsitr03183_2-compliance",
+              "target-id": "bsi-compliance",
               "type": "objective-id"
             },
             "title": "BSI TR-03183-2 compliance roll-up",
-            "uuid": "2744e0e1-750c-5511-99a4-e3c139d24102"
+            "uuid": "182bf597-1b10-542e-a542-e76c0f07545f"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.1\\] Creator of the SBOM missing (email address, or URL if no email is available); generation tools (metadata.tools) do not satisfy the field — provide a Person/Organization creator (e.g. CycloneDX metadata.authors or metadata.manufacturer)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "617979fa-9c9a-5715-b6fe-83f539c486d0"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:000354355e33ac4a"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-5-1|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a4b3a9ab-129a-5910-96e6-c75949057c79"
+              }
+            ],
+            "remarks": "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator. SPDX 3.0: set creationInfo.createdBy to a Person or Organization element that has a name; createdUsing tools do not count.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -89,15 +133,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-5-1",
-            "uuid": "794b734b-3c7c-5603-95e7-55cb6664ee18"
+            "uuid": "2840c3f2-ab73-5cde-85b6-7bb3794243ca"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 1/3 component(s) missing distribution licence(s): lib-utils",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "2b5684b2-8d5f-5909-834e-34c1b42ece42"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:82644af310164731"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-LICENSE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "66ec0077-14a8-5a22-930b-83b420a55a9d"
+              }
+            ],
+            "remarks": "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1). SPDX 3.0: add a hasDeclaredLicense (or hasConcludedLicense) Relationship from the package to a simplelicensing\\_LicenseExpression element.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -106,15 +169,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-LICENSE",
-            "uuid": "4e60def1-e440-5b52-ac11-b73885fef23f"
+            "uuid": "a206b309-7ffc-552a-b571-81135c160fcc"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 2/3 component(s) missing a component creator (supplier/author with email, or URL if no email)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "818336d0-9c28-500e-942c-93e6a5ec171c"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:c7b9741417339d70"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-CREATOR|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "df36d7c6-7838-50c7-87c8-9fd801c8bff3"
+              }
+            ],
+            "remarks": "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -123,15 +205,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-CREATOR",
-            "uuid": "be1cda83-320c-5360-b31d-f62a68b7fff6"
+            "uuid": "af78c830-bc78-5447-ae14-11725deb1047"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 2/3 component(s) carry hashes but none is a valid SHA-512 digest (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app, lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "4eb01774-6d16-59d8-9d4a-ed799462ef1c"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f40d65709c70d36b"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-5-4|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bdada49a-5e4f-5c9c-973f-9945503cc495"
+              }
+            ],
+            "remarks": "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist). SPDX 3.0: add a verifiedUsing\\[\\] Hash entry with algorithm sha512.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -140,15 +241,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-5-4",
-            "uuid": "57cf988a-82df-52f3-8a28-7a4990802ae2"
+            "uuid": "afb30e37-189b-5e76-b3ce-477bb4239143"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 1/3 component(s) have no hash of the deployable form; required as SHA-512 unless the information is unavailable due to the way the component is assembled (§3.2.1)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "37a1cebe-020b-5447-bac9-dbe7c6cc120c"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:39fcb85483501b9b"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-5-4-MISSING|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "42f9753c-38c2-563d-95e5-a72afb2a0148"
+              }
+            ],
+            "remarks": "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components). SPDX 3.0: add a verifiedUsing\\[\\] Hash entry with algorithm sha512.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -157,15 +277,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-5-4-MISSING",
-            "uuid": "51c2f0b5-7c7e-5bda-aa17-da58e700599f"
+            "uuid": "c4da7663-43a0-562b-aaed-d546c8941983"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.2\\] Completeness of the dependency enumeration is not clearly indicated (CycloneDX compositions.aggregate / SPDX 3 relationship completeness)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "d224e91a-ac44-50ba-9a82-f48a76068830"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:c4680981eb8cf7ab"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-5-5-COMPLETENESS|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "b7137034-a887-5bf7-b11d-cf2ba0358e23"
+              }
+            ],
+            "remarks": "Clearly indicate the completeness of the dependency enumeration (complete or incomplete). SPDX 3.0: set completeness (complete or incomplete) on the dependsOn Relationship elements.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -174,15 +313,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
-            "uuid": "498bf7fc-1346-51b6-b8c2-9b6ff7d4fb16"
+            "uuid": "2800a57f-4763-52c1-b1d3-ff889c7bef34"
           },
           {
             "description": "\\[BSI TR-03183-2 §5.2.4\\] 1/3 component(s) missing a unique identifier (purl/CPE/SWHID/SWID) — an additional-tier field that MUST be provided when one exists: lib-utils",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "8224fbec-c4d5-5474-97f0-198116cf1628"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9acdf22246e78381"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-5-2-4|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bac61b88-2645-5c47-aa94-e522c7203fd1"
+              }
+            ],
+            "remarks": "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component. SPDX 3.0: set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -191,15 +349,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-5-2-4",
-            "uuid": "bf1a6543-d556-5db9-af7a-f0bccf0d2794"
+            "uuid": "d361cd18-60b1-5904-98fe-65409f210382"
           },
           {
             "description": "\\[BSI TR-03183-2 §3.1\\] SBOM carries vulnerability information on 1/4 component(s); a document containing both SBOM and vulnerability information does not conform — publish advisories separately (e.g. CSAF). Ignore if the data was attached by enrichment rather than present in the source document.",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "5fc6e24d-95c9-589c-a835-6d21062228ff"
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:a4b11bafe5f569cf"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bsi|SBOM-BSI-TR-03183-2-3-1|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "30276322-0a20-5876-b522-04dcfdc94784"
+              }
+            ],
+            "remarks": "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2. SPDX 3.0: remove the security\\_Vulnerability elements and their affects and assessment Relationships.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -208,13 +385,20 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-BSI-TR-03183-2-3-1",
-            "uuid": "4837e793-312c-5221-833d-e645a1468d55"
+            "uuid": "cb5eb385-b279-5512-ae33-f86b1709716e"
           }
         ],
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.1\\] Creator of the SBOM missing (email address, or URL if no email is available); generation tools (metadata.tools) do not satisfy the field — provide a Person/Organization creator (e.g. CycloneDX metadata.authors or metadata.manufacturer)",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -225,7 +409,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.1: Creator of the SBOM"
               },
@@ -238,6 +422,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-1"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "creationInfo.createdBy"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.1"
               }
             ],
             "subjects": [
@@ -251,11 +446,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "617979fa-9c9a-5715-b6fe-83f539c486d0"
+            "uuid": "a4b3a9ab-129a-5910-96e6-c75949057c79"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 1/3 component(s) missing distribution licence(s): lib-utils",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.2"
+              },
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §6.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -266,7 +473,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.2: Distribution licences"
               },
@@ -279,6 +486,33 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-LICENSE"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "hasDeclaredLicense"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.2"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§6.1"
               }
             ],
             "subjects": [
@@ -292,11 +526,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "2b5684b2-8d5f-5909-834e-34c1b42ece42"
+            "uuid": "66ec0077-14a8-5a22-930b-83b420a55a9d"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 2/3 component(s) missing a component creator (supplier/author with email, or URL if no email)",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -307,7 +548,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.2: Component creator"
               },
@@ -320,6 +561,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-CREATOR"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "suppliedBy"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.2"
               }
             ],
             "subjects": [
@@ -333,11 +595,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "818336d0-9c28-500e-942c-93e6a5ec171c"
+            "uuid": "df36d7c6-7838-50c7-87c8-9fd801c8bff3"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 2/3 component(s) carry hashes but none is a valid SHA-512 digest (the TR names the algorithm; SHA-256 or others alone do not satisfy the required field): my-app, lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -348,7 +617,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.2: Hash of the deployable component (SHA-512)"
               },
@@ -361,6 +630,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-4"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "verifiedUsing[]"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.2"
               }
             ],
             "subjects": [
@@ -374,11 +664,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "4eb01774-6d16-59d8-9d4a-ed799462ef1c"
+            "uuid": "bdada49a-5e4f-5c9c-973f-9945503cc495"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.2\\] 1/3 component(s) have no hash of the deployable form; required as SHA-512 unless the information is unavailable due to the way the component is assembled (§3.2.1)",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.2"
+              },
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §3.2.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -389,7 +691,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.2: Hash of the deployable component"
               },
@@ -402,6 +704,33 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-4-MISSING"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "verifiedUsing[]"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.2"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§3.2.1"
               }
             ],
             "subjects": [
@@ -415,11 +744,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "37a1cebe-020b-5447-bac9-dbe7c6cc120c"
+            "uuid": "42f9753c-38c2-563d-95e5-a72afb2a0148"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.2\\] Completeness of the dependency enumeration is not clearly indicated (CycloneDX compositions.aggregate / SPDX 3 relationship completeness)",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.2"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -430,7 +766,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration"
               },
@@ -443,6 +779,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "completeness"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.2"
               }
             ],
             "subjects": [
@@ -456,11 +803,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "d224e91a-ac44-50ba-9a82-f48a76068830"
+            "uuid": "b7137034-a887-5bf7-b11d-cf2ba0358e23"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §5.2.4\\] 1/3 component(s) missing a unique identifier (purl/CPE/SWHID/SWID) — an additional-tier field that MUST be provided when one exists: lib-utils",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §5.2.4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -471,7 +825,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §5.2.4: Other unique identifiers"
               },
@@ -484,6 +838,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-5-2-4"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "software_packageUrl"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§5.2.4"
               }
             ],
             "subjects": [
@@ -497,11 +872,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "8224fbec-c4d5-5474-97f0-198116cf1628"
+            "uuid": "bac61b88-2645-5c47-aa94-e522c7203fd1"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[BSI TR-03183-2 §3.1\\] SBOM carries vulnerability information on 1/4 component(s); a document containing both SBOM and vulnerability information does not conform — publish advisories separately (e.g. CSAF). Ignore if the data was attached by enrichment rather than present in the source document.",
+            "links": [
+              {
+                "href": "https://bsi.bund.de/dok/TR-03183-en",
+                "rel": "reference",
+                "text": "BSI TR-03183-2: §3.1"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -512,7 +894,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "BSI TR-03183-2 §3.1: No vulnerability information in the SBOM"
               },
@@ -525,6 +907,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-BSI-TR-03183-2-3-1"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "4"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "security_Vulnerability"
+              },
+              {
+                "class": "BsiTr03183_2",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "§3.1"
               }
             ],
             "subjects": [
@@ -538,14 +941,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "5fc6e24d-95c9-589c-a835-6d21062228ff"
+            "uuid": "30276322-0a20-5876-b522-04dcfdc94784"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "BsiTr03183_2"
+            "value": "bsi"
           },
           {
             "name": "standard-name",
@@ -598,7 +1001,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — BSI TR-03183-2",
-        "uuid": "349168f3-d6d4-507f-a77b-b1ac070f5ebe"
+        "uuid": "9f1018a7-a6c2-5cd8-b900-51dc036e7106"
       },
       {
         "description": "Validation results for EO 14028 Section 4, derived only from the supplied SBOM.",
@@ -613,15 +1016,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "EO 14028 Section 4 compliance roll-up",
-            "uuid": "1d7f7229-77ac-5ec8-988e-013f5a1311ab"
+            "uuid": "fe2849ef-e24d-5770-869c-716f6919d054"
           },
           {
             "description": "1/3 components missing unique identifier (PURL/CPE/SWHID/SWID)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "87fea353-f4fd-502d-99d5-097872a1ebe7"
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:39af377742616641"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "eo14028|SBOM-EO14028-IDENTIFIER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "420ec616-fa81-5f79-a0e6-949df6872c8f"
+              }
+            ],
+            "remarks": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set software\\_packageUrl, or add an externalIdentifier\\[\\] entry with externalIdentifierType packageUrl, cpe23, swhid or swid.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -630,15 +1052,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-EO14028-IDENTIFIER",
-            "uuid": "1da5519d-9ccf-563e-ae05-bd98aa640510"
+            "uuid": "b7c5245a-35e4-5fc6-a449-3dc48a90e20d"
           },
           {
             "description": "2/3 components missing cryptographic hashes; hashes that do not count: lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "a16949c7-c691-51e8-ab48-7b1bccd99149"
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:d791ac1adac121ac"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "eo14028|SBOM-EO14028-INTEGRITY|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "73862a55-f30b-5618-b125-adbff0ca2237"
+              }
+            ],
+            "remarks": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add verifiedUsing\\[\\] Hash entries with algorithm sha256, sha384 or sha512 and the hashValue.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -647,15 +1088,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-EO14028-INTEGRITY",
-            "uuid": "56c70861-17b2-5301-b8e5-ad89ac160808"
+            "uuid": "1942c4f6-b58e-566a-8a8d-ce38eb97366f"
           },
           {
             "description": "No security contact or vulnerability disclosure reference found",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "a6a175b9-c897-58da-8e29-0c1bc7363dbd"
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:c1d6c36feb991c0a"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "eo14028|SBOM-EO14028-DISCLOSURE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bcd045a1-b1ad-548c-aea1-a7104b269adc"
+              }
+            ],
+            "remarks": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: add an externalRef\\[\\] entry with externalRefType securityAdvisory to the root package.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -664,15 +1124,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-EO14028-DISCLOSURE",
-            "uuid": "253bd136-1b9e-504a-8836-eaba518e17f5"
+            "uuid": "ab433f87-5672-5572-a80e-41c37f0af638"
           },
           {
             "description": "2/3 components (66%) missing supplier information",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "13401877-b4be-5e8d-a108-81400912068c"
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9fe2e163e08f2a30"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "eo14028|SBOM-EO14028-SUPPLIER|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "4901dbbf-c203-56cc-afaf-18a8e8e24d09"
+              }
+            ],
+            "remarks": "Follow the SBOM practice of EO 14028 §4(e): use a machine-readable format (CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+), generate the SBOM with a tool, and include unique identifiers, versions, hashes, dependencies and supplier information. This is practice, not a federal mandate: OMB M-26-05 rescinded the M-22-18 attestation requirement, though an agency may still ask for an SBOM in its contract. SPDX 3.0: set suppliedBy on the package to the spdxId of an Organization or Person element.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -681,13 +1160,20 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-EO14028-SUPPLIER",
-            "uuid": "ec80d0e4-563e-596e-bbf6-028253b0345f"
+            "uuid": "7271fc36-1d5f-525a-9280-50c65b52b34a"
           }
         ],
         "observations": [
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "1/3 components missing unique identifier (PURL/CPE/SWHID/SWID)",
+            "links": [
+              {
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "reference",
+                "text": "EO 14028 §4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -698,7 +1184,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "EO 14028 §4(e) practice: Component unique identification"
               },
@@ -711,6 +1197,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-IDENTIFIER"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "1"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "software_packageUrl"
+              },
+              {
+                "class": "Eo14028",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "EO 14028 §4"
               }
             ],
             "subjects": [
@@ -724,11 +1231,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "87fea353-f4fd-502d-99d5-097872a1ebe7"
+            "uuid": "420ec616-fa81-5f79-a0e6-949df6872c8f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "2/3 components missing cryptographic hashes; hashes that do not count: lib-core (SHA-256 digest is not 64 hex characters; SHA-512 digest is not 128 hex characters)",
+            "links": [
+              {
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "reference",
+                "text": "EO 14028 §4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -739,7 +1253,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "EO 14028 §4(e) practice: Component integrity verification"
               },
@@ -752,6 +1266,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-INTEGRITY"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "verifiedUsing[]"
+              },
+              {
+                "class": "Eo14028",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "EO 14028 §4"
               }
             ],
             "subjects": [
@@ -765,11 +1300,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "a16949c7-c691-51e8-ab48-7b1bccd99149"
+            "uuid": "73862a55-f30b-5618-b125-adbff0ca2237"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "No security contact or vulnerability disclosure reference found",
+            "links": [
+              {
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "reference",
+                "text": "EO 14028 §4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -780,7 +1322,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program"
               },
@@ -793,6 +1335,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-DISCLOSURE"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "externalRef[]"
+              },
+              {
+                "class": "Eo14028",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "EO 14028 §4"
               }
             ],
             "subjects": [
@@ -806,11 +1359,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "a6a175b9-c897-58da-8e29-0c1bc7363dbd"
+            "uuid": "bcd045a1-b1ad-548c-aea1-a7104b269adc"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "2/3 components (66%) missing supplier information",
+            "links": [
+              {
+                "href": "https://www.federalregister.gov/d/2021-10460",
+                "rel": "reference",
+                "text": "EO 14028 §4"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -821,7 +1381,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "EO 14028 §4(e) practice: Supplier identification"
               },
@@ -834,6 +1394,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-EO14028-SUPPLIER"
+              },
+              {
+                "name": "affected",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "2"
+              },
+              {
+                "name": "total",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "3"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "suppliedBy"
+              },
+              {
+                "class": "Eo14028",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "EO 14028 §4"
               }
             ],
             "subjects": [
@@ -847,14 +1428,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "13401877-b4be-5e8d-a108-81400912068c"
+            "uuid": "4901dbbf-c203-56cc-afaf-18a8e8e24d09"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "Eo14028"
+            "value": "eo14028"
           },
           {
             "name": "standard-name",
@@ -907,9 +1488,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — EO 14028 Section 4",
-        "uuid": "df00508c-eb50-564d-902d-b1e60a231146"
+        "uuid": "b74742a8-4c32-5ac5-9e31-bb15ceb5972b"
       }
     ],
-    "uuid": "6d599bcb-6c54-5e98-af74-f74ff9e61d85"
+    "uuid": "b853b33c-2d83-5293-bd8f-db2f1f04a29f"
   }
 }

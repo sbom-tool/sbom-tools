@@ -723,9 +723,12 @@ JSON OUTPUT:
     -o json emits the sbom-tools/compliance/v2 envelope (one object for any
     number of standards; schema: schemas/compliance/v2.schema.json). The
     pre-0.4 layout stays available with --json-schema v1 until v0.5.0.
-    Checks the SBOM passed (e.g. a NIST-approved PQC algorithm) are listed
-    under passed[], never as violations; -o sarif reports them only with
-    --sarif-include-passes.
+    The envelope states the instant every standard was judged at (as_of)
+    and the SBOM it judged (subject: SHA-256, format, file name, and how the
+    document was read). Checks the SBOM passed (e.g. a NIST-approved PQC
+    algorithm) are listed under passed[], never as violations; -o sarif
+    reports them only with --sarif-include-passes. -o sarif and -o
+    oscal-json carry the same fields for every finding and verdict.
 
 EXAMPLES:
     sbom-tools validate app.cdx.json                              # NTIA minimum

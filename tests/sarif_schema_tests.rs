@@ -18,10 +18,10 @@ mod sbom_fixtures;
 
 use sbom_tools::quality::{ComplianceLevel, ComplianceResult, QualityScorer, ScoringProfile};
 use sbom_tools::reports::{
-    ReportConfig, ReportGenerator, SARIF_SCHEMA_URI, SarifArtifact, SarifArtifactLocation,
-    SarifOptions, SarifReporter, generate_ai_readiness_sarif_with, generate_compliance_sarif_with,
-    generate_multi_compliance_sarif, generate_multi_compliance_sarif_with,
-    generate_quality_sarif_with,
+    AssessedSbom, ReportConfig, ReportGenerator, SARIF_SCHEMA_URI, SarifArtifact,
+    SarifArtifactLocation, SarifOptions, SarifReporter, generate_ai_readiness_sarif_with,
+    generate_compliance_sarif_with, generate_multi_compliance_sarif,
+    generate_multi_compliance_sarif_with, generate_quality_sarif_with,
 };
 use sbom_tools::{DiffEngine, parse_sbom_str};
 use serde_json::{Value, json};
@@ -96,13 +96,18 @@ fn vendored_schema_is_the_published_oasis_schema() {
 // ---------------------------------------------------------------------------
 
 /// The SBOM file of `fixture`, named as the CLI names it from the
-/// repository root.
+/// repository root, and what the run judged, as `validate` states it (the
+/// SBOM artifact with its SHA-256, `asOf` and `subject`).
 fn options(fixture: &sbom_fixtures::Fixture) -> SarifOptions {
-    SarifOptions::new().with_artifact(SarifArtifact::new(
-        SarifArtifactLocation::relative(format!("tests/fixtures/{}", fixture.rel)),
-        &fixture.sbom,
-        &fixture.raw,
-    ))
+    let assessed =
+        AssessedSbom::new(&fixture.sbom, fixture.raw.as_bytes()).with_file_name(&fixture.rel);
+    SarifOptions::new()
+        .with_artifact(SarifArtifact::new(
+            SarifArtifactLocation::relative(format!("tests/fixtures/{}", fixture.rel)),
+            &fixture.sbom,
+            &fixture.raw,
+        ))
+        .with_subject(&assessed, sbom_fixtures::as_of())
 }
 
 #[test]

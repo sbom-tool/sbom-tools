@@ -102,6 +102,58 @@ fn validate_reads_sbom_from_stdin() {
     );
 }
 
+/// `validate -o json` names the SBOM it read: the file's name without its
+/// directory (the path here is absolute), and no file name for stdin, with
+/// the digest of the bytes either way. Without `--as-of` the run states the
+/// instant it judged at, to the second.
+#[test]
+fn validate_json_names_the_sbom_it_read() {
+    use sha2::{Digest, Sha256};
+    let path = fixture_path("cyclonedx/minimal.cdx.json");
+    let sbom = std::fs::read(&path).expect("fixture readable");
+    let digest: String = Sha256::digest(&sbom)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    let envelope = |output: &Output| -> serde_json::Value {
+        serde_json::from_slice(&output.stdout)
+            .unwrap_or_else(|e| panic!("stdout is no JSON ({e}): {}", stderr(output)))
+    };
+
+    let mut cmd = base_command();
+    cmd.arg("validate").arg(&path).args([
+        "--standard",
+        "ntia",
+        "--as-of",
+        "2026-10-12",
+        "-o",
+        "json",
+    ]);
+    let from_file = envelope(&cmd.output().expect("binary should run"));
+    assert_eq!(from_file["as_of"], "2026-10-12T00:00:00Z");
+    assert_eq!(from_file["subject"]["file_name"], "minimal.cdx.json");
+    assert_eq!(from_file["subject"]["sha256"], digest.as_str());
+    assert!(
+        !from_file.to_string().contains(FIXTURES_DIR),
+        "the envelope names no local path"
+    );
+
+    let mut cmd = base_command();
+    cmd.arg("validate")
+        .arg("-")
+        .args(["--standard", "ntia", "-o", "json"]);
+    let from_stdin = envelope(&run_with_stdin(cmd, &sbom));
+    assert!(from_stdin["subject"].get("file_name").is_none());
+    assert_eq!(from_stdin["subject"]["sha256"], digest.as_str());
+    let as_of = from_stdin["as_of"].as_str().expect("as_of");
+    let instant = chrono::DateTime::parse_from_rfc3339(as_of).expect("an RFC 3339 instant");
+    assert_eq!(
+        instant.timestamp_subsec_nanos(),
+        0,
+        "to the second: {as_of}"
+    );
+}
+
 #[test]
 fn diff_accepts_one_stdin_side() {
     let new_sbom = std::fs::read(fixture_path("demo-new.cdx.json")).expect("fixture readable");

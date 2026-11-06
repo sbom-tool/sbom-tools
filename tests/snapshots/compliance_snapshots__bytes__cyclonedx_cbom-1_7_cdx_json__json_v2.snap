@@ -7,6 +7,20 @@ source: tests/compliance_snapshots.rs
     "name": "sbom-tools",
     "version": "[VERSION]"
   },
+  "as_of": "2026-10-12T00:00:00Z",
+  "subject": {
+    "sha256": "97b4195d754e26ef6db0406f488dfa1c08f68dd576ea51b30a4bd189170986a9",
+    "format": "CycloneDX",
+    "spec_version": "1.7",
+    "file_name": "cbom-1.7.cdx.json",
+    "components": 19,
+    "duplicates": {
+      "components": 0,
+      "entries": 0,
+      "conflicts": []
+    },
+    "timestamp_unparsed": false
+  },
   "results": [
     {
       "standard": "cnsa2",

@@ -26,6 +26,31 @@ source: tests/compliance_snapshots.rs
               "name": "spec-version",
               "ns": "https://sbom.tools/ns/oscal",
               "value": "1.5"
+            },
+            {
+              "name": "file-name",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "minimal.cdx.json"
+            },
+            {
+              "name": "component-count",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "3"
+            },
+            {
+              "name": "duplicate-components",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "duplicate-entries",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "0"
+            },
+            {
+              "name": "timestamp-unparsed",
+              "ns": "https://sbom.tools/ns/oscal",
+              "value": "false"
             }
           ],
           "title": "test-app (CycloneDX 1.5 SBOM)",
@@ -52,19 +77,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "ntiaminimum-compliance",
+              "target-id": "ntia-compliance",
               "type": "objective-id"
             },
             "title": "NTIA Minimum Elements compliance roll-up",
-            "uuid": "eeebe298-4512-5f77-bd6e-75b6c3914e3d"
+            "uuid": "bb708787-5e8c-57e8-9ec2-e59ed6f3455a"
           },
           {
             "description": "Component 'test-app' missing unique identifier (PURL/CPE/SWHID/SWID)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "eb4dde64-c238-557e-b2bc-d5effda09d52"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:8dbbd0ee3922d90e"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-IDENTIFIER|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "92a1d48a-dae8-5777-8f44-2175107be0ae"
+              }
+            ],
+            "remarks": "Give every component another unique identifier (an NTIA minimum data field): a PURL, CPE, SWHID or SWID. CycloneDX: set components\\[\\].purl (or cpe, or swhid\\[\\]).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -73,15 +117,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-IDENTIFIER",
-            "uuid": "19e29324-297f-5df0-802e-15783e116179"
+            "uuid": "7ba7f0a1-5417-5910-9193-a09d373e289d"
           },
           {
             "description": "Component 'test-app' missing supplier/manufacturer",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "93f57206-5d01-5e31-a2f3-bfdd374dfc84"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:ab835691e2f798bb"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-SUPPLIER|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "d22a421d-c75d-5355-988e-66b3fcb0af04"
+              }
+            ],
+            "remarks": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -90,15 +153,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-SUPPLIER",
-            "uuid": "b9fc4fbe-ca4d-52c9-adf5-f88ea152fbe5"
+            "uuid": "08ff13b0-617c-5fcd-8d11-90e2c49e6a7f"
           },
           {
             "description": "Component 'lodash' missing supplier/manufacturer",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "a08ef9c3-94c0-52e2-88f3-2bd9af8485a0"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:f863b422f8675d3b"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/lodash@4.17.21"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bc1302cb-3a99-5295-bc8a-4dea62fc8716"
+              }
+            ],
+            "remarks": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -107,15 +189,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-SUPPLIER",
-            "uuid": "09f11ac9-65ec-5f7a-9a29-62c8587e532a"
+            "uuid": "fd99a3d7-d817-5c80-b773-c9d6ccc815f0"
           },
           {
             "description": "Component 'express' missing supplier/manufacturer",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "21eb9ca5-ebb9-5cb9-8b28-f924acf02a3c"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:3ac7f51e13b33edf"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-SUPPLIER|pkg:npm/express@4.18.2"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "b3349b93-5950-5cb0-a55d-d88a14b8ab16"
+              }
+            ],
+            "remarks": "Name the supplier of every component, the entity that creates, defines and identifies it (an NTIA minimum data field); placeholders such as NOASSERTION do not count. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -124,15 +225,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-SUPPLIER",
-            "uuid": "5c3c5241-3932-5ba5-b633-a0875539a40b"
+            "uuid": "bd2a2250-2aac-54db-aed0-ee722ea5624e"
           },
           {
             "description": "Primary component 'test-app' participates in no dependency relationship",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "7da54341-077d-587b-b781-b2bf1cc12b06"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:8b7cd2c62a51b687"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-DEPENDENCY|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "a7c2bbb7-edd2-5571-af13-4733dc930a96"
+              }
+            ],
+            "remarks": "Declare the dependency relationships between components (an NTIA minimum data field): connect the primary component to its direct dependencies and keep most components inside the dependency graph. CycloneDX: add dependencies\\[\\] entries (ref plus dependsOn\\[\\]); an entry with an empty dependsOn records a component that has no dependencies.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -141,15 +261,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-DEPENDENCY",
-            "uuid": "73bbc378-80a7-5da6-af5d-7ebf7723d8de"
+            "uuid": "843ca6ee-f556-556e-b6aa-b8279ff22c8f"
           },
           {
             "description": "Component 'test-app' may be missing bom-ref",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "d910703c-7964-5005-a221-6cbd42678f9e"
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:394b5cbe21a02487"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "ntia|SBOM-NTIA-ELEMENT-ID|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "4d544030-1088-5a9f-ae01-9e12cf4b4db4"
+              }
+            ],
+            "remarks": "Give every element its own well-formed identifier, the one dependency relationships refer to. CycloneDX: set a bom-ref on every component, one that differs from the component's name.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -158,7 +297,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-NTIA-ELEMENT-ID",
-            "uuid": "35e7c5e3-94cd-5f27-8736-51c6386bf8c5"
+            "uuid": "1769ee56-86a9-546e-9ca2-bbdae266e04b"
           }
         ],
         "local-definitions": {
@@ -247,6 +386,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'test-app' missing unique identifier (PURL/CPE/SWHID/SWID)",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -257,7 +403,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA Minimum Elements: Other Unique Identifiers"
               },
@@ -275,6 +421,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.purl"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -293,11 +455,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "eb4dde64-c238-557e-b2bc-d5effda09d52"
+            "uuid": "92a1d48a-dae8-5777-8f44-2175107be0ae"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'test-app' missing supplier/manufacturer",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -308,7 +477,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Supplier information"
               },
@@ -326,6 +495,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.supplier.name"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -344,11 +529,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "93f57206-5d01-5e31-a2f3-bfdd374dfc84"
+            "uuid": "d22a421d-c75d-5355-988e-66b3fcb0af04"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'lodash' missing supplier/manufacturer",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -359,7 +551,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Supplier information"
               },
@@ -377,6 +569,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/lodash@4.17.21"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].supplier.name"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -395,11 +603,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "a08ef9c3-94c0-52e2-88f3-2bd9af8485a0"
+            "uuid": "bc1302cb-3a99-5295-bc8a-4dea62fc8716"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'express' missing supplier/manufacturer",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -410,7 +625,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Supplier information"
               },
@@ -428,6 +643,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "express"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/express@4.18.2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].supplier.name"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -446,11 +677,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "21eb9ca5-ebb9-5cb9-8b28-f924acf02a3c"
+            "uuid": "b3349b93-5950-5cb0-a55d-d88a14b8ab16"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Primary component 'test-app' participates in no dependency relationship",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -461,7 +699,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "NTIA: Dependency relationships"
               },
@@ -479,6 +717,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "dependencies[]"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -497,11 +751,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "7da54341-077d-587b-b781-b2bf1cc12b06"
+            "uuid": "a7c2bbb7-edd2-5571-af13-4733dc930a96"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "Component 'test-app' may be missing bom-ref",
+            "links": [
+              {
+                "href": "https://www.ntia.gov/report/2021/minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "NTIA Minimum Elements"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -512,7 +773,7 @@ source: tests/compliance_snapshots.rs
                 "value": "info"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CycloneDX: bom-ref for dependency tracking"
               },
@@ -530,6 +791,27 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "bom-ref"
+              },
+              {
+                "name": "observed",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "class": "NtiaMinimum",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "NTIA Minimum Elements"
               }
             ],
             "subjects": [
@@ -548,14 +830,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "d910703c-7964-5005-a221-6cbd42678f9e"
+            "uuid": "4d544030-1088-5a9f-ae01-9e12cf4b4db4"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "NtiaMinimum"
+            "value": "ntia"
           },
           {
             "name": "standard-name",
@@ -608,7 +890,7 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — NTIA Minimum Elements",
-        "uuid": "0425376f-7838-56c3-bec5-8f2873c006d7"
+        "uuid": "4b9aa242-ee06-5031-bba2-82c36515b94d"
       },
       {
         "description": "Validation results for CISA 2026 Minimum Elements, derived only from the supplied SBOM.",
@@ -619,19 +901,38 @@ source: tests/compliance_snapshots.rs
               "status": {
                 "state": "not-satisfied"
               },
-              "target-id": "cisa2026-compliance",
+              "target-id": "cisa-2026-compliance",
               "type": "objective-id"
             },
             "title": "CISA 2026 Minimum Elements compliance roll-up",
-            "uuid": "ea63db51-26f7-594c-8f33-436b55dadaf3"
+            "uuid": "3e890aa5-30a6-53f7-ac87-bf741de8281b"
           },
           {
             "description": "\\[CISA 2026\\] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "e56bcb5d-e88a-55b1-95c6-aa5e316b1b87"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:c121631bf022b328"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-AUTHOR|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "25bc1d06-add4-5de8-85b6-b9ebf7c31919"
+              }
+            ],
+            "remarks": "Add a Person or Organization creator naming the entity that created the SBOM data — the entity operating the generation tool, not the tool itself, so tool-only creator lists do not satisfy the element. Use full names, no acronyms. CycloneDX: add metadata.authors\\[\\] (name, email) or metadata.manufacturer (name, contact\\[\\].email); metadata.tools entries do not count.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -640,15 +941,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-AUTHOR",
-            "uuid": "b1440af9-98f0-5678-81d0-0e70c39f7511"
+            "uuid": "1db86a7f-9d04-58f9-9756-bfd35056672c"
           },
           {
             "description": "\\[CISA 2026\\] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "fb2e8002-8c70-5a1b-b53b-40e48c26390d"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:a8f36f3ede2cbd0f"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-SIGNATURE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "9498e049-e528-536c-984d-a0e63f1399e3"
+              }
+            ],
+            "remarks": "Sign the SBOM with a digital signature attributable to the SBOM author, using an algorithm approved per NIST DSS, ISO/IEC 14888-4:2024, or the ENISA Agreed Cryptographic Mechanisms. Detached signatures are invisible to this check, and not every format can carry one in-document — hence Warning, not Error. SPDX 2.x has no in-document signature field, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: sign the BOM: in JSON, a JSF signature object (algorithm and value) at the document root; in XML, an enveloped XML-DSig \\<Signature\\> element on \\<bom\\>.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -657,15 +977,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-SIGNATURE",
-            "uuid": "ee45aab2-0684-58e5-b9b9-c25b5bb895e7"
+            "uuid": "f0117fdd-656c-5dae-ba07-e510f8886a58"
           },
           {
             "description": "\\[CISA 2026\\] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "aa14f4ec-c005-5640-9006-0f8abb41de19"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:98b748f2ca790daf"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-GENERATION-CONTEXT|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "43526641-849d-5ee7-924c-227339f1de3f"
+              }
+            ],
+            "remarks": "Declare the lifecycle phase the SBOM was generated in — 'before build', 'build', 'after build', or a more specific identifier. Warning, not Error: not every format can carry the phase. SPDX 2.x has no standard field for it, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set metadata.lifecycles\\[\\].phase, e.g. build (the first entry is read).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -674,15 +1013,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-GENERATION-CONTEXT",
-            "uuid": "b9fb3bbf-979b-5c18-916f-35cebf29185d"
+            "uuid": "8f218173-dcc5-58a5-8425-64fb95e158ae"
           },
           {
             "description": "\\[CISA 2026\\] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "ddab5b0f-3d24-5b07-9705-9f302419db17"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:237e61efe1f7dfd4"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-PRODUCER|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "0d1869a6-7be3-5454-92a6-6f0e2abe44b2"
+              }
+            ],
+            "remarks": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -691,15 +1049,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-PRODUCER",
-            "uuid": "970ffdf1-4949-534e-92bc-42673d3a1337"
+            "uuid": "bd1214b4-7aa1-58a9-aac4-f5a51ea6073e"
           },
           {
             "description": "\\[CISA 2026\\] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "ac20ff1c-bdea-53a4-b911-0a83f4e884cf"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:17ed5a828034d7b5"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-IDENTIFIER|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "cbe3e387-24f3-537d-9483-36bd8fb2d903"
+              }
+            ],
+            "remarks": "Add at least one common machine-processable identifier per component — the document names CPE and PURL (ECMA-427); UUIDs, organization-specific identifiers, commit hashes, and intrinsic identifiers (OmniBOR, SWHID / ISO/IEC 18670:2025) also qualify. Include all known identifiers. CycloneDX: set components\\[\\].purl (or cpe, or swhid\\[\\]).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -708,15 +1085,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-IDENTIFIER",
-            "uuid": "eed6d01e-4582-54b0-8427-9cfcb38707a7"
+            "uuid": "e9092ff3-653e-5e86-8a26-125fb615f0d5"
           },
           {
             "description": "\\[CISA 2026\\] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "2ba41766-867a-5496-a544-82fcb3a87b1f"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9d8266cde530b4f9"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-HASH|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "2a1bbe98-41be-5cab-bc8e-20abbee76282"
+              }
+            ],
+            "remarks": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -725,15 +1121,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-HASH",
-            "uuid": "04e7a2cc-0bd3-5688-bf31-95d8190f5fd3"
+            "uuid": "3423b263-55cc-5ad5-8de9-0d02e1d1bd0d"
           },
           {
             "description": "\\[CISA 2026\\] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "87b0137c-f184-53d2-a60a-1a8b7576f243"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:9942ba05bb3e949d"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-LICENSE|test-app"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "ce65f8dc-8978-5a2a-97b2-5b13c5bb0465"
+              }
+            ],
+            "remarks": "Declare each component's license(s), preferring machine-processable SPDX license identifiers; a LicenseRef-\\* expression or a pointer to where the full license details are available also satisfies the element, and an explicit unknown (NOASSERTION) is required when the author is unaware. Silent absence and a placeholder such as TBD fail. CycloneDX: add components\\[\\].licenses\\[\\] entries (license.id with an SPDX identifier, or an expression).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -742,15 +1157,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-LICENSE",
-            "uuid": "7e516bb7-69be-5a82-96c2-ed52fc54c4ce"
+            "uuid": "88dee765-20db-57eb-955f-d9a875a67d54"
           },
           {
             "description": "\\[CISA 2026\\] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c1b3a7f7-192a-5a68-8802-84eee074c58b"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:ed9b044d1e184c63"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-PRODUCER|pkg:npm/lodash@4.17.21"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "06de66f7-8b16-5166-90d9-c5fd9f8d02d2"
+              }
+            ],
+            "remarks": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -759,15 +1193,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-PRODUCER",
-            "uuid": "b67f9b2d-2467-54e4-87a3-8bfe4e15bc02"
+            "uuid": "30909a18-1697-5939-a031-1f56c2b9c61e"
           },
           {
             "description": "\\[CISA 2026\\] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "c25c118c-4fea-5651-a39b-900f9fb97ef8"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:95cd0336e73dcd72"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-HASH|pkg:npm/lodash@4.17.21"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "9d858ad9-6bbb-5892-8fd6-c171d3702dd8"
+              }
+            ],
+            "remarks": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -776,15 +1229,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-HASH",
-            "uuid": "3775dbe4-ff98-5ebd-bb06-dcadd89d0cef"
+            "uuid": "73bca4a3-6495-5cbe-9db6-215e9680c69f"
           },
           {
             "description": "\\[CISA 2026\\] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "acb8419b-3694-50a0-a9ad-c23c56832511"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:7dfaa34cd5221fcc"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-PRODUCER|pkg:npm/express@4.18.2"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "4da19bba-9367-5ab6-af19-fabf14fe7026"
+              }
+            ],
+            "remarks": "Identify each component's producer (the 2026 rename of the ambiguous Supplier Name): the entity that created the component is preferred, its supplier or manufacturer is accepted; if no clear producer exists, explicitly mark the component as of unknown provenance. File-type entries are exempt. CycloneDX: set components\\[\\].supplier.name (or manufacturer.name, or authors\\[\\].name).",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -793,15 +1265,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-PRODUCER",
-            "uuid": "e9d97f1d-7fc8-5955-9d7c-dc5f011807b2"
+            "uuid": "a22c8ff0-53d4-5442-8bac-cc90e6798ced"
           },
           {
             "description": "\\[CISA 2026\\] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "e3915823-a79a-55ed-8b62-b1e5b108f7cc"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:7b85bdafcc0877b0"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-HASH|pkg:npm/express@4.18.2"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "e060ae07-436a-5635-988e-88511c71fa84"
+              }
+            ],
+            "remarks": "Provide an ASCII-hexadecimal cryptographic hash of each executable component artifact; when the SBOM author lacks access to the artifact, explicitly indicate the value is unknown. CycloneDX: add components\\[\\].hashes\\[\\] entries with alg SHA-256, SHA-384 or SHA-512 and the content.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -810,15 +1301,34 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-HASH",
-            "uuid": "2b52ac4d-5fba-53b8-8782-b482ba5f2508"
+            "uuid": "68fbf203-c9df-51be-9dd0-a027f94c7f67"
           },
           {
             "description": "\\[CISA 2026\\] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
-            "related-observations": [
+            "links": [
               {
-                "observation-uuid": "7740ac5b-aad5-581c-815f-b234e360e15b"
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "help"
               }
             ],
+            "props": [
+              {
+                "name": "finding-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "sbomtools:v1:17cdd69dc4e4f721"
+              },
+              {
+                "name": "finding-key",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "cisa-2026|SBOM-CISA2026-COVERAGE|document"
+              }
+            ],
+            "related-observations": [
+              {
+                "observation-uuid": "bafbd094-4249-5320-b064-d3a75b417d88"
+              }
+            ],
+            "remarks": "Declare the SBOM's completeness: the 2026 Coverage element expects all components including transitive dependencies, and information gaps must be explicitly stated as unknown or deliberately withheld. This rule verifies the declaration, not actual completeness — the document itself points to external repositories / binary analysis for that. SPDX 2.x has no completeness declaration, so the rule is not evaluated for SPDX 2.x documents. CycloneDX: set compositions\\[\\].aggregate (complete, incomplete, incomplete\\_first\\_party\\_only, …); the first composition is read.",
             "target": {
               "status": {
                 "state": "not-satisfied"
@@ -827,7 +1337,7 @@ source: tests/compliance_snapshots.rs
               "type": "objective-id"
             },
             "title": "SBOM-CISA2026-COVERAGE",
-            "uuid": "d251da9f-fd8b-504f-bbcc-9f2a45942843"
+            "uuid": "3ee206de-c06a-5bbc-bc57-f0935b9103c4"
           }
         ],
         "local-definitions": {
@@ -916,6 +1426,13 @@ source: tests/compliance_snapshots.rs
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] SBOM Author missing: no Person or Organization creator names the entity that created the SBOM data (tool-only creator lists do not satisfy the element — the author is the entity operating the tool, not the tool itself)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: SBOM Author"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -926,7 +1443,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: SBOM Author"
               },
@@ -939,6 +1456,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-AUTHOR"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.authors[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM Author"
               }
             ],
             "subjects": [
@@ -952,11 +1480,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "e56bcb5d-e88a-55b1-95c6-aa5e316b1b87"
+            "uuid": "25bc1d06-add4-5de8-85b6-b9ebf7c31919"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] No SBOM Author Signature found in the document (CycloneDX JSF signature or SPDX 3 verifiedUsing signature); SPDX 2.x cannot express one in-document and detached signatures are invisible to this check",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: SBOM Author Signature"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -967,7 +1502,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: SBOM Author Signature"
               },
@@ -980,6 +1515,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-SIGNATURE"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "signature"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM Author Signature"
               }
             ],
             "subjects": [
@@ -993,11 +1539,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "fb2e8002-8c70-5a1b-b53b-40e48c26390d"
+            "uuid": "9498e049-e528-536c-984d-a0e63f1399e3"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] SBOM Generation Context missing: no software lifecycle phase is declared (CycloneDX 1.5+ metadata.lifecycles, e.g. 'pre-build', 'build', 'post-build'; SPDX 2.x has no standard field)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: SBOM Generation Context"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1008,7 +1561,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: SBOM Generation Context"
               },
@@ -1021,6 +1574,17 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-GENERATION-CONTEXT"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.lifecycles[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "SBOM Generation Context"
               }
             ],
             "subjects": [
@@ -1034,11 +1598,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "aa14f4ec-c005-5640-9006-0f8abb41de19"
+            "uuid": "43526641-849d-5ee7-924c-227339f1de3f"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'test-app' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Producer"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1049,7 +1620,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Producer"
               },
@@ -1067,6 +1638,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.supplier.name"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Producer"
               }
             ],
             "subjects": [
@@ -1085,11 +1672,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "ddab5b0f-3d24-5b07-9705-9f302419db17"
+            "uuid": "0d1869a6-7be3-5454-92a6-6f0e2abe44b2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'test-app' has no machine-processable identifier (CPE or PURL are named by the element; SWHID/SWID also qualify)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Identifiers"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1100,7 +1694,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Identifiers"
               },
@@ -1118,6 +1712,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.purl"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Identifiers"
               }
             ],
             "subjects": [
@@ -1136,11 +1746,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "ac20ff1c-bdea-53a4-b911-0a83f4e884cf"
+            "uuid": "cbe3e387-24f3-537d-9483-36bd8fb2d903"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'test-app' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Hash Value"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1151,7 +1768,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Hash Value"
               },
@@ -1169,6 +1786,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.hashes[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Hash Value"
               }
             ],
             "subjects": [
@@ -1187,11 +1820,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "2ba41766-867a-5496-a544-82fcb3a87b1f"
+            "uuid": "2a1bbe98-41be-5cab-bc8e-20abbee76282"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'test-app' has no license information and no explicit unknown indication (prefer SPDX identifiers; use NOASSERTION when the license is unknown to the author)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component License"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1202,7 +1842,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component License"
               },
@@ -1220,6 +1860,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "test-app"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "test-app"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "metadata.component.licenses[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component License"
               }
             ],
             "subjects": [
@@ -1238,11 +1894,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "87b0137c-f184-53d2-a60a-1a8b7576f243"
+            "uuid": "ce65f8dc-8978-5a2a-97b2-5b13c5bb0465"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'lodash' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Producer"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1253,7 +1916,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Producer"
               },
@@ -1271,6 +1934,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/lodash@4.17.21"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].supplier.name"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Producer"
               }
             ],
             "subjects": [
@@ -1289,11 +1968,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c1b3a7f7-192a-5a68-8802-84eee074c58b"
+            "uuid": "06de66f7-8b16-5166-90d9-c5fd9f8d02d2"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'lodash' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Hash Value"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1304,7 +1990,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Hash Value"
               },
@@ -1322,6 +2008,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "lodash"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/lodash@4.17.21"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].hashes[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Hash Value"
               }
             ],
             "subjects": [
@@ -1340,11 +2042,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "c25c118c-4fea-5651-a39b-900f9fb97ef8"
+            "uuid": "9d858ad9-6bbb-5892-8fd6-c171d3702dd8"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'express' names no producer (author/originator, manufacturer or supplier) and is not explicitly marked as of unknown provenance",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Producer"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1355,7 +2064,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Producer"
               },
@@ -1373,6 +2082,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "express"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/express@4.18.2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].supplier.name"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Producer"
               }
             ],
             "subjects": [
@@ -1391,11 +2116,18 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "acb8419b-3694-50a0-a9ad-c23c56832511"
+            "uuid": "4da19bba-9367-5ab6-af19-fabf14fe7026"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Component 'express' carries no cryptographic hash of the executable component artifact (explicitly indicate the value is unknown when the artifact is not available to the SBOM author)",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Component Hash Value"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1406,7 +2138,7 @@ source: tests/compliance_snapshots.rs
                 "value": "error"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Component Hash Value"
               },
@@ -1424,6 +2156,22 @@ source: tests/compliance_snapshots.rs
                 "name": "sbom-element",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "express"
+              },
+              {
+                "name": "component-id",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "pkg:npm/express@4.18.2"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "components[].hashes[]"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Component Hash Value"
               }
             ],
             "subjects": [
@@ -1442,11 +2190,23 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "e3915823-a79a-55ed-8b62-b1e5b108f7cc"
+            "uuid": "e060ae07-436a-5635-988e-88511c71fa84"
           },
           {
             "collected": "2026-10-12T00:00:00Z",
             "description": "\\[CISA 2026\\] Coverage: the SBOM does not declare its completeness (CycloneDX compositions aggregate); information gaps must be explicitly stated as unknown or deliberately withheld",
+            "links": [
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Coverage"
+              },
+              {
+                "href": "https://www.cisa.gov/resources-tools/resources/2026-minimum-elements-software-bill-materials-sbom",
+                "rel": "reference",
+                "text": "CISA 2026: Explicitly Identifying Unknown Information"
+              }
+            ],
             "methods": [
               "EXAMINE"
             ],
@@ -1457,7 +2217,7 @@ source: tests/compliance_snapshots.rs
                 "value": "warning"
               },
               {
-                "name": "standard-reference",
+                "name": "requirement",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "CISA 2026 Minimum Elements: Coverage / Explicitly Identifying Unknown Information"
               },
@@ -1470,6 +2230,23 @@ source: tests/compliance_snapshots.rs
                 "name": "sarif-rule-id",
                 "ns": "https://sbom.tools/ns/oscal",
                 "value": "SBOM-CISA2026-COVERAGE"
+              },
+              {
+                "name": "field",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "compositions[].aggregate"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Coverage"
+              },
+              {
+                "class": "CisaMinimum2026",
+                "name": "standard-ref",
+                "ns": "https://sbom.tools/ns/oscal",
+                "value": "Explicitly Identifying Unknown Information"
               }
             ],
             "subjects": [
@@ -1483,14 +2260,14 @@ source: tests/compliance_snapshots.rs
             "types": [
               "discovery"
             ],
-            "uuid": "7740ac5b-aad5-581c-815f-b234e360e15b"
+            "uuid": "bafbd094-4249-5320-b064-d3a75b417d88"
           }
         ],
         "props": [
           {
             "name": "standard",
             "ns": "https://sbom.tools/ns/oscal",
-            "value": "Cisa2026"
+            "value": "cisa-2026"
           },
           {
             "name": "standard-name",
@@ -1543,9 +2320,9 @@ source: tests/compliance_snapshots.rs
         },
         "start": "2026-10-12T00:00:00Z",
         "title": "sbom-tools validation assessment — CISA 2026 Minimum Elements",
-        "uuid": "262c917a-51f2-5260-ad81-831cb767eb68"
+        "uuid": "c1afab5e-e0fa-5bbf-bce1-451cc12f49f5"
       }
     ],
-    "uuid": "34c02b5b-d4bd-5b11-a869-28e5b99f205e"
+    "uuid": "6cae3a10-d1e2-5e85-9297-cccae03b2f7f"
   }
 }

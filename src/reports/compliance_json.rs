@@ -11,13 +11,20 @@
 //! [`ComplianceResult`]'s serialization the envelope does not render itself,
 //! with each `<kind>_count` collected under `counts.<kind>`. A field any of
 //! these types gains therefore reaches this envelope without a change here;
-//! the schema tests fail until the schema declares it.
+//! the schema tests fail until the schema declares it, and the audit tests
+//! (`reports::audit`) until SARIF and OSCAL carry it too.
+//!
+//! [`generate_compliance_json_at`] adds what the envelope says about the run:
+//! the instant the verdicts were judged at (`as_of`) and the SBOM they judge
+//! (`subject`).
 
 use super::ReportError;
+use super::audit::{AssessedSbom, instant_text};
 use crate::quality::{
     Applicability, ComplianceResult, ConformityAssessmentSummary, FindingIdentity, PassedCheck,
     RuleEvaluation, Violation, finding_id, finding_key, standard_key,
 };
+use chrono::{DateTime, Utc};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -45,6 +52,13 @@ const RENDERED_FIELDS: &[&str] = &[
 struct Envelope<'a> {
     schema: &'static str,
     tool: Tool,
+    /// The instant the verdicts were judged at; omitted when the writer is
+    /// not told it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    as_of: Option<String>,
+    /// The SBOM the results judge; omitted when the writer is not given it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    subject: Option<Subject<'a>>,
     results: Vec<EnvelopeResult<'a>>,
 }
 
@@ -52,6 +66,55 @@ struct Envelope<'a> {
 struct Tool {
     name: &'static str,
     version: &'static str,
+}
+
+/// The envelope's `subject`: the SBOM the results judge, and how its
+/// document was read.
+#[derive(Serialize)]
+struct Subject<'a> {
+    /// Lowercase hex SHA-256 of the bytes read.
+    sha256: &'a str,
+    format: String,
+    spec_version: &'a str,
+    /// The file's name, without its directory; omitted for standard input.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    file_name: Option<&'a str>,
+    /// The components, after the duplicate entries were merged.
+    components: usize,
+    duplicates: Duplicates,
+    /// Whether the creation timestamp is there but does not parse.
+    timestamp_unparsed: bool,
+}
+
+/// The components the document lists more than once, whose entries were
+/// merged into one each.
+#[derive(Serialize)]
+struct Duplicates {
+    /// The components listed more than once.
+    components: usize,
+    /// Their entries.
+    entries: usize,
+    /// The fields the entries disagree on, each once, sorted.
+    conflicts: Vec<String>,
+}
+
+impl<'a> Subject<'a> {
+    fn of(assessed: &'a AssessedSbom<'_>) -> Self {
+        let sbom = assessed.sbom();
+        Self {
+            sha256: assessed.sha256(),
+            format: sbom.document.format.to_string(),
+            spec_version: &sbom.document.spec_version,
+            file_name: assessed.file_name(),
+            components: sbom.component_count(),
+            duplicates: Duplicates {
+                components: sbom.duplicate_components.len(),
+                entries: assessed.duplicate_entries(),
+                conflicts: assessed.duplicate_conflicts(),
+            },
+            timestamp_unparsed: sbom.document.created_unparsed.is_some(),
+        }
+    }
 }
 
 /// One standard's verdict.
@@ -136,14 +199,43 @@ impl<'a, F: Serialize + FindingIdentity> Identified<'a, F> {
     }
 }
 
-/// Render `results` as one `sbom-tools/compliance/v2` envelope.
+/// Render `results` as one `sbom-tools/compliance/v2` envelope, without the
+/// `as_of` and `subject` that [`generate_compliance_json_at`] adds.
 pub fn generate_compliance_json(results: &[ComplianceResult]) -> Result<String, ReportError> {
+    render(results, None, None)
+}
+
+/// Render `results` as one `sbom-tools/compliance/v2` envelope about
+/// `assessed`, the SBOM they judge, judged at `as_of`. The envelope's
+/// `as_of` states that instant, and its `subject` the SBOM's SHA-256,
+/// format, specification version and file name, and how its document was
+/// read: its components, the duplicate entries merged and whether its
+/// creation timestamp parses. `validate -o json` writes this.
+pub fn generate_compliance_json_at(
+    results: &[ComplianceResult],
+    assessed: &AssessedSbom<'_>,
+    as_of: DateTime<Utc>,
+) -> Result<String, ReportError> {
+    render(
+        results,
+        Some(Subject::of(assessed)),
+        Some(instant_text(as_of)),
+    )
+}
+
+fn render(
+    results: &[ComplianceResult],
+    subject: Option<Subject<'_>>,
+    as_of: Option<String>,
+) -> Result<String, ReportError> {
     let envelope = Envelope {
         schema: COMPLIANCE_JSON_SCHEMA,
         tool: Tool {
             name: "sbom-tools",
             version: env!("CARGO_PKG_VERSION"),
         },
+        as_of,
+        subject,
         results: results
             .iter()
             .map(envelope_result)

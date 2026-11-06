@@ -7,6 +7,20 @@ source: tests/compliance_snapshots.rs
     "name": "sbom-tools",
     "version": "[VERSION]"
   },
+  "as_of": "2026-10-12T00:00:00Z",
+  "subject": {
+    "sha256": "54964988348193d6f63e26a32b8a57224809f6bea921a6080d4758a7a759cef6",
+    "format": "CycloneDX",
+    "spec_version": "1.6",
+    "file_name": "cra-compliant.cdx.json",
+    "components": 3,
+    "duplicates": {
+      "components": 0,
+      "entries": 0,
+      "conflicts": []
+    },
+    "timestamp_unparsed": false
+  },
   "results": [
     {
       "standard": "cra",
