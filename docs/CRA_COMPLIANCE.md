@@ -665,23 +665,25 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
 
 ## Where this map lives in the code
 
-- `rule_meta()` in `src/quality/compliance/registry.rs` (via `Violation::registry_standard_refs()`) —
+- `rule_meta()` in `src/quality/compliance/registry/mod.rs`, over the
+  rules the family modules beside it declare (via
+  `Violation::registry_standard_refs()`) —
   string → `(StandardKind, id)` mapping. Drives SARIF
   `properties.standardIds`.
-- `rules_for_level()` in `src/quality/compliance/registry.rs` — the rules
+- `rules_for_level()` in `src/quality/compliance/registry/mod.rs` — the rules
   each profile's checks can report (Phase 1, Phase 2 and the steward have
   lists of their own). Drives SARIF `rules[]` and `sbom-tools rules
   --standard`; the rule matrices prove each list.
 - `rule_catalog()` in `src/quality/compliance/catalog.rs` — the catalogue
   `sbom-tools rules` prints: each rule's standards, references with URLs,
   remediation and per-format field advice.
-- `StandardKind::canonical_help_uri()` in `src/quality/compliance/mod.rs` —
+- `StandardKind::canonical_help_uri()` in `src/quality/compliance/standard_ref.rs` —
   `(StandardKind, id)` → URL. Drives SARIF `helpUri` (a rule links the
   first of its references that has a URL) and `properties.standardHelpUris`.
 - `rule_help_uri()` in `src/reports/sarif/rules.rs` — rule-ID prefix → URL,
   the `runs[].tool.driver.rules[].helpUri` of a rule none of whose
   references has a URL, and of the rules outside the registry.
-- `ComplianceChecker::class_severity()` in `src/quality/compliance/mod.rs` —
+- `ComplianceChecker::class_severity()` in `src/quality/compliance/checker.rs` —
   P3.2 calibration table.
 - `ComplianceRunConfig::checker()` in `src/quality/compliance/run_config.rs` —
   which of a run's inputs (`--as-of`, CRA sidecar, product class, PQC

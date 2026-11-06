@@ -4,9 +4,16 @@
 //!
 //! The public surface ([`ComplianceChecker`], [`ComplianceLevel`],
 //! [`ComplianceResult`], [`Violation`], [`PassedCheck`], the rule registry,
-//! …) lives here; the per-standard check logic is split across sibling
-//! submodules and dispatched through the [`StandardChecker`] trait in
-//! [`context`].
+//! …) is re-exported here from the modules that define it: `level` (the
+//! levels and CRA phases), `standard_ref` (the standard references),
+//! `result` (the result model and the score), `checker` (the checker and
+//! `check()`) and `registry` (the rules, one module per family). The
+//! per-standard check logic is split across sibling submodules and
+//! dispatched through the [`StandardChecker`] trait in [`context`]. The
+//! unit tests that check SBOMs end to end live in `tests`.
+//!
+//! The private `use` items below are the names the submodules share: they
+//! import them with `use super::*`.
 
 use crate::model::{NormalizedSbom, SbomFormat};
 use serde::{Deserialize, Serialize};

@@ -2,8 +2,10 @@
 //! IDs, harmonised-standard cross-references, and remediation text, keyed
 //! by the stable internal `Violation::rule_id`.
 //!
-//! Each rule is declared once, as a match arm of `declared_rule_meta`. The
-//! rule index reads every declaration once, on first use, and keeps the
+//! Each rule is declared once, as a match arm of the `declared_rule_meta`
+//! of its family's module (`cra`, `generic`, `crypto`, …); the per-format
+//! field advice the declarations share is in `advice`. The rule index
+//! reads every declaration once, on first use, and keeps the
 //! rules sorted by id with what every finding of a rule carries: its
 //! remediation for each format and its standard references, rendered once.
 //! [`rule_meta`] and the checker's per-finding lookups are binary searches
@@ -369,10 +371,11 @@ fn declared_rule_meta(rule_id: &str) -> Option<RuleMeta> {
         .or_else(|| fsct::declared_rule_meta(rule_id))
 }
 
-/// Every stable internal rule key with a `declared_rule_meta` match arm, in
-/// match-arm order: the rules the rule index holds. Kept adjacent to the
-/// declarations; the `all_rule_ids_matches_the_registry` test asserts the
-/// list and the match arms stay in lockstep.
+/// Every stable internal rule key with a match arm in a family module's
+/// `declared_rule_meta`: the rules the rule index holds, in registry order
+/// (the order of [`all_rule_ids`] and the rule catalogue). The
+/// `all_rule_ids_matches_the_registry` test asserts the list and the match
+/// arms stay in lockstep.
 const ALL_RULE_IDS: &[&str] = &[
     "SBOM-CRA-ART-13-2",
     "SBOM-CRA-SBOM-FRESHNESS",
@@ -763,7 +766,7 @@ fn closest_rule_id(value: &str) -> Option<&'static str> {
 //
 // The `SBOM-<FAMILY>-GENERAL` fallback rules are in no slice: no check emits
 // one. The SARIF generator files a finding without a registered rule under
-// its family's fallback (`generic_rule_id_for_level` in mod.rs) and declares
+// its family's fallback (`generic_rule_id_for_level` in level.rs) and declares
 // that rule when it does.
 // ---------------------------------------------------------------------------
 

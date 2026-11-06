@@ -1901,7 +1901,7 @@ fn level_sweep(
                         "[{checked:?}] reported {rule} (sarif {sarif}) for the fixture of {id} \
                          ({label}) in the {level:?} matrix, in {enc}; the rule is not in \
                          rules_for_level({checked:?}) — add it to that level's rule list in \
-                         src/quality/compliance/registry.rs",
+                         src/quality/compliance/registry/mod.rs",
                         id = entry.id,
                         enc = encoding.name(),
                     )
