@@ -19,6 +19,47 @@ use crate::model::{
     VulnerabilityRef, VulnerabilitySource,
 };
 
+/// The package rules of a context over `sbom`'s evidence, against the
+/// checker's own, for both excluded-scope settings: the components they
+/// judge, in order, their count, and the inventory-absent finding.
+fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
+    use super::super::context::ComplianceContext;
+    use super::super::{ComplianceChecker, ComplianceLevel};
+    let ev = SbomEvidence::new(sbom, as_of());
+    for include in [false, true] {
+        let checker = ComplianceChecker::new(ComplianceLevel::NtiaMinimum)
+            .with_as_of(as_of())
+            .with_include_excluded_scope(include);
+        let ctx = ComplianceContext::new(&checker, &ev);
+        let judged: Vec<_> = ctx
+            .package_components()
+            .map(|c| c.canonical_id().clone())
+            .collect();
+        let expected: Vec<_> = checker
+            .package_components(sbom)
+            .map(|c| c.canonical_id.clone())
+            .collect();
+        assert_eq!(judged, expected, "{at} (include: {include})");
+        assert_eq!(ctx.package_count(), expected.len(), "{at}");
+        for c in ev.components() {
+            assert_eq!(
+                ctx.leaves_out(&c),
+                checker.leaves_out(sbom, &sbom.components[c.canonical_id()]),
+                "{at}"
+            );
+        }
+        let rule = "SBOM-NTIA-INVENTORY";
+        assert_eq!(
+            ctx.inventory_absent_violation(rule, "inventory")
+                .map(|v| format!("{v:?}")),
+            checker
+                .inventory_absent_violation(sbom, rule, "inventory")
+                .map(|v| format!("{v:?}")),
+            "{at} (include: {include})"
+        );
+    }
+}
+
 /// The pinned evaluation instant (tests/common/clock.rs).
 fn as_of() -> chrono::DateTime<chrono::Utc> {
     chrono::DateTime::parse_from_rfc3339("2026-10-12T00:00:00Z")
@@ -722,5 +763,42 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
                 "{at}"
             );
         }
+    }
+}
+
+#[test]
+fn context_package_rules_agree_with_the_checker_on_every_fixture() {
+    for (path, sbom) in fixtures() {
+        assert_context_package_rules_agree(&sbom, &path.display().to_string());
+    }
+}
+
+#[test]
+fn context_inventory_finding_agrees_in_every_case() {
+    let typed = |name: &str, component_type: ComponentType| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c
+    };
+    let mut excluded = component("test-dep");
+    excluded.scope = Some(DependencyScope::Excluded);
+    let cases = [
+        ("empty", sbom_of(vec![])),
+        (
+            "crypto only",
+            sbom_of(vec![typed("aes", ComponentType::Cryptographic)]),
+        ),
+        (
+            "files and crypto",
+            sbom_of(vec![
+                typed("a.c", ComponentType::File),
+                typed("aes", ComponentType::Cryptographic),
+            ]),
+        ),
+        ("excluded only", sbom_of(vec![excluded])),
+        ("a package", sbom_of(vec![component("lib")])),
+    ];
+    for (what, sbom) in cases {
+        assert_context_package_rules_agree(&sbom, what);
     }
 }
