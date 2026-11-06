@@ -2,7 +2,9 @@
 //! lifecycle properties.
 
 use super::super::shared::{ValueState, known_value, plausible_digest, value_state};
-use crate::model::{Component, ComponentIdentifiers, Hash, HashAlgorithm, LicenseInfo};
+use crate::model::{
+    Component, ComponentIdentifiers, Hash, HashAlgorithm, HashProvenance, LicenseInfo,
+};
 
 /// Which identifier kinds a component declares: a PURL, a CPE, a SWHID, a
 /// SWID. Presence only, as the identifier checks read them.
@@ -193,4 +195,74 @@ pub(super) fn has_lifecycle_property(component: &Component) -> bool {
             || name_lower.contains("endofsupport");
         is_lifecycle_name && known_value(Some(p.value.as_str())).is_some()
     })
+}
+
+/// The first of `component`'s licences, declared then concluded (the order
+/// of `LicenseInfo::all_licenses`), that is a real expression but not a
+/// valid SPDX identifier or expression, as read. BSI TR-03183-2 §6.1 asks
+/// for licences named by SPDX identifier or expression.
+pub(super) fn first_non_spdx_license(component: &Component) -> Option<&str> {
+    component
+        .licenses
+        .declared
+        .iter()
+        .chain(&component.licenses.concluded)
+        // The SPDX test is a flag the parser set: read it before the value.
+        .filter(|l| !l.is_valid_spdx)
+        .find(|l| known_value(Some(l.expression.as_str())).is_some())
+        .map(|l| l.expression.as_str())
+}
+
+/// Which of a component's authored hashes count: the hashes the document
+/// itself carries (`HashProvenance::Authored`), not those enrichment fetched
+/// from a registry. BSI TR-03183-2 and CISA 2026 judge only these; the other
+/// hash rules count every hash (see [`HashFacts`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct AuthoredHashFacts {
+    /// The document carries at least one hash of the component.
+    pub(crate) present: bool,
+    /// At least one of them is a plausible SHA-512 digest (see
+    /// `shared::plausible_digest`).
+    pub(crate) plausible_sha512: bool,
+}
+
+impl AuthoredHashFacts {
+    pub(super) fn of(hashes: &[Hash]) -> Self {
+        let mut facts = Self::default();
+        for hash in authored(hashes) {
+            facts.present = true;
+            facts.plausible_sha512 |= hash.algorithm == HashAlgorithm::Sha512
+                && plausible_digest(&hash.algorithm, &hash.value);
+        }
+        facts
+    }
+}
+
+/// The hashes among `hashes` that the document itself carries, in document
+/// order.
+fn authored(hashes: &[Hash]) -> impl Iterator<Item = &Hash> {
+    hashes
+        .iter()
+        .filter(|h| h.provenance == HashProvenance::Authored)
+}
+
+/// A component's authored hashes.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AuthoredHashes<'a> {
+    /// Which of them count.
+    pub(crate) facts: AuthoredHashFacts,
+    /// Every hash of the component, enriched ones included.
+    raw: &'a [Hash],
+}
+
+impl<'a> AuthoredHashes<'a> {
+    pub(super) const fn new(raw: &'a [Hash], facts: AuthoredHashFacts) -> Self {
+        Self { facts, raw }
+    }
+
+    /// The authored hashes as read, in document order, for a finding's
+    /// message.
+    pub(crate) fn iter(self) -> impl Iterator<Item = &'a Hash> {
+        authored(self.raw)
+    }
 }

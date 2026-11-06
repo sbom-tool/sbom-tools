@@ -4,7 +4,8 @@
 use super::super::shared::{is_valid_email_format, known_contact};
 use super::{ComponentIx, Text};
 use crate::model::{
-    CanonicalId, CompletenessDeclaration, Creator, NormalizedSbom, SbomFormat, SpecVersion,
+    CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
+    SpecVersion,
 };
 
 /// The document-level facts of an SBOM.
@@ -43,6 +44,11 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) primary_declared: Option<&'a CanonicalId>,
     /// The primary component, when its id names a component.
     pub(crate) primary: Option<ComponentIx>,
+    /// Whether a creator is a person or an organization, not a tool: BSI
+    /// TR-03183-2's creator of the SBOM. Other standards judge the author
+    /// differently: most accept any creator, and CISA 2026 and FSCT require
+    /// a non-tool creator that is also identified.
+    pub(crate) has_non_tool_creator: bool,
 }
 
 /// One creator of the document.
@@ -88,6 +94,10 @@ impl<'a> DocumentFacts<'a> {
             completeness: &document.completeness_declaration,
             primary_declared: sbom.primary_component_id.as_ref(),
             primary,
+            has_non_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool),
         }
     }
 }

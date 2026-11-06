@@ -7,16 +7,16 @@ use std::path::{Path, PathBuf};
 
 use super::super::shared::{
     ValueState, has_known_license, has_known_producer, has_known_value, is_declared_unknown,
-    justified_not_affected, known_component_name, known_contact, license_state,
+    justified_not_affected, known_component_name, known_contact, known_value, license_state,
     manufacturer_identified, manufacturer_reference, observed, observed_producer, plausible_digest,
     unreachable_contact,
 };
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
-    DependencyType, ExternalRefType, ExternalReference, Hash, HashAlgorithm, LicenseExpression,
-    NormalizedSbom, Organization, Property, VexJustification, VexState, VexStatus,
-    VulnerabilityRef, VulnerabilitySource,
+    DependencyType, ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance,
+    LicenseExpression, NormalizedSbom, Organization, Property, VexJustification, VexState,
+    VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -412,6 +412,126 @@ fn manufacturer_references_count_on_the_described_product_only() {
     assert!(!ev.manufacturer().identified);
 }
 
+#[test]
+fn a_non_tool_creator_is_judged_by_its_type_only() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.creators = vec![creator(CreatorType::Tool, "syft 1.0")];
+    assert!(
+        !SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_non_tool_creator
+    );
+    // A placeholder name still counts here: BSI TR-03183-2 judges the
+    // creator's contact apart.
+    sbom.document
+        .creators
+        .push(creator(CreatorType::Person, "NOASSERTION"));
+    assert!(
+        SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_non_tool_creator
+    );
+}
+
+#[test]
+fn vulnerability_presence_is_read_per_component() {
+    let mut a = component("a");
+    a.vulnerabilities = vec![VulnerabilityRef::new(
+        "CVE-1".to_string(),
+        VulnerabilitySource::Osv,
+    )];
+    let sbom = sbom_of(vec![a, component("b")]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "a").has_vulnerabilities());
+    assert!(!view(&ev, "b").has_vulnerabilities());
+}
+
+#[test]
+fn the_first_non_spdx_licence_is_a_real_one_in_licence_order() {
+    let with = |name: &str, declared: &[&str], concluded: Option<&str>| {
+        let mut c = component(name);
+        for expression in declared {
+            c.licenses
+                .add_declared(LicenseExpression::new((*expression).to_string()));
+        }
+        c.licenses.concluded = concluded.map(|e| LicenseExpression::new(e.to_string()));
+        c
+    };
+    let sbom = sbom_of(vec![
+        with("spdx", &["MIT"], Some("Apache-2.0")),
+        with(
+            "text",
+            &["MIT", "Custom Licence A"],
+            Some("Custom Licence B"),
+        ),
+        with("sentinel", &["NOASSERTION"], None),
+        with("placeholder", &["TBD"], Some("Custom Licence C")),
+        with("none", &[], None),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let first = |name| view(&ev, name).first_non_spdx_license();
+    assert_eq!(first("spdx"), None);
+    assert_eq!(first("text"), Some("Custom Licence A"));
+    assert_eq!(first("sentinel"), None);
+    assert_eq!(first("placeholder"), Some("Custom Licence C"));
+    assert_eq!(first("none"), None);
+}
+
+#[test]
+fn authored_hash_facts_leave_out_enriched_hashes() {
+    let hash = |algorithm, value: String, provenance| {
+        let mut h = Hash::new(algorithm, value);
+        h.provenance = provenance;
+        h
+    };
+    let with = |name: &str, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.hashes = hashes;
+        c
+    };
+    let (authored, enriched) = (HashProvenance::Authored, HashProvenance::Enriched);
+    let sbom = sbom_of(vec![
+        with("none", vec![]),
+        with(
+            "enriched",
+            vec![hash(HashAlgorithm::Sha512, "a".repeat(128), enriched)],
+        ),
+        with(
+            "sha256",
+            vec![hash(HashAlgorithm::Sha256, "b".repeat(64), authored)],
+        ),
+        with(
+            "bad-sha512",
+            vec![hash(HashAlgorithm::Sha512, "zz".to_string(), authored)],
+        ),
+        with(
+            "sha512",
+            vec![
+                hash(HashAlgorithm::Sha256, "c".repeat(64), enriched),
+                hash(HashAlgorithm::Sha512, "d".repeat(128), authored),
+            ],
+        ),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let facts = |name| view(&ev, name).authored_hashes().facts;
+    assert!(!facts("none").present);
+    assert!(!facts("enriched").present && !facts("enriched").plausible_sha512);
+    assert!(facts("sha256").present && !facts("sha256").plausible_sha512);
+    assert!(facts("bad-sha512").present && !facts("bad-sha512").plausible_sha512);
+    assert!(facts("sha512").plausible_sha512);
+    let listed: Vec<_> = view(&ev, "sha512")
+        .authored_hashes()
+        .iter()
+        .map(|h| h.algorithm.clone())
+        .collect();
+    assert_eq!(listed, [HashAlgorithm::Sha512]);
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -437,7 +557,7 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
             ev.components()
                 .map(|c| {
                     format!(
-                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {}\n",
+                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {:?}\n",
                         c.version(),
                         c.producer(),
                         c.licenses().state,
@@ -447,6 +567,9 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.package_scoped(),
                         c.excluded_scope(),
                         c.touched(),
+                        c.has_vulnerabilities(),
+                        c.first_non_spdx_license(),
+                        c.authored_hashes().facts,
                     )
                 })
                 .collect()
@@ -600,6 +723,47 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
                 comp.identifiers.has_cra_identifier(),
                 "{at}"
             );
+            assert_eq!(
+                view.has_vulnerabilities(),
+                !comp.vulnerabilities.is_empty(),
+                "{at}"
+            );
+            // BSI TR-03183-2's licence-name and authored-hash reading (bsi.rs).
+            let known_licenses: Vec<_> = comp
+                .licenses
+                .all_licenses()
+                .into_iter()
+                .filter(|l| known_value(Some(l.expression.as_str())).is_some())
+                .collect();
+            assert_eq!(
+                view.first_non_spdx_license(),
+                known_licenses
+                    .iter()
+                    .find(|l| !l.is_valid_spdx)
+                    .map(|l| l.expression.as_str()),
+                "{at}"
+            );
+            let authored: Vec<&Hash> = comp
+                .hashes
+                .iter()
+                .filter(|h| h.provenance == HashProvenance::Authored)
+                .collect();
+            let authored_facts = view.authored_hashes().facts;
+            assert_eq!(authored_facts.present, !authored.is_empty(), "{at}");
+            assert_eq!(
+                authored_facts.plausible_sha512,
+                authored.iter().any(|h| {
+                    h.algorithm == HashAlgorithm::Sha512 && plausible_digest(&h.algorithm, &h.value)
+                }),
+                "{at}"
+            );
+            assert!(
+                view.authored_hashes()
+                    .iter()
+                    .map(std::ptr::from_ref)
+                    .eq(authored.iter().map(|h| std::ptr::from_ref(*h))),
+                "{at}"
+            );
             for (include, checker) in [false, true].into_iter().zip(&checkers) {
                 assert_eq!(
                     !include && view.excluded_scope(),
@@ -643,6 +807,15 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             "{at}"
         );
         assert_eq!(doc.creators.len(), document.creators.len(), "{at}");
+        // BSI TR-03183-2's creator of the SBOM (bsi.rs).
+        assert_eq!(
+            doc.has_non_tool_creator,
+            document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool),
+            "{at}"
+        );
         assert_eq!(doc.name.is_known(), has_known_value(&document.name), "{at}");
         assert_eq!(
             doc.security_contact_reaches,

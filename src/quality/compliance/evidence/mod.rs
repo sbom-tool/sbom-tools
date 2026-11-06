@@ -40,6 +40,10 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
+// Transitional: the facts the BSI TR-03183-2 port reads, before it reads
+// them.
+#![cfg_attr(not(test), allow(dead_code))]
+
 mod component;
 mod document;
 mod graph;
@@ -59,7 +63,9 @@ use crate::model::{
     CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, NormalizedSbom,
 };
 
-pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
+pub(crate) use component::{
+    AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Producer,
+};
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -149,6 +155,8 @@ pub(crate) struct SbomEvidence<'a> {
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
+    non_spdx_licenses: OnceLock<Box<[Option<&'a str>]>>,
+    authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -176,6 +184,8 @@ impl<'a> SbomEvidence<'a> {
             manufacturer: OnceLock::new(),
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
+            non_spdx_licenses: OnceLock::new(),
+            authored_hashes: OnceLock::new(),
         }
     }
 
@@ -338,6 +348,26 @@ impl<'a> SbomEvidence<'a> {
                 .collect()
         })
     }
+
+    fn non_spdx_licenses(&self) -> &[Option<&'a str>] {
+        self.non_spdx_licenses.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(component::first_non_spdx_license)
+                .collect()
+        })
+    }
+
+    fn authored_hashes(&self) -> &[AuthoredHashFacts] {
+        self.authored_hashes.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| AuthoredHashFacts::of(&c.hashes))
+                .collect()
+        })
+    }
 }
 
 /// One component's facts. The cheap ones are computed on access; the rest
@@ -428,5 +458,23 @@ impl<'a> ComponentView<'_, 'a> {
     /// Whether the component positively declares it has no dependencies.
     pub(crate) fn declares_no_dependencies(&self) -> bool {
         self.ev.graph().declares_no_dependencies[self.ix.0]
+    }
+
+    /// Whether the component carries vulnerability information.
+    pub(crate) fn has_vulnerabilities(&self) -> bool {
+        !self.component.vulnerabilities.is_empty()
+    }
+
+    /// The first of the component's licences that is a real expression but
+    /// not a valid SPDX identifier or expression, as read (see
+    /// [`component::first_non_spdx_license`]).
+    pub(crate) fn first_non_spdx_license(&self) -> Option<&'a str> {
+        self.ev.non_spdx_licenses()[self.ix.0]
+    }
+
+    /// The hashes the document itself carries for the component, without
+    /// those enrichment added.
+    pub(crate) fn authored_hashes(&self) -> AuthoredHashes<'a> {
+        AuthoredHashes::new(&self.component.hashes, self.ev.authored_hashes()[self.ix.0])
     }
 }
