@@ -16,7 +16,13 @@ const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 ///
 /// This structure represents an SBOM in a format-agnostic way, allowing
 /// comparison between `CycloneDX` and SPDX documents.
+///
+/// Build one with [`Self::new`] or [`Default`] and set its fields, or
+/// deserialize it: it keeps derived state of its own (see
+/// [`Self::claim_canonical_id`]), so code outside the crate cannot build it
+/// with a struct literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct NormalizedSbom {
     /// Document-level metadata
     pub document: DocumentMetadata,
