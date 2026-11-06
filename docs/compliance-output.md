@@ -619,7 +619,9 @@ CPE, SWHID or SWID. When two different components share a canonical id, the
 later one in the document is re-keyed by appending `#` and its `bom-ref` or
 `SPDXID`, so reordering such components can move that suffix. Entries with
 the same canonical id, name and version are one component, merged into one
-(see [Duplicate components](#duplicate-components)). A finding with a
+(see [Duplicate components](#duplicate-components)); a later entry of a
+re-keyed component under the same `bom-ref` or `SPDXID` takes the re-keyed
+id and is merged into it too. A finding with a
 `finding_detail` also changes id with its detail, which comes from the SBOM's
 own data (a vulnerability id, a cipher suite name), never from the message.
 

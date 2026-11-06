@@ -1278,32 +1278,41 @@ impl SbomSpec {
             .any(|other| other != index && self.components[other].build(other).canonical_id == id)
     }
 
-    /// Whether entries of different components take one canonical id (they
-    /// carry the same malformed purl or CPE) and there are three or more of
-    /// them. Which entries become which components then depends on their
-    /// order, and so do the findings and the counts. Not fixed here (output
-    /// is frozen for the refactor), and excluded where it matters:
+    /// Whether entries of different specs take one canonical id (they carry
+    /// the same malformed purl or CPE), and some of them are one component
+    /// ([`Component::is_same_component`]) while others are not. Which
+    /// entries merge then depends on their order, and so do the findings
+    /// and the counts:
     ///
-    /// - `NormalizedSbom::claim_canonical_id` gives the repeat of an entry
-    ///   it re-keyed yet another id (`<id>#<ref>#2`) instead of merging it
-    ///   into that entry: `a, b, b` under one purl is three components,
-    ///   `b, a, b` two.
     /// - An entry whose name or version is not known agrees with any, so it
     ///   merges into whichever component under its id comes first: in
     ///   `a, NOASSERTION, b` its fields go to `a`, in `NOASSERTION, b, a`
     ///   to `b`.
-    fn has_unstable_id_sharing(&self) -> bool {
-        let mut groups: BTreeMap<String, Vec<usize>> = BTreeMap::new();
-        for index in self.entries() {
-            let id = self.components[index].build(index).canonical_id;
+    /// - A component listed under two format ids beside another component
+    ///   under the id: when the other comes first, the second entry is
+    ///   re-keyed under its own format id and kept apart from the first.
+    ///
+    /// Excluded where it matters. A component listed twice under one
+    /// format id (a repeat of the same spec) is not excluded: its repeat
+    /// takes the id its first entry got, in every order.
+    fn has_ambiguous_merges(&self) -> bool {
+        let mut groups: BTreeMap<String, Vec<(usize, Component)>> = BTreeMap::new();
+        for index in 0..self.components.len() {
+            let component = self.components[index].build(index);
             groups
-                .entry(id.value().to_string())
+                .entry(component.canonical_id.value().to_string())
                 .or_default()
-                .push(index);
+                .push((index, component));
         }
         groups.values().any(|group| {
-            let components: BTreeSet<&usize> = group.iter().collect();
-            components.len() >= 2 && group.len() >= 3
+            let pairs = || {
+                group.iter().enumerate().flat_map(move |(i, (_, a))| {
+                    group[i + 1..]
+                        .iter()
+                        .map(move |(_, b)| a.is_same_component(b))
+                })
+            };
+            pairs().any(|same| same) && pairs().any(|same| !same)
         })
     }
 }
@@ -1703,8 +1712,8 @@ proptest! {
             .collect();
         let shuffled_edges = permutation(spec.edges.len(), seed.rotate_left(17));
         // Excluded: entries whose merging follows their order (see
-        // `SbomSpec::has_unstable_id_sharing`).
-        prop_assume!(!spec.has_unstable_id_sharing());
+        // `SbomSpec::has_ambiguous_merges`).
+        prop_assume!(!spec.has_ambiguous_merges());
         let original = spec.build_in_order(&entries, &(0..spec.edges.len()).collect::<Vec<_>>());
         let shuffled = spec.build_in_order(&shuffled_entries, &shuffled_edges);
 

@@ -124,7 +124,9 @@ impl NormalizedSbom {
     ///
     /// A component of a different known name or version under a taken id
     /// replaces the one there (counted, and `true`). Parsers never pass one:
-    /// [`Self::claim_canonical_id`] gives it an id of its own first.
+    /// [`Self::claim_canonical_id`] gives it an id of its own first, and
+    /// gives a later entry of it with the same format ID that same id, so
+    /// the two merge here.
     pub fn add_component(&mut self, component: Component) -> bool {
         let id = component.canonical_id.clone();
         let Some(existing) = self.components.get_mut(&id) else {
@@ -154,11 +156,16 @@ impl NormalizedSbom {
     /// share an identifier (two versions under one version-less purl, say).
     /// Inserting would overwrite — silently dropping a component from every
     /// count and check — so `component` is re-keyed to an ID that appends its
-    /// format ID (bom-ref or SPDXID), and the clash is logged. A true
+    /// format ID (bom-ref or SPDXID), then `#2`, `#3`, … while that ID is
+    /// taken by another component, and the clash is logged. A true
     /// duplicate (the same name and version, where a name or version that is
     /// absent or not known agrees with any; see
-    /// [`Component::is_same_component`]) keeps the shared ID, and
-    /// [`Self::add_component`] merges the two entries. Returns the ID to
+    /// [`Component::is_same_component`]) keeps the ID its first entry got:
+    /// the shared ID, or the re-keyed one when the first entry was re-keyed
+    /// under the same format ID. [`Self::add_component`] then merges the two
+    /// entries: a component listed twice under one bom-ref, beside another
+    /// component under the same purl, is one component whether the other
+    /// comes before both of its entries or between them. Returns the ID to
     /// register.
     pub fn claim_canonical_id(&self, component: &mut Component) -> CanonicalId {
         let distinct = self
@@ -173,16 +180,26 @@ impl NormalizedSbom {
             );
             let mut candidate = CanonicalId::from_format_id(&base);
             let mut n = 2;
-            while self.components.contains_key(&candidate) {
+            // An ID taken by the same component is the one its first entry
+            // was re-keyed to: reuse it, so the entries merge.
+            while self
+                .components
+                .get(&candidate)
+                .is_some_and(|holder| !holder.is_same_component(component))
+            {
                 candidate = CanonicalId::from_format_id(&format!("{base}#{n}"));
                 n += 1;
             }
-            tracing::warn!(
-                shared_id = %component.canonical_id,
-                component = %component.name,
-                kept_as = %candidate,
-                "distinct components share a canonical ID; keeping both"
-            );
+            // The clash was logged for the first entry; a repeat merges and
+            // is counted in the collision summary.
+            if !self.components.contains_key(&candidate) {
+                tracing::warn!(
+                    shared_id = %component.canonical_id,
+                    component = %component.name,
+                    kept_as = %candidate,
+                    "distinct components share a canonical ID; keeping both"
+                );
+            }
             component.canonical_id = candidate;
         }
         component.canonical_id.clone()

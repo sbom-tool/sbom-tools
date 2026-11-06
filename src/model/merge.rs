@@ -3,8 +3,10 @@
 //! A document can list one component twice: the same purl under two
 //! bom-refs, or one bom-ref repeated. Parsers settle each entry's canonical
 //! id with [`NormalizedSbom::claim_canonical_id`], which keeps entries of a
-//! different known name or version apart, so entries that still share an id
-//! are one component ([`Component::is_same_component`]).
+//! different known name or version apart, and gives a repeat the id its
+//! first entry got, also when that entry was re-keyed under the same
+//! bom-ref or SPDXID. Entries that share an id are one component
+//! ([`Component::is_same_component`]).
 //! [`NormalizedSbom::add_component`] merges them with
 //! [`Component::merge_duplicate`] and records the duplicate as a
 //! [`DuplicateComponent`]. The merged component does not depend on which
@@ -799,6 +801,101 @@ mod tests {
             "two known versions are two components"
         );
         assert!(sbom.duplicate_components.is_empty());
+    }
+
+    /// A component listed twice under one bom-ref, beside a different
+    /// component under the same purl, is one component in every order: when
+    /// the other component took the purl's id first, the repeat gets the id
+    /// the first entry was re-keyed to and merges into it, where it used to
+    /// be re-keyed again (`pkg:npm/x#b#2`) and kept as a third component.
+    /// Which of the two keeps the bare id still follows the order.
+    #[test]
+    fn a_repeat_of_a_rekeyed_entry_merges_in_every_order() {
+        const PURL: &str = "pkg:npm/x";
+        let a = Component::new("a".to_string(), "a".to_string()).with_purl(PURL.to_string());
+        let mut b = Component::new("b".to_string(), "b".to_string()).with_purl(PURL.to_string());
+        b.description = Some("first entry".to_string());
+        let mut b_again =
+            Component::new("b".to_string(), "b".to_string()).with_purl(PURL.to_string());
+        b_again.supplier = Some(Organization::new("Acme".to_string()));
+        let parse = |entries: Vec<Component>| {
+            let mut sbom = NormalizedSbom::default();
+            for mut c in entries {
+                sbom.claim_canonical_id(&mut c);
+                sbom.add_component(c);
+            }
+            sbom
+        };
+        for order in permutations(&[a, b, b_again]) {
+            let names: Vec<&str> = order.iter().map(|c| c.name.as_str()).collect();
+            let sbom = parse(order.clone());
+            assert_eq!(sbom.components.len(), 2, "{names:?}: a and b");
+            let b = sbom
+                .components
+                .values()
+                .find(|c| c.name == "b")
+                .expect("b is kept");
+            assert_eq!(b.description.as_deref(), Some("first entry"), "{names:?}");
+            assert!(b.supplier.is_some(), "{names:?}: the repeat's supplier");
+            let duplicate = &sbom.duplicate_components[&b.canonical_id];
+            assert_eq!(duplicate.entries, 2, "{names:?}");
+            assert_eq!(sbom.duplicate_components.len(), 1, "{names:?}");
+            // The bare id goes to whichever component comes first.
+            let first = sbom.components.values().next().expect("a component");
+            assert_eq!(first.canonical_id.value(), PURL, "{names:?}");
+            assert_eq!(first.name, names[0], "{names:?}");
+        }
+
+        // `a, b, b` and `b, a, b`, the orders that used to differ: b's
+        // entries share the id its first entry got.
+        let ids = |sbom: &NormalizedSbom| {
+            sbom.components
+                .values()
+                .map(|c| (c.name.clone(), c.canonical_id.value().to_string()))
+                .collect::<Vec<_>>()
+        };
+        let entry = |name: &str| {
+            Component::new(name.to_string(), name.to_string()).with_purl(PURL.to_string())
+        };
+        assert_eq!(
+            ids(&parse(vec![entry("a"), entry("b"), entry("b")])),
+            [
+                ("a".to_string(), PURL.to_string()),
+                ("b".to_string(), format!("{PURL}#b")),
+            ]
+        );
+        assert_eq!(
+            ids(&parse(vec![entry("b"), entry("a"), entry("b")])),
+            [
+                ("b".to_string(), PURL.to_string()),
+                ("a".to_string(), format!("{PURL}#a")),
+            ]
+        );
+    }
+
+    /// A component re-keyed past a taken `#<n>` candidate keeps that id for
+    /// its repeat too.
+    #[test]
+    fn a_repeat_reuses_a_numbered_rekeyed_id() {
+        const PURL: &str = "pkg:npm/x";
+        // Three different components under one purl and one bom-ref, then a
+        // repeat of the third.
+        let entry = |name: &str| {
+            Component::new(name.to_string(), "ref".to_string()).with_purl(PURL.to_string())
+        };
+        let mut sbom = NormalizedSbom::default();
+        let mut ids = Vec::new();
+        for mut c in [entry("a"), entry("b"), entry("c"), entry("c")] {
+            ids.push(sbom.claim_canonical_id(&mut c));
+            sbom.add_component(c);
+        }
+        let ids: Vec<&str> = ids.iter().map(CanonicalId::value).collect();
+        assert_eq!(
+            ids,
+            [PURL, "pkg:npm/x#ref", "pkg:npm/x#ref#2", "pkg:npm/x#ref#2"]
+        );
+        assert_eq!(sbom.components.len(), 3);
+        assert_eq!(sbom.duplicate_components.len(), 1);
     }
 
     #[test]
