@@ -1,5 +1,7 @@
 //! Compliance levels: the standards and profiles a checker can check
-//! against, the CRA phases, and each level's family fallback rule.
+//! against, the CRA phases, and each level's family fallback rule. What a
+//! level's methods return is in its entry in the standards table
+//! (`standards.rs`).
 
 use super::*;
 
@@ -125,133 +127,25 @@ impl ComplianceLevel {
     /// Get human-readable name
     #[must_use]
     pub const fn name(&self) -> &'static str {
-        match self {
-            Self::Minimum => "Minimum",
-            Self::Standard => "Standard",
-            Self::NtiaMinimum => "NTIA Minimum Elements",
-            Self::CraPhase1 => "EU CRA Phase 1 (2026)",
-            Self::CraPhase2 => "EU CRA Phase 2 (2027)",
-            Self::FdaMedicalDevice => "FDA Medical Device",
-            Self::NistSsdf => "NIST SSDF (SP 800-218)",
-            Self::Eo14028 => "EO 14028 Section 4",
-            Self::Cnsa2 => "CNSA 2.0",
-            Self::NistPqc => "NIST PQC Readiness",
-            Self::BsiTr03183_2 => "BSI TR-03183-2",
-            Self::CraOssSteward => "CRA OSS Steward (Art. 24)",
-            Self::EuccSubstantial => "EUCC Substantial (Reg. 2024/482)",
-            Self::EuAiAct => "EU AI Act Annex IV Readiness",
-            Self::BsiSbomForAi => "BSI/G7 SBOM-for-AI Minimum Elements Readiness",
-            Self::Cisa2026 => "CISA 2026 Minimum Elements",
-            Self::PciDss632 => "PCI DSS v4.0.1 Req. 6.3.2",
-            Self::Fsct => "CISA Framing Software Component Transparency (3rd ed.)",
-            Self::Comprehensive => "Comprehensive",
-        }
+        self.descriptor().name
     }
 
     /// Get compact tab label (max ~8 chars) for terminal display.
     #[must_use]
     pub const fn short_name(&self) -> &'static str {
-        match self {
-            Self::Minimum => "Min",
-            Self::Standard => "Std",
-            Self::NtiaMinimum => "NTIA",
-            Self::CraPhase1 => "CRA-1",
-            Self::CraPhase2 => "CRA-2",
-            Self::FdaMedicalDevice => "FDA",
-            Self::NistSsdf => "SSDF",
-            Self::Eo14028 => "EO14028",
-            Self::Cnsa2 => "CNSA2",
-            Self::NistPqc => "PQC",
-            Self::BsiTr03183_2 => "BSI",
-            Self::CraOssSteward => "OSS",
-            Self::EuccSubstantial => "EUCC",
-            Self::EuAiAct => "AI-Act",
-            Self::BsiSbomForAi => "BSI-AI",
-            Self::Cisa2026 => "CISA26",
-            Self::PciDss632 => "PCI",
-            Self::Fsct => "FSCT",
-            Self::Comprehensive => "Full",
-        }
+        self.descriptor().short_name
     }
 
     /// Get description of what this level checks
     #[must_use]
     pub const fn description(&self) -> &'static str {
-        match self {
-            Self::Minimum => "Basic component identification only",
-            Self::Standard => "Recommended fields for general use",
-            Self::NtiaMinimum => "NTIA minimum elements for software transparency",
-            Self::CraPhase1 => {
-                "CRA reporting obligations — product ID, SBOM format, manufacturer (Art. 14 applies from 11 Sep 2026)"
-            }
-            Self::CraPhase2 => {
-                "Full CRA compliance — adds vulnerability metadata, lifecycle, disclosure (regulation fully applies from 11 Dec 2027)"
-            }
-            Self::FdaMedicalDevice => "FDA premarket submission requirements for medical devices",
-            Self::NistSsdf => {
-                "Secure Software Development Framework — provenance, build integrity, VCS references"
-            }
-            Self::Eo14028 => {
-                "Executive Order 14028 §4 SBOM practice (not a federal mandate since OMB M-26-05 rescinded M-22-18 and M-23-16) — machine-readable SBOM, auto-generation, supply chain security"
-            }
-            Self::Cnsa2 => {
-                "CNSA 2.0 (required by CNSSP 15) — AES-256, SHA-384+, ML-KEM-1024, ML-DSA-87, quantum security level 5"
-            }
-            Self::NistPqc => {
-                "NIST PQC — quantum-vulnerable algorithm detection, FIPS 203/204/205, SP 800-131A"
-            }
-            Self::BsiTr03183_2 => {
-                "BSI TR-03183-2 v2.1.0 — German national SBOM guideline (free, ENISA-cited): CycloneDX 1.6+/SPDX 3.0.1+ formats, required creator/timestamp, per-component version/licences/SHA-512 hash"
-            }
-            Self::CraOssSteward => {
-                "CRA Article 24 — Open-source software steward (lighter than full manufacturer obligations): SBOM + CVD policy + vuln-handling required, no DoC/module/manufacturer-email enforcement"
-            }
-            Self::EuccSubstantial => {
-                "EUCC Substantial (Implementing Reg. (EU) 2024/482, as amended by 2024/3144 and 2025/2462) — reference-only check for Common-Criteria Protection Profile, Target of Evaluation, ITSEF, and certificate valid-until date"
-            }
-            Self::EuAiAct => {
-                "EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744) Annex IV technical-documentation READINESS — model description, training-data characteristics, validation/testing metrics, limitations (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
-            }
-            Self::BsiSbomForAi => {
-                "BSI/G7 SBOM-for-AI Minimum Elements (joint G7 final, May 2026) READINESS — scores an AI-BOM element-by-element across the Metadata, System-Level, Models, Datasets, Infrastructure, and Security clusters (readiness only, not a legal-conformity guarantee; N/A for non-AI SBOMs)"
-            }
-            Self::Cisa2026 => {
-                "2026 Minimum Elements for an SBOM (CISA et al., July 2026) — successor to NTIA 2021: author (person/org), signature, format name+version, generation context, timestamp, tool name+version, SBOM version, and per-component producer/name/version/identifiers/hash/license/dependencies. Frequency, distribution, and update accommodation are organizational practices with no in-document evidence and carry no rules."
-            }
-            Self::PciDss632 => {
-                "PCI DSS v4.0.1 Req. 6.3.2 software-inventory profile (required in assessments since 31 Mar 2025) — inventory completeness, per-component name/version/supplier/identifier, freshness, and vulnerability-management usability; 6.3.1/11.3.1.1 risk-ranking checks where vulnerability data is embedded. Assessor-side testing procedures (interviews, software comparison) are out of document reach."
-            }
-            Self::Fsct => {
-                "CISA Framing Software Component Transparency, 3rd ed. (2024) — baseline attributes (author, timestamp, primary component, name, version, supplier, identifiers, hashes, relationships, licenses, copyright) across the Minimum Expected (Error) / Recommended Practice (Warning) / Aspirational Goal (Info) maturity tiers"
-            }
-            Self::Comprehensive => "All recommended fields and best practices",
-        }
+        self.descriptor().description
     }
 
     /// Get all compliance levels
     #[must_use]
     pub const fn all() -> &'static [Self] {
-        &[
-            Self::Minimum,
-            Self::Standard,
-            Self::NtiaMinimum,
-            Self::CraPhase1,
-            Self::CraPhase2,
-            Self::FdaMedicalDevice,
-            Self::NistSsdf,
-            Self::Eo14028,
-            Self::Cnsa2,
-            Self::NistPqc,
-            Self::BsiTr03183_2,
-            Self::CraOssSteward,
-            Self::EuccSubstantial,
-            Self::EuAiAct,
-            Self::BsiSbomForAi,
-            Self::Cisa2026,
-            Self::PciDss632,
-            Self::Fsct,
-            Self::Comprehensive,
-        ]
+        &super::standards::ALL_LEVELS
     }
 
     /// Whether this level is a CRA check. Includes the lighter Article 24
@@ -259,20 +153,13 @@ impl ComplianceLevel {
     /// regulation (just with reduced obligations).
     #[must_use]
     pub const fn is_cra(&self) -> bool {
-        matches!(
-            self,
-            Self::CraPhase1 | Self::CraPhase2 | Self::CraOssSteward
-        )
+        self.descriptor().cra
     }
 
     /// Get CRA phase, if applicable
     #[must_use]
     pub const fn cra_phase(&self) -> Option<CraPhase> {
-        match self {
-            Self::CraPhase1 => Some(CraPhase::Phase1),
-            Self::CraPhase2 => Some(CraPhase::Phase2),
-            _ => None,
-        }
+        self.descriptor().cra_phase
     }
 }
 
@@ -284,27 +171,7 @@ impl ComplianceLevel {
 /// files a finding here declares the rule with registry metadata.
 #[must_use]
 pub const fn generic_rule_id_for_level(level: ComplianceLevel) -> &'static str {
-    match level {
-        ComplianceLevel::Minimum | ComplianceLevel::Standard | ComplianceLevel::Comprehensive => {
-            "SBOM-QUALITY-GENERAL"
-        }
-        ComplianceLevel::NtiaMinimum => "SBOM-NTIA-GENERAL",
-        ComplianceLevel::CraPhase1
-        | ComplianceLevel::CraPhase2
-        | ComplianceLevel::CraOssSteward => "SBOM-CRA-GENERAL",
-        ComplianceLevel::FdaMedicalDevice => "SBOM-FDA-GENERAL",
-        ComplianceLevel::NistSsdf => "SBOM-SSDF-GENERAL",
-        ComplianceLevel::Eo14028 => "SBOM-EO14028-GENERAL",
-        ComplianceLevel::Cnsa2 => "SBOM-CNSA2-GENERAL",
-        ComplianceLevel::NistPqc => "SBOM-PQC-GENERAL",
-        ComplianceLevel::BsiTr03183_2 => "SBOM-BSI-TR-03183-2-GENERAL",
-        ComplianceLevel::EuccSubstantial => "SBOM-EUCC-GENERAL",
-        ComplianceLevel::EuAiAct => "SBOM-AIACT-GENERAL",
-        ComplianceLevel::BsiSbomForAi => "SBOM-BSIAI-GENERAL",
-        ComplianceLevel::Cisa2026 => "SBOM-CISA2026-GENERAL",
-        ComplianceLevel::PciDss632 => "SBOM-PCI-GENERAL",
-        ComplianceLevel::Fsct => "SBOM-FSCT-GENERAL",
-    }
+    level.descriptor().fallback_rule
 }
 
 #[cfg(test)]
