@@ -141,7 +141,9 @@ impl<'r, 'a> ComplianceContext<'r, 'a> {
         rule_id: &'static str,
         requirement: &str,
     ) -> Option<Violation> {
-        if self.package_count() > 0 {
+        // The first judged component settles it: a level that reads no
+        // count does not pay for one.
+        if self.package_components().next().is_some() {
             return None;
         }
         Some(inventory_absent_finding(
