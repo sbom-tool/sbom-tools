@@ -348,8 +348,6 @@ impl<'a> SbomEvidence<'a> {
     /// `AttestationDeclarations::evidence_for_family`), in that function's
     /// order. The attestations are judged once per evidence; each read
     /// picks the family's.
-    // Read by the EO 14028 checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn supported_requirements(
         &self,
         family: AttestationRuleFamily,

@@ -325,7 +325,7 @@ dedicated_checker!(
     Eo14028Checker,
     ComplianceLevel::Eo14028,
     check_eo14028,
-    findings
+    context
 );
 dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2);
 dedicated_checker!(

@@ -45,8 +45,6 @@ pub(crate) struct DocumentFacts<'a> {
     /// The primary component, when its id names a component.
     pub(crate) primary: Option<ComponentIx>,
     /// Whether a creator of the document is a tool, whatever its name.
-    // Read by the EO 14028 checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) has_tool_creator: bool,
 }
 
