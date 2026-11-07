@@ -48,7 +48,8 @@ impl ComplianceChecker {
         // fully resolved at the injectable clock). Strengthens only: the
         // legacy tool-creator path below stays a valid SelfDeclared-level
         // fallback, and documents without declarations are unaffected.
-        let ctx = ComplianceContext::new(self, sbom);
+        let sbom_evidence = SbomEvidence::new(sbom, self.now());
+        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let declarations = ctx.attestation_declarations();
         let autogen_attested = ctx
             .evidence_for(AttestationRuleFamily::Eo14028)

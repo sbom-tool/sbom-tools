@@ -27,6 +27,7 @@
 //! }
 //! ```
 
+use super::evidence::SbomEvidence;
 use super::{
     Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, RuleEvaluation,
     Violation,
@@ -36,19 +37,27 @@ use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequ
 /// Read-only context threaded through every [`StandardChecker`].
 ///
 /// Carries the [`ComplianceChecker`] configuration (level, sidecar, product
-/// class) alongside the [`NormalizedSbom`] under test. Checkers read both but
-/// never mutate either; they return the violations they find.
-pub(crate) struct ComplianceContext<'a> {
+/// class) alongside the [`SbomEvidence`] of the SBOM under test, which the
+/// levels of a run share. Checkers read both but never mutate either; they
+/// return the violations they find.
+pub(crate) struct ComplianceContext<'r, 'a> {
     /// The configured checker — source of level, sidecar, and product class,
     /// plus the shared severity-calibration helpers.
-    pub(crate) checker: &'a ComplianceChecker,
-    /// The SBOM being evaluated.
+    pub(crate) checker: &'r ComplianceChecker,
+    /// The facts of the SBOM being evaluated, at the run's instant.
+    pub(crate) ev: &'r SbomEvidence<'a>,
+    /// The SBOM being evaluated, for the checkers that do not read the
+    /// evidence yet (see [`super::evidence`]).
     pub(crate) sbom: &'a NormalizedSbom,
 }
 
-impl<'a> ComplianceContext<'a> {
-    pub(crate) const fn new(checker: &'a ComplianceChecker, sbom: &'a NormalizedSbom) -> Self {
-        Self { checker, sbom }
+impl<'r, 'a> ComplianceContext<'r, 'a> {
+    pub(crate) const fn new(checker: &'r ComplianceChecker, ev: &'r SbomEvidence<'a>) -> Self {
+        Self {
+            checker,
+            ev,
+            sbom: ev.raw_sbom(),
+        }
     }
 
     /// CDXA attestation declarations parsed from the document (CycloneDX
@@ -63,8 +72,8 @@ impl<'a> ComplianceContext<'a> {
     }
 
     /// Machine-readable attestation evidence that fully supports standard
-    /// requirements classified into `family`, evaluated at the checker's
-    /// injectable clock (`--as-of` pinned or wall clock — the Art. 14
+    /// requirements classified into `family`, evaluated at the run's
+    /// instant (`--as-of` pinned, or the wall clock read once — the Art. 14
     /// pattern; expired or future-created evidence never counts).
     ///
     /// Fail closed end to end (see
@@ -89,7 +98,7 @@ impl<'a> ComplianceContext<'a> {
         self.sbom
             .declarations()
             .map_or_else(Vec::new, |declarations| {
-                declarations.evidence_for_family(family, self.checker.now())
+                declarations.evidence_for_family(family, self.ev.as_of())
             })
     }
 }
@@ -210,19 +219,19 @@ impl StandardChecker for GenericChecker {
         } = &mut findings;
 
         // Check document-level requirements
-        checker.check_document_metadata(sbom, violations, not_evaluated);
+        checker.check_document_metadata(ctx, violations, not_evaluated);
 
         // Check component requirements
-        checker.check_components(sbom, violations);
+        checker.check_components(ctx, violations);
 
         // Check dependency requirements
-        checker.check_dependencies(sbom, violations);
+        checker.check_dependencies(ctx, violations);
 
         // Check vulnerability metadata (CRA readiness)
-        checker.check_vulnerability_metadata(sbom, violations);
+        checker.check_vulnerability_metadata(ctx, violations);
 
         // Check format-specific requirements
-        checker.check_format_specific(sbom, violations, not_evaluated);
+        checker.check_format_specific(ctx, violations, not_evaluated);
 
         // Check CRA-specific gap requirements (SBOM freshness, Art. 13(5), 13(9), Annex I Part II, document integrity)
         if checker.level.is_cra() {
@@ -236,9 +245,12 @@ impl StandardChecker for GenericChecker {
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
 /// single dedicated method on [`ComplianceChecker`]. The method takes the
-/// violations it pushes to, or, with the trailing `findings`, the whole
-/// [`Findings`] (for a standard that reports passed checks, skips a check on
-/// purpose, or can decide it does not apply).
+/// SBOM and the violations it pushes to, or, with the trailing `findings`,
+/// the SBOM and the whole [`Findings`] (for a standard that reports passed
+/// checks, skips a check on purpose, or can decide it does not apply). With
+/// the trailing `context` it takes the [`ComplianceContext`] instead of the
+/// SBOM, and the whole [`Findings`]: the form of a standard whose checks read
+/// the evidence (see [`super::evidence`]).
 macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
@@ -284,6 +296,28 @@ macro_rules! dedicated_checker {
             }
         }
     };
+    ($name:ident, $level:expr, $method:ident, context) => {
+        pub(crate) struct $name;
+
+        impl $name {
+            /// The checker, for the standards table.
+            pub(crate) fn boxed(_level: ComplianceLevel) -> Box<dyn StandardChecker> {
+                Box::new(Self)
+            }
+        }
+
+        impl StandardChecker for $name {
+            fn level(&self) -> ComplianceLevel {
+                $level
+            }
+
+            fn check(&self, ctx: &ComplianceContext) -> Findings {
+                let mut findings = Findings::default();
+                ctx.checker.$method(ctx, &mut findings);
+                findings
+            }
+        }
+    };
 }
 
 dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
@@ -310,7 +344,7 @@ dedicated_checker!(
     CraOssStewardChecker,
     ComplianceLevel::CraOssSteward,
     check_cra_oss_steward,
-    findings
+    context
 );
 dedicated_checker!(
     EuccSubstantialChecker,
@@ -427,7 +461,8 @@ mod tests {
         let sbom = sbom_with_ssdf_declarations();
         let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf)
             .with_as_of(ts("2026-06-01T00:00:00Z"));
-        let ctx = ComplianceContext::new(&checker, &sbom);
+        let ev = SbomEvidence::new(&sbom, checker.now());
+        let ctx = ComplianceContext::new(&checker, &ev);
 
         assert!(ctx.attestation_declarations().is_some());
         let ssdf = ctx.evidence_for(AttestationRuleFamily::Ssdf);
@@ -445,14 +480,16 @@ mod tests {
         // Clock pinned after evidence expiry: fail closed, nothing supports SSDF.
         let expired = ComplianceChecker::new(ComplianceLevel::NistSsdf)
             .with_as_of(ts("2027-06-01T00:00:00Z"));
-        let ctx = ComplianceContext::new(&expired, &sbom);
+        let ev = SbomEvidence::new(&sbom, expired.now());
+        let ctx = ComplianceContext::new(&expired, &ev);
         assert!(ctx.evidence_for(AttestationRuleFamily::Ssdf).is_empty());
 
         // No declarations at all: accessor is None, evidence queries are empty.
         let bare = NormalizedSbom::default();
         let checker = ComplianceChecker::new(ComplianceLevel::NistSsdf)
             .with_as_of(ts("2026-10-12T00:00:00Z"));
-        let ctx = ComplianceContext::new(&checker, &bare);
+        let ev = SbomEvidence::new(&bare, checker.now());
+        let ctx = ComplianceContext::new(&checker, &ev);
         assert!(ctx.attestation_declarations().is_none());
         assert!(ctx.evidence_for(AttestationRuleFamily::Ssdf).is_empty());
     }

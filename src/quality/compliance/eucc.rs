@@ -180,7 +180,8 @@ impl ComplianceChecker {
         // standard naming EUCC / Common Criteria (Structural/SignaturePresent
         // level; the URL-substring scan remains the SelfDeclared fallback).
         // Until v0.4.0 this check did not read "commoncriteria".
-        let ctx = ComplianceContext::new(self, sbom);
+        let sbom_evidence = SbomEvidence::new(sbom, self.now());
+        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let cdxa_eucc_attested = ctx
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()

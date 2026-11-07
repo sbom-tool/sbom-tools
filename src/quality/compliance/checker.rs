@@ -366,7 +366,28 @@ impl ComplianceChecker {
     /// inputs (clock, sidecar, product class) each level gets.
     #[must_use]
     pub fn check(&self, sbom: &NormalizedSbom) -> ComplianceResult {
-        let ctx = ComplianceContext::new(self, sbom);
+        // One check judges one instant: an unpinned checker reads the wall
+        // clock once, here, and judges every check at that instant.
+        let as_of = self.now();
+        let evidence = SbomEvidence::new(sbom, as_of);
+        if self.as_of.is_some() {
+            self.check_with(&evidence)
+        } else {
+            self.clone().with_as_of(as_of).check_with(&evidence)
+        }
+    }
+
+    /// [`Self::check`] on `evidence`, the facts of the SBOM at this
+    /// checker's pinned instant. [`ComplianceRunConfig::check_levels`]
+    /// shares one evidence value across the levels of a run.
+    pub(crate) fn check_with(&self, evidence: &SbomEvidence<'_>) -> ComplianceResult {
+        debug_assert_eq!(
+            self.as_of,
+            Some(evidence.as_of()),
+            "a checker judges the instant of the evidence it reads"
+        );
+        let sbom = evidence.raw_sbom();
+        let ctx = ComplianceContext::new(self, evidence);
         let checker = checker_for(self.level);
         debug_assert_eq!(
             checker.level(),
