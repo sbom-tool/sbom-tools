@@ -40,9 +40,6 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
-// Transitional: the facts the CISA 2026 port reads, before it reads them.
-#![cfg_attr(not(test), allow(dead_code))]
-
 mod component;
 mod document;
 mod graph;

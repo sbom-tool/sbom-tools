@@ -40,7 +40,13 @@
 //! For those rules an explicit sentinel (`NOASSERTION`/`NONE`/`UNKNOWN`)
 //! satisfies the element — deliberately unlike the NTIA checks, where
 //! sentinels count as missing — while silent absence fails.
+//!
+//! The checks read the run's evidence (see [`super::evidence`]), never the
+//! SBOM itself; the run's own inputs (the excluded-scope choice) come from
+//! the checker.
 
+use super::evidence::Known;
+use super::shared::unparseable_timestamp_of;
 use super::*;
 
 /// Explicit-unknown sentinel: the marker an SBOM author uses to state that a
@@ -110,9 +116,11 @@ impl ComplianceChecker {
     /// graph-level Dependency Relationship element and the Coverage /
     /// Explicitly Identifying Unknown Information declaration check.
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn check_cisa2026(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
-        use crate::model::{CompletenessDeclaration, CreatorType, ExternalRefType, HashProvenance};
+    pub(crate) fn check_cisa2026(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
+        use crate::model::{CompletenessDeclaration, CreatorType};
 
+        let ev = ctx.ev;
+        let doc = ev.document();
         let Findings {
             violations,
             not_evaluated,
@@ -121,15 +129,14 @@ impl ComplianceChecker {
 
         // The per-component elements below have nothing to judge without a
         // package-scoped component.
-        violations.extend(self.inventory_absent_violation(
-            sbom,
+        violations.extend(ctx.inventory_absent_violation(
             "SBOM-CISA2026-INVENTORY",
             "CISA 2026 Minimum Elements: component inventory",
         ));
 
         // Signature, generation context and coverage evidence cannot be
         // expressed in SPDX 2.x; those checks skip it (see module docs).
-        let spdx2 = is_spdx2(sbom);
+        let spdx2 = doc.spdx2;
 
         // SBOM Author (Error) — "the name of the entity that creates the
         // SBOM data": the entity operating the generation tool, not the tool
@@ -137,12 +144,7 @@ impl ComplianceChecker {
         // than SBOM-NTIA-AUTHOR, which passes on any non-empty creator list.
         // The author must also be identified: an empty or placeholder name
         // (NOASSERTION, TBD) names no entity.
-        let has_person_or_org = sbom
-            .document
-            .creators
-            .iter()
-            .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c));
-        if !has_person_or_org {
+        if !doc.has_identified_non_tool_creator {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
@@ -162,10 +164,10 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: sbom
-                    .document
+                observed: doc
                     .creators
                     .iter()
+                    .map(|c| c.creator)
                     .find(|c| c.creator_type != CreatorType::Tool)
                     .and_then(|c| observed(&c.name)),
             });
@@ -178,10 +180,9 @@ impl ComplianceChecker {
         // invisible to a document checker, so absence must not hard-fail the
         // run. Presence is structural (algorithm + non-empty value) — nothing
         // is cryptographically verified.
-        let has_signature = document_signed(sbom);
         if spdx2 {
             not_evaluated.push("SBOM-CISA2026-SIGNATURE", SPDX2_NO_SIGNATURE);
-        } else if !has_signature {
+        } else if !doc.signed {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -214,11 +215,11 @@ impl ComplianceChecker {
         // mirroring the repo's EO 14028 machine-readable gate, and the
         // message says so. Unparseable/absent spec versions skip the gate
         // rather than false-failing (`DocumentMetadata::spec_version_parsed`).
-        let minimum = match sbom.document.format {
+        let minimum = match doc.format {
             SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
             SbomFormat::Spdx => crate::model::SpecVersion::new(2, 2, 0),
         };
-        let parsed = sbom.document.spec_version_parsed();
+        let parsed = doc.spec_version;
         if parsed.is_none() {
             not_evaluated.push("SBOM-CISA2026-FORMAT", SPEC_VERSION_UNPARSED);
         }
@@ -230,7 +231,7 @@ impl ComplianceChecker {
                     "[CISA 2026] {} {} is an outdated release of the data format; this tool's \
                      policy floor is CycloneDX 1.4+ / SPDX 2.2+ (CISA itself names no deprecated \
                      versions — the floor mirrors the EO 14028 machine-readable gate)",
-                    sbom.document.format, sbom.document.spec_version
+                    doc.format, doc.spec_version_raw
                 ),
                 element: None,
                 requirement: "CISA 2026 Minimum Elements: SBOM Data Format Name/Version \
@@ -245,10 +246,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed(&format!(
-                    "{} {}",
-                    sbom.document.format, sbom.document.spec_version
-                )),
+                observed: observed(&format!("{} {}", doc.format, doc.spec_version_raw)),
             });
         }
 
@@ -261,7 +259,7 @@ impl ComplianceChecker {
         // Warning rather than an Error.
         if spdx2 {
             not_evaluated.push("SBOM-CISA2026-GENERATION-CONTEXT", SPDX2_NO_LIFECYCLE_PHASE);
-        } else if known_value(sbom.document.lifecycle_phase.as_deref()).is_none() {
+        } else if !doc.lifecycle_phase.is_known() {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -291,8 +289,8 @@ impl ComplianceChecker {
         // element's RFC 9557 source-syntax requirement is unverifiable
         // post-normalization and is NOT claimed to be checked here. A value
         // the parser could not read is quoted.
-        if !sbom.document.has_known_timestamp() {
-            let message = unparseable_timestamp(sbom).map_or_else(
+        if !doc.has_known_timestamp {
+            let message = unparseable_timestamp_of(doc.created_unparsed).map_or_else(
                 || {
                     "[CISA 2026] SBOM Timestamp missing or invalid: no date/time of the \
                      most recent update to the SBOM data (the element targets RFC 9557 \
@@ -321,7 +319,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed_unparsed_timestamp(sbom),
+                observed: doc.created_unparsed.and_then(observed),
             });
         }
 
@@ -329,13 +327,7 @@ impl ComplianceChecker {
         // heuristic). The version check only runs when a tool is identified
         // at all: with no Tool creator the TOOL rule already covers the gap,
         // and firing both would double-report one omission.
-        let tool_creators: Vec<_> = sbom
-            .document
-            .creators
-            .iter()
-            .filter(|c| c.creator_type == CreatorType::Tool)
-            .collect();
-        if tool_creators.is_empty() {
+        if !doc.has_tool_creator {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
@@ -355,10 +347,7 @@ impl ComplianceChecker {
                 field: None,
                 observed: None,
             });
-        } else if !tool_creators
-            .iter()
-            .any(|t| tool_name_carries_version(&t.name))
-        {
+        } else if !doc.tool_version_discernible {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -378,7 +367,12 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: tool_creators.first().and_then(|t| observed(&t.name)),
+                observed: doc
+                    .creators
+                    .iter()
+                    .map(|c| c.creator)
+                    .find(|c| c.creator_type == CreatorType::Tool)
+                    .and_then(|t| observed(&t.name)),
             });
         }
 
@@ -394,10 +388,9 @@ impl ComplianceChecker {
         // the element asks the author to declare the version, not the parser
         // to assume it. Warning because SPDX 2.x has no dedicated
         // document-version field at all.
-        let declares_version = sbom.document.doc_version.is_some()
-            || known_value(sbom.document.serial_number.as_deref()).is_some();
+        let declares_version = doc.doc_version.is_some() || doc.serial_number_text.is_known();
         if !declares_version {
-            let message = match sbom.document.format {
+            let message = match doc.format {
                 SbomFormat::CycloneDx => {
                     "[CISA 2026] SBOM Version missing: the document omits bom.version (absence \
                      is not backfilled with the CycloneDX default of 1) and carries no \
@@ -428,20 +421,20 @@ impl ComplianceChecker {
         }
 
         // Per-component data fields.
-        for comp in sbom.components.values() {
+        for comp in ev.components() {
             // Component Name (Error) — applies to every enumerated entry.
             // Placeholder sentinels count as missing unless corroborated by
             // a matching identifier (known_component_name).
-            if !known_component_name(comp) {
+            if !comp.name_known() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,
                     message: "[CISA 2026] Component must have the name assigned by its producer"
                         .to_string(),
-                    element: Some(comp.identifiers.format_id.clone()),
+                    element: Some(comp.format_id().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Name".to_string(),
                     rule_id: "SBOM-CISA2026-NAME",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -449,7 +442,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed(&comp.name),
+                    observed: observed(comp.name()),
                 });
             }
 
@@ -458,7 +451,7 @@ impl ComplianceChecker {
             // identifier / hash / license elements below do not apply to them
             // (same carve-out as the NTIA-path checks — without it a
             // file-cataloguing SBOM emits thousands of spurious Errors).
-            if !self.judges_package(sbom, comp) {
+            if !ctx.judges_package(&comp) {
                 continue;
             }
 
@@ -470,29 +463,20 @@ impl ComplianceChecker {
             // element's escape hatch ("the SBOM author should explicitly mark
             // the component as of unknown provenance"). Only silent absence
             // fails.
-            let producer_named = has_known_producer(comp);
-            let producer_marked_unknown = comp
-                .supplier
-                .iter()
-                .chain(&comp.manufacturer)
-                .any(|o| is_unknown_marker(o.name.trim()))
-                || comp
-                    .author
-                    .as_deref()
-                    .is_some_and(|a| is_unknown_marker(a.trim()));
-            if !producer_named && !producer_marked_unknown {
+            let producer = comp.producer();
+            if producer.state == ValueState::Missing {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::SupplierInfo,
                     message: format!(
                         "[CISA 2026] Component '{}' names no producer (author/originator, \
                          manufacturer or supplier) and is not explicitly marked as of unknown provenance",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Producer".to_string(),
                     rule_id: "SBOM-CISA2026-PRODUCER",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -500,7 +484,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed_producer(comp),
+                    observed: producer.observed.and_then(observed),
                 });
             }
 
@@ -509,20 +493,20 @@ impl ComplianceChecker {
             // — the honesty requirement is the point of the Major Update.
             // Silent absence fails, and so do placeholders such as "TBD" or
             // "N/A": they neither give a version nor state it is unknown.
-            let version_declared = value_state(comp.version.as_deref()) != ValueState::Missing;
-            if !version_declared {
+            let version = comp.version();
+            if version.value == Known::Missing {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,
                     message: format!(
                         "[CISA 2026] Component '{}' is missing a version and does not explicitly \
                          indicate the version is unknown",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Version".to_string(),
                     rule_id: "SBOM-CISA2026-VERSION",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -530,7 +514,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: comp.version.as_deref().and_then(observed),
+                    observed: version.raw.and_then(observed),
                 });
             }
 
@@ -539,19 +523,19 @@ impl ComplianceChecker {
             // (the model's identifier set). "Include all known identifiers"
             // is unenforceable (no oracle for what the author knew) and
             // stays out of the check.
-            if !comp.identifiers.has_cra_identifier() {
+            if !comp.ids().any() {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::ComponentIdentification,
                     message: format!(
                         "[CISA 2026] Component '{}' has no machine-processable identifier \
                          (CPE or PURL are named by the element; SWHID/SWID also qualify)",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Identifiers".to_string(),
                     rule_id: "SBOM-CISA2026-IDENTIFIER",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -573,16 +557,8 @@ impl ComplianceChecker {
             // hash rule uses); an explicit unknown marker satisfies the
             // escape hatch for authors without access to the executable
             // artifact.
-            let authored: Vec<_> = comp
-                .hashes
-                .iter()
-                .filter(|h| h.provenance == HashProvenance::Authored)
-                .collect();
-            let has_hex_value = authored
-                .iter()
-                .any(|h| plausible_digest(&h.algorithm, &h.value));
-            let hash_marked_unknown = authored.iter().any(|h| is_unknown_marker(h.value.trim()));
-            if authored.is_empty() {
+            let authored = comp.authored_hashes();
+            if !authored.facts.present {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::IntegrityInfo,
@@ -590,12 +566,12 @@ impl ComplianceChecker {
                         "[CISA 2026] Component '{}' carries no cryptographic hash of the \
                          executable component artifact (explicitly indicate the value is \
                          unknown when the artifact is not available to the SBOM author)",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Hash Value".to_string(),
                     rule_id: "SBOM-CISA2026-HASH",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -605,20 +581,20 @@ impl ComplianceChecker {
                     field: None,
                     observed: None,
                 });
-            } else if !has_hex_value && !hash_marked_unknown {
+            } else if !authored.facts.plausible && !authored.facts.declared_unknown {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::IntegrityInfo,
                     message: format!(
                         "[CISA 2026] Component '{}' declares hash value(s) that are not \
                          ASCII-hexadecimal digests of their algorithm, as the element requires: {}",
-                        comp.name,
-                        digest_problems(authored.iter().copied()).join("; ")
+                        comp.name(),
+                        digest_problems(authored.iter()).join("; ")
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component Hash Value".to_string(),
                     rule_id: "SBOM-CISA2026-HASH",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -626,7 +602,7 @@ impl ComplianceChecker {
                     severity_override: None,
                     deadline: None,
                     field: None,
-                    observed: observed_digest(authored.iter().copied()),
+                    observed: observed_digest(authored.iter()),
                 });
             } else {
                 // Hash-value evidence is sound — assess the algorithms (see
@@ -641,11 +617,7 @@ impl ComplianceChecker {
                     .iter()
                     .filter_map(|h| hash_algorithm_shortfall(&h.algorithm))
                     .collect();
-                let has_strong_hash = authored.iter().any(|h| {
-                    hash_algorithm_shortfall(&h.algorithm).is_none()
-                        && plausible_digest(&h.algorithm, &h.value)
-                });
-                if !offending.is_empty() && !has_strong_hash {
+                if !offending.is_empty() && !authored.facts.plausible_strong {
                     violations.push(Violation {
                         severity: ViolationSeverity::Warning,
                         category: ViolationCategory::IntegrityInfo,
@@ -653,14 +625,14 @@ impl ComplianceChecker {
                             "[CISA 2026] Component '{}' declares hash algorithm(s) that are not \
                              approved by a relevant authority or not identifiable by an IANA \
                              Hash Function Textual Name: {}",
-                            comp.name,
+                            comp.name(),
                             truncate_list(&offending, 5)
                         ),
-                        element: Some(comp.name.clone()),
+                        element: Some(comp.name().to_string()),
                         requirement: "CISA 2026 Minimum Elements: Component Hash Algorithm"
                             .to_string(),
                         rule_id: "SBOM-CISA2026-HASH-ALGO",
-                        component_id: Some(comp.canonical_id.value().to_string()),
+                        component_id: Some(comp.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -689,7 +661,7 @@ impl ComplianceChecker {
             // shares (`license_state`), which also accepts the explicit
             // unknown here: absence and a placeholder such as TBD fail, as
             // everywhere (until v0.4.0 any non-empty value passed).
-            let has_license_info = license_state(comp) != ValueState::Missing;
+            let has_license_info = comp.licenses().state != ValueState::Missing;
             if !has_license_info {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
@@ -698,12 +670,12 @@ impl ComplianceChecker {
                         "[CISA 2026] Component '{}' has no license information and no explicit \
                          unknown indication (prefer SPDX identifiers; use NOASSERTION when the \
                          license is unknown to the author)",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CISA 2026 Minimum Elements: Component License".to_string(),
                     rule_id: "SBOM-CISA2026-LICENSE",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -725,34 +697,27 @@ impl ComplianceChecker {
         // reference of BOM type is accepted as alternative evidence).
         // Dependency relationships between packages: crypto assets, files
         // and services need not join the graph.
-        if self.package_components(sbom).nth(1).is_some() && sbom.edges.is_empty() {
-            let has_external_sbom_link = sbom.components.values().any(|c| {
-                c.external_refs
-                    .iter()
-                    .any(|r| matches!(r.ref_type, ExternalRefType::Bom))
+        if !ev.has_edges() && ctx.package_count() > 1 && !ev.has_bom_reference() {
+            violations.push(Violation {
+                severity: ViolationSeverity::Error,
+                category: ViolationCategory::DependencyInfo,
+                message: "[CISA 2026] SBOM enumerates multiple components but declares no \
+                          dependency relationships and links no external SBOM documents"
+                    .to_string(),
+                element: None,
+                requirement: "CISA 2026 Minimum Elements: Component Dependency Relationship"
+                    .to_string(),
+                rule_id: "SBOM-CISA2026-DEPENDENCY",
+                component_id: None,
+                counts: None,
+                standard_refs: Cow::Borrowed(&[]),
+                remediation: None,
+                finding_detail: None,
+                severity_override: None,
+                deadline: None,
+                field: None,
+                observed: None,
             });
-            if !has_external_sbom_link {
-                violations.push(Violation {
-                    severity: ViolationSeverity::Error,
-                    category: ViolationCategory::DependencyInfo,
-                    message: "[CISA 2026] SBOM enumerates multiple components but declares no \
-                              dependency relationships and links no external SBOM documents"
-                        .to_string(),
-                    element: None,
-                    requirement: "CISA 2026 Minimum Elements: Component Dependency Relationship"
-                        .to_string(),
-                    rule_id: "SBOM-CISA2026-DEPENDENCY",
-                    component_id: None,
-                    counts: None,
-                    standard_refs: Cow::Borrowed(&[]),
-                    remediation: None,
-                    finding_detail: None,
-                    severity_override: None,
-                    deadline: None,
-                    field: None,
-                    observed: None,
-                });
-            }
         }
 
         // Coverage / Explicitly Identifying Unknown Information (Warning) —
@@ -765,7 +730,7 @@ impl ComplianceChecker {
         // components including transitive dependencies) but with a message
         // acknowledging the declaration is honest. SPDX 2.x cannot declare
         // completeness at all, so the check skips it.
-        match sbom.document.completeness_declaration {
+        match doc.completeness {
             _ if spdx2 => {
                 not_evaluated.push("SBOM-CISA2026-COVERAGE", SPDX2_NO_COMPLETENESS);
             }
@@ -804,7 +769,7 @@ impl ComplianceChecker {
                          ({}); the declaration is honest, but the 2026 Coverage element expects \
                          all components including transitive dependencies — close the gap or \
                          link the missing SBOM documents",
-                        sbom.document.completeness_declaration
+                        doc.completeness
                     ),
                     element: None,
                     requirement: "CISA 2026 Minimum Elements: Coverage / Explicitly Identifying \
