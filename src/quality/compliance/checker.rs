@@ -144,13 +144,13 @@ impl ComplianceChecker {
     /// How many package-scoped components this check leaves out of its
     /// package rules for their excluded scope: none for a standard without
     /// package rules (see [`ComplianceRunConfig::excluded_scope_applies`]).
-    fn excluded_component_count(&self, sbom: &NormalizedSbom) -> usize {
+    fn excluded_component_count(&self, ctx: &ComplianceContext<'_, '_>) -> usize {
         if !ComplianceRunConfig::excluded_scope_applies(self.level) {
             return 0;
         }
-        sbom.components
-            .values()
-            .filter(|c| c.component_type.is_package_scoped() && self.leaves_out(sbom, c))
+        ctx.ev
+            .components()
+            .filter(|c| c.package_scoped() && ctx.leaves_out(c))
             .count()
     }
 
@@ -464,11 +464,11 @@ impl ComplianceChecker {
 
         let mut result = ComplianceResult::new(self.level, violations)
             .with_passed(passed)
-            .with_elements_checked(self.elements_checked(sbom))
+            .with_elements_checked(self.elements_checked(&ctx))
             .with_evaluated(evaluated);
         result.applicability = applicability;
         result.suppressed = suppressed;
-        result.excluded_components = self.excluded_component_count(sbom);
+        result.excluded_components = self.excluded_component_count(&ctx);
         // Attach the CRA Annex VIII conformity summary when a product class
         // has been pinned and the level is a CRA phase profile. Annex VIII
         // lists the manufacturer's conformity-assessment procedures; an
@@ -487,24 +487,27 @@ impl Default for ComplianceChecker {
 }
 
 impl ComplianceChecker {
-    /// The elements this check judges in `sbom`, the unit its score is
-    /// normalised by (see [`ComplianceResult::elements_checked`]): the
-    /// document, plus the components in the standard's scope. The package
-    /// standards count the components their package rules judge, so the
-    /// ones left out for their excluded scope do not count.
-    fn elements_checked(&self, sbom: &NormalizedSbom) -> usize {
+    /// The elements this check judges in the SBOM of `ctx`, the unit its
+    /// score is normalised by (see [`ComplianceResult::elements_checked`]):
+    /// the document, plus the components in the standard's scope. The
+    /// package standards count the components their package rules judge,
+    /// so the ones left out for their excluded scope do not count.
+    fn elements_checked(&self, ctx: &ComplianceContext<'_, '_>) -> usize {
         let components = match self.level.descriptor().subjects {
             // EUCC checks the sidecar's certification evidence, not components.
             Subjects::CertificationEvidence => 0,
             // All components: the count selects cryptographic assets by type,
             // the subjects of the CNSA 2.0 and PQC checks.
-            Subjects::CryptographicAssets => sbom
-                .components
-                .values()
-                .filter(|c| c.component_type == crate::model::ComponentType::Cryptographic)
+            Subjects::CryptographicAssets => ctx
+                .ev
+                .components()
+                .filter(|c| *c.component_type() == crate::model::ComponentType::Cryptographic)
                 .count(),
-            Subjects::AiBom => ai_shared::ai_bom_scope(sbom).component_count(),
-            Subjects::Packages => self.package_components(sbom).count(),
+            Subjects::AiBom => {
+                // escape hatch: the AI-BOM scope is not an evidence fact yet.
+                ai_shared::ai_bom_scope(ctx.ev.raw_sbom()).component_count()
+            }
+            Subjects::Packages => ctx.package_count(),
         };
         components.saturating_add(1)
     }
