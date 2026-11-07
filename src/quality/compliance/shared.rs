@@ -170,10 +170,27 @@ pub(crate) fn future_timestamp_violation(
     citation: &str,
     requirement: &str,
 ) -> Option<Violation> {
-    let created = sbom.document.created;
-    if !sbom.document.has_known_timestamp() || created <= as_of {
-        return None;
-    }
+    future_timestamp_violation_of(
+        sbom.document
+            .has_known_timestamp()
+            .then_some(sbom.document.created),
+        as_of,
+        rule_id,
+        citation,
+        requirement,
+    )
+}
+
+/// [`future_timestamp_violation`] of `created`, the document's creation
+/// timestamp when it is known.
+pub(crate) fn future_timestamp_violation_of(
+    created: Option<chrono::DateTime<chrono::Utc>>,
+    as_of: chrono::DateTime<chrono::Utc>,
+    rule_id: &'static str,
+    citation: &str,
+    requirement: &str,
+) -> Option<Violation> {
+    let created = created.filter(|created| *created > as_of)?;
     // The message names only the document's timestamp: the evaluation
     // instant is the wall clock unless pinned, and would make the text
     // differ on every run.
