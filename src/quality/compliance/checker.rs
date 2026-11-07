@@ -474,7 +474,7 @@ impl ComplianceChecker {
         // lists the manufacturer's conformity-assessment procedures; an
         // open-source steward (Art. 24, `CraOssSteward`) follows none.
         if self.level.cra_phase().is_some() && self.has_explicit_product_class() {
-            result.conformity_summary = Some(self.build_conformity_summary(sbom));
+            result.conformity_summary = Some(self.build_conformity_summary(&ctx));
         }
         result
     }
