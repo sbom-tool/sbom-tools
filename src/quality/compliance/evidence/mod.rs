@@ -370,8 +370,6 @@ impl<'a> SbomEvidence<'a> {
 
     /// Whether any component, a dependency included, references a
     /// version-control repository.
-    // Read by the SSDF checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn has_vcs_reference(&self) -> bool {
         *self
             .vcs_reference
@@ -380,8 +378,6 @@ impl<'a> SbomEvidence<'a> {
 
     /// Whether any component, a dependency included, references build
     /// metadata or its build system.
-    // Read by the SSDF checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn has_build_reference(&self) -> bool {
         *self
             .build_reference
@@ -390,8 +386,6 @@ impl<'a> SbomEvidence<'a> {
 
     /// Whether any component lists a vulnerability: whether
     /// [`Self::vulnerabilities`] holds any, without collecting them.
-    // Read by the SSDF checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn has_vulnerabilities(&self) -> bool {
         *self.any_vulnerability.get_or_init(|| vulns::any(self.sbom))
     }
@@ -401,8 +395,6 @@ impl<'a> SbomEvidence<'a> {
     /// vulnerability-assertion reference. A support reference does not
     /// count. The checks that look for the manufacturer's contact read only
     /// the product's own references instead (see [`Self::manufacturer`]).
-    // Read by the SSDF checks from the next commit on.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn has_vulnerability_reference_on_any_component(&self) -> bool {
         *self
             .vulnerability_reference_on_any_component

@@ -26,6 +26,7 @@ const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 const READS_EVIDENCE: &[&str] = &[
     "src/quality/compliance/generic.rs",
     "src/quality/compliance/eo14028.rs",
+    "src/quality/compliance/ssdf.rs",
 ];
 
 /// Identifiers a checker that reads the evidence may not use: the SBOM, by
