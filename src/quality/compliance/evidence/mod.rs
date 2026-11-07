@@ -40,6 +40,11 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
+// Temporary: the AI facts are read by their tests until the AI and EUCC
+// checks read them (the next commits).
+#![cfg_attr(not(test), allow(dead_code))]
+
+mod ai;
 mod component;
 mod document;
 mod graph;
@@ -60,6 +65,7 @@ use crate::model::{
     ExternalRefType, NormalizedSbom,
 };
 
+pub(crate) use ai::AiFacts;
 pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
@@ -153,6 +159,8 @@ pub(crate) struct SbomEvidence<'a> {
     vulnerability_assertion: OnceLock<bool>,
     direct_dependencies: OnceLock<Box<[bool]>>,
     firmware_dependencies: OnceLock<Box<[bool]>>,
+    ai: OnceLock<AiFacts>,
+    dataset_containers: OnceLock<Box<[bool]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -183,6 +191,8 @@ impl<'a> SbomEvidence<'a> {
             vulnerability_assertion: OnceLock::new(),
             direct_dependencies: OnceLock::new(),
             firmware_dependencies: OnceLock::new(),
+            ai: OnceLock::new(),
+            dataset_containers: OnceLock::new(),
         }
     }
 
@@ -376,6 +386,24 @@ impl<'a> SbomEvidence<'a> {
     fn firmware_dependencies(&self) -> &[bool] {
         self.firmware_dependencies
             .get_or_init(|| graph::firmware_dependencies(self.sbom))
+    }
+
+    /// The AI-BOM scope: the components the AI profiles judge.
+    pub(crate) fn ai(&self) -> &AiFacts {
+        self.ai.get_or_init(|| AiFacts::collect(self.sbom))
+    }
+
+    /// The components at `positions`, in that order.
+    pub(crate) fn components_at<'s>(
+        &'s self,
+        positions: &'s [ComponentIx],
+    ) -> impl ExactSizeIterator<Item = ComponentView<'s, 'a>> + 's {
+        positions.iter().map(move |&ix| self.component(ix))
+    }
+
+    fn dataset_containers(&self) -> &[bool] {
+        self.dataset_containers
+            .get_or_init(|| ai::dataset_containers(self.sbom))
     }
 }
 

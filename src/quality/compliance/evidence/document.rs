@@ -1,13 +1,14 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
 //! serial number, contacts, support period, completeness, primary component,
-//! signature, declared profiles.
+//! signature, declared profiles, the kinds of creators.
 
 use chrono::{DateTime, Utc};
 
 use super::super::shared::{document_signed, is_valid_email_format, known_contact};
 use super::{ComponentIx, Text};
 use crate::model::{
-    CanonicalId, CompletenessDeclaration, Creator, NormalizedSbom, SbomFormat, SpecVersion,
+    CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
+    SpecVersion,
 };
 
 /// The document-level facts of an SBOM.
@@ -65,6 +66,17 @@ pub(crate) struct DocumentFacts<'a> {
     /// Whether a profile the document declares conforming to names the
     /// SimpleLicensing profile (any case).
     pub(crate) licensing_profile_declared: bool,
+    /// Whether a creator of the document is a tool.
+    pub(crate) has_tool_creator: bool,
+    /// Whether a creator of the document is an organization, whatever its
+    /// name, a placeholder such as `NOASSERTION` included. BSI/G7
+    /// SBOM-for-AI accepts it as the AI system's producer; the manufacturer
+    /// checks want an identified one (`ManufacturerFacts::identified`).
+    pub(crate) has_organization_creator: bool,
+    /// The data format's version as the document gives it (`1.6` for
+    /// CycloneDX 1.6), for the checks that read it beside
+    /// [`Self::spec_version_raw`].
+    pub(crate) format_version: &'a str,
 }
 
 /// One creator of the document.
@@ -120,6 +132,15 @@ impl<'a> DocumentFacts<'a> {
                 &document.profile_conformance,
                 "licensing",
             ),
+            has_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Tool),
+            has_organization_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Organization),
+            format_version: &document.format_version,
         }
     }
 }

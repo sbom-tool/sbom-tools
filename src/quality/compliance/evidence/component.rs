@@ -127,6 +127,10 @@ pub(crate) struct HashFacts {
     /// At least one plausible digest is of SHA-256 or a stronger algorithm:
     /// SHA-2 and SHA-3 at 256 bits or more, BLAKE2b, BLAKE3 or Streebog.
     pub(crate) plausible_strong: bool,
+    /// At least one plausible digest is of a NIST-approved algorithm: the
+    /// set of [`Self::plausible_strong`] without Streebog. The BSI/G7
+    /// SBOM-for-AI hash-algorithm check asks this.
+    pub(crate) plausible_nist_approved: bool,
 }
 
 impl HashFacts {
@@ -138,6 +142,7 @@ impl HashFacts {
         {
             facts.plausible = true;
             facts.plausible_strong |= is_strong(&hash.algorithm);
+            facts.plausible_nist_approved |= is_nist_approved(&hash.algorithm);
         }
         facts
     }
@@ -159,6 +164,25 @@ const fn is_strong(algorithm: &HashAlgorithm) -> bool {
             | HashAlgorithm::Blake3
             | HashAlgorithm::Streebog256
             | HashAlgorithm::Streebog512
+    )
+}
+
+/// Whether `algorithm` is NIST-approved and SHA-256 or stronger: SHA-2 and
+/// SHA-3 at 256 bits or more, BLAKE2b or BLAKE3. Unlike [`is_strong`], it
+/// leaves out Streebog.
+const fn is_nist_approved(algorithm: &HashAlgorithm) -> bool {
+    matches!(
+        algorithm,
+        HashAlgorithm::Sha256
+            | HashAlgorithm::Sha384
+            | HashAlgorithm::Sha512
+            | HashAlgorithm::Sha3_256
+            | HashAlgorithm::Sha3_384
+            | HashAlgorithm::Sha3_512
+            | HashAlgorithm::Blake2b256
+            | HashAlgorithm::Blake2b384
+            | HashAlgorithm::Blake2b512
+            | HashAlgorithm::Blake3
     )
 }
 
