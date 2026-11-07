@@ -2,7 +2,7 @@
 //!
 //! Also home of the shared CDXA attestation-evidence helpers used by the
 //! SSDF / EO 14028 / CRA / EUCC integration sites (SSDF is the canonical
-//! CDXA rule family, and `registry.rs`/`mod.rs` are frozen surfaces).
+//! CDXA rule family, and `registry/`/`mod.rs` are frozen surfaces).
 
 use super::*;
 use crate::model::{

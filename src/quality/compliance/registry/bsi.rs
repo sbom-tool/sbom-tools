@@ -1,0 +1,170 @@
+//! The rules of the BSI TR-03183-2 profile.
+
+use super::*;
+
+/// The declared [`RuleMeta`] of `rule_id` when it is a rule of this
+/// family; `None` otherwise.
+pub(super) fn declared_rule_meta(rule_id: &str) -> Option<RuleMeta> {
+    use StandardKind as K;
+    let meta = match rule_id {
+        // ---- BSI TR-03183-2 (v2.1.0, 2025-08-20) --------------------------
+        "SBOM-BSI-TR-03183-2-4" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-4",
+            name: "BsiTr03183FormatEligibility",
+            short_description: "BSI TR-03183-2 v2.1.0 §4: Newly generated/updated SBOMs must be CycloneDX 1.6+ or SPDX 3.0.1+",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§4"), (K::BsiTr03183_2, "§7")],
+            remediation: "Regenerate the SBOM as CycloneDX 1.6+ or SPDX 3.0.1+ in JSON or XML. TR-03183-2 v2.1.0 §4 lists the eligible specifications for newly generated or updated SBOMs; the §7 transitional grace for the v2.0.0 minimums (CycloneDX 1.5 / SPDX 2.2.1) ended 2026-02-20.",
+            advice: None,
+        },
+        "SBOM-BSI-TR-03183-2-5-1" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-1",
+            name: "BsiTr03183SbomCreator",
+            short_description: "BSI TR-03183-2 §5.2.1: Creator of the SBOM (email, or URL if no email)",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.1")],
+            remediation: "Identify the SBOM creator with an email address, or a URL (e.g. the creator's home page) if no email is available; generation tools do not count as the creator.",
+            advice: Some(&ADVICE_PERSON_ORG_CREATOR),
+        },
+        "SBOM-BSI-TR-03183-2-5-1-CONTACT" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-1-CONTACT",
+            name: "BsiTr03183SbomCreatorContact",
+            short_description: "BSI TR-03183-2 §5.2.1: SBOM creator must carry an email address or URL",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2.1")],
+            remediation: "Add an email address to the SBOM creator entry, or a URL (creator home page / project web page) when no email exists — a bare name does not satisfy §5.2.1. A contact must reach someone: placeholders such as NOASSERTION or n/a, and addresses at example.com, example.net or example.org, do not count.",
+            advice: Some(&ADVICE_CREATOR_CONTACT),
+        },
+        "SBOM-BSI-TR-03183-2-5-2" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-2",
+            name: "BsiTr03183Timestamp",
+            short_description: "BSI TR-03183-2 §5.2.1: Timestamp of the SBOM data compilation",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.1")],
+            remediation: "Add the date and time of the SBOM data compilation (UTC 'Zulu' timestamps recommended).",
+            advice: Some(&ADVICE_TIMESTAMP),
+        },
+        "SBOM-BSI-TR-03183-2-5-3" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-3",
+            name: "BsiTr03183ComponentName",
+            short_description: "BSI TR-03183-2 §5.2.2: Component name (fallback: actual filename)",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Name every component. When the component creator assigned no name, the actual filename MUST be used instead.",
+            advice: Some(&ADVICE_NAME),
+        },
+        "SBOM-BSI-TR-03183-2-INVENTORY" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-INVENTORY",
+            name: "BsiTr03183Inventory",
+            short_description: "BSI TR-03183-2 §5.2.2: SBOM lists at least one component",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: REMEDIATION_INVENTORY,
+            advice: Some(&ADVICE_INVENTORY),
+        },
+        "SBOM-BSI-TR-03183-2-VERSION" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-VERSION",
+            name: "BsiTr03183ComponentVersion",
+            short_description: "BSI TR-03183-2 §5.2.2: Component version (fallback: RFC 3339 modification date)",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Version every component (SemVer/CalVer recommended). When no version is assigned, the modification date of the file as RFC 3339 date-time MUST be used instead.",
+            advice: Some(&ADVICE_VERSION),
+        },
+        "SBOM-BSI-TR-03183-2-LICENSE" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-LICENSE",
+            name: "BsiTr03183DistributionLicence",
+            short_description: "BSI TR-03183-2 §5.2.2: Distribution licence(s) per component",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2"), (K::BsiTr03183_2, "§6.1")],
+            remediation: "Declare the distribution licence(s) of every component, named by SPDX licence identifier or expression (§6.1).",
+            advice: Some(&ADVICE_LICENSE),
+        },
+        "SBOM-BSI-TR-03183-2-LICENSE-SPDX" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-LICENSE-SPDX",
+            name: "BsiTr03183SpdxLicenceNaming",
+            short_description: "BSI TR-03183-2 §6.1: Licences must be named by SPDX identifier/expression",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§6.1")],
+            remediation: "Name licences by SPDX identifier or expression; consult Scancode LicenseDB (LicenseRef-scancode-*) or use LicenseRef-<entity>-* for unlisted licences. Licence text MUST NOT be used as a substitute for an identifier.",
+            advice: None,
+        },
+        "SBOM-BSI-TR-03183-2-CREATOR" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-CREATOR",
+            name: "BsiTr03183ComponentCreator",
+            short_description: "BSI TR-03183-2 §5.2.2: Component creator (email, or URL if no email)",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Record the component creator: the email address (or URL if no email) of the entity that created or maintains the component.",
+            advice: Some(&ADVICE_PRODUCER),
+        },
+        "SBOM-BSI-TR-03183-2-5-4" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-4",
+            name: "BsiTr03183ComponentHash",
+            short_description: "BSI TR-03183-2 §5.2.2: Hash of the deployable component as SHA-512",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Provide the hash of the deployed/deployable component as SHA-512 — §5.2.2 names the algorithm, so SHA-256 or other algorithms alone do not satisfy the required field (additional hashes may coexist).",
+            advice: Some(&ADVICE_HASH_SHA512),
+        },
+        "SBOM-BSI-TR-03183-2-5-4-MISSING" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-4-MISSING",
+            name: "BsiTr03183ComponentHashMissing",
+            short_description: "BSI TR-03183-2 §5.2.2/§3.2.1: Component has no hash of the deployable form",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2.2"), (K::BsiTr03183_2, "§3.2.1")],
+            remediation: "Add a SHA-512 hash of the deployable component. §3.2.1 permits omission only when the information cannot exist due to the way the component is assembled (e.g. logical components).",
+            advice: Some(&ADVICE_HASH_SHA512),
+        },
+        "SBOM-BSI-TR-03183-2-5-5" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-5",
+            name: "BsiTr03183Dependencies",
+            short_description: "BSI TR-03183-2 §5.2.2: Dependencies on other components",
+            default_severity: ViolationSeverity::Error,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Enumerate all direct dependencies of each component.",
+            advice: Some(&ADVICE_DEPENDENCIES),
+        },
+        "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-5-COMPLETENESS",
+            name: "BsiTr03183DependencyCompleteness",
+            short_description: "BSI TR-03183-2 §5.2.2: Completeness of the dependency enumeration must be clearly indicated",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2.2")],
+            remediation: "Clearly indicate the completeness of the dependency enumeration (complete or incomplete).",
+            advice: Some(&ADVICE_COMPLETENESS),
+        },
+        "SBOM-BSI-TR-03183-2-5-2-4" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-5-2-4",
+            name: "BsiTr03183UniqueIdentifier",
+            short_description: "BSI TR-03183-2 §5.2.4: Other unique identifiers (purl/CPE) — additional tier",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§5.2.4")],
+            remediation: "Add unique identifiers (purl, CPE) to components. §5.2.4 is the additional tier: the field MUST be provided when an identifier exists for the component.",
+            advice: Some(&ADVICE_IDENTIFIER),
+        },
+        "SBOM-BSI-TR-03183-2-3-1" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-3-1",
+            name: "BsiTr03183NoVulnerabilityInfo",
+            short_description: "BSI TR-03183-2 §3.1: An SBOM must not contain vulnerability information",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "§3.1")],
+            remediation: "Remove vulnerability information from the SBOM and publish it separately (e.g. as CSAF advisories); a document containing both SBOM and vulnerability information does not conform to TR-03183-2.",
+            advice: Some(&ADVICE_REMOVE_VULNS),
+        },
+        // Catch-all descriptor for the BSI TR-03183-2 profile; not emitted by
+        // any check site, kept so the registry-generated SARIF catalogue
+        // mirrors the historical hand-maintained rule table.
+        "SBOM-BSI-TR-03183-2-GENERAL" => RuleMeta {
+            sarif_id: "SBOM-BSI-TR-03183-2-GENERAL",
+            name: "BsiTr03183General",
+            short_description: "BSI TR-03183-2 general SBOM requirement",
+            default_severity: ViolationSeverity::Warning,
+            refs: &[(K::BsiTr03183_2, "TR-03183-2")],
+            remediation: "Catch-all for BSI TR-03183-2 findings that have no dedicated rule (no check emits it; the SARIF writer files unmapped findings here). Set the field the finding's requirement names: the SBOM creator with an email or URL, the timestamp, and per component the name, version, distribution licence as an SPDX identifier, creator, SHA-512 hash, dependencies and their completeness, and a unique identifier.",
+            advice: None,
+        },
+        _ => return None,
+    };
+    Some(meta)
+}
