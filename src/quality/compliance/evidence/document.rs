@@ -2,9 +2,9 @@
 //! serial number and revision, contacts, support period, completeness,
 //! signature, lifecycle phase, primary component.
 
-use super::super::cisa2026::tool_name_carries_version;
 use super::super::shared::{
-    creator_identified, document_signed, is_spdx2, is_valid_email_format, known_contact,
+    creator_identified, document_signed, is_declared_unknown, is_spdx2, is_valid_email_format,
+    known_contact,
 };
 use super::{ComponentIx, Text};
 use crate::model::{
@@ -71,9 +71,9 @@ pub(crate) struct DocumentFacts<'a> {
     /// Whether a creator is a tool.
     pub(crate) has_tool_creator: bool,
     /// Whether a tool creator's name carries a version or an explicit
-    /// unknown, by CISA 2026's heuristic (see
-    /// `cisa2026::tool_name_carries_version`): a digit in the name's last
-    /// segment, or a sentinel word. FSCT reads a tool version differently.
+    /// unknown, by CISA 2026's heuristic (see [`tool_name_carries_version`]):
+    /// a digit in the name's last segment, or a sentinel word. FSCT reads a
+    /// tool version differently.
     pub(crate) tool_version_discernible: bool,
     /// The document's revision counter (CycloneDX `version`), when it
     /// gives one.
@@ -151,4 +151,36 @@ impl<'a> DocumentFacts<'a> {
             serial_number_text: Text::of(document.serial_number.as_deref()),
         }
     }
+}
+
+/// Explicit-unknown sentinel: the marker an SBOM author uses to state that a
+/// value is unknown rather than silently omitting it. The 2026 elements'
+/// escape hatches ("the SBOM author should indicate the information is
+/// unknown") make these markers *satisfy* the honesty requirement, so this
+/// is deliberately the complement of `known_value` (which treats the same
+/// sentinels as absent for the NTIA-style presence gates).
+fn is_unknown_marker(value: &str) -> bool {
+    is_declared_unknown(value)
+}
+
+/// Heuristic for the SBOM Tool Version element: whether a Tool creator's
+/// name carries a version identifier (or an explicit unknown marker).
+///
+/// Heuristic by necessity: the parsers concatenate tool name and version
+/// into one creator name — CycloneDX `metadata.tools` becomes
+/// `"{name} {version}"` and the SPDX `Creator: Tool:` convention is
+/// `name-version` — so there is no dedicated tool-version field to check.
+/// A trailing whitespace- or hyphen-delimited segment containing an ASCII
+/// digit counts as a version; a tool genuinely named with a trailing digit
+/// (e.g. "syft2") is an accepted false pass, which is why the rule is a
+/// Warning with heuristic wording rather than an Error.
+pub(super) fn tool_name_carries_version(name: &str) -> bool {
+    let name = name.trim();
+    // The element's escape hatch: an explicit unknown marker satisfies it.
+    if name.split_whitespace().any(is_unknown_marker) {
+        return true;
+    }
+    let last_ws = name.rsplit(char::is_whitespace).next().unwrap_or(name);
+    let last_seg = last_ws.rsplit('-').next().unwrap_or(last_ws);
+    last_seg.chars().any(|c| c.is_ascii_digit())
 }

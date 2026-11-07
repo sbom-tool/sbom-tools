@@ -5,13 +5,14 @@
 
 use std::path::{Path, PathBuf};
 
-use super::super::cisa2026::{hash_algorithm_shortfall, tool_name_carries_version};
+use super::super::cisa2026::hash_algorithm_shortfall;
 use super::super::shared::{
     ValueState, creator_identified, document_signed, has_known_license, has_known_producer,
     has_known_value, is_declared_unknown, is_spdx2, justified_not_affected, known_component_name,
     known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
     observed, observed_producer, plausible_digest, unreachable_contact, value_state,
 };
+use super::document::tool_name_carries_version;
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,

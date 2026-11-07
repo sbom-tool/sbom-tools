@@ -49,38 +49,6 @@ use super::evidence::Known;
 use super::shared::unparseable_timestamp_of;
 use super::*;
 
-/// Explicit-unknown sentinel: the marker an SBOM author uses to state that a
-/// value is unknown rather than silently omitting it. The 2026 elements'
-/// escape hatches ("the SBOM author should indicate the information is
-/// unknown") make these markers *satisfy* the honesty requirement, so this
-/// is deliberately the complement of `known_value` (which treats the same
-/// sentinels as absent for the NTIA-style presence gates).
-fn is_unknown_marker(value: &str) -> bool {
-    is_declared_unknown(value)
-}
-
-/// Heuristic for the SBOM Tool Version element: whether a Tool creator's
-/// name carries a version identifier (or an explicit unknown marker).
-///
-/// Heuristic by necessity: the parsers concatenate tool name and version
-/// into one creator name — CycloneDX `metadata.tools` becomes
-/// `"{name} {version}"` and the SPDX `Creator: Tool:` convention is
-/// `name-version` — so there is no dedicated tool-version field to check.
-/// A trailing whitespace- or hyphen-delimited segment containing an ASCII
-/// digit counts as a version; a tool genuinely named with a trailing digit
-/// (e.g. "syft2") is an accepted false pass, which is why the rule is a
-/// Warning with heuristic wording rather than an Error.
-pub(super) fn tool_name_carries_version(name: &str) -> bool {
-    let name = name.trim();
-    // The element's escape hatch: an explicit unknown marker satisfies it.
-    if name.split_whitespace().any(is_unknown_marker) {
-        return true;
-    }
-    let last_ws = name.rsplit(char::is_whitespace).next().unwrap_or(name);
-    let last_seg = last_ws.rsplit('-').next().unwrap_or(last_ws);
-    last_seg.chars().any(|c| c.is_ascii_digit())
-}
-
 /// Why a hash algorithm falls short of the Component Hash Algorithm element,
 /// or `None` when it is acceptable. "The algorithm should be approved by a
 /// relevant authority, such as NIST": MD5 was never FIPS-approved; SHA-1 is
