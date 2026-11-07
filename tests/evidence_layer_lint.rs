@@ -24,8 +24,9 @@ const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 /// The checker files that read the evidence layer, relative to the
 /// repository root.
 const READS_EVIDENCE: &[&str] = &[
-    "src/quality/compliance/generic.rs",
     "src/quality/compliance/bsi.rs",
+    "src/quality/compliance/cra.rs",
+    "src/quality/compliance/generic.rs",
 ];
 
 /// Identifiers a checker that reads the evidence may not use: the SBOM, by

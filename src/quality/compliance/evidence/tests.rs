@@ -6,17 +6,17 @@
 use std::path::{Path, PathBuf};
 
 use super::super::shared::{
-    ValueState, has_known_license, has_known_producer, has_known_value, is_declared_unknown,
-    justified_not_affected, known_component_name, known_contact, known_value, license_state,
-    manufacturer_identified, manufacturer_reference, observed, observed_producer, plausible_digest,
-    unreachable_contact,
+    ValueState, document_signed, has_known_license, has_known_producer, has_known_value,
+    is_declared_unknown, justified_not_affected, known_component_name, known_contact, known_value,
+    license_state, manufacturer_identified, manufacturer_reference, observed, observed_producer,
+    plausible_digest, unreachable_contact,
 };
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
-    DependencyType, ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance,
-    LicenseExpression, NormalizedSbom, Organization, Property, VexJustification, VexState,
-    VexStatus, VulnerabilityRef, VulnerabilitySource,
+    DependencyType, EolInfo, EolStatus, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
+    HashProvenance, LicenseExpression, NormalizedSbom, Organization, Property, SbomFormat,
+    SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -55,6 +55,44 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
             checker
                 .inventory_absent_violation(sbom, rule, "inventory")
                 .map(|v| format!("{v:?}")),
+            "{at} (include: {include})"
+        );
+
+        // The CRA vendor-hash cohort, as cra.rs derived it: every type, minus
+        // the left-out components, with a known producer and an identifier,
+        // and the metric's counts over it.
+        let vendors: Vec<_> = ctx
+            .vendor_components()
+            .map(|c| c.canonical_id().clone())
+            .collect();
+        let expected: Vec<_> = sbom
+            .components
+            .values()
+            .filter(|c| {
+                !checker.leaves_out(sbom, c)
+                    && has_known_producer(c)
+                    && c.identifiers.has_cra_identifier()
+            })
+            .map(|c| c.canonical_id.clone())
+            .collect();
+        assert_eq!(vendors, expected, "{at} (include: {include})");
+        let metrics = crate::quality::HashQualityMetrics::from_components(
+            sbom.components
+                .values()
+                .filter(|c| !checker.leaves_out(sbom, c)),
+        );
+        let coverage = ctx.vendor_hash_coverage();
+        assert_eq!(
+            (coverage.total, coverage.with_hash),
+            (
+                metrics.vendor_components_total,
+                metrics.vendor_components_with_hash
+            ),
+            "{at} (include: {include})"
+        );
+        assert_eq!(
+            coverage.fraction().map(f64::to_bits),
+            metrics.vendor_hash_coverage().map(f64::to_bits),
             "{at} (include: {include})"
         );
     }
@@ -413,6 +451,197 @@ fn manufacturer_references_count_on_the_described_product_only() {
 }
 
 #[test]
+fn document_facts_read_the_signature_the_profiles_and_the_written_spdx3_version() {
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.format = SbomFormat::Spdx;
+    sbom.document.spec_version = "SPDX-3.0".to_string();
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: false,
+    });
+    sbom.document.profile_conformance = vec!["core".to_string(), "Security".to_string()];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert_eq!(doc.created, sbom.document.created);
+    assert!(doc.signature_present && !doc.signed);
+    // The written version does not start with "3.", whatever it parses to.
+    assert!(!doc.spdx3_by_prefix);
+    assert!(doc.security_profile_declared && !doc.licensing_profile_declared);
+
+    sbom.document.spec_version = "3.0.1-rc".to_string();
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: true,
+    });
+    sbom.document.profile_conformance = vec!["simpleLicensing".to_string()];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(doc.spdx3_by_prefix);
+    assert!(doc.signed && doc.signature_present);
+    assert!(!doc.security_profile_declared && doc.licensing_profile_declared);
+
+    // A CycloneDX document is never SPDX 3, whatever its version says.
+    sbom.document.format = SbomFormat::CycloneDx;
+    assert!(!SbomEvidence::new(&sbom, as_of()).document().spdx3_by_prefix);
+}
+
+#[test]
+fn presence_facts_read_the_field_whatever_it_says() {
+    let mut sentinel = component("sentinel");
+    sentinel.version = Some("NOASSERTION".to_string());
+    sentinel
+        .licenses
+        .add_declared(LicenseExpression::new("TBD".to_string()));
+    sentinel.eol = Some(EolInfo {
+        status: EolStatus::ApproachingEol,
+        product: "p".to_string(),
+        cycle: "1".to_string(),
+        eol_date: None,
+        support_end_date: None,
+        is_lts: false,
+        latest_in_cycle: None,
+        latest_release_date: None,
+        days_until_eol: None,
+    });
+    let mut concluded = component("concluded");
+    concluded.licenses.concluded = Some(LicenseExpression::new("MIT".to_string()));
+    let sbom = sbom_of(vec![sentinel, concluded, component("bare")]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+
+    let sentinel = view(&ev, "sentinel");
+    assert!(sentinel.version_present() && !sentinel.version().is_known());
+    assert!(sentinel.license_present() && !sentinel.licenses().is_known());
+    assert_eq!(sentinel.eol_status(), Some(EolStatus::ApproachingEol));
+    assert!(view(&ev, "concluded").license_present());
+    let bare = view(&ev, "bare");
+    assert!(!bare.version_present() && !bare.license_present());
+    assert_eq!(bare.eol_status(), None);
+}
+
+#[test]
+fn direct_dependencies_hang_off_the_primary_or_else_the_roots() {
+    let app = component("app");
+    let lib = component("lib");
+    let deep = component("deep");
+    let other = component("other");
+    let mut sbom = sbom_of(vec![app.clone(), lib.clone(), deep.clone(), other.clone()]);
+    sbom.add_edge(edge(&app, &lib));
+    sbom.add_edge(edge(&lib, &deep));
+    sbom.add_edge(edge(&other, &deep));
+    let direct = |sbom: &NormalizedSbom| -> Vec<bool> {
+        SbomEvidence::new(sbom, as_of())
+            .components()
+            .map(|c| c.direct_dependency())
+            .collect()
+    };
+    // No primary: app and other are the roots, so lib and deep are direct.
+    assert_eq!(direct(&sbom), [false, true, true, false]);
+    sbom.primary_component_id = Some(app.canonical_id);
+    assert_eq!(direct(&sbom), [false, true, false, false]);
+}
+
+#[test]
+fn firmware_dependencies_need_an_edge_to_a_firmware_component() {
+    let typed = |name: &str, component_type: ComponentType| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c
+    };
+    let board = typed("board", ComponentType::Device);
+    let radio = typed("radio", ComponentType::Device);
+    let blob = typed("blob", ComponentType::Firmware);
+    let driver = typed("driver", ComponentType::DeviceDriver);
+    let mut sbom = sbom_of(vec![
+        board.clone(),
+        radio.clone(),
+        blob.clone(),
+        driver.clone(),
+    ]);
+    sbom.add_edge(edge(&board, &blob));
+    sbom.add_edge(edge(&radio, &driver));
+    sbom.add_edge(edge(&blob, &component("ghost")));
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "board").depends_on_firmware());
+    assert!(!view(&ev, "radio").depends_on_firmware());
+    assert!(!view(&ev, "blob").depends_on_firmware());
+}
+
+#[test]
+fn a_vulnerability_assertion_is_a_vex_or_exploitability_reference_anywhere() {
+    let with_ref = |ref_type| {
+        let mut c = component("dep");
+        c.external_refs.push(ExternalReference {
+            ref_type,
+            url: "https://acme.test/vex.json".to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        });
+        sbom_of(vec![component("app"), c])
+    };
+    let asserted =
+        |sbom: &NormalizedSbom| SbomEvidence::new(sbom, as_of()).has_vulnerability_assertion();
+    assert!(asserted(&with_ref(ExternalRefType::VulnerabilityAssertion)));
+    assert!(asserted(&with_ref(
+        ExternalRefType::ExploitabilityStatement
+    )));
+    assert!(!asserted(&with_ref(ExternalRefType::Advisories)));
+    assert!(!asserted(&sbom_of(vec![])));
+}
+
+#[test]
+fn the_vendor_cohort_takes_every_type_but_the_left_out() {
+    use super::super::context::ComplianceContext;
+    use super::super::{ComplianceChecker, ComplianceLevel};
+    let vendor = |name: &str, component_type: ComponentType, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c.supplier = Some(Organization::new("Acme".to_string()));
+        c.identifiers.purl = Some(format!("pkg:generic/{name}@1"));
+        c.hashes = hashes;
+        c
+    };
+    let mut excluded = vendor("test-dep", ComponentType::Library, Vec::new());
+    excluded.scope = Some(DependencyScope::Excluded);
+    let mut anonymous = vendor("anonymous", ComponentType::Library, Vec::new());
+    anonymous.supplier = None;
+    let sbom = sbom_of(vec![
+        vendor(
+            "lib",
+            ComponentType::Library,
+            vec![Hash::new(HashAlgorithm::Sha256, "a".repeat(64))],
+        ),
+        vendor(
+            "aes",
+            ComponentType::Cryptographic,
+            vec![Hash::new(HashAlgorithm::Sha256, "zz".to_string())],
+        ),
+        excluded,
+        anonymous,
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let coverage = |include: bool| {
+        let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+            .with_as_of(as_of())
+            .with_include_excluded_scope(include);
+        let ctx = ComplianceContext::new(&checker, &ev);
+        let names: Vec<_> = ctx.vendor_components().map(|c| c.name()).collect();
+        (names, ctx.vendor_hash_coverage())
+    };
+    let (names, left_out) = coverage(false);
+    assert_eq!(names, ["lib", "aes"]);
+    assert_eq!((left_out.total, left_out.with_hash), (2, 1));
+    assert_eq!(left_out.fraction(), Some(0.5));
+    let (names, judged) = coverage(true);
+    assert_eq!(names, ["lib", "aes", "test-dep"]);
+    assert_eq!((judged.total, judged.with_hash), (3, 1));
+    let empty = sbom_of(vec![]);
+    let ev = SbomEvidence::new(&empty, as_of());
+    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2).with_as_of(as_of());
+    let ctx = ComplianceContext::new(&checker, &ev);
+    assert_eq!(ctx.vendor_hash_coverage().fraction(), None);
+}
+
+#[test]
 fn a_non_tool_creator_is_judged_by_its_type_only() {
     let creator = |creator_type, name: &str| Creator {
         creator_type,
@@ -546,18 +775,19 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
         Box::new(|| format!("{:?}", ev.duplicates())),
         Box::new(|| {
             format!(
-                "{} {} {} {}",
+                "{} {} {} {} {}",
                 ev.cycle_count(),
                 ev.has_lifecycle_property(),
                 ev.package_count(false),
-                ev.package_count(true)
+                ev.package_count(true),
+                ev.has_vulnerability_assertion()
             )
         }),
         Box::new(|| {
             ev.components()
                 .map(|c| {
                     format!(
-                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {:?}\n",
+                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {} {} {} {} {:?} {:?}\n",
                         c.version(),
                         c.producer(),
                         c.licenses().state,
@@ -567,6 +797,11 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.package_scoped(),
                         c.excluded_scope(),
                         c.touched(),
+                        c.version_present(),
+                        c.eol_status(),
+                        c.license_present(),
+                        c.direct_dependency(),
+                        c.depends_on_firmware(),
                         c.has_vulnerabilities(),
                         c.first_non_spdx_license(),
                         c.authored_hashes().facts,
@@ -677,6 +912,7 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
         let at = path.display();
         let ev = SbomEvidence::new(&sbom, as_of());
         assert_eq!(ev.component_count(), sbom.components.len(), "{at}");
+        let direct_ids = sbom.direct_dependency_ids();
         for (view, comp) in ev.components().zip(sbom.components.values()) {
             let at = format!("{at}: {}", comp.canonical_id.value());
             assert!(std::ptr::eq(view.name(), comp.name.as_str()), "{at}");
@@ -721,6 +957,33 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
             assert_eq!(
                 view.ids().any(),
                 comp.identifiers.has_cra_identifier(),
+                "{at}"
+            );
+            // The CRA checks' raw reads (cra.rs).
+            assert_eq!(view.version_present(), comp.version.is_some(), "{at}");
+            assert_eq!(
+                view.eol_status(),
+                comp.eol.as_ref().map(|e| e.status),
+                "{at}"
+            );
+            assert_eq!(
+                view.license_present(),
+                !comp.licenses.declared.is_empty() || comp.licenses.concluded.is_some(),
+                "{at}"
+            );
+            assert_eq!(
+                view.direct_dependency(),
+                direct_ids.contains(&comp.canonical_id),
+                "{at}"
+            );
+            assert_eq!(
+                view.depends_on_firmware(),
+                sbom.edges.iter().any(|e| {
+                    e.from == comp.canonical_id
+                        && sbom.components.get(&e.to).is_some_and(|child| {
+                            matches!(child.component_type, ComponentType::Firmware)
+                        })
+                }),
                 "{at}"
             );
             assert_eq!(
@@ -830,6 +1093,44 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
         assert_eq!(
             ev.primary().map(|p| p.canonical_id()),
             sbom.primary_component().map(|p| &p.canonical_id),
+            "{at}"
+        );
+        // The CRA checks' document reads (cra.rs).
+        assert_eq!(doc.created, document.created, "{at}");
+        assert_eq!(doc.signed, document_signed(&sbom), "{at}");
+        assert_eq!(doc.signature_present, document.signature.is_some(), "{at}");
+        assert_eq!(
+            doc.spdx3_by_prefix,
+            document.format == SbomFormat::Spdx && document.spec_version.starts_with("3."),
+            "{at}"
+        );
+        assert_eq!(
+            doc.security_profile_declared,
+            document
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("security")),
+            "{at}"
+        );
+        assert_eq!(
+            doc.licensing_profile_declared,
+            document
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("licensing")),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_vulnerability_assertion(),
+            sbom.components.values().any(|comp| {
+                comp.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        ExternalRefType::VulnerabilityAssertion
+                            | ExternalRefType::ExploitabilityStatement
+                    )
+                })
+            }),
             "{at}"
         );
 

@@ -1,7 +1,10 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
-//! serial number, contacts, support period, completeness, primary component.
+//! serial number, contacts, support period, completeness, primary component,
+//! signature, declared profiles.
 
-use super::super::shared::{is_valid_email_format, known_contact};
+use chrono::{DateTime, Utc};
+
+use super::super::shared::{document_signed, is_valid_email_format, known_contact};
 use super::{ComponentIx, Text};
 use crate::model::{
     CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
@@ -44,6 +47,25 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) primary_declared: Option<&'a CanonicalId>,
     /// The primary component, when its id names a component.
     pub(crate) primary: Option<ComponentIx>,
+    /// The creation timestamp as parsed: the epoch when the document gives
+    /// none or one that does not parse (see [`Self::has_known_timestamp`]).
+    pub(crate) created: DateTime<Utc>,
+    /// Whether the document carries a signature with a value (see
+    /// `shared::document_signed`).
+    pub(crate) signed: bool,
+    /// Whether the document carries a signature entry, with a value or not.
+    pub(crate) signature_present: bool,
+    /// Whether the document is SPDX and its spec version, as written,
+    /// starts with `3.`. The CRA SPDX 3 profile checks ask this; the other
+    /// checks read the parsed version ([`Self::spec_version`]), and the two
+    /// differ on versions such as `3`, `SPDX-3.0` or `3.0.1-rc`.
+    pub(crate) spdx3_by_prefix: bool,
+    /// Whether a profile the document declares conforming to names the
+    /// Security profile (any case).
+    pub(crate) security_profile_declared: bool,
+    /// Whether a profile the document declares conforming to names the
+    /// SimpleLicensing profile (any case).
+    pub(crate) licensing_profile_declared: bool,
     /// Whether a creator is a person or an organization, not a tool: BSI
     /// TR-03183-2's creator of the SBOM. Other standards judge the author
     /// differently: most accept any creator, and CISA 2026 and FSCT require
@@ -94,10 +116,25 @@ impl<'a> DocumentFacts<'a> {
             completeness: &document.completeness_declaration,
             primary_declared: sbom.primary_component_id.as_ref(),
             primary,
+            created: document.created,
+            signed: document_signed(sbom),
+            signature_present: document.signature.is_some(),
+            spdx3_by_prefix: document.format == SbomFormat::Spdx
+                && document.spec_version.starts_with("3."),
+            security_profile_declared: declares_profile(&document.profile_conformance, "security"),
+            licensing_profile_declared: declares_profile(
+                &document.profile_conformance,
+                "licensing",
+            ),
             has_non_tool_creator: document
                 .creators
                 .iter()
                 .any(|c| c.creator_type != CreatorType::Tool),
         }
     }
+}
+
+/// Whether a declared profile's name contains `keyword`, in any case.
+fn declares_profile(profiles: &[String], keyword: &str) -> bool {
+    profiles.iter().any(|p| p.to_lowercase().contains(keyword))
 }

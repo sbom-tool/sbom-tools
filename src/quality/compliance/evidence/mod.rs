@@ -56,7 +56,8 @@ use chrono::{DateTime, Utc};
 
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
-    CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, NormalizedSbom,
+    CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, EolStatus,
+    ExternalRefType, NormalizedSbom,
 };
 
 pub(crate) use component::{
@@ -151,6 +152,9 @@ pub(crate) struct SbomEvidence<'a> {
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
+    vulnerability_assertion: OnceLock<bool>,
+    direct_dependencies: OnceLock<Box<[bool]>>,
+    firmware_dependencies: OnceLock<Box<[bool]>>,
     non_spdx_licenses: OnceLock<Box<[Option<&'a str>]>>,
     authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
 }
@@ -180,6 +184,9 @@ impl<'a> SbomEvidence<'a> {
             manufacturer: OnceLock::new(),
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
+            vulnerability_assertion: OnceLock::new(),
+            direct_dependencies: OnceLock::new(),
+            firmware_dependencies: OnceLock::new(),
             non_spdx_licenses: OnceLock::new(),
             authored_hashes: OnceLock::new(),
         }
@@ -345,6 +352,38 @@ impl<'a> SbomEvidence<'a> {
         })
     }
 
+    /// Whether any component references a vulnerability assertion or an
+    /// exploitability statement (a VEX or VDR document, say).
+    pub(crate) fn has_vulnerability_assertion(&self) -> bool {
+        *self.vulnerability_assertion.get_or_init(|| {
+            self.sbom.components.values().any(|c| {
+                c.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        ExternalRefType::VulnerabilityAssertion
+                            | ExternalRefType::ExploitabilityStatement
+                    )
+                })
+            })
+        })
+    }
+
+    fn direct_dependencies(&self) -> &[bool] {
+        self.direct_dependencies.get_or_init(|| {
+            let direct = self.sbom.direct_dependency_ids();
+            self.sbom
+                .components
+                .values()
+                .map(|c| direct.contains(&c.canonical_id))
+                .collect()
+        })
+    }
+
+    fn firmware_dependencies(&self) -> &[bool] {
+        self.firmware_dependencies
+            .get_or_init(|| graph::firmware_dependencies(self.sbom))
+    }
+
     fn non_spdx_licenses(&self) -> &[Option<&'a str>] {
         self.non_spdx_licenses.get_or_init(|| {
             self.sbom
@@ -454,6 +493,39 @@ impl<'a> ComponentView<'_, 'a> {
     /// Whether the component positively declares it has no dependencies.
     pub(crate) fn declares_no_dependencies(&self) -> bool {
         self.ev.graph().declares_no_dependencies[self.ix.0]
+    }
+
+    /// Whether the component gives a version at all, whatever it says. The
+    /// CRA hardware checks ask this, the other version checks what the
+    /// version says ([`Self::version`]): a `NOASSERTION` version satisfies
+    /// the first and not the second.
+    pub(crate) fn version_present(&self) -> bool {
+        self.component.version.is_some()
+    }
+
+    /// The component's end-of-life status, when enrichment gave one.
+    pub(crate) fn eol_status(&self) -> Option<EolStatus> {
+        self.component.eol.as_ref().map(|eol| eol.status)
+    }
+
+    /// Whether the component lists a licence at all, declared or concluded,
+    /// whatever it says (see [`Self::licenses`] for what it says).
+    pub(crate) fn license_present(&self) -> bool {
+        !self.component.licenses.declared.is_empty() || self.component.licenses.concluded.is_some()
+    }
+
+    /// Whether the component is a direct dependency of the product: one
+    /// hop from the primary component, or from a root of the graph when
+    /// the document names no primary (see
+    /// `NormalizedSbom::direct_dependency_ids`).
+    pub(crate) fn direct_dependency(&self) -> bool {
+        self.ev.direct_dependencies()[self.ix.0]
+    }
+
+    /// Whether a dependency relationship leads from the component to a
+    /// firmware component.
+    pub(crate) fn depends_on_firmware(&self) -> bool {
+        self.ev.firmware_dependencies()[self.ix.0]
     }
 
     /// Whether the component carries vulnerability information.
