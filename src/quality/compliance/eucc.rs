@@ -25,9 +25,10 @@ impl ComplianceChecker {
 
     pub(crate) fn check_eucc_substantial(
         &self,
-        sbom: &NormalizedSbom,
-        violations: &mut Vec<Violation>,
+        ctx: &ComplianceContext<'_, '_>,
+        findings: &mut Findings,
     ) {
+        let violations = &mut findings.violations;
         let sidecar = self.sidecar.as_ref();
 
         // 1. Common Criteria Protection Profile reference
@@ -123,7 +124,7 @@ impl ComplianceChecker {
                     observed: None,
                 });
             }
-            Some(until) if until <= self.now() => {
+            Some(until) if until <= ctx.ev.as_of() => {
                 violations.push(Violation {
                     severity: ViolationSeverity::Error,
                     category: ViolationCategory::DocumentMetadata,
@@ -145,7 +146,7 @@ impl ComplianceChecker {
                     observed: observed(&until.format("%Y-%m-%d").to_string()),
                 });
             }
-            Some(until) if until <= self.now() + chrono::Duration::days(180) => {
+            Some(until) if until <= ctx.ev.as_of() + chrono::Duration::days(180) => {
                 violations.push(Violation {
                     severity: ViolationSeverity::Warning,
                     category: ViolationCategory::DocumentMetadata,
@@ -180,21 +181,19 @@ impl ComplianceChecker {
         // standard naming EUCC / Common Criteria (Structural/SignaturePresent
         // level; the URL-substring scan remains the SelfDeclared fallback).
         // Until v0.4.0 this check did not read "commoncriteria".
-        let sbom_evidence = SbomEvidence::new(sbom, self.now());
-        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let cdxa_eucc_attested = ctx
             .evidence_for(AttestationRuleFamily::Cra)
             .iter()
             .any(|s| standard_references_eucc(s.standard));
         let eucc_ref_present =
-            cdxa_eucc_attested || manufacturer_reference(sbom, is_eucc_reference);
+            cdxa_eucc_attested || ctx.ev.manufacturer().reference(is_eucc_reference);
         if !eucc_ref_present {
             let mut message = "[EUCC] No Certification/Attestation external reference points at an EUCC URL (recommended)".to_string();
             if let Some(note) = cdxa_note(
                 ctx.attestation_declarations(),
                 AttestationRuleFamily::Cra,
                 &|s, _| standard_references_eucc(s),
-                self.now(),
+                ctx.ev.as_of(),
                 "an EUCC / Common Criteria certification",
             ) {
                 message.push_str(&note);

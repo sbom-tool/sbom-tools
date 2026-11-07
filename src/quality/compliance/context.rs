@@ -348,7 +348,8 @@ dedicated_checker!(
 dedicated_checker!(
     EuccSubstantialChecker,
     ComplianceLevel::EuccSubstantial,
-    check_eucc_substantial
+    check_eucc_substantial,
+    context
 );
 dedicated_checker!(
     EuAiActChecker,
