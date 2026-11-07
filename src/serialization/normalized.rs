@@ -102,6 +102,8 @@ impl NormalizedSbomPayload {
                 .map(|record| (record.canonical_id.clone(), record))
                 .collect(),
             collision_count: self.collision_count,
+            // Derived while a document is read; the payload does not carry it.
+            rekeyed: crate::model::RekeyIndex::default(),
         }
     }
 

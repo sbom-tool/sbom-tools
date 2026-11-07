@@ -1,5 +1,5 @@
 {
-  "description": "False-pass regression corpus from the v0.3.0 compliance review (review ids V*) and the v0.4.0 rule matrices (WP 1.2 findings B*). Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
+  "description": "False-pass regression corpus from the v0.3.0 compliance review (review ids V*) and the v0.4.0 rule matrices (WP 1.2 findings B*) and property tests (Q4). Each check names the verdict a standard must reach. A check with \"xfail\" is a known defect, still reproduced: the runner asserts its expectation does NOT hold yet, and the work package named in \"xfail\" must remove the marker when it fixes it. Paths are relative to this directory. Evaluated at as_of 2026-10-12T00:00:00Z.",
   "entries": [
     {
       "id": "v1-empty-purl-collision",
@@ -1812,6 +1812,108 @@
                 "total": 1
               }
             ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "q4-repeat-after-other",
+      "review_id": "Q4",
+      "fixture": "q4-repeat-after-other.cdx.json",
+      "note": "left-pad and left-pad-fork share one purl, and left-pad-fork is listed twice under one bom-ref: first without a supplier, then with one. left-pad comes first and keeps the purl's id, so left-pad-fork is re-keyed to <purl>#left-pad-fork. Its repeat was re-keyed again, to <purl>#left-pad-fork#2, and kept as a third component, so the entry without a supplier failed NTIA, EO 14028 and CISA 2026. It now merges into the first entry, as it does when left-pad-fork comes first (q4-repeat-around-other): the same verdicts and counts in both orders.",
+      "checks": [
+        {
+          "standard": "ntia",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-NTIA-DUPLICATE-COMPONENT",
+                "severity": "info"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eo14028",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "errors": 6
+          }
+        }
+      ]
+    },
+    {
+      "id": "q4-repeat-around-other",
+      "review_id": "Q4",
+      "fixture": "q4-repeat-around-other.cdx.json",
+      "note": "The entries of q4-repeat-after-other with left-pad-fork first: it keeps the purl's id, left-pad is re-keyed, and the repeat merges. This order always gave these verdicts; the pair pins that the order no longer matters.",
+      "checks": [
+        {
+          "standard": "ntia",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-NTIA-DUPLICATE-COMPONENT",
+                "severity": "info"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eo14028",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "errors": 6
+          }
+        }
+      ]
+    },
+    {
+      "id": "q4-repeat-two-refs",
+      "review_id": "Q4",
+      "fixture": "q4-repeat-two-refs.cdx.json",
+      "note": "q4-repeat-after-other with the two entries of left-pad-fork under two bom-refs, left-pad-fork-1 (no supplier) and left-pad-fork-2 (with one). left-pad keeps the purl's id and the first entry is re-keyed to <purl>#left-pad-fork-1. The second entry was re-keyed under its own bom-ref, to <purl>#left-pad-fork-2, and kept as a third component, so the first failed NTIA, EO 14028 and CISA 2026 for its supplier; with left-pad-fork first the two merged. The second entry now finds the first, whatever its bom-ref.",
+      "checks": [
+        {
+          "standard": "ntia",
+          "expect": {
+            "compliant": true,
+            "errors": 0,
+            "rules_present": [
+              {
+                "rule": "SBOM-NTIA-DUPLICATE-COMPONENT",
+                "severity": "info"
+              }
+            ]
+          }
+        },
+        {
+          "standard": "eo14028",
+          "expect": {
+            "compliant": true,
+            "errors": 0
+          }
+        },
+        {
+          "standard": "cisa-2026",
+          "expect": {
+            "errors": 6
           }
         }
       ]

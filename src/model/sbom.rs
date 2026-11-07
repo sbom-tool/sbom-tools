@@ -3,7 +3,7 @@
 use super::{
     CanonicalId, ComponentExtensions, ComponentIdentifiers, ComponentType, CryptoProperties,
     DependencyScope, DependencyType, DocumentMetadata, DuplicateComponent, Ecosystem,
-    ExternalReference, FormatExtensions, Hash, LicenseInfo, Organization, VexStatus,
+    ExternalReference, FormatExtensions, Hash, LicenseInfo, Organization, RekeyIndex, VexStatus,
     VulnerabilityRef,
 };
 use indexmap::IndexMap;
@@ -16,7 +16,13 @@ const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
 ///
 /// This structure represents an SBOM in a format-agnostic way, allowing
 /// comparison between `CycloneDX` and SPDX documents.
+///
+/// Build one with [`Self::new`] or [`Default`] and set its fields, or
+/// deserialize it: it keeps derived state of its own (see
+/// [`Self::claim_canonical_id`]), so code outside the crate cannot build it
+/// with a struct literal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct NormalizedSbom {
     /// Document-level metadata
     pub document: DocumentMetadata,
@@ -56,6 +62,12 @@ pub struct NormalizedSbom {
     /// different name or version replaced.
     #[serde(skip)]
     pub collision_count: usize,
+    /// The components [`Self::claim_canonical_id`] re-keyed, by the id they
+    /// share, so a later entry of one finds it (see `model::rekey`).
+    /// Derived while a document is read: not serialized, and empty in a
+    /// deserialized SBOM.
+    #[serde(skip)]
+    pub(crate) rekeyed: RekeyIndex,
 }
 
 impl NormalizedSbom {
@@ -72,6 +84,7 @@ impl NormalizedSbom {
             described_root_ids: Vec::new(),
             duplicate_components: IndexMap::new(),
             collision_count: 0,
+            rekeyed: RekeyIndex::default(),
         }
     }
 
@@ -124,26 +137,58 @@ impl NormalizedSbom {
     ///
     /// A component of a different known name or version under a taken id
     /// replaces the one there (counted, and `true`). Parsers never pass one:
-    /// [`Self::claim_canonical_id`] gives it an id of its own first.
+    /// [`Self::claim_canonical_id`] gives it an id of its own first, and
+    /// gives a later entry of it that same id, so the two merge here.
     pub fn add_component(&mut self, component: Component) -> bool {
         let id = component.canonical_id.clone();
         let Some(existing) = self.components.get_mut(&id) else {
+            if let Some((shared, base, suffix)) = self.rekeyed_from(&component) {
+                self.rekeyed
+                    .add(shared, id.clone(), &base, suffix, &component);
+            }
             self.components.insert(id, component);
             return false;
         };
         self.collision_count += 1;
         if !existing.is_same_component(&component) {
             *existing = component;
+            self.rekeyed.refresh(&id, existing);
             return true;
         }
         let first_format_id = existing.identifiers.format_id.clone();
         let format_id = component.identifiers.format_id.clone();
         let conflicts = existing.merge_duplicate(component);
+        // The merge can teach a re-keyed component its name or version.
+        self.rekeyed.refresh(&id, existing);
         self.duplicate_components
             .entry(id.clone())
             .or_insert_with(|| DuplicateComponent::first_entry(id, first_format_id))
             .count_entry(format_id, conflicts);
         true
+    }
+
+    /// Whether `component`, about to be inserted, was re-keyed by
+    /// [`Self::claim_canonical_id`]: its id is `<shared>#<format id>` or
+    /// `<shared>#<format id>#<n>`, where a component already holds
+    /// `<shared>`, and its own identifiers do not give that id. Returns the
+    /// shared id, the re-key base (`<shared>#<format id>`) and the suffix.
+    fn rekeyed_from(&self, component: &Component) -> Option<(CanonicalId, String, Option<usize>)> {
+        let id = component.canonical_id.value();
+        if !id.contains('#') || component.identifiers.canonical_id() == component.canonical_id {
+            return None;
+        }
+        let tail = format!("#{}", component.identifiers.format_id);
+        let held = |shared: &str| {
+            let shared = CanonicalId::from_format_id(shared);
+            self.components.contains_key(&shared).then_some(shared)
+        };
+        if let Some(shared) = id.strip_suffix(tail.as_str()).and_then(held) {
+            return Some((shared, id.to_string(), None));
+        }
+        let (base, suffix) = id.rsplit_once('#')?;
+        let suffix = suffix.parse::<usize>().ok()?;
+        let shared = base.strip_suffix(tail.as_str()).and_then(held)?;
+        Some((shared, base.to_string(), Some(suffix)))
     }
 
     /// Settle the canonical ID `component` will be inserted under.
@@ -154,35 +199,72 @@ impl NormalizedSbom {
     /// share an identifier (two versions under one version-less purl, say).
     /// Inserting would overwrite — silently dropping a component from every
     /// count and check — so `component` is re-keyed to an ID that appends its
-    /// format ID (bom-ref or SPDXID), and the clash is logged. A true
+    /// format ID (bom-ref or SPDXID), then `#2`, `#3`, … while that ID is
+    /// taken by another component, and the clash is logged. A true
     /// duplicate (the same name and version, where a name or version that is
     /// absent or not known agrees with any; see
-    /// [`Component::is_same_component`]) keeps the shared ID, and
-    /// [`Self::add_component`] merges the two entries. Returns the ID to
-    /// register.
+    /// [`Component::is_same_component`]) keeps the ID its first entry got:
+    /// the shared ID, or, when the first entry was re-keyed, the re-keyed
+    /// one, under whatever format ID either entry has. Of several components
+    /// re-keyed from the shared ID that it agrees with, it takes the one
+    /// re-keyed first. [`Self::add_component`] then merges the entries: a
+    /// component listed twice beside another component under the same purl
+    /// is one component whether the other comes before both of its entries
+    /// or between them. Returns the ID to register.
+    ///
+    /// The re-keyed components are looked up in an index the SBOM keeps
+    /// while it is read, not by a scan, so a document with many components
+    /// under one ID parses in linear time. A deserialized SBOM starts
+    /// without that index: a later entry then finds a re-keyed component
+    /// only under its own format ID.
     pub fn claim_canonical_id(&self, component: &mut Component) -> CanonicalId {
         let distinct = self
             .components
             .get(&component.canonical_id)
             .is_some_and(|existing| !existing.is_same_component(component));
         if distinct {
+            // A later entry of a component re-keyed from this ID merges
+            // into it.
+            if let Some(id) = self
+                .rekeyed
+                .find(&component.canonical_id, component)
+                .filter(|id| {
+                    self.components
+                        .get(*id)
+                        .is_some_and(|holder| holder.is_same_component(component))
+                })
+            {
+                component.canonical_id = id.clone();
+                return id.clone();
+            }
             let base = format!(
                 "{}#{}",
                 component.canonical_id.value(),
                 component.identifiers.format_id
             );
             let mut candidate = CanonicalId::from_format_id(&base);
-            let mut n = 2;
-            while self.components.contains_key(&candidate) {
+            let mut n = self.rekeyed.next_suffix(&base);
+            // An ID taken by the same component is the one its first entry
+            // was re-keyed to (found here when the index does not have it,
+            // in a deserialized SBOM): reuse it, so the entries merge.
+            while self
+                .components
+                .get(&candidate)
+                .is_some_and(|holder| !holder.is_same_component(component))
+            {
                 candidate = CanonicalId::from_format_id(&format!("{base}#{n}"));
                 n += 1;
             }
-            tracing::warn!(
-                shared_id = %component.canonical_id,
-                component = %component.name,
-                kept_as = %candidate,
-                "distinct components share a canonical ID; keeping both"
-            );
+            // The clash was logged for the first entry; a repeat merges and
+            // is counted in the collision summary.
+            if !self.components.contains_key(&candidate) {
+                tracing::warn!(
+                    shared_id = %component.canonical_id,
+                    component = %component.name,
+                    kept_as = %candidate,
+                    "distinct components share a canonical ID; keeping both"
+                );
+            }
             component.canonical_id = candidate;
         }
         component.canonical_id.clone()

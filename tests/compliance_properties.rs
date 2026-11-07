@@ -685,8 +685,13 @@ fn component() -> BoxedStrategy<ComponentSpec> {
 impl ComponentSpec {
     /// The component of the `index`th entry; its format id is `ref-<index>`.
     fn build(&self, index: usize) -> Component {
+        self.build_as(index, format!("ref-{index}"))
+    }
+
+    /// The component of the `index`th spec, listed under `format_id`.
+    fn build_as(&self, index: usize, format_id: String) -> Component {
         let name = self.name.text().unwrap_or_default();
-        let mut component = Component::new(name, format!("ref-{index}"));
+        let mut component = Component::new(name, format_id);
         if let Some(version) = self.version.text() {
             component = component.with_version(version);
         }
@@ -1003,8 +1008,9 @@ struct SbomSpec {
     document: DocSpec,
     components: Vec<ComponentSpec>,
     /// Entries listed a second time, by index (modulo the number of
-    /// entries): the duplicates the model merges into one component.
-    repeats: Vec<usize>,
+    /// entries), under the same format id or another one: the duplicates
+    /// the model merges into one component when an identifier ties them.
+    repeats: Vec<(usize, bool)>,
     primary: Option<usize>,
     edges: Vec<EdgeSpec>,
 }
@@ -1023,7 +1029,7 @@ fn any_sbom_spec() -> BoxedStrategy<SbomSpec> {
     (
         document(),
         prop::collection::vec(component(), 0..10),
-        prop::collection::vec(0usize..16, 0..2),
+        prop::collection::vec((0usize..16, any::<bool>()), 0..3),
         prop::option::weighted(0.7, 0usize..16),
         prop::collection::vec(edge(), 0..14),
     )
@@ -1213,12 +1219,17 @@ fn good_document() -> BoxedStrategy<DocSpec> {
 
 impl SbomSpec {
     /// The entries in document order: each component once, then the
-    /// repeats.
-    fn entries(&self) -> Vec<usize> {
+    /// repeats. An entry is its spec's index, and whether it is listed under
+    /// another format id (`ref-<index>-again`).
+    fn entries(&self) -> Vec<(usize, bool)> {
         let n = self.components.len();
-        let mut entries: Vec<usize> = (0..n).collect();
+        let mut entries: Vec<(usize, bool)> = (0..n).map(|index| (index, false)).collect();
         if n > 0 {
-            entries.extend(self.repeats.iter().map(|repeat| repeat % n));
+            entries.extend(
+                self.repeats
+                    .iter()
+                    .map(|(repeat, again)| (repeat % n, *again)),
+            );
         }
         entries
     }
@@ -1228,14 +1239,19 @@ impl SbomSpec {
             .sbom
     }
 
-    /// The SBOM with its entries listed in `entries` order and its edges in
-    /// `edges` order (both lists of indices).
-    fn build_in_order(&self, entries: &[usize], edges: &[usize]) -> Built {
+    /// The SBOM with its entries listed in `entries` order (see
+    /// [`Self::entries`]) and its edges in `edges` order (indices).
+    fn build_in_order(&self, entries: &[(usize, bool)], edges: &[usize]) -> Built {
         let mut sbom = NormalizedSbom::new(self.document.build());
         let mut ids: BTreeMap<usize, CanonicalId> = BTreeMap::new();
         let mut sources: BTreeMap<String, BTreeSet<usize>> = BTreeMap::new();
-        for &index in entries {
-            let mut component = self.components[index].build(index);
+        for &(index, again) in entries {
+            let format_id = if again {
+                format!("ref-{index}-again")
+            } else {
+                format!("ref-{index}")
+            };
+            let mut component = self.components[index].build_as(index, format_id);
             // As the parsers do: a different component under a taken id gets
             // one of its own, a true duplicate is merged.
             let id = sbom.claim_canonical_id(&mut component);
@@ -1278,32 +1294,42 @@ impl SbomSpec {
             .any(|other| other != index && self.components[other].build(other).canonical_id == id)
     }
 
-    /// Whether entries of different components take one canonical id (they
-    /// carry the same malformed purl or CPE) and there are three or more of
-    /// them. Which entries become which components then depends on their
-    /// order, and so do the findings and the counts. Not fixed here (output
-    /// is frozen for the refactor), and excluded where it matters:
+    /// Whether, among the entries of different specs that take one
+    /// canonical id (they carry the same malformed purl or CPE), one agrees
+    /// with two that do not agree with each other
+    /// ([`Component::is_same_component`]): an entry whose name or version is
+    /// not known agrees with any. It then merges into whichever of the two
+    /// comes first: in `a, NOASSERTION, b` its fields go to `a`, in
+    /// `NOASSERTION, b, a` to `b`, and the findings and counts follow.
+    /// Left as it is (which of the two the entry belongs to has no
+    /// order-free answer), and excluded where it matters.
     ///
-    /// - `NormalizedSbom::claim_canonical_id` gives the repeat of an entry
-    ///   it re-keyed yet another id (`<id>#<ref>#2`) instead of merging it
-    ///   into that entry: `a, b, b` under one purl is three components,
-    ///   `b, a, b` two.
-    /// - An entry whose name or version is not known agrees with any, so it
-    ///   merges into whichever component under its id comes first: in
-    ///   `a, NOASSERTION, b` its fields go to `a`, in `NOASSERTION, b, a`
-    ///   to `b`.
-    fn has_unstable_id_sharing(&self) -> bool {
-        let mut groups: BTreeMap<String, Vec<usize>> = BTreeMap::new();
-        for index in self.entries() {
-            let id = self.components[index].build(index).canonical_id;
+    /// Every other sharing is order-free and not excluded: a different
+    /// component under a taken id is re-keyed, and a later entry of a
+    /// re-keyed component finds it, under any format id.
+    fn has_ambiguous_merges(&self) -> bool {
+        let mut groups: BTreeMap<String, Vec<Component>> = BTreeMap::new();
+        for index in 0..self.components.len() {
+            let component = self.components[index].build(index);
             groups
-                .entry(id.value().to_string())
+                .entry(component.canonical_id.value().to_string())
                 .or_default()
-                .push(index);
+                .push(component);
         }
         groups.values().any(|group| {
-            let components: BTreeSet<&usize> = group.iter().collect();
-            components.len() >= 2 && group.len() >= 3
+            group.iter().enumerate().any(|(i, entry)| {
+                let agreeing: Vec<&Component> = group
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, other)| *j != i && entry.is_same_component(other))
+                    .map(|(_, other)| other)
+                    .collect();
+                agreeing.iter().enumerate().any(|(k, first)| {
+                    agreeing[k + 1..]
+                        .iter()
+                        .any(|second| !first.is_same_component(second))
+                })
+            })
         })
     }
 }
@@ -1697,14 +1723,14 @@ proptest! {
         seed in any::<u64>(),
     ) {
         let entries = spec.entries();
-        let shuffled_entries: Vec<usize> = permutation(entries.len(), seed)
+        let shuffled_entries: Vec<(usize, bool)> = permutation(entries.len(), seed)
             .into_iter()
             .map(|i| entries[i])
             .collect();
         let shuffled_edges = permutation(spec.edges.len(), seed.rotate_left(17));
         // Excluded: entries whose merging follows their order (see
-        // `SbomSpec::has_unstable_id_sharing`).
-        prop_assume!(!spec.has_unstable_id_sharing());
+        // `SbomSpec::has_ambiguous_merges`).
+        prop_assume!(!spec.has_ambiguous_merges());
         let original = spec.build_in_order(&entries, &(0..spec.edges.len()).collect::<Vec<_>>());
         let shuffled = spec.build_in_order(&shuffled_entries, &shuffled_edges);
 
