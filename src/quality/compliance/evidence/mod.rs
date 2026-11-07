@@ -45,6 +45,7 @@ mod component;
 mod document;
 mod graph;
 mod manufacturer;
+mod references;
 mod scope;
 mod vulns;
 
@@ -152,6 +153,10 @@ pub(crate) struct SbomEvidence<'a> {
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
     supported_requirements: OnceLock<Box<[attestations::Supported<'a>]>>,
+    vcs_reference: OnceLock<bool>,
+    build_reference: OnceLock<bool>,
+    any_vulnerability: OnceLock<bool>,
+    vulnerability_reference_on_any_component: OnceLock<bool>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -180,6 +185,10 @@ impl<'a> SbomEvidence<'a> {
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
             supported_requirements: OnceLock::new(),
+            vcs_reference: OnceLock::new(),
+            build_reference: OnceLock::new(),
+            any_vulnerability: OnceLock::new(),
+            vulnerability_reference_on_any_component: OnceLock::new(),
         }
     }
 
@@ -357,6 +366,47 @@ impl<'a> SbomEvidence<'a> {
             .iter()
             .filter(move |s| s.family == Some(family))
             .map(|s| &s.requirement)
+    }
+
+    /// Whether any component, a dependency included, references a
+    /// version-control repository.
+    // Read by the SSDF checks from the next commit on.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn has_vcs_reference(&self) -> bool {
+        *self
+            .vcs_reference
+            .get_or_init(|| references::any_vcs(self.sbom))
+    }
+
+    /// Whether any component, a dependency included, references build
+    /// metadata or its build system.
+    // Read by the SSDF checks from the next commit on.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn has_build_reference(&self) -> bool {
+        *self
+            .build_reference
+            .get_or_init(|| references::any_build(self.sbom))
+    }
+
+    /// Whether any component lists a vulnerability: whether
+    /// [`Self::vulnerabilities`] holds any, without collecting them.
+    // Read by the SSDF checks from the next commit on.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn has_vulnerabilities(&self) -> bool {
+        *self.any_vulnerability.get_or_init(|| vulns::any(self.sbom))
+    }
+
+    /// Whether any component, a dependency included, carries an advisories
+    /// or security-contact reference that reaches someone, or a
+    /// vulnerability-assertion reference. A support reference does not
+    /// count. The checks that look for the manufacturer's contact read only
+    /// the product's own references instead (see [`Self::manufacturer`]).
+    // Read by the SSDF checks from the next commit on.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn has_vulnerability_reference_on_any_component(&self) -> bool {
+        *self
+            .vulnerability_reference_on_any_component
+            .get_or_init(|| references::any_vulnerability_reference(self.sbom))
     }
 }
 

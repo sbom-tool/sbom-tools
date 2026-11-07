@@ -16,6 +16,13 @@ pub(crate) struct VulnFact<'a> {
     pub(crate) justified_not_affected: bool,
 }
 
+/// Whether any component lists a vulnerability.
+pub(super) fn any(sbom: &NormalizedSbom) -> bool {
+    sbom.components
+        .values()
+        .any(|c| !c.vulnerabilities.is_empty())
+}
+
 /// Every vulnerability of every component, in inventory order and, within a
 /// component, in document order (as `NormalizedSbom::all_vulnerabilities`).
 pub(super) fn collect(sbom: &NormalizedSbom) -> Box<[VulnFact<'_>]> {
