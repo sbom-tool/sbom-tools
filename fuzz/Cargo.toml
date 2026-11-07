@@ -10,8 +10,9 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 
-# Fuzz targets only exercise the parsers and the quality scorer, so drop the
-# default cli/tui/enrichment features to keep the fuzz build dependency-lean.
+# Fuzz targets only exercise the parsers, the quality scorer and the
+# compliance engine with its report writers, so drop the default
+# cli/tui/enrichment features to keep the fuzz build dependency-lean.
 [dependencies.sbom-tools]
 path = ".."
 default-features = false
@@ -61,4 +62,9 @@ doc = false
 [[bin]]
 name = "fuzz_spdx3_json"
 path = "fuzz_targets/fuzz_spdx3_json.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_compliance"
+path = "fuzz_targets/fuzz_compliance.rs"
 doc = false

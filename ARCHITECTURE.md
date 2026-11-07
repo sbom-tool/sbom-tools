@@ -112,8 +112,8 @@ The repository now includes a C-compatible ABI layer in [src/ffi.rs](src/ffi.rs)
 ## Testing
 
 - 912+ tests (unit + integration)
-- Property-based testing via `proptest` (matching symmetry, score range, self-match)
-- Fuzz targets for all parser formats (`cargo-fuzz`)
+- Property-based testing via `proptest` (matching symmetry, score range, self-match; on generated SBOMs, the compliance verdict contract, order independence, determinism, monotonic evidence and the nesting of the CRA phases in `tests/compliance_properties.rs`)
+- Fuzz targets for all parser formats, and for the compliance engine with its report writers (`cargo-fuzz`)
 - Golden fixture tests for format compatibility
 - Integration tests in `tests/` covering pipeline, CLI, CRA, query, VEX, watch, and graph
 
