@@ -338,7 +338,7 @@ dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,
     check_bsi_tr_03183_2,
-    findings
+    context
 );
 dedicated_checker!(
     CraOssStewardChecker,

@@ -40,10 +40,6 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
-// Transitional: the facts the BSI TR-03183-2 port reads, before it reads
-// them.
-#![cfg_attr(not(test), allow(dead_code))]
-
 mod component;
 mod document;
 mod graph;
