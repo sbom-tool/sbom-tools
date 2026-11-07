@@ -12,9 +12,6 @@
 //! them. The verdicts, which need the deadline calendar, stay in the
 //! checker (`crypto.rs`), which also defines the classification.
 
-// The crypto checks read these facts from the next commit on.
-#![cfg_attr(not(test), allow(dead_code))]
-
 use std::collections::HashMap;
 use std::sync::OnceLock;
 

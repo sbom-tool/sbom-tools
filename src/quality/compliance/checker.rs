@@ -206,15 +206,11 @@ impl ComplianceChecker {
         self.pqc_mode
     }
 
-    /// The calendar the crypto checks judge by: `None` in readiness mode.
-    pub(crate) fn pqc_calendar(&self) -> Option<Calendar> {
-        (self.pqc_mode == PqcMode::Deadline).then(|| {
-            Calendar::new(
-                self.pqc_profile,
-                self.cnsa_category,
-                self.now().date_naive(),
-            )
-        })
+    /// The calendar the crypto checks judge by on `today`, the date of the
+    /// evaluation instant: `None` in readiness mode.
+    pub(crate) fn pqc_calendar(&self, today: chrono::NaiveDate) -> Option<Calendar> {
+        (self.pqc_mode == PqcMode::Deadline)
+            .then(|| Calendar::new(self.pqc_profile, self.cnsa_category, today))
     }
 
     /// Attach CRA sidecar metadata to supplement SBOM-level fields.

@@ -326,12 +326,12 @@ dedicated_checker!(
     check_eo14028,
     findings
 );
-dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2);
+dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2, context);
 dedicated_checker!(
     NistPqcChecker,
     ComplianceLevel::NistPqc,
     check_nist_pqc,
-    findings
+    context
 );
 dedicated_checker!(
     BsiTr03183Checker,
