@@ -23,7 +23,10 @@
 //! identifier kinds, the name test) is computed on access, through a
 //! [`ComponentView`]. A fact that classifies text or scans a list is a lazy
 //! group: computed the first time a check reads it, once per evidence, in
-//! inventory order. A run pays only for the facts its levels read.
+//! inventory order. The crypto classification is kept per component
+//! instead, computed the first time a check reads that component's (the
+//! crypto levels classify only some components; see `crypto.rs`). A run
+//! pays only for the facts its levels read.
 //!
 //! Facts are what a verdict is decided on: states, flags, positions and
 //! counts, and the SBOM's own values, borrowed as read. A check writes a
