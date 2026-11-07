@@ -5,104 +5,55 @@
 //! the clap definition of `validate --standard` (help text, parse errors,
 //! shell completions), the config file's `compliance.standards` section, and
 //! `cli::run_validate` — parses through this type, so the accepted spellings
-//! can never drift between the CLI, the config file, and the docs again.
+//! can never drift between the CLI, the config file, and the docs again. The
+//! spellings and their help lines are in each level's entry in the
+//! standards table (`standards.rs`).
 
 use super::ComplianceLevel;
 use clap::ValueEnum;
+use clap::builder::PossibleValue;
 
 /// A compliance standard as selected on the command line or in the config
-/// file. Each variant corresponds to one canonical `--standard` value; the
-/// historical alias spellings are attached via `#[value(alias = ...)]` so
-/// clap (and [`std::str::FromStr`], which delegates to the same table)
-/// accepts them everywhere.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ValueEnum)]
+/// file. Each variant corresponds to one canonical `--standard` value, the
+/// key of its level; the historical alias spellings come from the same
+/// entry of the standards table, so clap (and [`std::str::FromStr`], which
+/// delegates to the same table) accepts them everywhere. `--help` lists the
+/// values in the variant order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum StandardSelector {
-    /// NTIA Minimum Elements for software transparency
-    #[value(name = "ntia")]
+    /// `ntia`: [`ComplianceLevel::NtiaMinimum`].
     Ntia,
-    /// FDA premarket submission requirements for medical devices
-    #[value(name = "fda")]
+    /// `fda`: [`ComplianceLevel::FdaMedicalDevice`].
     Fda,
-    /// EU CRA Phase 2 — full application of the regulation (from 11 Dec 2027).
-    /// `cra` selects Phase 2; use `cra-phase1` for the 2026 reporting phase.
-    #[value(name = "cra", alias = "cra-phase2")]
+    /// `cra`: [`ComplianceLevel::CraPhase2`]. `cra` selects Phase 2; use
+    /// `cra-phase1` for the 2026 reporting phase.
     Cra,
-    /// EU CRA Phase 1 — Art. 14 reporting obligations (apply from 11 Sep 2026)
-    #[value(name = "cra-phase1", alias = "cra-2026")]
+    /// `cra-phase1`: [`ComplianceLevel::CraPhase1`].
     CraPhase1,
-    /// NIST SP 800-218 Secure Software Development Framework
-    #[value(name = "ssdf", alias = "nist-ssdf", alias = "nist_ssdf")]
+    /// `ssdf`: [`ComplianceLevel::NistSsdf`].
     Ssdf,
-    /// Executive Order 14028 Section 4 — software supply chain security
-    /// practice (no federal mandate: OMB M-26-05 rescinded M-22-18)
-    #[value(name = "eo14028", alias = "eo-14028", alias = "eo_14028")]
+    /// `eo14028`: [`ComplianceLevel::Eo14028`].
     Eo14028,
-    /// NSA CNSA 2.0 — Commercial National Security Algorithm Suite 2.0,
-    /// required for US national security systems by CNSSP 15
-    #[value(name = "cnsa2", alias = "cnsa-2", alias = "cnsa_2", alias = "cnsa2.0")]
+    /// `cnsa2`: [`ComplianceLevel::Cnsa2`].
     Cnsa2,
-    /// NIST PQC readiness (IR 8547 + FIPS 203/204/205)
-    #[value(name = "pqc", alias = "nist-pqc", alias = "nist_pqc")]
+    /// `pqc`: [`ComplianceLevel::NistPqc`].
     Pqc,
-    /// BSI TR-03183-2 v2.1.0 (German national CRA-aligned SBOM guideline)
-    #[value(
-        name = "bsi",
-        alias = "tr-03183",
-        alias = "tr03183",
-        alias = "bsi-tr-03183-2"
-    )]
+    /// `bsi`: [`ComplianceLevel::BsiTr03183_2`].
     Bsi,
-    /// CRA Article 24 — open-source software steward profile
-    #[value(
-        name = "oss-steward",
-        alias = "cra-oss-steward",
-        alias = "cra-oss",
-        alias = "cra-art24",
-        alias = "art24"
-    )]
+    /// `oss-steward`: [`ComplianceLevel::CraOssSteward`].
     OssSteward,
-    /// EUCC Substantial assurance level (Reg. (EU) 2024/482 as amended by
-    /// 2024/3144 and 2025/2462), reference-only
-    #[value(name = "eucc", alias = "eucc-substantial", alias = "common-criteria")]
+    /// `eucc`: [`ComplianceLevel::EuccSubstantial`].
     Eucc,
-    /// EU AI Act (Reg. (EU) 2024/1689, as amended by Reg. (EU) 2026/1744)
-    /// Annex IV documentation readiness
-    #[value(
-        name = "ai-act",
-        alias = "ai_act",
-        alias = "aiact",
-        alias = "eu-ai-act"
-    )]
+    /// `ai-act`: [`ComplianceLevel::EuAiAct`].
     AiAct,
-    /// BSI/G7 "SBOM for AI — Minimum Elements" readiness
-    #[value(
-        name = "bsi-ai",
-        alias = "bsi_ai",
-        alias = "bsiai",
-        alias = "sbom-for-ai",
-        alias = "ai-bom"
-    )]
+    /// `bsi-ai`: [`ComplianceLevel::BsiSbomForAi`].
     BsiAi,
-    /// CISA 2026 Minimum Elements for an SBOM (v2.1, July 2026; successor
-    /// to the NTIA 2021 Minimum Elements)
-    #[value(
-        name = "cisa-2026",
-        alias = "cisa",
-        alias = "cisa2026",
-        alias = "minimum-elements-2026"
-    )]
+    /// `cisa-2026`: [`ComplianceLevel::Cisa2026`].
     Cisa2026,
-    /// PCI DSS v4.0.1 Requirement 6.3.2 software-inventory profile
-    #[value(
-        name = "pci-dss",
-        alias = "pci",
-        alias = "pci-dss-6-3-2",
-        alias = "pci-dss-4"
-    )]
+    /// `pci-dss`: [`ComplianceLevel::PciDss632`].
     PciDss,
-    /// CISA Framing Software Component Transparency, 3rd ed. (2024)
-    #[value(name = "fsct", alias = "fsct-3", alias = "component-transparency")]
+    /// `fsct`: [`ComplianceLevel::Fsct`].
     Fsct,
 }
 
@@ -130,27 +81,10 @@ impl StandardSelector {
         }
     }
 
-    /// The canonical CLI spelling (the `#[value(name = ...)]`).
+    /// The canonical CLI spelling: the key of the selected level.
     #[must_use]
     pub fn canonical_name(self) -> &'static str {
-        match self {
-            Self::Ntia => "ntia",
-            Self::Fda => "fda",
-            Self::Cra => "cra",
-            Self::CraPhase1 => "cra-phase1",
-            Self::Ssdf => "ssdf",
-            Self::Eo14028 => "eo14028",
-            Self::Cnsa2 => "cnsa2",
-            Self::Pqc => "pqc",
-            Self::Bsi => "bsi",
-            Self::OssSteward => "oss-steward",
-            Self::Eucc => "eucc",
-            Self::AiAct => "ai-act",
-            Self::BsiAi => "bsi-ai",
-            Self::Cisa2026 => "cisa-2026",
-            Self::PciDss => "pci-dss",
-            Self::Fsct => "fsct",
-        }
+        self.level().descriptor().key
     }
 
     /// Comma-separated list of every canonical value, for error messages.
@@ -179,6 +113,41 @@ impl StandardSelector {
             }
         }
         (kept, repeats)
+    }
+}
+
+impl ValueEnum for StandardSelector {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            Self::Ntia,
+            Self::Fda,
+            Self::Cra,
+            Self::CraPhase1,
+            Self::Ssdf,
+            Self::Eo14028,
+            Self::Cnsa2,
+            Self::Pqc,
+            Self::Bsi,
+            Self::OssSteward,
+            Self::Eucc,
+            Self::AiAct,
+            Self::BsiAi,
+            Self::Cisa2026,
+            Self::PciDss,
+            Self::Fsct,
+        ]
+    }
+
+    /// The canonical value, the aliases and the help line of the selected
+    /// level's entry in the standards table.
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        let descriptor = self.level().descriptor();
+        let cli = descriptor.cli.as_ref()?;
+        Some(
+            PossibleValue::new(descriptor.key)
+                .help(cli.help)
+                .aliases(cli.aliases.iter().copied()),
+        )
     }
 }
 

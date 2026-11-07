@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use sbom_tools::quality::ComplianceLevel;
+use sbom_tools::quality::{ComplianceLevel, StandardSelector};
 
 const FIXTURES_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
@@ -24,9 +24,10 @@ fn base_command() -> Command {
     cmd
 }
 
-/// The complete documented alias table for `--standard` (mirrors the
-/// `#[value(name/alias = …)]` attributes on `StandardSelector`). Removing or
-/// re-mapping any spelling is a breaking CLI change and must fail here.
+/// The complete documented alias table for `--standard` (mirrors the CLI
+/// names of the standards table, src/quality/compliance/standards.rs, in
+/// `--help` order). Removing or re-mapping any spelling is a breaking CLI
+/// change and must fail here.
 fn alias_table() -> Vec<(&'static str, ComplianceLevel)> {
     vec![
         ("ntia", ComplianceLevel::NtiaMinimum),
@@ -151,4 +152,55 @@ fn comma_separated_alias_list_runs_each_selected_standard() {
         ],
         "aliased multi-standard list must dispatch each entry in order"
     );
+}
+
+/// Every spelling `--standard` offers: the canonical value and the aliases
+/// of each selector, as clap reads them from the standards table.
+fn offered_spellings() -> Vec<(String, ComplianceLevel)> {
+    use clap::ValueEnum;
+    StandardSelector::value_variants()
+        .iter()
+        .flat_map(|selector| {
+            let value = selector
+                .to_possible_value()
+                .expect("every selector is offered");
+            value
+                .get_name_and_aliases()
+                .map(|name| (name.to_string(), selector.level()))
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+/// The pinned alias table above is the table the CLI offers: no spelling
+/// was added, dropped or re-mapped. With the test above, every spelling
+/// the standards table gives runs through the real binary.
+#[test]
+fn the_alias_table_is_every_spelling_the_cli_offers() {
+    let pinned: Vec<(String, ComplianceLevel)> = alias_table()
+        .into_iter()
+        .map(|(alias, level)| (alias.to_string(), level))
+        .collect();
+    assert_eq!(offered_spellings(), pinned);
+}
+
+/// The `--standard` help names every alias (the prose list in the doc
+/// comment of `validate --standard`, written by hand).
+#[test]
+fn validate_help_names_every_alias() {
+    let output = base_command()
+        .args(["validate", "--help"])
+        .output()
+        .expect("validate --help should run");
+    let help = String::from_utf8_lossy(&output.stdout).into_owned();
+    let words: Vec<&str> = help
+        .split(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.')))
+        .map(|word| word.trim_end_matches('.'))
+        .collect();
+    for (spelling, level) in offered_spellings() {
+        assert!(
+            words.contains(&spelling.as_str()),
+            "validate --help does not name `{spelling}` ({level:?})"
+        );
+    }
 }

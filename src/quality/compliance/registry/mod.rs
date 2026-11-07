@@ -748,13 +748,14 @@ fn closest_rule_id(value: &str) -> Option<&'static str> {
 // Standard membership: the rules each compliance level reports.
 //
 // Each slice lists, in display order, every rule the level's checks can
-// emit, and nothing else: one per check the standard runs. `rules_for_level`
-// maps a level to its slice. The lists are derived from the check sites
-// (generic.rs, cra.rs and the per-standard modules) and proven by the rule
-// matrices: tests/common/rule_matrix.rs requires each level's matrix to cover
-// exactly its list, and runs every matrix fixture at every level, failing on
-// a rule outside that level's list. A rule a new check emits must join the
-// list of every level whose checks emit it.
+// emit, and nothing else: one per check the standard runs. Each level's
+// entry in the standards table (standards.rs) names its slice, and
+// `rules_for_level` reads it there. The lists are derived from the check
+// sites (generic.rs, cra.rs and the per-standard modules) and proven by the
+// rule matrices: tests/common/rule_matrix.rs requires each level's matrix to
+// cover exactly its list, and runs every matrix fixture at every level,
+// failing on a rule outside that level's list. A rule a new check emits must
+// join the list of every level whose checks emit it.
 //
 // A slice is a level's SARIF rule catalogue: a run declares the slices of the
 // standards it checked as reportingDescriptors (src/reports/sarif/rules.rs).
@@ -776,32 +777,12 @@ fn closest_rule_id(value: &str) -> Option<&'static str> {
 /// listed: no check emits it.
 #[must_use]
 pub const fn rules_for_level(level: ComplianceLevel) -> &'static [&'static str] {
-    match level {
-        ComplianceLevel::Minimum => MINIMUM_SARIF_RULE_IDS,
-        ComplianceLevel::Standard => STANDARD_SARIF_RULE_IDS,
-        ComplianceLevel::NtiaMinimum => NTIA_SARIF_RULE_IDS,
-        ComplianceLevel::CraPhase1 => CRA_PHASE1_SARIF_RULE_IDS,
-        ComplianceLevel::CraPhase2 => CRA_PHASE2_SARIF_RULE_IDS,
-        ComplianceLevel::FdaMedicalDevice => FDA_SARIF_RULE_IDS,
-        ComplianceLevel::NistSsdf => SSDF_SARIF_RULE_IDS,
-        ComplianceLevel::Eo14028 => EO14028_SARIF_RULE_IDS,
-        ComplianceLevel::Cnsa2 => CNSA2_SARIF_RULE_IDS,
-        ComplianceLevel::NistPqc => PQC_SARIF_RULE_IDS,
-        ComplianceLevel::BsiTr03183_2 => BSI_SARIF_RULE_IDS,
-        ComplianceLevel::CraOssSteward => CRA_OSS_STEWARD_SARIF_RULE_IDS,
-        ComplianceLevel::EuccSubstantial => EUCC_SARIF_RULE_IDS,
-        ComplianceLevel::EuAiAct => AIACT_SARIF_RULE_IDS,
-        ComplianceLevel::BsiSbomForAi => BSIAI_SARIF_RULE_IDS,
-        ComplianceLevel::Cisa2026 => CISA2026_SARIF_RULE_IDS,
-        ComplianceLevel::PciDss632 => PCIDSS_SARIF_RULE_IDS,
-        ComplianceLevel::Fsct => FSCT_SARIF_RULE_IDS,
-        ComplianceLevel::Comprehensive => COMPREHENSIVE_SARIF_RULE_IDS,
-    }
+    level.descriptor().rules
 }
 
 /// The Minimum quality profile's rules (generic.rs): the document creator, a
 /// component inventory, component names and the format checks.
-const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-INVENTORY",
     "SBOM-QUALITY-NAME",
@@ -813,7 +794,7 @@ const MINIMUM_SARIF_RULE_IDS: &[&str] = &[
 
 /// The Standard quality profile's rules (generic.rs): Minimum's, plus the
 /// serial number, component versions, unique identifiers and licenses.
-const STANDARD_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const STANDARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-SERIAL",
     "SBOM-QUALITY-INVENTORY",
@@ -830,7 +811,7 @@ const STANDARD_SARIF_RULE_IDS: &[&str] = &[
 /// The Comprehensive quality profile's rules (generic.rs): Standard's, plus
 /// the creation timestamp, component suppliers and hashes, and dependency
 /// relationships.
-const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-QUALITY-CREATOR",
     "SBOM-QUALITY-TIMESTAMP",
     "SBOM-QUALITY-SERIAL",
@@ -854,7 +835,7 @@ const COMPREHENSIVE_SARIF_RULE_IDS: &[&str] = &[
 /// checks (CVD policy, lifecycle evidence, the Annex V DoC reference, the
 /// Art. 13(2) risk assessment and the vulnerability severity and remediation
 /// checks) are not listed.
-const CRA_PHASE1_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const CRA_PHASE1_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-17-CONTACT",
@@ -907,7 +888,7 @@ const CRA_PHASE1_SARIF_RULE_IDS: &[&str] = &[
 /// CVD policy (Annex I Part II (5)), lifecycle evidence (Annex II (7)), the
 /// EU Declaration of Conformity reference (Annex V) and the risk assessment
 /// (Art. 13(2)).
-const CRA_PHASE2_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const CRA_PHASE2_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-SBOM-FRESHNESS",
     "SBOM-CRA-MACHINE-READABLE",
     "SBOM-CRA-ART-13-17-CONTACT",
@@ -964,7 +945,7 @@ const CRA_PHASE2_SARIF_RULE_IDS: &[&str] = &[
 /// CRA Art. 24 open-source steward rules (`check_cra_oss_steward` in cra.rs):
 /// the component, dependency and format checks plus the two steward floors.
 /// The steward runs no document-metadata, gap, Art. 14 or hardware check.
-const CRA_OSS_STEWARD_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const CRA_OSS_STEWARD_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-CRA-CVD-POLICY",
     "SBOM-CRA-COMPONENT-VERSION",
     "SBOM-CRA-ANNEX-I-IDENTIFIER",
@@ -983,7 +964,7 @@ const CRA_OSS_STEWARD_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// BSI TR-03183-2 rules: every `SBOM-BSI-TR-03183-2-*` rule but the fallback.
-const BSI_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const BSI_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-BSI-TR-03183-2-4",
     "SBOM-BSI-TR-03183-2-5-1",
     "SBOM-BSI-TR-03183-2-5-1-CONTACT",
@@ -1003,7 +984,7 @@ const BSI_SARIF_RULE_IDS: &[&str] = &[
 ];
 
 /// EUCC Substantial rules: every `SBOM-EUCC-*` rule but the fallback.
-const EUCC_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const EUCC_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-EUCC-PP",
     "SBOM-EUCC-TOE",
     "SBOM-EUCC-ITSEF",
@@ -1013,7 +994,7 @@ const EUCC_SARIF_RULE_IDS: &[&str] = &[
 
 /// EU AI Act Annex IV readiness rules: every `SBOM-AIACT-*` rule but the
 /// fallback.
-const AIACT_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const AIACT_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-AIACT-ANNEX-IV-1-DESCRIPTION",
     "SBOM-AIACT-ANNEX-IV-1-PURPOSE",
     "SBOM-AIACT-ANNEX-IV-2D-DATASETS",
@@ -1027,7 +1008,7 @@ const AIACT_SARIF_RULE_IDS: &[&str] = &[
 
 /// BSI/G7 SBOM-for-AI readiness rules: every `SBOM-BSIAI-*` rule but the
 /// fallback.
-const BSIAI_SARIF_RULE_IDS: &[&str] = &[
+pub(super) const BSIAI_SARIF_RULE_IDS: &[&str] = &[
     "SBOM-BSIAI-META-AUTHOR",
     "SBOM-BSIAI-META-FORMAT",
     "SBOM-BSIAI-META-TIMESTAMP",

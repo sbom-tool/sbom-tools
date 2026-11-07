@@ -187,6 +187,11 @@ impl GenericChecker {
     pub(crate) const fn new(level: ComplianceLevel) -> Self {
         Self { level }
     }
+
+    /// The checker for `level`, for the standards table.
+    pub(crate) fn boxed(level: ComplianceLevel) -> Box<dyn StandardChecker> {
+        Box::new(Self::new(level))
+    }
 }
 
 impl StandardChecker for GenericChecker {
@@ -238,6 +243,13 @@ macro_rules! dedicated_checker {
     ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
 
+        impl $name {
+            /// The checker, for the standards table.
+            pub(crate) fn boxed(_level: ComplianceLevel) -> Box<dyn StandardChecker> {
+                Box::new(Self)
+            }
+        }
+
         impl StandardChecker for $name {
             fn level(&self) -> ComplianceLevel {
                 $level
@@ -252,6 +264,13 @@ macro_rules! dedicated_checker {
     };
     ($name:ident, $level:expr, $method:ident, findings) => {
         pub(crate) struct $name;
+
+        impl $name {
+            /// The checker, for the standards table.
+            pub(crate) fn boxed(_level: ComplianceLevel) -> Box<dyn StandardChecker> {
+                Box::new(Self)
+            }
+        }
 
         impl StandardChecker for $name {
             fn level(&self) -> ComplianceLevel {
@@ -323,24 +342,11 @@ dedicated_checker!(
 );
 dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
 
-/// Resolve the [`StandardChecker`] for a given level. The dedicated profiles
-/// get their own checker; everything else takes the generic path.
+/// Resolve the [`StandardChecker`] for a given level: the one its entry in
+/// the standards table names. The dedicated profiles have their own
+/// checker; the others take the generic path.
 pub(crate) fn checker_for(level: ComplianceLevel) -> Box<dyn StandardChecker> {
-    match level {
-        ComplianceLevel::NistSsdf => Box::new(NistSsdfChecker),
-        ComplianceLevel::Eo14028 => Box::new(Eo14028Checker),
-        ComplianceLevel::Cnsa2 => Box::new(Cnsa2Checker),
-        ComplianceLevel::NistPqc => Box::new(NistPqcChecker),
-        ComplianceLevel::BsiTr03183_2 => Box::new(BsiTr03183Checker),
-        ComplianceLevel::CraOssSteward => Box::new(CraOssStewardChecker),
-        ComplianceLevel::EuccSubstantial => Box::new(EuccSubstantialChecker),
-        ComplianceLevel::EuAiAct => Box::new(EuAiActChecker),
-        ComplianceLevel::BsiSbomForAi => Box::new(BsiSbomForAiChecker),
-        ComplianceLevel::Cisa2026 => Box::new(Cisa2026Checker),
-        ComplianceLevel::PciDss632 => Box::new(PciDss632Checker),
-        ComplianceLevel::Fsct => Box::new(FsctChecker),
-        other => Box::new(GenericChecker::new(other)),
-    }
+    (level.descriptor().checker)(level)
 }
 
 #[cfg(test)]
