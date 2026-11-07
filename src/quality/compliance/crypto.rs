@@ -1167,7 +1167,6 @@ fn tls_version_below(version: &str, min: (u32, u32)) -> bool {
     parse_tls_version(version).is_some_and(|v| v < min)
 }
 
-/// Whether a protocol asset is SSL (obsolete under every profile here).
 /// Why a protocol offers nothing to evaluate: what it does declare (type
 /// and version) and exactly which evaluable fields are absent. A declared
 /// version alone names no algorithm, so the asset still cannot be judged —
@@ -1187,6 +1186,7 @@ fn unevaluable_protocol_detail(comp_name: &str, proto: &ProtocolProperties) -> S
     format!("Protocol '{comp_name}' ({declared}) declares no {missing}")
 }
 
+/// Whether a protocol asset is SSL (obsolete under every profile here).
 fn is_ssl_protocol(proto: &ProtocolProperties) -> bool {
     matches!(&proto.protocol_type, ProtocolType::Other(s) if s.to_lowercase().contains("ssl"))
 }
