@@ -40,6 +40,7 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
+mod attestations;
 mod component;
 mod document;
 mod graph;
@@ -56,7 +57,8 @@ use chrono::{DateTime, Utc};
 
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
-    CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, NormalizedSbom,
+    AttestationRuleFamily, CanonicalId, Component, ComponentType, DependencyScope,
+    DuplicateComponent, NormalizedSbom, SupportedRequirement,
 };
 
 pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
@@ -149,6 +151,7 @@ pub(crate) struct SbomEvidence<'a> {
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
+    supported_requirements: OnceLock<Box<[attestations::Supported<'a>]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -176,6 +179,7 @@ impl<'a> SbomEvidence<'a> {
             manufacturer: OnceLock::new(),
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
+            supported_requirements: OnceLock::new(),
         }
     }
 
@@ -337,6 +341,24 @@ impl<'a> SbomEvidence<'a> {
                 .map(|c| HashFacts::of(&c.hashes))
                 .collect()
         })
+    }
+
+    /// The requirements of `family` the document's CDXA attestations fully
+    /// support at the evaluation instant (see
+    /// `AttestationDeclarations::evidence_for_family`), in that function's
+    /// order. The attestations are judged once per evidence; each read
+    /// picks the family's.
+    // Read by the EO 14028 checks from the next commit on.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub(crate) fn supported_requirements(
+        &self,
+        family: AttestationRuleFamily,
+    ) -> impl Iterator<Item = &SupportedRequirement<'a>> + '_ {
+        self.supported_requirements
+            .get_or_init(|| attestations::collect(self.sbom, self.as_of))
+            .iter()
+            .filter(move |s| s.family == Some(family))
+            .map(|s| &s.requirement)
     }
 }
 
