@@ -59,7 +59,9 @@ use crate::model::{
     CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, NormalizedSbom,
 };
 
-pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
+pub(crate) use component::{
+    AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Placeholders, Producer,
+};
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -143,7 +145,7 @@ pub(crate) struct SbomEvidence<'a> {
     /// The number of components the package rules judge, by whether the
     /// run judges components whose scope is excluded (`[false, true]`).
     package_counts: [OnceLock<usize>; 2],
-    graph: OnceLock<GraphFacts>,
+    graph: OnceLock<GraphFacts<'a>>,
     cycle_count: OnceLock<usize>,
     lifecycle_property: OnceLock<bool>,
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
@@ -152,6 +154,9 @@ pub(crate) struct SbomEvidence<'a> {
     version_ranges: OnceLock<Box<[ValueState]>>,
     groups: OnceLock<Box<[ValueState]>>,
     vulnerability_hook_reference: OnceLock<bool>,
+    copyrights: OnceLock<Box<[ValueState]>>,
+    concluded_licenses: OnceLock<Box<[ValueState]>>,
+    authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -182,6 +187,9 @@ impl<'a> SbomEvidence<'a> {
             version_ranges: OnceLock::new(),
             groups: OnceLock::new(),
             vulnerability_hook_reference: OnceLock::new(),
+            copyrights: OnceLock::new(),
+            concluded_licenses: OnceLock::new(),
+            authored_hashes: OnceLock::new(),
         }
     }
 
@@ -257,7 +265,7 @@ impl<'a> SbomEvidence<'a> {
     }
 
     /// The dependency-graph facts.
-    pub(crate) fn graph(&self) -> &GraphFacts {
+    pub(crate) fn graph(&self) -> &GraphFacts<'a> {
         self.graph.get_or_init(|| GraphFacts::collect(self.sbom))
     }
 
@@ -377,6 +385,45 @@ impl<'a> SbomEvidence<'a> {
                 .any(component::has_vulnerability_hook_reference)
         })
     }
+
+    fn copyrights(&self) -> &[ValueState] {
+        self.copyrights.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.copyright.as_deref()))
+                .collect()
+        })
+    }
+
+    fn concluded_licenses(&self) -> &[ValueState] {
+        self.concluded_licenses.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(concluded_license(c)))
+                .collect()
+        })
+    }
+
+    fn authored_hashes(&self) -> &[AuthoredHashFacts] {
+        self.authored_hashes.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| AuthoredHashFacts::of(&c.hashes))
+                .collect()
+        })
+    }
+}
+
+/// The expression of `component`'s concluded licence, as read.
+fn concluded_license(component: &Component) -> Option<&str> {
+    component
+        .licenses
+        .concluded
+        .as_ref()
+        .map(|l| l.expression.as_str())
 }
 
 /// One component's facts. The cheap ones are computed on access; the rest
@@ -499,5 +546,54 @@ impl<'a> ComponentView<'_, 'a> {
     /// it from the PURL type).
     pub(crate) fn ecosystem_declared(&self) -> bool {
         self.component.ecosystem.is_some()
+    }
+
+    /// Whether the component names a supplier: a supplier whose name is not
+    /// blank, as read. Unlike [`Self::producer`], a manufacturer or author
+    /// does not count, and a placeholder or sentinel name does.
+    pub(crate) fn supplier_declared(&self) -> bool {
+        self.component
+            .supplier
+            .as_ref()
+            .is_some_and(|s| !s.name.trim().is_empty())
+    }
+
+    /// The component's copyright notice.
+    pub(crate) fn copyright(&self) -> Text<'a> {
+        Text::with_state(
+            self.component.copyright.as_deref(),
+            self.ev.copyrights()[self.ix.0],
+        )
+    }
+
+    /// The component's concluded licence (SPDX `PackageLicenseConcluded`).
+    pub(crate) fn concluded_license(&self) -> Text<'a> {
+        Text::with_state(
+            concluded_license(self.component),
+            self.ev.concluded_licenses()[self.ix.0],
+        )
+    }
+
+    /// The component's hashes the document itself gives.
+    pub(crate) fn authored_hashes(&self) -> AuthoredHashes<'a> {
+        AuthoredHashes::new(&self.component.hashes, self.ev.authored_hashes()[self.ix.0])
+    }
+
+    /// The fields of the component that hold an ambiguous placeholder.
+    /// Computed on access, not kept: one check reads it, once per
+    /// component (FSCT §2.3.1).
+    pub(crate) fn placeholders(&self) -> Placeholders<'a> {
+        Placeholders::of(self.component)
+    }
+
+    /// Whether the component links an SBOM of its own (a BOM-type external
+    /// reference).
+    pub(crate) fn bom_reference(&self) -> bool {
+        component::has_bom_reference(self.component)
+    }
+
+    /// Whether a dependency relationship starts at the component.
+    pub(crate) fn has_outgoing(&self) -> bool {
+        self.ev.graph().has_outgoing[self.ix.0]
     }
 }

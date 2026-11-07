@@ -1,12 +1,16 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
-//! serial number, contacts, support period, completeness, primary component.
+//! serial number, contacts, support period, completeness, primary component,
+//! signature, lifecycle phase.
 
 use chrono::{DateTime, Utc};
 
-use super::super::shared::{is_valid_email_format, known_contact};
+use super::super::shared::{
+    creator_identified, document_signed, is_spdx2, is_valid_email_format, known_contact,
+};
 use super::{ComponentIx, Text};
 use crate::model::{
-    CanonicalId, CompletenessDeclaration, Creator, NormalizedSbom, SbomFormat, SpecVersion,
+    CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
+    SpecVersion,
 };
 
 /// The document-level facts of an SBOM.
@@ -49,6 +53,27 @@ pub(crate) struct DocumentFacts<'a> {
     /// when the document gives none or it does not parse, so it means
     /// something only when [`Self::has_known_timestamp`].
     pub(crate) created: DateTime<Utc>,
+    /// Whether the document is SPDX 2.x, which has no field for a
+    /// signature, a lifecycle phase or a completeness declaration (see
+    /// `shared::is_spdx2`; an SPDX version that does not parse counts as
+    /// 2.x).
+    pub(crate) spdx2: bool,
+    /// Whether the document carries an in-document signature with a value
+    /// (see `shared::document_signed`).
+    pub(crate) signed: bool,
+    /// The lifecycle phase the document was generated in.
+    pub(crate) lifecycle_phase: Text<'a>,
+    /// Whether a creator that is not a tool is identified by a real name or
+    /// email address (see `shared::creator_identified`): the SBOM author of
+    /// FSCT and CISA 2026. Other standards accept any creator.
+    pub(crate) has_identified_non_tool_creator: bool,
+    /// Whether a creator is a tool.
+    pub(crate) has_tool_creator: bool,
+    /// Whether a tool creator's name has a digit in it: FSCT's reading of a
+    /// tool version. The parsers fold a tool's version into the tool
+    /// creator's name ("name version"). CISA 2026 reads a tool version
+    /// differently.
+    pub(crate) tool_name_has_digit: bool,
 }
 
 /// One creator of the document.
@@ -95,6 +120,22 @@ impl<'a> DocumentFacts<'a> {
             primary_declared: sbom.primary_component_id.as_ref(),
             primary,
             created: document.created,
+            spdx2: is_spdx2(sbom),
+            signed: document_signed(sbom),
+            lifecycle_phase: Text::of(document.lifecycle_phase.as_deref()),
+            has_identified_non_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c)),
+            has_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Tool),
+            tool_name_has_digit: document
+                .creators
+                .iter()
+                .filter(|c| c.creator_type == CreatorType::Tool)
+                .any(|t| t.name.chars().any(|ch| ch.is_ascii_digit())),
         }
     }
 }

@@ -375,7 +375,7 @@ dedicated_checker!(
     check_pci_dss_6_3_2,
     context
 );
-dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
+dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, context);
 
 /// Resolve the [`StandardChecker`] for a given level: the one its entry in
 /// the standards table names. The dedicated profiles have their own

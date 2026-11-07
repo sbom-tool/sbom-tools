@@ -1,11 +1,13 @@
 //! Per-component facts: identifiers, producer, licences, hashes, the
-//! lifecycle properties, and the vulnerability-management references.
+//! lifecycle properties, the vulnerability-management references, and the
+//! placeholders.
 
 use super::super::shared::{
-    ValueState, is_contact_reference, known_value, plausible_digest, value_state,
+    ValueState, is_contact_reference, is_placeholder, known_value, plausible_digest, value_state,
 };
 use crate::model::{
-    Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, LicenseInfo,
+    Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, HashProvenance,
+    LicenseInfo,
 };
 
 /// Which identifier kinds a component declares: a PURL, a CPE, a SWHID, a
@@ -32,6 +34,14 @@ impl IdKinds {
     /// (`ComponentIdentifiers::has_cra_identifier`).
     pub(crate) const fn any(self) -> bool {
         self.purl || self.cpe || self.swhid || self.swid
+    }
+
+    /// How many of the four kinds are declared.
+    pub(crate) fn count(self) -> usize {
+        usize::from(self.purl)
+            + usize::from(self.cpe)
+            + usize::from(self.swhid)
+            + usize::from(self.swid)
     }
 }
 
@@ -210,4 +220,103 @@ pub(super) fn has_vulnerability_hook_reference(component: &Component) -> bool {
         ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
         _ => false,
     })
+}
+
+/// Which of a component's author-provided hashes count: only plausible
+/// digests (see `shared::plausible_digest`) that the document itself gives.
+/// A hash an enrichment fetched from a registry is not part of the document
+/// under assessment, so it does not count here (unlike [`HashFacts`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct AuthoredHashFacts {
+    /// At least one authored hash is a plausible digest.
+    pub(crate) plausible: bool,
+    /// At least one plausible authored digest is of the SHA-2 family at
+    /// SHA-256 or stronger: SHA-256, SHA-384 or SHA-512.
+    pub(crate) plausible_sha2_256_plus: bool,
+}
+
+impl AuthoredHashFacts {
+    pub(super) fn of(hashes: &[Hash]) -> Self {
+        let mut facts = Self::default();
+        for hash in authored(hashes).filter(|h| plausible_digest(&h.algorithm, &h.value)) {
+            facts.plausible = true;
+            facts.plausible_sha2_256_plus |= matches!(
+                hash.algorithm,
+                HashAlgorithm::Sha256 | HashAlgorithm::Sha384 | HashAlgorithm::Sha512
+            );
+        }
+        facts
+    }
+}
+
+/// The hashes of `hashes` the document itself gives, in document order.
+fn authored(hashes: &[Hash]) -> impl Iterator<Item = &Hash> {
+    hashes
+        .iter()
+        .filter(|h| h.provenance == HashProvenance::Authored)
+}
+
+/// A component's author-provided hashes.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AuthoredHashes<'a> {
+    /// Which of them count.
+    pub(crate) facts: AuthoredHashFacts,
+    /// All of the component's hashes as read, enriched ones included.
+    raw: &'a [Hash],
+}
+
+impl<'a> AuthoredHashes<'a> {
+    pub(super) const fn new(raw: &'a [Hash], facts: AuthoredHashFacts) -> Self {
+        Self { facts, raw }
+    }
+
+    /// The authored hashes as read, in document order, for a finding's
+    /// message.
+    pub(crate) fn iter(self) -> impl Iterator<Item = &'a Hash> {
+        authored(self.raw)
+    }
+}
+
+/// The fields of a component that hold an ambiguous placeholder such as
+/// `TBD` or `N/A` (see `shared::is_placeholder`): a value that neither
+/// gives the field nor declares it unknown. Each is the value as read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct Placeholders<'a> {
+    pub(crate) version: Option<&'a str>,
+    /// The supplier's name.
+    pub(crate) supplier: Option<&'a str>,
+    /// The first of the licences, the declared ones before the concluded
+    /// one.
+    pub(crate) license: Option<&'a str>,
+    pub(crate) copyright: Option<&'a str>,
+}
+
+impl<'a> Placeholders<'a> {
+    pub(super) fn of(component: &'a Component) -> Self {
+        Self {
+            version: component.version.as_deref().filter(|v| is_placeholder(v)),
+            supplier: component
+                .supplier
+                .as_ref()
+                .map(|s| s.name.as_str())
+                .filter(|name| is_placeholder(name)),
+            license: component
+                .licenses
+                .declared
+                .iter()
+                .chain(&component.licenses.concluded)
+                .map(|l| l.expression.as_str())
+                .find(|expression| is_placeholder(expression)),
+            copyright: component.copyright.as_deref().filter(|c| is_placeholder(c)),
+        }
+    }
+}
+
+/// Whether `component` links an SBOM of its own: a BOM-type external
+/// reference.
+pub(super) fn has_bom_reference(component: &Component) -> bool {
+    component
+        .external_refs
+        .iter()
+        .any(|r| r.ref_type == ExternalRefType::Bom)
 }
