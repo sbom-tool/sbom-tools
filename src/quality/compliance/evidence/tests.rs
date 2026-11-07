@@ -641,6 +641,91 @@ fn the_vendor_cohort_takes_every_type_but_the_left_out() {
     assert_eq!(ctx.vendor_hash_coverage().fraction(), None);
 }
 
+#[test]
+fn a_crypto_reference_names_the_last_component_with_that_bom_ref() {
+    let with_ref = |name: &str, bom_ref: &str| {
+        let mut c = Component::new(name.to_string(), bom_ref.to_string());
+        c.identifiers.purl = Some(format!("pkg:generic/{name}@1"));
+        c.canonical_id = c.identifiers.canonical_id();
+        c
+    };
+    let sbom = sbom_of(vec![
+        with_ref("first", "algo-1"),
+        with_ref("unnamed", ""),
+        with_ref("second", "algo-1"),
+        with_ref("other", "algo-2"),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let named = |bom_ref: &str| ev.resolve_bom_ref(bom_ref).map(|c| c.name());
+    assert_eq!(named("algo-1"), Some("second"));
+    assert_eq!(named("algo-2"), Some("other"));
+    assert_eq!(named(""), None);
+    assert_eq!(named("algo-3"), None);
+    // As the SBOM's own index resolves them.
+    let index = sbom.build_index();
+    for bom_ref in ["algo-1", "algo-2", "", "algo-3"] {
+        assert_eq!(
+            ev.resolve_bom_ref(bom_ref).map(|c| c.canonical_id()),
+            index.resolve_bom_ref(bom_ref),
+            "{bom_ref}"
+        );
+    }
+}
+
+#[test]
+fn a_component_is_classified_once_as_the_crypto_checks_classify_it() {
+    use super::super::crypto::{Declared, classify_crypto_component};
+    use crate::model::{
+        AlgorithmClass, AlgorithmProperties, CryptoAssetType, CryptoPrimitive, CryptoProperties,
+    };
+    let mut aes = component("AES-GCM");
+    aes.component_type = ComponentType::Cryptographic;
+    aes.crypto_properties = Some(
+        CryptoProperties::new(CryptoAssetType::Algorithm).with_algorithm_properties(
+            AlgorithmProperties::new(CryptoPrimitive::Ae)
+                .with_algorithm_family("AES".to_string())
+                .with_classical_security_level(256),
+        ),
+    );
+    // A component without crypto properties is classified by its name, as
+    // the target of a crypto reference is.
+    let sbom = sbom_of(vec![
+        aes,
+        component("sha224WithRSAEncryption"),
+        component("lib"),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+
+    let aes = view(&ev, "AES-GCM");
+    assert_eq!(aes.algorithm().family.as_deref(), Some("AES"));
+    assert_eq!(aes.classical_bits(), Some(256));
+    assert!(aes.crypto_properties().is_some());
+    assert!(
+        std::ptr::eq(aes.algorithm(), view(&ev, "AES-GCM").algorithm()),
+        "the classification is derived once"
+    );
+    let signature = view(&ev, "sha224WithRSAEncryption");
+    assert_eq!(
+        signature.algorithm().class,
+        AlgorithmClass::ClassicalQuantumVulnerable
+    );
+    assert!(signature.crypto_properties().is_none());
+    assert_eq!(signature.classical_bits(), None);
+    let declared = format!("{:?}", signature.algorithm_declared());
+    assert!(
+        declared.contains("SHA-224"),
+        "the signature names its 112-bit digest: {declared}"
+    );
+    assert_eq!(view(&ev, "lib").algorithm().class, AlgorithmClass::Unknown);
+    for (c, comp) in ev.components().zip(sbom.components.values()) {
+        assert_eq!(c.algorithm(), &classify_crypto_component(comp));
+        assert_eq!(
+            format!("{:?}", c.algorithm_declared()),
+            format!("{:?}", Declared::of(comp))
+        );
+    }
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -682,6 +767,18 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.license_present(),
                         c.direct_dependency(),
                         c.depends_on_firmware(),
+                    )
+                })
+                .collect()
+        }),
+        Box::new(|| {
+            ev.components()
+                .map(|c| {
+                    format!(
+                        "{:?} {:?} {:?}\n",
+                        c.algorithm(),
+                        c.algorithm_declared(),
+                        ev.resolve_bom_ref(c.format_id()).map(|t| t.canonical_id()),
                     )
                 })
                 .collect()
@@ -1062,6 +1159,67 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
                 manufacturer.reference(accepts),
                 manufacturer_reference(&sbom, accepts),
                 "{at}"
+            );
+        }
+    }
+}
+
+#[test]
+fn crypto_facts_agree_with_the_classifier_and_the_index_on_every_fixture() {
+    use super::super::crypto::{Declared, classical_bits_of, classify_crypto_component};
+    for (path, sbom) in fixtures() {
+        let at = path.display();
+        let ev = SbomEvidence::new(&sbom, as_of());
+        for (view, comp) in ev.components().zip(sbom.components.values()) {
+            let at = format!("{at}: {}", comp.canonical_id.value());
+            assert_eq!(view.algorithm(), &classify_crypto_component(comp), "{at}");
+            assert_eq!(
+                format!("{:?}", view.algorithm_declared()),
+                format!("{:?}", Declared::of(comp)),
+                "{at}"
+            );
+            assert_eq!(view.classical_bits(), classical_bits_of(comp), "{at}");
+            assert_eq!(
+                view.crypto_properties().map(std::ptr::from_ref),
+                comp.crypto_properties.as_ref().map(std::ptr::from_ref),
+                "{at}"
+            );
+        }
+        // Every bom-ref the crypto checks resolve (the references of every
+        // crypto asset), each component's own, and two that name nothing.
+        let index = sbom.build_index();
+        let mut refs = vec![String::new(), "no-such-ref".to_string()];
+        for comp in sbom.components.values() {
+            refs.push(comp.identifiers.format_id.clone());
+            let Some(cp) = &comp.crypto_properties else {
+                continue;
+            };
+            if let Some(cert) = &cp.certificate_properties {
+                refs.extend(
+                    cert.signature_algorithm_refs()
+                        .into_iter()
+                        .map(str::to_string),
+                );
+            }
+            if let Some(proto) = &cp.protocol_properties {
+                for suite in &proto.cipher_suites {
+                    refs.extend(suite.algorithms.iter().cloned());
+                }
+                if let Some(ike) = &proto.ikev2_transform_types {
+                    refs.extend(
+                        ike.judged_transforms()
+                            .into_iter()
+                            .filter_map(|t| t.algorithm_ref),
+                    );
+                }
+                refs.extend(proto.crypto_ref_array.iter().cloned());
+            }
+        }
+        for bom_ref in &refs {
+            assert_eq!(
+                ev.resolve_bom_ref(bom_ref).map(|t| t.canonical_id()),
+                index.resolve_bom_ref(bom_ref),
+                "{at}: {bom_ref}"
             );
         }
     }

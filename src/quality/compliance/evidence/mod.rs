@@ -41,6 +41,7 @@
 //! evidence and enforces it).
 
 mod component;
+mod crypto;
 mod document;
 mod graph;
 mod manufacturer;
@@ -61,6 +62,7 @@ use crate::model::{
 };
 
 pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
+use crypto::CryptoFacts;
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -153,6 +155,7 @@ pub(crate) struct SbomEvidence<'a> {
     vulnerability_assertion: OnceLock<bool>,
     direct_dependencies: OnceLock<Box<[bool]>>,
     firmware_dependencies: OnceLock<Box<[bool]>>,
+    crypto: OnceLock<CryptoFacts<'a>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -183,6 +186,7 @@ impl<'a> SbomEvidence<'a> {
             vulnerability_assertion: OnceLock::new(),
             direct_dependencies: OnceLock::new(),
             firmware_dependencies: OnceLock::new(),
+            crypto: OnceLock::new(),
         }
     }
 
@@ -376,6 +380,11 @@ impl<'a> SbomEvidence<'a> {
     fn firmware_dependencies(&self) -> &[bool] {
         self.firmware_dependencies
             .get_or_init(|| graph::firmware_dependencies(self.sbom))
+    }
+
+    /// The crypto facts (see [`CryptoFacts`]).
+    fn crypto(&self) -> &CryptoFacts<'a> {
+        self.crypto.get_or_init(|| CryptoFacts::collect(self.sbom))
     }
 }
 

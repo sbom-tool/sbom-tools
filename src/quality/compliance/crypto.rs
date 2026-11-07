@@ -62,7 +62,7 @@ enum CnsaVerdict {
 /// "Hybrid-KEM" (no CycloneDX family) or "ML-KEM" (one of its parts) with
 /// the name "X25519-ML-KEM-768" is that hybrid. A declared part keeps its
 /// declared parameter set, as a declared family always does.
-fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
+pub(crate) fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
     let cp = comp.crypto_properties.as_ref();
     let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
     let cls = classify_algorithm(
@@ -105,7 +105,7 @@ fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
 /// properties — evidence of the key size (e.g., AES-256) that must survive
 /// bom-ref resolution so referenced assets are judged with the same
 /// evidence as directly evaluated ones.
-fn classical_bits_of(comp: &Component) -> Option<u32> {
+pub(crate) fn classical_bits_of(comp: &Component) -> Option<u32> {
     comp.crypto_properties
         .as_ref()
         .and_then(|c| c.algorithm_properties.as_ref())
@@ -698,7 +698,7 @@ const IR8547_PUBLIC_KEY_FAMILIES: &[&str] = &[
 /// What a component declares beside its algorithm's identity, which
 /// deadline mode reads for the algorithm's use and size.
 #[derive(Debug, Clone, Default)]
-struct Declared {
+pub(crate) struct Declared {
     /// The CycloneDX `primitive`.
     primitive: Option<CryptoPrimitive>,
     /// The declared `classicalSecurityLevel`.
@@ -714,7 +714,7 @@ struct Declared {
 }
 
 impl Declared {
-    fn of(comp: &Component) -> Self {
+    pub(crate) fn of(comp: &Component) -> Self {
         let cp = comp.crypto_properties.as_ref();
         let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
         let family = algo.and_then(|a| a.algorithm_family.as_deref());
