@@ -372,7 +372,8 @@ dedicated_checker!(
 dedicated_checker!(
     PciDss632Checker,
     ComplianceLevel::PciDss632,
-    check_pci_dss_6_3_2
+    check_pci_dss_6_3_2,
+    context
 );
 dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
 

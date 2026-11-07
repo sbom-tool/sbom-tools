@@ -1,8 +1,12 @@
-//! Per-component facts: identifiers, producer, licences, hashes, and the
-//! lifecycle properties.
+//! Per-component facts: identifiers, producer, licences, hashes, the
+//! lifecycle properties, and the vulnerability-management references.
 
-use super::super::shared::{ValueState, known_value, plausible_digest, value_state};
-use crate::model::{Component, ComponentIdentifiers, Hash, HashAlgorithm, LicenseInfo};
+use super::super::shared::{
+    ValueState, is_contact_reference, known_value, plausible_digest, value_state,
+};
+use crate::model::{
+    Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, LicenseInfo,
+};
 
 /// Which identifier kinds a component declares: a PURL, a CPE, a SWHID, a
 /// SWID. Presence only, as the identifier checks read them.
@@ -192,5 +196,18 @@ pub(super) fn has_lifecycle_property(component: &Component) -> bool {
             || name_lower.contains("endoflife")
             || name_lower.contains("endofsupport");
         is_lifecycle_name && known_value(Some(p.value.as_str())).is_some()
+    })
+}
+
+/// Whether `component` carries an external reference a vulnerability
+/// management process can start from: an advisories or security-contact
+/// reference that reaches someone (see `shared::is_contact_reference`), a
+/// vulnerability assertion (VEX or VDR), or a linked BOM. A VDR or a linked
+/// BOM is a document, not a contact, so it counts as given.
+pub(super) fn has_vulnerability_hook_reference(component: &Component) -> bool {
+    component.external_refs.iter().any(|r| match r.ref_type {
+        ExternalRefType::Advisories | ExternalRefType::SecurityContact => is_contact_reference(r),
+        ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
+        _ => false,
     })
 }

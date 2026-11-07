@@ -1,6 +1,8 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
 //! serial number, contacts, support period, completeness, primary component.
 
+use chrono::{DateTime, Utc};
+
 use super::super::shared::{is_valid_email_format, known_contact};
 use super::{ComponentIx, Text};
 use crate::model::{
@@ -43,6 +45,10 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) primary_declared: Option<&'a CanonicalId>,
     /// The primary component, when its id names a component.
     pub(crate) primary: Option<ComponentIx>,
+    /// The creation timestamp as parsed. The parsers write the Unix epoch
+    /// when the document gives none or it does not parse, so it means
+    /// something only when [`Self::has_known_timestamp`].
+    pub(crate) created: DateTime<Utc>,
 }
 
 /// One creator of the document.
@@ -88,6 +94,7 @@ impl<'a> DocumentFacts<'a> {
             completeness: &document.completeness_declaration,
             primary_declared: sbom.primary_component_id.as_ref(),
             primary,
+            created: document.created,
         }
     }
 }

@@ -149,6 +149,9 @@ pub(crate) struct SbomEvidence<'a> {
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
+    version_ranges: OnceLock<Box<[ValueState]>>,
+    groups: OnceLock<Box<[ValueState]>>,
+    vulnerability_hook_reference: OnceLock<bool>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -176,6 +179,9 @@ impl<'a> SbomEvidence<'a> {
             manufacturer: OnceLock::new(),
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
+            version_ranges: OnceLock::new(),
+            groups: OnceLock::new(),
+            vulnerability_hook_reference: OnceLock::new(),
         }
     }
 
@@ -338,6 +344,39 @@ impl<'a> SbomEvidence<'a> {
                 .collect()
         })
     }
+
+    fn version_ranges(&self) -> &[ValueState] {
+        self.version_ranges.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.version_range.as_deref()))
+                .collect()
+        })
+    }
+
+    fn groups(&self) -> &[ValueState] {
+        self.groups.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.group.as_deref()))
+                .collect()
+        })
+    }
+
+    /// Whether any component, of any type, carries an external reference a
+    /// vulnerability-management process can start from (see
+    /// [`component::has_vulnerability_hook_reference`]). Unlike the CRA and
+    /// EO 14028 contacts, a dependency's reference counts too.
+    pub(crate) fn vulnerability_hook_reference(&self) -> bool {
+        *self.vulnerability_hook_reference.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .any(component::has_vulnerability_hook_reference)
+        })
+    }
 }
 
 /// One component's facts. The cheap ones are computed on access; the rest
@@ -428,5 +467,37 @@ impl<'a> ComponentView<'_, 'a> {
     /// Whether the component positively declares it has no dependencies.
     pub(crate) fn declares_no_dependencies(&self) -> bool {
         self.ev.graph().declares_no_dependencies[self.ix.0]
+    }
+
+    /// Whether the component is the document's primary component: its id
+    /// is the one the document names as its primary.
+    pub(crate) fn is_primary(&self) -> bool {
+        self.ev.document().primary == Some(self.ix)
+    }
+
+    /// Whether the component is provided by the environment the product
+    /// runs in, not shipped with it (the parsers' `is_external`).
+    pub(crate) fn is_external(&self) -> bool {
+        self.component.is_external
+    }
+
+    /// The range of versions the component may resolve to, as an external
+    /// component can declare in place of a version.
+    pub(crate) fn version_range(&self) -> Text<'a> {
+        Text::with_state(
+            self.component.version_range.as_deref(),
+            self.ev.version_ranges()[self.ix.0],
+        )
+    }
+
+    /// The component's group or namespace (a Maven group id, an npm scope).
+    pub(crate) fn group(&self) -> Text<'a> {
+        Text::with_state(self.component.group.as_deref(), self.ev.groups()[self.ix.0])
+    }
+
+    /// Whether the component's package ecosystem is known (the model reads
+    /// it from the PURL type).
+    pub(crate) fn ecosystem_declared(&self) -> bool {
+        self.component.ecosystem.is_some()
     }
 }
