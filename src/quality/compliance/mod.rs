@@ -7,10 +7,12 @@
 //! …) is re-exported here from the modules that define it: `level` (the
 //! levels and CRA phases), `standard_ref` (the standard references),
 //! `result` (the result model and the score), `checker` (the checker and
-//! `check()`) and `registry` (the rules, one module per family). The
-//! per-standard check logic is split across sibling submodules and
-//! dispatched through the [`StandardChecker`] trait in [`context`]. The
-//! unit tests that check SBOMs end to end live in `tests`.
+//! `check()`) and `registry` (the rules, one module per family). What
+//! sbom-tools knows about each standard apart from its checks is one entry
+//! of the table in `standards`, which the code reads instead of matching on
+//! the level. The per-standard check logic is split across sibling
+//! submodules and dispatched through the [`StandardChecker`] trait in
+//! [`context`]. The unit tests that check SBOMs end to end live in `tests`.
 //!
 //! The private `use` items below are the names the submodules share: they
 //! import them with `use super::*`.
@@ -49,6 +51,7 @@ mod selector;
 mod shared;
 mod ssdf;
 mod standard_ref;
+mod standards;
 
 pub(crate) use catalog::rule_family_help_uri;
 pub use catalog::{

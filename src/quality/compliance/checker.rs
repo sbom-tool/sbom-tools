@@ -3,6 +3,7 @@
 //! a level's checks and completes their findings from the registry.
 
 use super::result::registry_refs;
+use super::standards::Subjects;
 use super::*;
 
 /// Calibration check identifiers for `ComplianceChecker::class_severity()`.
@@ -492,20 +493,18 @@ impl ComplianceChecker {
     /// standards count the components their package rules judge, so the
     /// ones left out for their excluded scope do not count.
     fn elements_checked(&self, sbom: &NormalizedSbom) -> usize {
-        let components = match self.level {
+        let components = match self.level.descriptor().subjects {
             // EUCC checks the sidecar's certification evidence, not components.
-            ComplianceLevel::EuccSubstantial => 0,
+            Subjects::CertificationEvidence => 0,
             // All components: the count selects cryptographic assets by type,
             // the subjects of the CNSA 2.0 and PQC checks.
-            ComplianceLevel::Cnsa2 | ComplianceLevel::NistPqc => sbom
+            Subjects::CryptographicAssets => sbom
                 .components
                 .values()
                 .filter(|c| c.component_type == crate::model::ComponentType::Cryptographic)
                 .count(),
-            ComplianceLevel::EuAiAct | ComplianceLevel::BsiSbomForAi => {
-                ai_shared::ai_bom_scope(sbom).component_count()
-            }
-            _ => self.package_components(sbom).count(),
+            Subjects::AiBom => ai_shared::ai_bom_scope(sbom).component_count(),
+            Subjects::Packages => self.package_components(sbom).count(),
         };
         components.saturating_add(1)
     }

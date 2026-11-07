@@ -119,27 +119,7 @@ pub const FINDING_ID_PREFIX: &str = "sbomtools:v1:";
 /// --profile`) use their lowercase level name.
 #[must_use]
 pub const fn standard_key(level: ComplianceLevel) -> &'static str {
-    match level {
-        ComplianceLevel::Minimum => "minimum",
-        ComplianceLevel::Standard => "standard",
-        ComplianceLevel::NtiaMinimum => "ntia",
-        ComplianceLevel::CraPhase1 => "cra-phase1",
-        ComplianceLevel::CraPhase2 => "cra",
-        ComplianceLevel::FdaMedicalDevice => "fda",
-        ComplianceLevel::NistSsdf => "ssdf",
-        ComplianceLevel::Eo14028 => "eo14028",
-        ComplianceLevel::Cnsa2 => "cnsa2",
-        ComplianceLevel::NistPqc => "pqc",
-        ComplianceLevel::BsiTr03183_2 => "bsi",
-        ComplianceLevel::CraOssSteward => "oss-steward",
-        ComplianceLevel::EuccSubstantial => "eucc",
-        ComplianceLevel::EuAiAct => "ai-act",
-        ComplianceLevel::BsiSbomForAi => "bsi-ai",
-        ComplianceLevel::Cisa2026 => "cisa-2026",
-        ComplianceLevel::PciDss632 => "pci-dss",
-        ComplianceLevel::Fsct => "fsct",
-        ComplianceLevel::Comprehensive => "comprehensive",
-    }
+    level.descriptor().key
 }
 
 /// What `finding` is about, the `<subject>` of its finding key: the

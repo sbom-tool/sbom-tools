@@ -77,26 +77,15 @@ impl PolicyPreset {
 
     /// Whether this preset delegates to the standards-based compliance checker.
     pub const fn is_standards_based(self) -> bool {
-        matches!(
-            self,
-            Self::Cra
-                | Self::Ntia
-                | Self::Fda
-                | Self::NistSsdf
-                | Self::Eo14028
-                | Self::Cnsa2
-                | Self::NistPqc
-                | Self::BsiTr03183_2
-                | Self::CraOssSteward
-                | Self::EuccSubstantial
-                | Self::EuAiAct
-                | Self::BsiSbomForAi
-        )
+        self.compliance_level().is_some()
     }
 
     /// Get the corresponding `ComplianceLevel` for standards-based presets.
+    /// The standards offered are the ones the standards table flags
+    /// `in_tui_presets` (a test below holds the two in step).
     pub const fn compliance_level(self) -> Option<crate::quality::ComplianceLevel> {
         match self {
+            Self::Enterprise | Self::Strict | Self::Permissive => None,
             Self::Cra => Some(crate::quality::ComplianceLevel::CraPhase2),
             Self::Ntia => Some(crate::quality::ComplianceLevel::NtiaMinimum),
             Self::Fda => Some(crate::quality::ComplianceLevel::FdaMedicalDevice),
@@ -109,7 +98,6 @@ impl PolicyPreset {
             Self::EuccSubstantial => Some(crate::quality::ComplianceLevel::EuccSubstantial),
             Self::EuAiAct => Some(crate::quality::ComplianceLevel::EuAiAct),
             Self::BsiSbomForAi => Some(crate::quality::ComplianceLevel::BsiSbomForAi),
-            _ => None,
         }
     }
 }
@@ -308,5 +296,50 @@ impl DiffComplianceState {
         self.group_by_element = !self.group_by_element;
         self.selected_violation = 0;
         self.scroll_offset = 0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::quality::ComplianceLevel;
+
+    /// Every preset, in the order `next()` cycles through them.
+    fn presets() -> Vec<PolicyPreset> {
+        let mut presets = vec![PolicyPreset::default()];
+        loop {
+            let next = presets[presets.len() - 1].next();
+            if next == presets[0] {
+                return presets;
+            }
+            presets.push(next);
+        }
+    }
+
+    /// The standards-based presets are exactly the standards the standards
+    /// table flags for the TUI, one preset each.
+    #[test]
+    fn the_standard_presets_are_the_levels_flagged_for_the_tui() {
+        let offered: Vec<ComplianceLevel> = presets()
+            .into_iter()
+            .filter_map(PolicyPreset::compliance_level)
+            .collect();
+        let mut flagged: Vec<ComplianceLevel> = ComplianceLevel::all()
+            .iter()
+            .copied()
+            .filter(|level| level.descriptor().in_tui_presets)
+            .collect();
+        let mut sorted = offered.clone();
+        sorted.sort_by_key(|level| *level as usize);
+        flagged.sort_by_key(|level| *level as usize);
+        assert_eq!(sorted, flagged);
+        sorted.dedup();
+        assert_eq!(sorted.len(), offered.len(), "a level has two presets");
+        for preset in presets() {
+            assert_eq!(
+                preset.is_standards_based(),
+                preset.compliance_level().is_some()
+            );
+        }
     }
 }
