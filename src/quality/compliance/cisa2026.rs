@@ -64,7 +64,7 @@ fn is_unknown_marker(value: &str) -> bool {
 /// digit counts as a version; a tool genuinely named with a trailing digit
 /// (e.g. "syft2") is an accepted false pass, which is why the rule is a
 /// Warning with heuristic wording rather than an Error.
-fn tool_name_carries_version(name: &str) -> bool {
+pub(super) fn tool_name_carries_version(name: &str) -> bool {
     let name = name.trim();
     // The element's escape hatch: an explicit unknown marker satisfies it.
     if name.split_whitespace().any(is_unknown_marker) {
@@ -80,7 +80,7 @@ fn tool_name_carries_version(name: &str) -> bool {
 /// relevant authority, such as NIST": MD5 was never FIPS-approved; SHA-1 is
 /// deprecated with withdrawal slated by 2030; an unrecognized algorithm
 /// cannot be mapped to an IANA Hash Function Textual Name.
-fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<String> {
+pub(super) fn hash_algorithm_shortfall(algorithm: &crate::model::HashAlgorithm) -> Option<String> {
     use crate::model::HashAlgorithm;
     match algorithm {
         HashAlgorithm::Md5 => Some("MD5 (not NIST-approved)".to_string()),

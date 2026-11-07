@@ -1,7 +1,9 @@
 //! Per-component facts: identifiers, producer, licences, hashes, and the
 //! lifecycle properties.
 
-use super::super::shared::{ValueState, known_value, plausible_digest, value_state};
+use super::super::shared::{
+    ValueState, is_declared_unknown, known_value, plausible_digest, value_state,
+};
 use crate::model::{
     Component, ComponentIdentifiers, Hash, HashAlgorithm, HashProvenance, LicenseInfo,
 };
@@ -224,6 +226,15 @@ pub(crate) struct AuthoredHashFacts {
     /// At least one of them is a plausible SHA-512 digest (see
     /// `shared::plausible_digest`).
     pub(crate) plausible_sha512: bool,
+    /// At least one of them is a plausible digest.
+    pub(crate) plausible: bool,
+    /// At least one plausible digest is of SHA-256 or a stronger algorithm
+    /// (the set [`HashFacts::plausible_strong`] reads).
+    pub(crate) plausible_strong: bool,
+    /// At least one of them gives an explicit sentinel such as
+    /// `NOASSERTION` for its value: CISA 2026's way to state the hash is
+    /// unknown.
+    pub(crate) declared_unknown: bool,
 }
 
 impl AuthoredHashFacts {
@@ -231,8 +242,11 @@ impl AuthoredHashFacts {
         let mut facts = Self::default();
         for hash in authored(hashes) {
             facts.present = true;
-            facts.plausible_sha512 |= hash.algorithm == HashAlgorithm::Sha512
-                && plausible_digest(&hash.algorithm, &hash.value);
+            let plausible = plausible_digest(&hash.algorithm, &hash.value);
+            facts.plausible_sha512 |= hash.algorithm == HashAlgorithm::Sha512 && plausible;
+            facts.plausible |= plausible;
+            facts.plausible_strong |= plausible && is_strong(&hash.algorithm);
+            facts.declared_unknown |= is_declared_unknown(hash.value.trim());
         }
         facts
     }

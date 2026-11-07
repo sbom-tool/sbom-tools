@@ -5,18 +5,19 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::cisa2026::{hash_algorithm_shortfall, tool_name_carries_version};
 use super::super::shared::{
-    ValueState, has_known_license, has_known_producer, has_known_value, is_declared_unknown,
-    justified_not_affected, known_component_name, known_contact, known_value, license_state,
-    manufacturer_identified, manufacturer_reference, observed, observed_producer, plausible_digest,
-    unreachable_contact,
+    ValueState, creator_identified, document_signed, has_known_license, has_known_producer,
+    has_known_value, is_declared_unknown, is_spdx2, justified_not_affected, known_component_name,
+    known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
+    observed, observed_producer, plausible_digest, unreachable_contact, value_state,
 };
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
     DependencyType, ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance,
-    LicenseExpression, NormalizedSbom, Organization, Property, VexJustification, VexState,
-    VexStatus, VulnerabilityRef, VulnerabilitySource,
+    LicenseExpression, NormalizedSbom, Organization, Property, SbomFormat, SignatureInfo,
+    VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -532,6 +533,183 @@ fn authored_hash_facts_leave_out_enriched_hashes() {
     assert_eq!(listed, [HashAlgorithm::Sha512]);
 }
 
+#[test]
+fn cisa_document_facts_keep_the_serial_as_read_and_classified() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.format = SbomFormat::CycloneDx;
+    sbom.document.spec_version = "1.6".to_string();
+    sbom.document.creators = vec![
+        creator(CreatorType::Tool, "syft 1.0"),
+        creator(CreatorType::Person, "NOASSERTION"),
+    ];
+    sbom.document.serial_number = Some("NOASSERTION".to_string());
+    sbom.document.lifecycle_phase = Some("build".to_string());
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(!doc.spdx2);
+    assert!(doc.has_tool_creator);
+    // A person named by a sentinel is a non-tool creator, but no identified
+    // author.
+    assert!(doc.has_non_tool_creator && !doc.has_identified_non_tool_creator);
+    // The serial is present as read, and declares nothing.
+    assert_eq!(doc.serial_number, Some("NOASSERTION"));
+    assert_eq!(doc.serial_number_text.raw, Some("NOASSERTION"));
+    assert_eq!(doc.serial_number_text.value, Known::DeclaredUnknown);
+    assert_eq!(doc.lifecycle_phase.value, Known::Value("build"));
+    assert_eq!(doc.doc_version, None);
+    assert!(!doc.signed);
+
+    sbom.document.creators[1].email = Some("sbom@acme.test".to_string());
+    sbom.document.doc_version = Some(3);
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: true,
+    });
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(doc.has_identified_non_tool_creator);
+    assert_eq!(doc.doc_version, Some(3));
+    assert!(doc.signed);
+
+    sbom.document.format = SbomFormat::Spdx;
+    // A version that does not parse counts as 2.x.
+    for (spec_version, spdx2) in [("SPDX-2.3", true), ("3.0.1", false), ("draft", true)] {
+        sbom.document.spec_version = spec_version.to_string();
+        let ev = SbomEvidence::new(&sbom, as_of());
+        assert_eq!(ev.document().spdx2, spdx2, "{spec_version}");
+    }
+}
+
+#[test]
+fn the_tool_version_follows_cisa_2026s_heuristic() {
+    let discernible = |creator_type, name: &str| {
+        let mut sbom = sbom_of(vec![]);
+        sbom.document.creators = vec![Creator {
+            creator_type,
+            name: name.to_string(),
+            email: None,
+        }];
+        SbomEvidence::new(&sbom, as_of())
+            .document()
+            .tool_version_discernible
+    };
+    assert!(discernible(CreatorType::Tool, "syft 1.0"));
+    assert!(discernible(CreatorType::Tool, "cyclonedx-npm-1.19.3"));
+    assert!(!discernible(CreatorType::Tool, "acme"));
+    // A digit in an earlier segment is no version (FSCT reads it as one),
+    // and an explicit unknown is one (FSCT does not).
+    assert!(!discernible(CreatorType::Tool, "syft2 scanner"));
+    assert!(discernible(CreatorType::Tool, "acme NOASSERTION"));
+    // Only tools are read.
+    assert!(!discernible(CreatorType::Person, "acme 1.0"));
+}
+
+#[test]
+fn authored_hash_facts_read_the_explicit_unknown_and_the_strength() {
+    let hash = |algorithm, value: &str, provenance| {
+        let mut h = Hash::new(algorithm, value.to_string());
+        h.provenance = provenance;
+        h
+    };
+    let with = |name: &str, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.hashes = hashes;
+        c
+    };
+    let (authored, enriched) = (HashProvenance::Authored, HashProvenance::Enriched);
+    let md5 = "a".repeat(32);
+    let sha256 = "b".repeat(64);
+    let sbom = sbom_of(vec![
+        with(
+            "sentinel",
+            vec![hash(HashAlgorithm::Sha256, " NOASSERTION ", authored)],
+        ),
+        with("weak", vec![hash(HashAlgorithm::Md5, &md5, authored)]),
+        with(
+            "weak-and-strong",
+            vec![
+                hash(HashAlgorithm::Md5, &md5, authored),
+                hash(HashAlgorithm::Sha256, &sha256, authored),
+            ],
+        ),
+        with(
+            "enriched-strong",
+            vec![
+                hash(HashAlgorithm::Md5, &md5, authored),
+                hash(HashAlgorithm::Sha256, &sha256, enriched),
+            ],
+        ),
+        with(
+            "bad-strong",
+            vec![hash(HashAlgorithm::Sha256, "zz", authored)],
+        ),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let facts = |name| view(&ev, name).authored_hashes().facts;
+    let sentinel = facts("sentinel");
+    assert!(sentinel.present && !sentinel.plausible && sentinel.declared_unknown);
+    assert!(facts("weak").plausible && !facts("weak").plausible_strong);
+    assert!(facts("weak-and-strong").plausible_strong);
+    assert!(facts("enriched-strong").plausible && !facts("enriched-strong").plausible_strong);
+    let bad = facts("bad-strong");
+    assert!(bad.present && !bad.plausible && !bad.plausible_strong && !bad.declared_unknown);
+}
+
+#[test]
+fn the_strong_algorithms_are_those_cisa_2026_finds_no_shortfall_in() {
+    let algorithms = [
+        (HashAlgorithm::Md5, 32),
+        (HashAlgorithm::Sha1, 40),
+        (HashAlgorithm::Sha256, 64),
+        (HashAlgorithm::Sha384, 96),
+        (HashAlgorithm::Sha512, 128),
+        (HashAlgorithm::Sha3_256, 64),
+        (HashAlgorithm::Sha3_384, 96),
+        (HashAlgorithm::Sha3_512, 128),
+        (HashAlgorithm::Blake2b256, 64),
+        (HashAlgorithm::Blake2b384, 96),
+        (HashAlgorithm::Blake2b512, 128),
+        (HashAlgorithm::Blake3, 64),
+        (HashAlgorithm::Streebog256, 64),
+        (HashAlgorithm::Streebog512, 128),
+        (HashAlgorithm::Other("SHA224".to_string()), 56),
+        (HashAlgorithm::Other("MD6".to_string()), 64),
+    ];
+    for (algorithm, digits) in algorithms {
+        let mut c = component("c");
+        c.hashes = vec![Hash::new(algorithm.clone(), "e".repeat(digits))];
+        let sbom = sbom_of(vec![c]);
+        let ev = SbomEvidence::new(&sbom, as_of());
+        let facts = view(&ev, "c").authored_hashes().facts;
+        assert!(facts.plausible, "{algorithm}");
+        assert_eq!(
+            facts.plausible_strong,
+            hash_algorithm_shortfall(&algorithm).is_none(),
+            "{algorithm}"
+        );
+    }
+}
+
+#[test]
+fn a_bom_reference_on_any_component_links_an_external_sbom() {
+    let mut dependency = component("dependency");
+    dependency.external_refs.push(ExternalReference {
+        ref_type: ExternalRefType::Bom,
+        url: "https://acme.test/dependency.cdx.json".to_string(),
+        comment: None,
+        hashes: Vec::new(),
+    });
+    let linked = sbom_of(vec![component("app"), dependency]);
+    assert!(SbomEvidence::new(&linked, as_of()).has_bom_reference());
+    let alone = sbom_of(vec![component("app")]);
+    assert!(!SbomEvidence::new(&alone, as_of()).has_bom_reference());
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -546,11 +724,12 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
         Box::new(|| format!("{:?}", ev.duplicates())),
         Box::new(|| {
             format!(
-                "{} {} {} {}",
+                "{} {} {} {} {}",
                 ev.cycle_count(),
                 ev.has_lifecycle_property(),
                 ev.package_count(false),
-                ev.package_count(true)
+                ev.package_count(true),
+                ev.has_bom_reference()
             )
         }),
         Box::new(|| {
@@ -764,6 +943,32 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
                     .eq(authored.iter().map(|h| std::ptr::from_ref(*h))),
                 "{at}"
             );
+            // CISA 2026's authored-hash and version reading (cisa2026.rs).
+            assert_eq!(
+                authored_facts.plausible,
+                authored
+                    .iter()
+                    .any(|h| plausible_digest(&h.algorithm, &h.value)),
+                "{at}"
+            );
+            assert_eq!(
+                authored_facts.plausible_strong,
+                authored.iter().any(|h| {
+                    hash_algorithm_shortfall(&h.algorithm).is_none()
+                        && plausible_digest(&h.algorithm, &h.value)
+                }),
+                "{at}"
+            );
+            assert_eq!(
+                authored_facts.declared_unknown,
+                authored.iter().any(|h| is_declared_unknown(h.value.trim())),
+                "{at}"
+            );
+            assert_eq!(
+                view.version().value != Known::Missing,
+                value_state(comp.version.as_deref()) != ValueState::Missing,
+                "{at}"
+            );
             for (include, checker) in [false, true].into_iter().zip(&checkers) {
                 assert_eq!(
                     !include && view.excluded_scope(),
@@ -814,6 +1019,53 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
                 .creators
                 .iter()
                 .any(|c| c.creator_type != CreatorType::Tool),
+            "{at}"
+        );
+        // CISA 2026's document reading (cisa2026.rs).
+        assert_eq!(doc.spdx2, is_spdx2(&sbom), "{at}");
+        assert_eq!(
+            doc.has_identified_non_tool_creator,
+            document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c)),
+            "{at}"
+        );
+        assert_eq!(doc.signed, document_signed(&sbom), "{at}");
+        assert_eq!(
+            doc.lifecycle_phase.is_known(),
+            known_value(document.lifecycle_phase.as_deref()).is_some(),
+            "{at}"
+        );
+        let tools: Vec<_> = document
+            .creators
+            .iter()
+            .filter(|c| c.creator_type == CreatorType::Tool)
+            .collect();
+        assert_eq!(doc.has_tool_creator, !tools.is_empty(), "{at}");
+        assert_eq!(
+            doc.tool_version_discernible,
+            tools.iter().any(|t| tool_name_carries_version(&t.name)),
+            "{at}"
+        );
+        assert_eq!(doc.doc_version, document.doc_version, "{at}");
+        assert_eq!(
+            doc.serial_number_text.raw,
+            document.serial_number.as_deref(),
+            "{at}"
+        );
+        assert_eq!(
+            doc.serial_number_text.is_known(),
+            known_value(document.serial_number.as_deref()).is_some(),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_bom_reference(),
+            sbom.components.values().any(|c| {
+                c.external_refs
+                    .iter()
+                    .any(|r| matches!(r.ref_type, ExternalRefType::Bom))
+            }),
             "{at}"
         );
         assert_eq!(doc.name.is_known(), has_known_value(&document.name), "{at}");

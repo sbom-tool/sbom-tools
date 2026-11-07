@@ -1,7 +1,11 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
-//! serial number, contacts, support period, completeness, primary component.
+//! serial number and revision, contacts, support period, completeness,
+//! signature, lifecycle phase, primary component.
 
-use super::super::shared::{is_valid_email_format, known_contact};
+use super::super::cisa2026::tool_name_carries_version;
+use super::super::shared::{
+    creator_identified, document_signed, is_spdx2, is_valid_email_format, known_contact,
+};
 use super::{ComponentIx, Text};
 use crate::model::{
     CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
@@ -49,6 +53,35 @@ pub(crate) struct DocumentFacts<'a> {
     /// differently: most accept any creator, and CISA 2026 and FSCT require
     /// a non-tool creator that is also identified.
     pub(crate) has_non_tool_creator: bool,
+    /// Whether the document is SPDX 2.x, which has no field for a
+    /// signature, a lifecycle phase or a completeness declaration (see
+    /// `shared::is_spdx2`; an SPDX version that does not parse counts as
+    /// 2.x).
+    pub(crate) spdx2: bool,
+    /// Whether a creator that is not a tool is identified by a real name or
+    /// email address (see `shared::creator_identified`): the SBOM author of
+    /// CISA 2026. BSI TR-03183-2 accepts any non-tool creator (see
+    /// [`Self::has_non_tool_creator`]).
+    pub(crate) has_identified_non_tool_creator: bool,
+    /// Whether the document carries an in-document signature with a value
+    /// (see `shared::document_signed`).
+    pub(crate) signed: bool,
+    /// The lifecycle phase the document was generated in.
+    pub(crate) lifecycle_phase: Text<'a>,
+    /// Whether a creator is a tool.
+    pub(crate) has_tool_creator: bool,
+    /// Whether a tool creator's name carries a version or an explicit
+    /// unknown, by CISA 2026's heuristic (see
+    /// `cisa2026::tool_name_carries_version`): a digit in the name's last
+    /// segment, or a sentinel word. FSCT reads a tool version differently.
+    pub(crate) tool_version_discernible: bool,
+    /// The document's revision counter (CycloneDX `version`), when it
+    /// gives one.
+    pub(crate) doc_version: Option<u32>,
+    /// The document's serial number or namespace, and what it says. CISA
+    /// 2026 asks for a real value; the checks that read
+    /// [`Self::serial_number`] ask only that one is present.
+    pub(crate) serial_number_text: Text<'a>,
 }
 
 /// One creator of the document.
@@ -98,6 +131,24 @@ impl<'a> DocumentFacts<'a> {
                 .creators
                 .iter()
                 .any(|c| c.creator_type != CreatorType::Tool),
+            spdx2: is_spdx2(sbom),
+            has_identified_non_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c)),
+            signed: document_signed(sbom),
+            lifecycle_phase: Text::of(document.lifecycle_phase.as_deref()),
+            has_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Tool),
+            tool_version_discernible: document
+                .creators
+                .iter()
+                .filter(|c| c.creator_type == CreatorType::Tool)
+                .any(|t| tool_name_carries_version(&t.name)),
+            doc_version: document.doc_version,
+            serial_number_text: Text::of(document.serial_number.as_deref()),
         }
     }
 }
