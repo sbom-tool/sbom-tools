@@ -397,6 +397,10 @@ impl ComplianceChecker {
             Some(evidence.as_of()),
             "a checker judges the instant of the evidence it reads"
         );
+        // The registry picks each finding's remediation and field advice by
+        // the document's format (`RemediationFormat::of` reads the metadata)
+        // and by whether the finding is about the declared primary.
+        // escape hatch: the driver, not a check, reads the document metadata
         let sbom = evidence.raw_sbom();
         let ctx = ComplianceContext::new(self, evidence);
         let checker = checker_for(self.level);

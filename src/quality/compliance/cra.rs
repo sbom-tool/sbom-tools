@@ -922,7 +922,7 @@ impl ComplianceChecker {
                 self.effective_product_class().label()
             );
             if let Some(note) = cdxa_note(
-                ctx.attestation_declarations(),
+                ctx.ev.attestation_declarations(),
                 AttestationRuleFamily::Cra,
                 &|s, _| standard_references_eucc(s),
                 ctx.ev.as_of(),

@@ -3,9 +3,8 @@
 //!
 //! The evidence of a run is the only thing such a checker reads about the
 //! SBOM, so two standards cannot derive one fact two ways. A checker file on
-//! the list below may not bind or name the SBOM (`sbom`, `NormalizedSbom`,
-//! the context's transitional `sbom` field) and may not read the clock (the
-//! evidence's instant is the run's). Where no fact gives what a check needs,
+//! the list below may not bind or name the SBOM (`sbom`, `NormalizedSbom`)
+//! and may not read the clock (the evidence's instant is the run's). Where no fact gives what a check needs,
 //! it calls `raw_sbom()`, the named escape hatch, with a `// escape hatch:
 //! <why>` comment on the line or the line above, and the PR that adds it
 //! says why.

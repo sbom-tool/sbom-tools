@@ -217,7 +217,7 @@ impl ComplianceChecker {
         // every legacy check below remains a valid SelfDeclared-level
         // satisfaction path, and on documents without declarations
         // `attested()` is uniformly false (zero behavior change).
-        let declarations = ctx.attestation_declarations();
+        let declarations = ctx.ev.attestation_declarations();
         let attested = |practice: &str| {
             ev.supported_requirements(AttestationRuleFamily::Ssdf)
                 .any(|s| requirement_matches_id(s.requirement, practice))

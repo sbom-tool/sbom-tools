@@ -29,10 +29,8 @@
 
 use super::evidence::SbomEvidence;
 use super::{
-    Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, RuleEvaluation,
-    Violation,
+    Applicability, ComplianceChecker, ComplianceLevel, PassedCheck, RuleEvaluation, Violation,
 };
-use crate::model::AttestationDeclarations;
 
 /// Read-only context threaded through every [`StandardChecker`].
 ///
@@ -44,31 +42,14 @@ pub(crate) struct ComplianceContext<'r, 'a> {
     /// The configured checker — source of level, sidecar, and product class,
     /// plus the shared severity-calibration helpers.
     pub(crate) checker: &'r ComplianceChecker,
-    /// The facts of the SBOM being evaluated, at the run's instant.
+    /// The facts of the SBOM being evaluated, at the run's instant: all a
+    /// check reads about the SBOM (see [`super::evidence`]).
     pub(crate) ev: &'r SbomEvidence<'a>,
-    /// The SBOM being evaluated, for the checkers that do not read the
-    /// evidence yet (see [`super::evidence`]).
-    pub(crate) sbom: &'a NormalizedSbom,
 }
 
 impl<'r, 'a> ComplianceContext<'r, 'a> {
     pub(crate) const fn new(checker: &'r ComplianceChecker, ev: &'r SbomEvidence<'a>) -> Self {
-        Self {
-            checker,
-            ev,
-            sbom: ev.raw_sbom(),
-        }
-    }
-
-    /// CDXA attestation declarations parsed from the document (CycloneDX
-    /// 1.6+ `declarations` + `definitions.standards`), if any.
-    ///
-    /// Structural evidence only: signature objects in the returned model are
-    /// PRESENCE records (algorithm, signatory identity) — nothing has been
-    /// cryptographically verified, so no consumer may report an evidence
-    /// level above `EvidenceLevel::SignaturePresent`.
-    pub(crate) fn attestation_declarations(&self) -> Option<&'a AttestationDeclarations> {
-        self.sbom.declarations()
+        Self { checker, ev }
     }
 }
 
@@ -275,9 +256,9 @@ pub(crate) fn checker_for(level: ComplianceLevel) -> Box<dyn StandardChecker> {
 mod tests {
     use super::*;
     use crate::model::{
-        AttestationAssertion, AttestationMapEntry, AttestationRuleFamily, CdxaRef, CdxaResolution,
-        DeclaredClaim, DeclaredEvidence, DefinedRequirement, DefinedStandard, EvidenceLevel,
-        SignaturePresence,
+        AttestationAssertion, AttestationDeclarations, AttestationMapEntry, AttestationRuleFamily,
+        CdxaRef, CdxaResolution, DeclaredClaim, DeclaredEvidence, DefinedRequirement,
+        DefinedStandard, EvidenceLevel, NormalizedSbom, SignaturePresence,
     };
 
     fn ts(s: &str) -> chrono::DateTime<chrono::Utc> {
@@ -353,7 +334,7 @@ mod tests {
         let ev = SbomEvidence::new(&sbom, checker.now());
         let ctx = ComplianceContext::new(&checker, &ev);
 
-        assert!(ctx.attestation_declarations().is_some());
+        assert!(ctx.ev.attestation_declarations().is_some());
         let ssdf: Vec<_> = ctx
             .ev
             .supported_requirements(AttestationRuleFamily::Ssdf)
@@ -389,7 +370,7 @@ mod tests {
             .with_as_of(ts("2026-10-12T00:00:00Z"));
         let ev = SbomEvidence::new(&bare, checker.now());
         let ctx = ComplianceContext::new(&checker, &ev);
-        assert!(ctx.attestation_declarations().is_none());
+        assert!(ctx.ev.attestation_declarations().is_none());
         assert!(none(&ctx));
     }
 }

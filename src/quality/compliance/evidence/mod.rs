@@ -63,8 +63,9 @@ use chrono::{DateTime, Utc};
 
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
-    AttestationRuleFamily, CanonicalId, Component, ComponentType, DependencyScope,
-    DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom, SupportedRequirement,
+    AttestationDeclarations, AttestationRuleFamily, CanonicalId, Component, ComponentType,
+    DependencyScope, DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom,
+    SupportedRequirement,
 };
 
 pub(crate) use ai::AiFacts;
@@ -591,6 +592,18 @@ impl<'a> SbomEvidence<'a> {
     fn dataset_containers(&self) -> &[bool] {
         self.dataset_containers
             .get_or_init(|| ai::dataset_containers(self.sbom))
+    }
+
+    /// The CDXA attestation declarations the document carries (CycloneDX
+    /// 1.6+ `declarations` and `definitions.standards`), if any, as read:
+    /// the checks name the attestation that came closest when none supports
+    /// a rule (see [`Self::supported_requirements`]).
+    ///
+    /// Structural evidence only: a signature in them is a presence record
+    /// (algorithm, signatory identity), never verified, so no consumer
+    /// reports an evidence level above `EvidenceLevel::SignaturePresent`.
+    pub(crate) fn attestation_declarations(&self) -> Option<&'a AttestationDeclarations> {
+        self.sbom.declarations()
     }
 }
 

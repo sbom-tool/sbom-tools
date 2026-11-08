@@ -190,7 +190,7 @@ impl ComplianceChecker {
         if !eucc_ref_present {
             let mut message = "[EUCC] No Certification/Attestation external reference points at an EUCC URL (recommended)".to_string();
             if let Some(note) = cdxa_note(
-                ctx.attestation_declarations(),
+                ctx.ev.attestation_declarations(),
                 AttestationRuleFamily::Cra,
                 &|s, _| standard_references_eucc(s),
                 ctx.ev.as_of(),
