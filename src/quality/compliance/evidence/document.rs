@@ -87,7 +87,7 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) has_identified_non_tool_creator: bool,
     /// The lifecycle phase the document was generated in.
     pub(crate) lifecycle_phase: Text<'a>,
-    /// Whether a creator is a tool.
+    /// Whether a creator of the document is a tool, whatever its name.
     pub(crate) has_tool_creator: bool,
     /// Whether a tool creator's name carries a version or an explicit
     /// unknown, by CISA 2026's heuristic (see [`tool_name_carries_version`]):

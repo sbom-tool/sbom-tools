@@ -16,11 +16,11 @@ use super::super::shared::{
 use super::document::tool_name_carries_version;
 use super::{ComponentIx, ComponentView, Known, Placeholders, SbomEvidence, Text};
 use crate::model::{
-    Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
-    DependencyType, Ecosystem, EolInfo, EolStatus, ExternalRefType, ExternalReference, Hash,
-    HashAlgorithm, HashProvenance, LicenseExpression, NormalizedSbom, Organization, Property,
-    SbomFormat, SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef,
-    VulnerabilitySource,
+    AttestationDeclarations, AttestationRuleFamily, Component, ComponentType, Creator, CreatorType,
+    DependencyEdge, DependencyScope, DependencyType, Ecosystem, EolInfo, EolStatus,
+    ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance, LicenseExpression,
+    NormalizedSbom, Organization, Property, SbomFormat, SignatureInfo, VexJustification, VexState,
+    VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -1309,6 +1309,152 @@ fn document_format_signature_lifecycle_and_creators() {
     assert!(!doc.has_tool_creator && !doc.tool_name_has_digit);
 }
 
+#[test]
+fn a_tool_creator_counts_whatever_its_name() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.creators = vec![
+        creator(CreatorType::Person, "Jane Doe"),
+        creator(CreatorType::Organization, "Tooling Inc"),
+    ];
+    assert!(
+        !SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_tool_creator
+    );
+    sbom.document
+        .creators
+        .push(creator(CreatorType::Tool, "NOASSERTION"));
+    assert!(
+        SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_tool_creator
+    );
+}
+
+/// The rule families attestation evidence can count for.
+const FAMILIES: [AttestationRuleFamily; 3] = [
+    AttestationRuleFamily::Ssdf,
+    AttestationRuleFamily::Eo14028,
+    AttestationRuleFamily::Cra,
+];
+
+/// Declarations whose one attestation fully supports one requirement of
+/// each standard in `requirements`, given as (standard name, requirement
+/// identifier), with evidence valid from 2026-01-10 to 2027-01-10.
+fn declarations_supporting(requirements: &[(&str, &str)]) -> AttestationDeclarations {
+    use crate::model::{
+        AttestationAssertion, AttestationMapEntry, CdxaRef, CdxaResolution, DeclaredClaim,
+        DeclaredEvidence, DefinedRequirement, DefinedStandard,
+    };
+    let reference = |raw: &str, resolution: CdxaResolution| CdxaRef {
+        raw: raw.to_string(),
+        resolution,
+    };
+    let at = |instant: &str| {
+        chrono::DateTime::parse_from_rfc3339(instant)
+            .expect("valid instant")
+            .with_timezone(&chrono::Utc)
+    };
+    AttestationDeclarations {
+        claims: vec![DeclaredClaim {
+            bom_ref: Some("claim".to_string()),
+            target: Some(reference("target", CdxaResolution::Target)),
+            evidence: vec![reference("evidence", CdxaResolution::Evidence)],
+            ..DeclaredClaim::default()
+        }],
+        evidence: vec![DeclaredEvidence {
+            bom_ref: Some("evidence".to_string()),
+            created: Some(at("2026-01-10T00:00:00Z")),
+            expires: Some(at("2027-01-10T00:00:00Z")),
+            ..DeclaredEvidence::default()
+        }],
+        attestations: vec![AttestationAssertion {
+            map: (0..requirements.len())
+                .map(|n| AttestationMapEntry {
+                    requirement: Some(reference(
+                        &format!("requirement-{n}"),
+                        CdxaResolution::Requirement,
+                    )),
+                    claims: vec![reference("claim", CdxaResolution::Claim)],
+                    conformance_score: Some(1.0),
+                    ..AttestationMapEntry::default()
+                })
+                .collect(),
+            ..AttestationAssertion::default()
+        }],
+        standards: requirements
+            .iter()
+            .enumerate()
+            .map(|(n, (standard, identifier))| DefinedStandard {
+                bom_ref: Some(format!("standard-{n}")),
+                name: Some((*standard).to_string()),
+                requirements: vec![DefinedRequirement {
+                    bom_ref: Some(format!("requirement-{n}")),
+                    identifier: Some((*identifier).to_string()),
+                    ..DefinedRequirement::default()
+                }],
+                ..DefinedStandard::default()
+            })
+            .collect(),
+        ..AttestationDeclarations::default()
+    }
+}
+
+/// The identifiers of the requirements of `family` that `ev` holds as
+/// supported, in order.
+fn supported_ids(ev: &SbomEvidence<'_>, family: AttestationRuleFamily) -> Vec<String> {
+    ev.supported_requirements(family)
+        .filter_map(|s| s.requirement.identifier.clone())
+        .collect()
+}
+
+#[test]
+fn attestations_are_judged_once_and_read_by_family() {
+    let mut sbom = NormalizedSbom::default();
+    sbom.extensions.declarations = Some(declarations_supporting(&[
+        ("NIST Secure Software Development Framework", "PS.1"),
+        ("Executive Order 14028", "4e-autogeneration"),
+        ("Internal policy", "X.1"),
+    ]));
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert_eq!(supported_ids(&ev, AttestationRuleFamily::Ssdf), ["PS.1"]);
+    assert_eq!(
+        supported_ids(&ev, AttestationRuleFamily::Eo14028),
+        ["4e-autogeneration"]
+    );
+    // A requirement no family knows counts for none.
+    assert!(supported_ids(&ev, AttestationRuleFamily::Cra).is_empty());
+    let declarations = sbom.declarations().expect("declarations");
+    for family in FAMILIES {
+        let derived: Vec<_> = declarations
+            .evidence_for_family(family, as_of())
+            .iter()
+            .map(|s| format!("{s:?}"))
+            .collect();
+        let cached: Vec<_> = ev
+            .supported_requirements(family)
+            .map(|s| format!("{s:?}"))
+            .collect();
+        assert_eq!(cached, derived, "{family:?}");
+    }
+
+    // Evidence that has expired at the instant supports nothing.
+    let later = chrono::DateTime::parse_from_rfc3339("2027-06-01T00:00:00Z")
+        .expect("valid instant")
+        .with_timezone(&chrono::Utc);
+    let expired = SbomEvidence::new(&sbom, later);
+    assert!(supported_ids(&expired, AttestationRuleFamily::Ssdf).is_empty());
+
+    let bare = NormalizedSbom::default();
+    let ev = SbomEvidence::new(&bare, as_of());
+    assert!(FAMILIES.iter().all(|f| supported_ids(&ev, *f).is_empty()));
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -1370,6 +1516,12 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                     )
                 })
                 .collect()
+        }),
+        Box::new(|| {
+            format!(
+                "{:?}",
+                FAMILIES.map(|f| ev.supported_requirements(f).collect::<Vec<_>>())
+            )
         }),
     ];
     if reversed {
@@ -2054,6 +2206,22 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
                 manufacturer_reference(&sbom, accepts),
                 "{at}"
             );
+        }
+
+        // The supported requirements, as `ComplianceContext::evidence_for`
+        // derives them.
+        for family in FAMILIES {
+            let cached: Vec<_> = ev
+                .supported_requirements(family)
+                .map(|s| format!("{s:?}"))
+                .collect();
+            let derived: Vec<_> = sbom.declarations().map_or_else(Vec::new, |d| {
+                d.evidence_for_family(family, as_of())
+                    .iter()
+                    .map(|s| format!("{s:?}"))
+                    .collect()
+            });
+            assert_eq!(cached, derived, "{at}: {family:?}");
         }
     }
 }

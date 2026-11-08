@@ -546,12 +546,8 @@ pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
 
 /// The clause a contact finding appends when the SBOM gives a contact that
 /// reaches nobody (see [`unreachable_contact`]), or an empty string.
-pub(crate) fn unreachable_contact_note(sbom: &NormalizedSbom) -> String {
-    unreachable_contact_note_of(unreachable_contact(sbom))
-}
-
-/// [`unreachable_contact_note`] for `contact`, the first contact the SBOM
-/// gives that reaches nobody, if any.
+/// `contact` is the first contact the SBOM gives that reaches nobody, if
+/// any.
 pub(crate) fn unreachable_contact_note_of(contact: Option<&str>) -> String {
     contact.map_or_else(String::new, |value| {
         format!(

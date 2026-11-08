@@ -40,6 +40,7 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
+mod attestations;
 mod component;
 mod document;
 mod graph;
@@ -56,8 +57,8 @@ use chrono::{DateTime, Utc};
 
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
-    CanonicalId, Component, ComponentType, DependencyScope, DuplicateComponent, EolStatus,
-    ExternalRefType, NormalizedSbom,
+    AttestationRuleFamily, CanonicalId, Component, ComponentType, DependencyScope,
+    DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom, SupportedRequirement,
 };
 
 pub(crate) use component::{
@@ -163,6 +164,7 @@ pub(crate) struct SbomEvidence<'a> {
     vulnerability_hook_reference: OnceLock<bool>,
     copyrights: OnceLock<Box<[ValueState]>>,
     concluded_licenses: OnceLock<Box<[ValueState]>>,
+    supported_requirements: OnceLock<Box<[attestations::Supported<'a>]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -201,6 +203,7 @@ impl<'a> SbomEvidence<'a> {
             vulnerability_hook_reference: OnceLock::new(),
             copyrights: OnceLock::new(),
             concluded_licenses: OnceLock::new(),
+            supported_requirements: OnceLock::new(),
         }
     }
 
@@ -479,6 +482,22 @@ impl<'a> SbomEvidence<'a> {
                 .map(|c| value_state(concluded_license(c)))
                 .collect()
         })
+    }
+
+    /// The requirements of `family` the document's CDXA attestations fully
+    /// support at the evaluation instant (see
+    /// `AttestationDeclarations::evidence_for_family`), in that function's
+    /// order. The attestations are judged once per evidence; each read
+    /// picks the family's.
+    pub(crate) fn supported_requirements(
+        &self,
+        family: AttestationRuleFamily,
+    ) -> impl Iterator<Item = &SupportedRequirement<'a>> + '_ {
+        self.supported_requirements
+            .get_or_init(|| attestations::collect(self.sbom, self.as_of))
+            .iter()
+            .filter(move |s| s.family == Some(family))
+            .map(|s| &s.requirement)
     }
 }
 

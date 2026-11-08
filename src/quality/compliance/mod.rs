@@ -103,8 +103,8 @@ use shared::{
     document_signed, has_known_license, has_known_value, invalid_digest_note, is_contact_reference,
     is_eucc_reference, is_placeholder, known_component_name, known_contact, manufacturer_reference,
     name_with_digest_problems, observed, observed_digest, observed_unparsed_timestamp,
-    truncate_list, unparseable_timestamp, unreachable_contact, unreachable_contact_note,
-    unreachable_creator, unreachable_creator_note, unreachable_sidecar_note,
+    truncate_list, unparseable_timestamp, unreachable_creator, unreachable_creator_note,
+    unreachable_sidecar_note,
 };
 
 #[cfg(test)]

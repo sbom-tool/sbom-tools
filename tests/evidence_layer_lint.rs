@@ -27,6 +27,7 @@ const READS_EVIDENCE: &[&str] = &[
     "src/quality/compliance/bsi.rs",
     "src/quality/compliance/cisa2026.rs",
     "src/quality/compliance/cra.rs",
+    "src/quality/compliance/eo14028.rs",
     "src/quality/compliance/fsct.rs",
     "src/quality/compliance/generic.rs",
     "src/quality/compliance/pci_dss.rs",
