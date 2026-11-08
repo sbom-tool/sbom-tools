@@ -15,9 +15,9 @@
 //! the result lists the entry under `evaluated` (see
 //! [`RuleEvaluation`](super::RuleEvaluation) for which skips count). Without
 //! the entry a skipped check reads like a passed one. A checker gets the list
-//! as [`Findings::not_evaluated`] (the `findings` form of
-//! `dedicated_checker!`), or as a `&mut NotEvaluated` argument in a check
-//! method the generic path calls:
+//! as [`Findings::not_evaluated`] (the method of a `dedicated_checker!`
+//! gets the whole [`Findings`]), or as a `&mut NotEvaluated` argument in a
+//! check method the generic path calls:
 //!
 //! ```ignore
 //! if spdx2 {
@@ -201,37 +201,13 @@ impl StandardChecker for GenericChecker {
 }
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
-/// single dedicated method on [`ComplianceChecker`]. With the trailing
-/// `findings`, the method takes the SBOM and the whole [`Findings`] (for a
-/// standard that reports passed checks, skips a check on purpose, or can
-/// decide it does not apply). With the trailing `context` it takes the
-/// [`ComplianceContext`] instead of the SBOM, and the whole [`Findings`]: the
-/// form of a standard whose checks read the evidence (see
-/// [`super::evidence`]).
+/// single dedicated method on [`ComplianceChecker`]. The method takes the
+/// [`ComplianceContext`], whose evidence is all a check reads about the SBOM
+/// (see [`super::evidence`]), and the whole [`Findings`], so a standard can
+/// report passed checks, skip a check on purpose, or decide it does not
+/// apply.
 macro_rules! dedicated_checker {
-    ($name:ident, $level:expr, $method:ident, findings) => {
-        pub(crate) struct $name;
-
-        impl $name {
-            /// The checker, for the standards table.
-            pub(crate) fn boxed(_level: ComplianceLevel) -> Box<dyn StandardChecker> {
-                Box::new(Self)
-            }
-        }
-
-        impl StandardChecker for $name {
-            fn level(&self) -> ComplianceLevel {
-                $level
-            }
-
-            fn check(&self, ctx: &ComplianceContext) -> Findings {
-                let mut findings = Findings::default();
-                ctx.checker.$method(ctx.sbom, &mut findings);
-                findings
-            }
-        }
-    };
-    ($name:ident, $level:expr, $method:ident, context) => {
+    ($name:ident, $level:expr, $method:ident) => {
         pub(crate) struct $name;
 
         impl $name {
@@ -255,68 +231,38 @@ macro_rules! dedicated_checker {
     };
 }
 
-dedicated_checker!(
-    NistSsdfChecker,
-    ComplianceLevel::NistSsdf,
-    check_nist_ssdf,
-    context
-);
-dedicated_checker!(
-    Eo14028Checker,
-    ComplianceLevel::Eo14028,
-    check_eo14028,
-    context
-);
-dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2, context);
-dedicated_checker!(
-    NistPqcChecker,
-    ComplianceLevel::NistPqc,
-    check_nist_pqc,
-    context
-);
+dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
+dedicated_checker!(Eo14028Checker, ComplianceLevel::Eo14028, check_eo14028);
+dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2);
+dedicated_checker!(NistPqcChecker, ComplianceLevel::NistPqc, check_nist_pqc);
 dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,
-    check_bsi_tr_03183_2,
-    context
+    check_bsi_tr_03183_2
 );
 dedicated_checker!(
     CraOssStewardChecker,
     ComplianceLevel::CraOssSteward,
-    check_cra_oss_steward,
-    context
+    check_cra_oss_steward
 );
 dedicated_checker!(
     EuccSubstantialChecker,
     ComplianceLevel::EuccSubstantial,
-    check_eucc_substantial,
-    context
+    check_eucc_substantial
 );
-dedicated_checker!(
-    EuAiActChecker,
-    ComplianceLevel::EuAiAct,
-    check_eu_ai_act,
-    context
-);
+dedicated_checker!(EuAiActChecker, ComplianceLevel::EuAiAct, check_eu_ai_act);
 dedicated_checker!(
     BsiSbomForAiChecker,
     ComplianceLevel::BsiSbomForAi,
-    check_bsi_sbom_for_ai,
-    context
+    check_bsi_sbom_for_ai
 );
-dedicated_checker!(
-    Cisa2026Checker,
-    ComplianceLevel::Cisa2026,
-    check_cisa2026,
-    context
-);
+dedicated_checker!(Cisa2026Checker, ComplianceLevel::Cisa2026, check_cisa2026);
 dedicated_checker!(
     PciDss632Checker,
     ComplianceLevel::PciDss632,
-    check_pci_dss_6_3_2,
-    context
+    check_pci_dss_6_3_2
 );
-dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, context);
+dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct);
 
 /// Resolve the [`StandardChecker`] for a given level: the one its entry in
 /// the standards table names. The dedicated profiles have their own
