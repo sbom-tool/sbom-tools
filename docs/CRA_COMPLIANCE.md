@@ -697,8 +697,9 @@ stems also tried (`app.cdx.json` → `app.cra.json` works).
   `definitions.standards` entry → CRA / SSDF / EO 14028 rule family;
   `AttestationDeclarations::supported_requirements()` — the fail-closed
   filter behind "when an attestation counts".
-- `ComplianceContext::evidence_for()` in `src/quality/compliance/context.rs` —
-  the query the CRA / EUCC checks call.
+- `SbomEvidence::supported_requirements()` in
+  `src/quality/compliance/evidence/mod.rs` — the query the CRA / EUCC checks
+  call, judged once per run.
 - `ComplianceChecker::build_conformity_summary()` and
   `check_class_eucc_reference()` in `src/quality/compliance/cra.rs`,
   `standard_references_eucc()` / `cdxa_note()` in

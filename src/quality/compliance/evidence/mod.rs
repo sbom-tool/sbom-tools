@@ -33,15 +33,17 @@
 //! finding's message and `observed` value from those values, as it did
 //! when it read the SBOM itself.
 //!
-//! Where a fact has a predicate in [`super::shared`] that checks which do
-//! not read the evidence yet still call, the fact calls that predicate, so
-//! the two cannot drift. The agreement tests (`tests.rs`) compare every fact
-//! with the predicates it replaces on every SBOM fixture.
+//! Every checker reads the evidence, and nothing else about the SBOM. Where
+//! a fact rests on a predicate in [`super::shared`] that other code still
+//! calls (the quality metrics and scorer, the `cra-docs` dossier), the fact
+//! calls that predicate, so the two cannot drift. The agreement tests
+//! (`tests.rs`) compare the facts with the predicates they replaced on every
+//! SBOM fixture.
 //!
-//! A checker that reads the evidence reaches the SBOM itself only through
+//! A checker reaches the SBOM itself only through
 //! [`SbomEvidence::raw_sbom`], each use marked `// escape hatch:` with the
-//! reason (`tests/evidence_layer_lint.rs` lists the files that read the
-//! evidence and enforces it).
+//! reason; no checker needs one today (`tests/evidence_layer_lint.rs` finds
+//! the checker files and enforces it).
 
 mod ai;
 mod attestations;

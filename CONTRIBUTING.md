@@ -53,7 +53,15 @@ all come from there. To add a standard:
    `SBOM-<FAMILY>-GENERAL` fallback rule (the entry's `fallback_rule`).
 4. Write its checks in a module of their own and a `dedicated_checker!` in
    `context.rs` (the entry's `checker`); a profile of the generic path uses
-   `GenericChecker::boxed`.
+   `GenericChecker::boxed`. The checks read the SBOM only through the
+   evidence layer (`ctx.ev`, `src/quality/compliance/evidence/`): a fact the
+   standard needs and the evidence lacks goes there, with a unit test,
+   defined once for every standard (if the standard judges an element
+   differently from another one on purpose, add a separately named fact
+   rather than change an existing one). Add the module to `READS_EVIDENCE`
+   in `tests/evidence_layer_lint.rs`; the lint fails until you do, and
+   whenever the module names the SBOM, reads the clock or derives a fact
+   the evidence holds.
 5. If `--standard` selects it (the entry's `cli`), add a `StandardSelector`
    variant where `--help` should list it, with its arms in `level()` and
    `value_variants()`, and add its spellings to the alias tables in the
