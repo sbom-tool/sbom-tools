@@ -28,6 +28,7 @@ const READS_EVIDENCE: &[&str] = &[
     "src/quality/compliance/cisa2026.rs",
     "src/quality/compliance/cra.rs",
     "src/quality/compliance/generic.rs",
+    "src/quality/compliance/pci_dss.rs",
 ];
 
 /// Identifiers a checker that reads the evidence may not use: the SBOM, by

@@ -50,8 +50,9 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) primary_declared: Option<&'a CanonicalId>,
     /// The primary component, when its id names a component.
     pub(crate) primary: Option<ComponentIx>,
-    /// The creation timestamp as parsed: the epoch when the document gives
-    /// none or one that does not parse (see [`Self::has_known_timestamp`]).
+    /// The creation timestamp as parsed: the Unix epoch when the document
+    /// gives none or one that does not parse, so it means something only
+    /// when [`Self::has_known_timestamp`].
     pub(crate) created: DateTime<Utc>,
     /// Whether the document carries an in-document signature with a value
     /// (see `shared::document_signed`).

@@ -163,6 +163,10 @@ pub(crate) fn observed_unparsed_timestamp(sbom: &NormalizedSbom) -> Option<Strin
 /// generators are common and the rest of the document is unaffected. There is
 /// no skew tolerance, as for attestation evidence created after `as_of`.
 /// `citation` prefixes the message, e.g. `"[PCI DSS 6.3.2]"`.
+///
+/// No checker calls it since the CRA and PCI DSS checks read the evidence
+/// ([`future_timestamp_violation_of`]); it stays for the tests.
+#[cfg(test)]
 pub(crate) fn future_timestamp_violation(
     sbom: &NormalizedSbom,
     as_of: chrono::DateTime<chrono::Utc>,
@@ -373,6 +377,11 @@ pub(crate) fn observed_digest<'a>(hashes: impl IntoIterator<Item = &'a Hash>) ->
 /// ([`has_known_producer`]): the first supplier, manufacturer or author
 /// value present, typically a placeholder such as `NOASSERTION` or `TBD`.
 /// `None` when the component names no producer at all.
+///
+/// No checker calls it since the CRA, CISA 2026 and PCI DSS checks read the
+/// evidence (`Producer::observed`); it stays as the predicate the evidence's
+/// agreement test pins that fact to.
+#[cfg(test)]
 pub(crate) fn observed_producer(comp: &Component) -> Option<String> {
     comp.supplier
         .as_ref()

@@ -16,9 +16,10 @@ use super::document::tool_name_carries_version;
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
-    DependencyType, EolInfo, EolStatus, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
-    HashProvenance, LicenseExpression, NormalizedSbom, Organization, Property, SbomFormat,
-    SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
+    DependencyType, Ecosystem, EolInfo, EolStatus, ExternalRefType, ExternalReference, Hash,
+    HashAlgorithm, HashProvenance, LicenseExpression, NormalizedSbom, Organization, Property,
+    SbomFormat, SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef,
+    VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -940,6 +941,100 @@ fn a_bom_reference_on_any_component_links_an_external_sbom() {
     assert!(!SbomEvidence::new(&alone, as_of()).has_bom_reference());
 }
 
+#[test]
+fn version_range_group_and_ecosystem_are_facts_of_their_own() {
+    let mut external = component("external");
+    external.is_external = true;
+    external.version_range = Some(">=1.0 <2.0".to_string());
+    let mut grouped = component("grouped");
+    grouped.group = Some(" org.acme ".to_string());
+    grouped.version_range = Some("TBD".to_string());
+    let mut placeholder_group = component("placeholder-group");
+    placeholder_group.group = Some("N/A".to_string());
+    let mut npm = component("npm");
+    npm.ecosystem = Some(Ecosystem::Npm);
+    let sbom = sbom_of(vec![external, grouped, placeholder_group, npm]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+
+    let external = view(&ev, "external");
+    assert!(external.is_external());
+    assert_eq!(external.version_range().value, Known::Value(">=1.0 <2.0"));
+    assert!(!external.version().is_known());
+    let grouped = view(&ev, "grouped");
+    assert!(!grouped.is_external());
+    assert_eq!(grouped.version_range().raw, Some("TBD"));
+    assert!(!grouped.version_range().is_known());
+    assert_eq!(grouped.group().value, Known::Value("org.acme"));
+    assert_eq!(view(&ev, "placeholder-group").group().value, Known::Missing);
+    assert_eq!(view(&ev, "npm").group().raw, None);
+    assert!(view(&ev, "npm").ecosystem_declared());
+    assert!(!grouped.ecosystem_declared());
+}
+
+#[test]
+fn the_primary_is_the_component_the_document_names() {
+    let product = component("product");
+    let lib = component("lib");
+    let mut sbom = sbom_of(vec![lib, product.clone()]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(ev.components().all(|c| !c.is_primary()));
+
+    sbom.primary_component_id = Some(product.canonical_id);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "product").is_primary());
+    assert!(!view(&ev, "lib").is_primary());
+
+    // A primary id that names no component makes none of them the primary.
+    sbom.primary_component_id = Some(component("missing").canonical_id);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(ev.components().all(|c| !c.is_primary()));
+}
+
+#[test]
+fn vulnerability_hook_references_count_on_any_component() {
+    let hooked = |ref_type, url: &str| {
+        let product = component("product");
+        let mut dependency = component("dependency");
+        dependency.external_refs.push(ExternalReference {
+            ref_type,
+            url: url.to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        });
+        let mut sbom = sbom_of(vec![product.clone(), dependency]);
+        sbom.primary_component_id = Some(product.canonical_id);
+        SbomEvidence::new(&sbom, as_of()).vulnerability_hook_reference()
+    };
+    let reachable = "https://acme.test/security";
+    assert!(hooked(ExternalRefType::Advisories, reachable));
+    assert!(hooked(ExternalRefType::SecurityContact, reachable));
+    assert!(!hooked(
+        ExternalRefType::SecurityContact,
+        "security@example.com"
+    ));
+    // A VEX/VDR or a linked BOM is a document, not a contact.
+    assert!(hooked(ExternalRefType::VulnerabilityAssertion, "TBD"));
+    assert!(hooked(ExternalRefType::Bom, "https://example.com/bom.json"));
+    assert!(!hooked(ExternalRefType::Support, reachable));
+    let bare = sbom_of(vec![component("lib")]);
+    assert!(!SbomEvidence::new(&bare, as_of()).vulnerability_hook_reference());
+}
+
+#[test]
+fn the_creation_timestamp_is_read_as_parsed() {
+    // The parsers write the Unix epoch for a missing timestamp.
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.created = chrono::DateTime::UNIX_EPOCH;
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(!ev.document().has_known_timestamp);
+    assert_eq!(ev.document().created, chrono::DateTime::UNIX_EPOCH);
+
+    sbom.document.created = as_of();
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(ev.document().has_known_timestamp);
+    assert_eq!(ev.document().created, as_of());
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -954,20 +1049,21 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
         Box::new(|| format!("{:?}", ev.duplicates())),
         Box::new(|| {
             format!(
-                "{} {} {} {} {} {}",
+                "{} {} {} {} {} {} {}",
                 ev.cycle_count(),
                 ev.has_lifecycle_property(),
                 ev.package_count(false),
                 ev.package_count(true),
                 ev.has_vulnerability_assertion(),
-                ev.has_bom_reference()
+                ev.has_bom_reference(),
+                ev.vulnerability_hook_reference()
             )
         }),
         Box::new(|| {
             ev.components()
                 .map(|c| {
                     format!(
-                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {} {} {} {} {:?} {:?}\n",
+                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {} {} {} {} {:?} {:?} {} {} {:?} {:?} {}\n",
                         c.version(),
                         c.producer(),
                         c.licenses().state,
@@ -985,6 +1081,11 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.has_vulnerabilities(),
                         c.first_non_spdx_license(),
                         c.authored_hashes().facts,
+                        c.is_primary(),
+                        c.is_external(),
+                        c.version_range(),
+                        c.group(),
+                        c.ecosystem_declared(),
                     )
                 })
                 .collect()
@@ -1233,6 +1334,25 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
                 value_state(comp.version.as_deref()) != ValueState::Missing,
                 "{at}"
             );
+            // PCI DSS 6.3.2's version range and supplier evidence
+            // (pci_dss.rs).
+            assert_eq!(view.is_external(), comp.is_external, "{at}");
+            assert_eq!(
+                view.version_range().raw,
+                comp.version_range.as_deref(),
+                "{at}"
+            );
+            assert_eq!(
+                view.version_range().is_known(),
+                has_known_value(&comp.version_range),
+                "{at}"
+            );
+            assert_eq!(
+                view.group().is_known(),
+                has_known_value(&comp.group),
+                "{at}"
+            );
+            assert_eq!(view.ecosystem_declared(), comp.ecosystem.is_some(), "{at}");
             for (include, checker) in [false, true].into_iter().zip(&checkers) {
                 assert_eq!(
                     !include && view.excluded_scope(),
@@ -1385,6 +1505,26 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             }),
             "{at}"
         );
+        // The primary as PCI DSS 6.3.2 tells it apart: by the inventory's
+        // key (pci_dss.rs).
+        for (view, id) in ev.components().zip(sbom.components.keys()) {
+            assert_eq!(
+                view.is_primary(),
+                sbom.primary_component_id.as_ref() == Some(id),
+                "{at}"
+            );
+        }
+        // PCI DSS 6.3.2's vulnerability-management hooks (pci_dss.rs).
+        let hook_reference = sbom.components.values().any(|c| {
+            c.external_refs.iter().any(|r| match r.ref_type {
+                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
+                    super::super::shared::is_contact_reference(r)
+                }
+                ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
+                _ => false,
+            })
+        });
+        assert_eq!(ev.vulnerability_hook_reference(), hook_reference, "{at}");
 
         // The dependency graph, as the generic dependency checks derived it.
         let mut connected = HashSet::new();
