@@ -290,6 +290,46 @@ fn producer_is_the_best_of_three_fields_and_quotes_the_first() {
     assert_eq!(sa.state, ValueState::DeclaredUnknown);
 }
 
+/// The producer column skips absent fields and stops at the first real
+/// value; it gives what classifying all three names and keeping the best
+/// gave, for every mix of absent, real, sentinel, placeholder and blank
+/// names.
+#[test]
+fn the_producer_state_is_the_best_of_all_three_classified() {
+    let rank = |state: &ValueState| match state {
+        ValueState::Known => 0,
+        ValueState::DeclaredUnknown => 1,
+        ValueState::Missing => 2,
+    };
+    let names = [
+        None,
+        Some("Acme"),
+        Some("NOASSERTION"),
+        Some("TBD"),
+        Some(" "),
+    ];
+    for supplier in names {
+        for manufacturer in names {
+            for author in names {
+                let mut c = component("c");
+                c.supplier = supplier.map(|n| Organization::new(n.to_string()));
+                c.manufacturer = manufacturer.map(|n| Organization::new(n.to_string()));
+                c.author = author.map(str::to_string);
+                let best = [supplier, manufacturer, author]
+                    .into_iter()
+                    .map(value_state)
+                    .min_by_key(rank)
+                    .unwrap_or(ValueState::Missing);
+                assert_eq!(
+                    super::component::producer_state(&c),
+                    best,
+                    "{supplier:?} {manufacturer:?} {author:?}"
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn licence_state_is_the_best_of_declared_and_concluded() {
     let mut known = component("k");

@@ -87,17 +87,33 @@ const fn rank(state: ValueState) -> u8 {
     }
 }
 
-/// The producer state of `component` (see [`Producer::state`]).
+/// The producer state of `component` (see [`Producer::state`]): the best
+/// [`value_state`] of its supplier, manufacturer and author names. Every
+/// component is classified once per evidence, so the work is kept small: a
+/// component that gives none of the three is missing without a test, and
+/// the first real value settles it, so the names after it are not
+/// classified (classifying a value allocates).
 pub(super) fn producer_state(component: &Component) -> ValueState {
-    [
+    if component.supplier.is_none()
+        && component.manufacturer.is_none()
+        && component.author.is_none()
+    {
+        return ValueState::Missing;
+    }
+    let names = [
         component.supplier.as_ref().map(|o| o.name.as_str()),
         component.manufacturer.as_ref().map(|o| o.name.as_str()),
         component.author.as_deref(),
-    ]
-    .into_iter()
-    .map(value_state)
-    .min_by_key(|state| rank(*state))
-    .unwrap_or(ValueState::Missing)
+    ];
+    let mut best = ValueState::Missing;
+    for name in names.into_iter().flatten() {
+        match value_state(Some(name)) {
+            ValueState::Known => return ValueState::Known,
+            ValueState::DeclaredUnknown => best = ValueState::DeclaredUnknown,
+            ValueState::Missing => {}
+        }
+    }
+    best
 }
 
 /// A component's licences.
