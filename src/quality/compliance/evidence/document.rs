@@ -7,7 +7,8 @@ use chrono::{DateTime, Utc};
 use super::super::shared::{document_signed, is_valid_email_format, known_contact};
 use super::{ComponentIx, Text};
 use crate::model::{
-    CanonicalId, CompletenessDeclaration, Creator, NormalizedSbom, SbomFormat, SpecVersion,
+    CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
+    SpecVersion,
 };
 
 /// The document-level facts of an SBOM.
@@ -65,6 +66,11 @@ pub(crate) struct DocumentFacts<'a> {
     /// Whether a profile the document declares conforming to names the
     /// SimpleLicensing profile (any case).
     pub(crate) licensing_profile_declared: bool,
+    /// Whether a creator is a person or an organization, not a tool: BSI
+    /// TR-03183-2's creator of the SBOM. Other standards judge the author
+    /// differently: most accept any creator, and CISA 2026 and FSCT require
+    /// a non-tool creator that is also identified.
+    pub(crate) has_non_tool_creator: bool,
 }
 
 /// One creator of the document.
@@ -120,6 +126,10 @@ impl<'a> DocumentFacts<'a> {
                 &document.profile_conformance,
                 "licensing",
             ),
+            has_non_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool),
         }
     }
 }

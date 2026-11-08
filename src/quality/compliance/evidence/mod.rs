@@ -60,7 +60,9 @@ use crate::model::{
     ExternalRefType, NormalizedSbom,
 };
 
-pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
+pub(crate) use component::{
+    AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Producer,
+};
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -153,6 +155,8 @@ pub(crate) struct SbomEvidence<'a> {
     vulnerability_assertion: OnceLock<bool>,
     direct_dependencies: OnceLock<Box<[bool]>>,
     firmware_dependencies: OnceLock<Box<[bool]>>,
+    non_spdx_licenses: OnceLock<Box<[Option<&'a str>]>>,
+    authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -183,6 +187,8 @@ impl<'a> SbomEvidence<'a> {
             vulnerability_assertion: OnceLock::new(),
             direct_dependencies: OnceLock::new(),
             firmware_dependencies: OnceLock::new(),
+            non_spdx_licenses: OnceLock::new(),
+            authored_hashes: OnceLock::new(),
         }
     }
 
@@ -377,6 +383,26 @@ impl<'a> SbomEvidence<'a> {
         self.firmware_dependencies
             .get_or_init(|| graph::firmware_dependencies(self.sbom))
     }
+
+    fn non_spdx_licenses(&self) -> &[Option<&'a str>] {
+        self.non_spdx_licenses.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(component::first_non_spdx_license)
+                .collect()
+        })
+    }
+
+    fn authored_hashes(&self) -> &[AuthoredHashFacts] {
+        self.authored_hashes.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| AuthoredHashFacts::of(&c.hashes))
+                .collect()
+        })
+    }
 }
 
 /// One component's facts. The cheap ones are computed on access; the rest
@@ -500,5 +526,23 @@ impl<'a> ComponentView<'_, 'a> {
     /// firmware component.
     pub(crate) fn depends_on_firmware(&self) -> bool {
         self.ev.firmware_dependencies()[self.ix.0]
+    }
+
+    /// Whether the component carries vulnerability information.
+    pub(crate) fn has_vulnerabilities(&self) -> bool {
+        !self.component.vulnerabilities.is_empty()
+    }
+
+    /// The first of the component's licences that is a real expression but
+    /// not a valid SPDX identifier or expression, as read (see
+    /// [`component::first_non_spdx_license`]).
+    pub(crate) fn first_non_spdx_license(&self) -> Option<&'a str> {
+        self.ev.non_spdx_licenses()[self.ix.0]
+    }
+
+    /// The hashes the document itself carries for the component, without
+    /// those enrichment added.
+    pub(crate) fn authored_hashes(&self) -> AuthoredHashes<'a> {
+        AuthoredHashes::new(&self.component.hashes, self.ev.authored_hashes()[self.ix.0])
     }
 }
