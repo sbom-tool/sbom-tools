@@ -38,9 +38,17 @@ impl<'r, 'a> ComplianceContext<'r, 'a> {
 
     /// The inventory-absent finding for `rule_id`, or `None` when the
     /// package rules judge at least one component (see
-    /// [`ComplianceChecker::inventory_absent_violation`](super::super::ComplianceChecker::inventory_absent_violation),
-    /// which reads the SBOM for the checkers that do not read the evidence
-    /// yet).
+    /// [`Self::package_components`]).
+    ///
+    /// Package rules (version, supplier, identifier, hash, license) only
+    /// judge package-scoped components, so a document with no components at
+    /// all — or with only files, snippets or cryptographic assets — used to
+    /// pass them vacuously, scoring like a perfect SBOM. Every standard that
+    /// judges a software inventory reports that instead, as PCI DSS already
+    /// did. The primary component counts: a leaf application with no
+    /// dependencies is a legitimate inventory. Components the run leaves out
+    /// for their excluded scope do not: they are not part of what the
+    /// product ships.
     pub(crate) fn inventory_absent_violation(
         &self,
         rule_id: &'static str,

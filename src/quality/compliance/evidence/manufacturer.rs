@@ -17,7 +17,7 @@ pub(crate) struct ManufacturerFacts<'a> {
     /// `shared::manufacturer_identified`).
     pub(crate) identified: bool,
     /// The first vulnerability contact the SBOM gives that reaches nobody
-    /// (see `shared::unreachable_contact`).
+    /// (see `shared::unreachable_contact_in`).
     pub(crate) unreachable_contact: Option<&'a str>,
 }
 
@@ -35,7 +35,7 @@ impl<'a> ManufacturerFacts<'a> {
     }
 
     /// Whether a component of the manufacturer's scope carries an external
-    /// reference that `accepts` (see `shared::manufacturer_reference`).
+    /// reference that `accepts`.
     pub(crate) fn reference(&self, accepts: impl Fn(&ExternalReference) -> bool) -> bool {
         self.scope
             .iter()
