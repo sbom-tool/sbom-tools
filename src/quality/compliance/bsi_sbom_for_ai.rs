@@ -1054,11 +1054,12 @@ mod tests {
         add(&mut sbom, c);
 
         let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
-        let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
-        assert!(
-            !ids.contains(&"SBOM-BSIAI-NA"),
-            "SBOM with ML metadata must not be N/A; got {ids:?}"
+        assert_eq!(
+            result.applicability,
+            Applicability::Applicable,
+            "SBOM with ML metadata must not be N/A"
         );
+        let ids: Vec<_> = result.violations.iter().map(|v| v.rule_id).collect();
         // The Models element checks ran on the mistyped model (no identifier).
         assert!(
             ids.contains(&"SBOM-BSIAI-MODEL-IDENTIFIER"),
@@ -1104,11 +1105,9 @@ mod tests {
         add(&mut sbom, c);
 
         let result = checker(ComplianceLevel::BsiSbomForAi).check(&sbom);
-        assert!(
-            !result
-                .violations
-                .iter()
-                .any(|v| v.rule_id == "SBOM-BSIAI-NA"),
+        assert_eq!(
+            result.applicability,
+            Applicability::Applicable,
             "huggingface PURL must keep the profile applicable"
         );
         assert!(
