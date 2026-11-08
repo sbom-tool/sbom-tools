@@ -5,18 +5,21 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::cisa2026::hash_algorithm_shortfall;
 use super::super::shared::{
-    ValueState, has_known_license, has_known_producer, has_known_value, is_declared_unknown,
-    justified_not_affected, known_component_name, known_contact, license_state,
-    manufacturer_identified, manufacturer_reference, observed, observed_producer, plausible_digest,
-    unreachable_contact,
+    ValueState, creator_identified, document_signed, has_known_license, has_known_producer,
+    has_known_value, is_declared_unknown, is_spdx2, justified_not_affected, known_component_name,
+    known_contact, known_value, license_state, manufacturer_identified, manufacturer_reference,
+    observed, observed_producer, plausible_digest, unreachable_contact, value_state,
 };
+use super::document::tool_name_carries_version;
 use super::{ComponentView, Known, SbomEvidence, Text};
 use crate::model::{
     Component, ComponentType, Creator, CreatorType, DependencyEdge, DependencyScope,
-    DependencyType, Ecosystem, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
-    LicenseExpression, NormalizedSbom, Organization, Property, VexJustification, VexState,
-    VexStatus, VulnerabilityRef, VulnerabilitySource,
+    DependencyType, Ecosystem, EolInfo, EolStatus, ExternalRefType, ExternalReference, Hash,
+    HashAlgorithm, HashProvenance, LicenseExpression, NormalizedSbom, Organization, Property,
+    SbomFormat, SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef,
+    VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -55,6 +58,44 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
             checker
                 .inventory_absent_violation(sbom, rule, "inventory")
                 .map(|v| format!("{v:?}")),
+            "{at} (include: {include})"
+        );
+
+        // The CRA vendor-hash cohort, as cra.rs derived it: every type, minus
+        // the left-out components, with a known producer and an identifier,
+        // and the metric's counts over it.
+        let vendors: Vec<_> = ctx
+            .vendor_components()
+            .map(|c| c.canonical_id().clone())
+            .collect();
+        let expected: Vec<_> = sbom
+            .components
+            .values()
+            .filter(|c| {
+                !checker.leaves_out(sbom, c)
+                    && has_known_producer(c)
+                    && c.identifiers.has_cra_identifier()
+            })
+            .map(|c| c.canonical_id.clone())
+            .collect();
+        assert_eq!(vendors, expected, "{at} (include: {include})");
+        let metrics = crate::quality::HashQualityMetrics::from_components(
+            sbom.components
+                .values()
+                .filter(|c| !checker.leaves_out(sbom, c)),
+        );
+        let coverage = ctx.vendor_hash_coverage();
+        assert_eq!(
+            (coverage.total, coverage.with_hash),
+            (
+                metrics.vendor_components_total,
+                metrics.vendor_components_with_hash
+            ),
+            "{at} (include: {include})"
+        );
+        assert_eq!(
+            coverage.fraction().map(f64::to_bits),
+            metrics.vendor_hash_coverage().map(f64::to_bits),
             "{at} (include: {include})"
         );
     }
@@ -413,6 +454,494 @@ fn manufacturer_references_count_on_the_described_product_only() {
 }
 
 #[test]
+fn document_facts_read_the_signature_the_profiles_and_the_written_spdx3_version() {
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.format = SbomFormat::Spdx;
+    sbom.document.spec_version = "SPDX-3.0".to_string();
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: false,
+    });
+    sbom.document.profile_conformance = vec!["core".to_string(), "Security".to_string()];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert_eq!(doc.created, sbom.document.created);
+    assert!(doc.signature_present && !doc.signed);
+    // The written version does not start with "3.", whatever it parses to.
+    assert!(!doc.spdx3_by_prefix);
+    assert!(doc.security_profile_declared && !doc.licensing_profile_declared);
+
+    sbom.document.spec_version = "3.0.1-rc".to_string();
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: true,
+    });
+    sbom.document.profile_conformance = vec!["simpleLicensing".to_string()];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(doc.spdx3_by_prefix);
+    assert!(doc.signed && doc.signature_present);
+    assert!(!doc.security_profile_declared && doc.licensing_profile_declared);
+
+    // A CycloneDX document is never SPDX 3, whatever its version says.
+    sbom.document.format = SbomFormat::CycloneDx;
+    assert!(!SbomEvidence::new(&sbom, as_of()).document().spdx3_by_prefix);
+}
+
+#[test]
+fn presence_facts_read_the_field_whatever_it_says() {
+    let mut sentinel = component("sentinel");
+    sentinel.version = Some("NOASSERTION".to_string());
+    sentinel
+        .licenses
+        .add_declared(LicenseExpression::new("TBD".to_string()));
+    sentinel.eol = Some(EolInfo {
+        status: EolStatus::ApproachingEol,
+        product: "p".to_string(),
+        cycle: "1".to_string(),
+        eol_date: None,
+        support_end_date: None,
+        is_lts: false,
+        latest_in_cycle: None,
+        latest_release_date: None,
+        days_until_eol: None,
+    });
+    let mut concluded = component("concluded");
+    concluded.licenses.concluded = Some(LicenseExpression::new("MIT".to_string()));
+    let sbom = sbom_of(vec![sentinel, concluded, component("bare")]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+
+    let sentinel = view(&ev, "sentinel");
+    assert!(sentinel.version_present() && !sentinel.version().is_known());
+    assert!(sentinel.license_present() && !sentinel.licenses().is_known());
+    assert_eq!(sentinel.eol_status(), Some(EolStatus::ApproachingEol));
+    assert!(view(&ev, "concluded").license_present());
+    let bare = view(&ev, "bare");
+    assert!(!bare.version_present() && !bare.license_present());
+    assert_eq!(bare.eol_status(), None);
+}
+
+#[test]
+fn direct_dependencies_hang_off_the_primary_or_else_the_roots() {
+    let app = component("app");
+    let lib = component("lib");
+    let deep = component("deep");
+    let other = component("other");
+    let mut sbom = sbom_of(vec![app.clone(), lib.clone(), deep.clone(), other.clone()]);
+    sbom.add_edge(edge(&app, &lib));
+    sbom.add_edge(edge(&lib, &deep));
+    sbom.add_edge(edge(&other, &deep));
+    let direct = |sbom: &NormalizedSbom| -> Vec<bool> {
+        SbomEvidence::new(sbom, as_of())
+            .components()
+            .map(|c| c.direct_dependency())
+            .collect()
+    };
+    // No primary: app and other are the roots, so lib and deep are direct.
+    assert_eq!(direct(&sbom), [false, true, true, false]);
+    sbom.primary_component_id = Some(app.canonical_id);
+    assert_eq!(direct(&sbom), [false, true, false, false]);
+}
+
+#[test]
+fn firmware_dependencies_need_an_edge_to_a_firmware_component() {
+    let typed = |name: &str, component_type: ComponentType| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c
+    };
+    let board = typed("board", ComponentType::Device);
+    let radio = typed("radio", ComponentType::Device);
+    let blob = typed("blob", ComponentType::Firmware);
+    let driver = typed("driver", ComponentType::DeviceDriver);
+    let mut sbom = sbom_of(vec![
+        board.clone(),
+        radio.clone(),
+        blob.clone(),
+        driver.clone(),
+    ]);
+    sbom.add_edge(edge(&board, &blob));
+    sbom.add_edge(edge(&radio, &driver));
+    sbom.add_edge(edge(&blob, &component("ghost")));
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "board").depends_on_firmware());
+    assert!(!view(&ev, "radio").depends_on_firmware());
+    assert!(!view(&ev, "blob").depends_on_firmware());
+}
+
+#[test]
+fn a_vulnerability_assertion_is_a_vex_or_exploitability_reference_anywhere() {
+    let with_ref = |ref_type| {
+        let mut c = component("dep");
+        c.external_refs.push(ExternalReference {
+            ref_type,
+            url: "https://acme.test/vex.json".to_string(),
+            comment: None,
+            hashes: Vec::new(),
+        });
+        sbom_of(vec![component("app"), c])
+    };
+    let asserted =
+        |sbom: &NormalizedSbom| SbomEvidence::new(sbom, as_of()).has_vulnerability_assertion();
+    assert!(asserted(&with_ref(ExternalRefType::VulnerabilityAssertion)));
+    assert!(asserted(&with_ref(
+        ExternalRefType::ExploitabilityStatement
+    )));
+    assert!(!asserted(&with_ref(ExternalRefType::Advisories)));
+    assert!(!asserted(&sbom_of(vec![])));
+}
+
+#[test]
+fn the_vendor_cohort_takes_every_type_but_the_left_out() {
+    use super::super::context::ComplianceContext;
+    use super::super::{ComplianceChecker, ComplianceLevel};
+    let vendor = |name: &str, component_type: ComponentType, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c.supplier = Some(Organization::new("Acme".to_string()));
+        c.identifiers.purl = Some(format!("pkg:generic/{name}@1"));
+        c.hashes = hashes;
+        c
+    };
+    let mut excluded = vendor("test-dep", ComponentType::Library, Vec::new());
+    excluded.scope = Some(DependencyScope::Excluded);
+    let mut anonymous = vendor("anonymous", ComponentType::Library, Vec::new());
+    anonymous.supplier = None;
+    let sbom = sbom_of(vec![
+        vendor(
+            "lib",
+            ComponentType::Library,
+            vec![Hash::new(HashAlgorithm::Sha256, "a".repeat(64))],
+        ),
+        vendor(
+            "aes",
+            ComponentType::Cryptographic,
+            vec![Hash::new(HashAlgorithm::Sha256, "zz".to_string())],
+        ),
+        excluded,
+        anonymous,
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let coverage = |include: bool| {
+        let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2)
+            .with_as_of(as_of())
+            .with_include_excluded_scope(include);
+        let ctx = ComplianceContext::new(&checker, &ev);
+        let names: Vec<_> = ctx.vendor_components().map(|c| c.name()).collect();
+        (names, ctx.vendor_hash_coverage())
+    };
+    let (names, left_out) = coverage(false);
+    assert_eq!(names, ["lib", "aes"]);
+    assert_eq!((left_out.total, left_out.with_hash), (2, 1));
+    assert_eq!(left_out.fraction(), Some(0.5));
+    let (names, judged) = coverage(true);
+    assert_eq!(names, ["lib", "aes", "test-dep"]);
+    assert_eq!((judged.total, judged.with_hash), (3, 1));
+    let empty = sbom_of(vec![]);
+    let ev = SbomEvidence::new(&empty, as_of());
+    let checker = ComplianceChecker::new(ComplianceLevel::CraPhase2).with_as_of(as_of());
+    let ctx = ComplianceContext::new(&checker, &ev);
+    assert_eq!(ctx.vendor_hash_coverage().fraction(), None);
+}
+
+#[test]
+fn a_non_tool_creator_is_judged_by_its_type_only() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.creators = vec![creator(CreatorType::Tool, "syft 1.0")];
+    assert!(
+        !SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_non_tool_creator
+    );
+    // A placeholder name still counts here: BSI TR-03183-2 judges the
+    // creator's contact apart.
+    sbom.document
+        .creators
+        .push(creator(CreatorType::Person, "NOASSERTION"));
+    assert!(
+        SbomEvidence::new(&sbom, as_of())
+            .document()
+            .has_non_tool_creator
+    );
+}
+
+#[test]
+fn vulnerability_presence_is_read_per_component() {
+    let mut a = component("a");
+    a.vulnerabilities = vec![VulnerabilityRef::new(
+        "CVE-1".to_string(),
+        VulnerabilitySource::Osv,
+    )];
+    let sbom = sbom_of(vec![a, component("b")]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "a").has_vulnerabilities());
+    assert!(!view(&ev, "b").has_vulnerabilities());
+}
+
+#[test]
+fn the_first_non_spdx_licence_is_a_real_one_in_licence_order() {
+    let with = |name: &str, declared: &[&str], concluded: Option<&str>| {
+        let mut c = component(name);
+        for expression in declared {
+            c.licenses
+                .add_declared(LicenseExpression::new((*expression).to_string()));
+        }
+        c.licenses.concluded = concluded.map(|e| LicenseExpression::new(e.to_string()));
+        c
+    };
+    let sbom = sbom_of(vec![
+        with("spdx", &["MIT"], Some("Apache-2.0")),
+        with(
+            "text",
+            &["MIT", "Custom Licence A"],
+            Some("Custom Licence B"),
+        ),
+        with("sentinel", &["NOASSERTION"], None),
+        with("placeholder", &["TBD"], Some("Custom Licence C")),
+        with("none", &[], None),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let first = |name| view(&ev, name).first_non_spdx_license();
+    assert_eq!(first("spdx"), None);
+    assert_eq!(first("text"), Some("Custom Licence A"));
+    assert_eq!(first("sentinel"), None);
+    assert_eq!(first("placeholder"), Some("Custom Licence C"));
+    assert_eq!(first("none"), None);
+}
+
+#[test]
+fn authored_hash_facts_leave_out_enriched_hashes() {
+    let hash = |algorithm, value: String, provenance| {
+        let mut h = Hash::new(algorithm, value);
+        h.provenance = provenance;
+        h
+    };
+    let with = |name: &str, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.hashes = hashes;
+        c
+    };
+    let (authored, enriched) = (HashProvenance::Authored, HashProvenance::Enriched);
+    let sbom = sbom_of(vec![
+        with("none", vec![]),
+        with(
+            "enriched",
+            vec![hash(HashAlgorithm::Sha512, "a".repeat(128), enriched)],
+        ),
+        with(
+            "sha256",
+            vec![hash(HashAlgorithm::Sha256, "b".repeat(64), authored)],
+        ),
+        with(
+            "bad-sha512",
+            vec![hash(HashAlgorithm::Sha512, "zz".to_string(), authored)],
+        ),
+        with(
+            "sha512",
+            vec![
+                hash(HashAlgorithm::Sha256, "c".repeat(64), enriched),
+                hash(HashAlgorithm::Sha512, "d".repeat(128), authored),
+            ],
+        ),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let facts = |name| view(&ev, name).authored_hashes().facts;
+    assert!(!facts("none").present);
+    assert!(!facts("enriched").present && !facts("enriched").plausible_sha512);
+    assert!(facts("sha256").present && !facts("sha256").plausible_sha512);
+    assert!(facts("bad-sha512").present && !facts("bad-sha512").plausible_sha512);
+    assert!(facts("sha512").plausible_sha512);
+    let listed: Vec<_> = view(&ev, "sha512")
+        .authored_hashes()
+        .iter()
+        .map(|h| h.algorithm.clone())
+        .collect();
+    assert_eq!(listed, [HashAlgorithm::Sha512]);
+}
+
+#[test]
+fn cisa_document_facts_keep_the_serial_as_read_and_classified() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.format = SbomFormat::CycloneDx;
+    sbom.document.spec_version = "1.6".to_string();
+    sbom.document.creators = vec![
+        creator(CreatorType::Tool, "syft 1.0"),
+        creator(CreatorType::Person, "NOASSERTION"),
+    ];
+    sbom.document.serial_number = Some("NOASSERTION".to_string());
+    sbom.document.lifecycle_phase = Some("build".to_string());
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(!doc.spdx2);
+    assert!(doc.has_tool_creator);
+    // A person named by a sentinel is a non-tool creator, but no identified
+    // author.
+    assert!(doc.has_non_tool_creator && !doc.has_identified_non_tool_creator);
+    // The serial is present as read, and declares nothing.
+    assert_eq!(doc.serial_number, Some("NOASSERTION"));
+    assert_eq!(doc.serial_number_text.raw, Some("NOASSERTION"));
+    assert_eq!(doc.serial_number_text.value, Known::DeclaredUnknown);
+    assert_eq!(doc.lifecycle_phase.value, Known::Value("build"));
+    assert_eq!(doc.doc_version, None);
+    assert!(!doc.signed);
+
+    sbom.document.creators[1].email = Some("sbom@acme.test".to_string());
+    sbom.document.doc_version = Some(3);
+    sbom.document.signature = Some(SignatureInfo {
+        algorithm: "ES256".to_string(),
+        has_value: true,
+    });
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(doc.has_identified_non_tool_creator);
+    assert_eq!(doc.doc_version, Some(3));
+    assert!(doc.signed);
+
+    sbom.document.format = SbomFormat::Spdx;
+    // A version that does not parse counts as 2.x.
+    for (spec_version, spdx2) in [("SPDX-2.3", true), ("3.0.1", false), ("draft", true)] {
+        sbom.document.spec_version = spec_version.to_string();
+        let ev = SbomEvidence::new(&sbom, as_of());
+        assert_eq!(ev.document().spdx2, spdx2, "{spec_version}");
+    }
+}
+
+#[test]
+fn the_tool_version_follows_cisa_2026s_heuristic() {
+    let discernible = |creator_type, name: &str| {
+        let mut sbom = sbom_of(vec![]);
+        sbom.document.creators = vec![Creator {
+            creator_type,
+            name: name.to_string(),
+            email: None,
+        }];
+        SbomEvidence::new(&sbom, as_of())
+            .document()
+            .tool_version_discernible
+    };
+    assert!(discernible(CreatorType::Tool, "syft 1.0"));
+    assert!(discernible(CreatorType::Tool, "cyclonedx-npm-1.19.3"));
+    assert!(!discernible(CreatorType::Tool, "acme"));
+    // A digit in an earlier segment is no version (FSCT reads it as one),
+    // and an explicit unknown is one (FSCT does not).
+    assert!(!discernible(CreatorType::Tool, "syft2 scanner"));
+    assert!(discernible(CreatorType::Tool, "acme NOASSERTION"));
+    // Only tools are read.
+    assert!(!discernible(CreatorType::Person, "acme 1.0"));
+}
+
+#[test]
+fn authored_hash_facts_read_the_explicit_unknown_and_the_strength() {
+    let hash = |algorithm, value: &str, provenance| {
+        let mut h = Hash::new(algorithm, value.to_string());
+        h.provenance = provenance;
+        h
+    };
+    let with = |name: &str, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.hashes = hashes;
+        c
+    };
+    let (authored, enriched) = (HashProvenance::Authored, HashProvenance::Enriched);
+    let md5 = "a".repeat(32);
+    let sha256 = "b".repeat(64);
+    let sbom = sbom_of(vec![
+        with(
+            "sentinel",
+            vec![hash(HashAlgorithm::Sha256, " NOASSERTION ", authored)],
+        ),
+        with("weak", vec![hash(HashAlgorithm::Md5, &md5, authored)]),
+        with(
+            "weak-and-strong",
+            vec![
+                hash(HashAlgorithm::Md5, &md5, authored),
+                hash(HashAlgorithm::Sha256, &sha256, authored),
+            ],
+        ),
+        with(
+            "enriched-strong",
+            vec![
+                hash(HashAlgorithm::Md5, &md5, authored),
+                hash(HashAlgorithm::Sha256, &sha256, enriched),
+            ],
+        ),
+        with(
+            "bad-strong",
+            vec![hash(HashAlgorithm::Sha256, "zz", authored)],
+        ),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let facts = |name| view(&ev, name).authored_hashes().facts;
+    let sentinel = facts("sentinel");
+    assert!(sentinel.present && !sentinel.plausible && sentinel.declared_unknown);
+    assert!(facts("weak").plausible && !facts("weak").plausible_strong);
+    assert!(facts("weak-and-strong").plausible_strong);
+    assert!(facts("enriched-strong").plausible && !facts("enriched-strong").plausible_strong);
+    let bad = facts("bad-strong");
+    assert!(bad.present && !bad.plausible && !bad.plausible_strong && !bad.declared_unknown);
+}
+
+#[test]
+fn the_strong_algorithms_are_those_cisa_2026_finds_no_shortfall_in() {
+    let algorithms = [
+        (HashAlgorithm::Md5, 32),
+        (HashAlgorithm::Sha1, 40),
+        (HashAlgorithm::Sha256, 64),
+        (HashAlgorithm::Sha384, 96),
+        (HashAlgorithm::Sha512, 128),
+        (HashAlgorithm::Sha3_256, 64),
+        (HashAlgorithm::Sha3_384, 96),
+        (HashAlgorithm::Sha3_512, 128),
+        (HashAlgorithm::Blake2b256, 64),
+        (HashAlgorithm::Blake2b384, 96),
+        (HashAlgorithm::Blake2b512, 128),
+        (HashAlgorithm::Blake3, 64),
+        (HashAlgorithm::Streebog256, 64),
+        (HashAlgorithm::Streebog512, 128),
+        (HashAlgorithm::Other("SHA224".to_string()), 56),
+        (HashAlgorithm::Other("MD6".to_string()), 64),
+    ];
+    for (algorithm, digits) in algorithms {
+        let mut c = component("c");
+        c.hashes = vec![Hash::new(algorithm.clone(), "e".repeat(digits))];
+        let sbom = sbom_of(vec![c]);
+        let ev = SbomEvidence::new(&sbom, as_of());
+        let facts = view(&ev, "c").authored_hashes().facts;
+        assert!(facts.plausible, "{algorithm}");
+        assert_eq!(
+            facts.plausible_strong,
+            hash_algorithm_shortfall(&algorithm).is_none(),
+            "{algorithm}"
+        );
+    }
+}
+
+#[test]
+fn a_bom_reference_on_any_component_links_an_external_sbom() {
+    let mut dependency = component("dependency");
+    dependency.external_refs.push(ExternalReference {
+        ref_type: ExternalRefType::Bom,
+        url: "https://acme.test/dependency.cdx.json".to_string(),
+        comment: None,
+        hashes: Vec::new(),
+    });
+    let linked = sbom_of(vec![component("app"), dependency]);
+    assert!(SbomEvidence::new(&linked, as_of()).has_bom_reference());
+    let alone = sbom_of(vec![component("app")]);
+    assert!(!SbomEvidence::new(&alone, as_of()).has_bom_reference());
+}
+
+#[test]
 fn version_range_group_and_ecosystem_are_facts_of_their_own() {
     let mut external = component("external");
     external.is_external = true;
@@ -520,19 +1049,21 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
         Box::new(|| format!("{:?}", ev.duplicates())),
         Box::new(|| {
             format!(
-                "{} {} {} {} {}",
+                "{} {} {} {} {} {} {}",
                 ev.cycle_count(),
                 ev.has_lifecycle_property(),
                 ev.package_count(false),
                 ev.package_count(true),
-                ev.vulnerability_hook_reference(),
+                ev.has_vulnerability_assertion(),
+                ev.has_bom_reference(),
+                ev.vulnerability_hook_reference()
             )
         }),
         Box::new(|| {
             ev.components()
                 .map(|c| {
                     format!(
-                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {} {:?} {:?} {}\n",
+                        "{:?} {:?} {:?} {:?} {:?} {} {} {} {} {} {:?} {} {} {} {} {:?} {:?} {} {} {:?} {:?} {}\n",
                         c.version(),
                         c.producer(),
                         c.licenses().state,
@@ -542,6 +1073,14 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.package_scoped(),
                         c.excluded_scope(),
                         c.touched(),
+                        c.version_present(),
+                        c.eol_status(),
+                        c.license_present(),
+                        c.direct_dependency(),
+                        c.depends_on_firmware(),
+                        c.has_vulnerabilities(),
+                        c.first_non_spdx_license(),
+                        c.authored_hashes().facts,
                         c.is_primary(),
                         c.is_external(),
                         c.version_range(),
@@ -654,6 +1193,7 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
         let at = path.display();
         let ev = SbomEvidence::new(&sbom, as_of());
         assert_eq!(ev.component_count(), sbom.components.len(), "{at}");
+        let direct_ids = sbom.direct_dependency_ids();
         for (view, comp) in ev.components().zip(sbom.components.values()) {
             let at = format!("{at}: {}", comp.canonical_id.value());
             assert!(std::ptr::eq(view.name(), comp.name.as_str()), "{at}");
@@ -698,6 +1238,100 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
             assert_eq!(
                 view.ids().any(),
                 comp.identifiers.has_cra_identifier(),
+                "{at}"
+            );
+            // The CRA checks' raw reads (cra.rs).
+            assert_eq!(view.version_present(), comp.version.is_some(), "{at}");
+            assert_eq!(
+                view.eol_status(),
+                comp.eol.as_ref().map(|e| e.status),
+                "{at}"
+            );
+            assert_eq!(
+                view.license_present(),
+                !comp.licenses.declared.is_empty() || comp.licenses.concluded.is_some(),
+                "{at}"
+            );
+            assert_eq!(
+                view.direct_dependency(),
+                direct_ids.contains(&comp.canonical_id),
+                "{at}"
+            );
+            assert_eq!(
+                view.depends_on_firmware(),
+                sbom.edges.iter().any(|e| {
+                    e.from == comp.canonical_id
+                        && sbom.components.get(&e.to).is_some_and(|child| {
+                            matches!(child.component_type, ComponentType::Firmware)
+                        })
+                }),
+                "{at}"
+            );
+            assert_eq!(
+                view.has_vulnerabilities(),
+                !comp.vulnerabilities.is_empty(),
+                "{at}"
+            );
+            // BSI TR-03183-2's licence-name and authored-hash reading (bsi.rs).
+            let known_licenses: Vec<_> = comp
+                .licenses
+                .all_licenses()
+                .into_iter()
+                .filter(|l| known_value(Some(l.expression.as_str())).is_some())
+                .collect();
+            assert_eq!(
+                view.first_non_spdx_license(),
+                known_licenses
+                    .iter()
+                    .find(|l| !l.is_valid_spdx)
+                    .map(|l| l.expression.as_str()),
+                "{at}"
+            );
+            let authored: Vec<&Hash> = comp
+                .hashes
+                .iter()
+                .filter(|h| h.provenance == HashProvenance::Authored)
+                .collect();
+            let authored_facts = view.authored_hashes().facts;
+            assert_eq!(authored_facts.present, !authored.is_empty(), "{at}");
+            assert_eq!(
+                authored_facts.plausible_sha512,
+                authored.iter().any(|h| {
+                    h.algorithm == HashAlgorithm::Sha512 && plausible_digest(&h.algorithm, &h.value)
+                }),
+                "{at}"
+            );
+            assert!(
+                view.authored_hashes()
+                    .iter()
+                    .map(std::ptr::from_ref)
+                    .eq(authored.iter().map(|h| std::ptr::from_ref(*h))),
+                "{at}"
+            );
+            // CISA 2026's authored-hash and version reading (cisa2026.rs).
+            assert_eq!(
+                authored_facts.plausible,
+                authored
+                    .iter()
+                    .any(|h| plausible_digest(&h.algorithm, &h.value)),
+                "{at}"
+            );
+            assert_eq!(
+                authored_facts.plausible_strong,
+                authored.iter().any(|h| {
+                    hash_algorithm_shortfall(&h.algorithm).is_none()
+                        && plausible_digest(&h.algorithm, &h.value)
+                }),
+                "{at}"
+            );
+            assert_eq!(
+                authored_facts.declared_unknown,
+                authored.iter().any(|h| is_declared_unknown(h.value.trim())),
+                "{at}"
+            );
+            assert_eq!(
+                view.version().value != Known::Missing,
+                value_state(comp.version.as_deref()) != ValueState::Missing,
                 "{at}"
             );
             // PCI DSS 6.3.2's version range and supplier evidence
@@ -762,6 +1396,61 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             "{at}"
         );
         assert_eq!(doc.creators.len(), document.creators.len(), "{at}");
+        // BSI TR-03183-2's creator of the SBOM (bsi.rs).
+        assert_eq!(
+            doc.has_non_tool_creator,
+            document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool),
+            "{at}"
+        );
+        // CISA 2026's document reading (cisa2026.rs).
+        assert_eq!(doc.spdx2, is_spdx2(&sbom), "{at}");
+        assert_eq!(
+            doc.has_identified_non_tool_creator,
+            document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c)),
+            "{at}"
+        );
+        assert_eq!(
+            doc.lifecycle_phase.is_known(),
+            known_value(document.lifecycle_phase.as_deref()).is_some(),
+            "{at}"
+        );
+        let tools: Vec<_> = document
+            .creators
+            .iter()
+            .filter(|c| c.creator_type == CreatorType::Tool)
+            .collect();
+        assert_eq!(doc.has_tool_creator, !tools.is_empty(), "{at}");
+        assert_eq!(
+            doc.tool_version_discernible,
+            tools.iter().any(|t| tool_name_carries_version(&t.name)),
+            "{at}"
+        );
+        assert_eq!(doc.doc_version, document.doc_version, "{at}");
+        assert_eq!(
+            doc.serial_number_text.raw,
+            document.serial_number.as_deref(),
+            "{at}"
+        );
+        assert_eq!(
+            doc.serial_number_text.is_known(),
+            known_value(document.serial_number.as_deref()).is_some(),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_bom_reference(),
+            sbom.components.values().any(|c| {
+                c.external_refs
+                    .iter()
+                    .any(|r| matches!(r.ref_type, ExternalRefType::Bom))
+            }),
+            "{at}"
+        );
         assert_eq!(doc.name.is_known(), has_known_value(&document.name), "{at}");
         assert_eq!(
             doc.security_contact_reaches,
@@ -778,7 +1467,44 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             sbom.primary_component().map(|p| &p.canonical_id),
             "{at}"
         );
+        // The CRA checks' document reads (cra.rs).
         assert_eq!(doc.created, document.created, "{at}");
+        assert_eq!(doc.signed, document_signed(&sbom), "{at}");
+        assert_eq!(doc.signature_present, document.signature.is_some(), "{at}");
+        assert_eq!(
+            doc.spdx3_by_prefix,
+            document.format == SbomFormat::Spdx && document.spec_version.starts_with("3."),
+            "{at}"
+        );
+        assert_eq!(
+            doc.security_profile_declared,
+            document
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("security")),
+            "{at}"
+        );
+        assert_eq!(
+            doc.licensing_profile_declared,
+            document
+                .profile_conformance
+                .iter()
+                .any(|p| p.to_lowercase().contains("licensing")),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_vulnerability_assertion(),
+            sbom.components.values().any(|comp| {
+                comp.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        ExternalRefType::VulnerabilityAssertion
+                            | ExternalRefType::ExploitabilityStatement
+                    )
+                })
+            }),
+            "{at}"
+        );
         // The primary as PCI DSS 6.3.2 tells it apart: by the inventory's
         // key (pci_dss.rs).
         for (view, id) in ev.components().zip(sbom.components.keys()) {

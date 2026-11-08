@@ -2,10 +2,12 @@
 //! lifecycle properties, and the vulnerability-management references.
 
 use super::super::shared::{
-    ValueState, is_contact_reference, known_value, plausible_digest, value_state,
+    ValueState, is_contact_reference, is_declared_unknown, known_value, plausible_digest,
+    value_state,
 };
 use crate::model::{
-    Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, LicenseInfo,
+    Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, HashProvenance,
+    LicenseInfo,
 };
 
 /// Which identifier kinds a component declares: a PURL, a CPE, a SWHID, a
@@ -197,6 +199,88 @@ pub(super) fn has_lifecycle_property(component: &Component) -> bool {
             || name_lower.contains("endofsupport");
         is_lifecycle_name && known_value(Some(p.value.as_str())).is_some()
     })
+}
+
+/// The first of `component`'s licences, declared then concluded (the order
+/// of `LicenseInfo::all_licenses`), that is a real expression but not a
+/// valid SPDX identifier or expression, as read. BSI TR-03183-2 §6.1 asks
+/// for licences named by SPDX identifier or expression.
+pub(super) fn first_non_spdx_license(component: &Component) -> Option<&str> {
+    component
+        .licenses
+        .declared
+        .iter()
+        .chain(&component.licenses.concluded)
+        // The SPDX test is a flag the parser set: read it before the value.
+        .filter(|l| !l.is_valid_spdx)
+        .find(|l| known_value(Some(l.expression.as_str())).is_some())
+        .map(|l| l.expression.as_str())
+}
+
+/// Which of a component's authored hashes count: the hashes the document
+/// itself carries (`HashProvenance::Authored`), not those enrichment fetched
+/// from a registry. BSI TR-03183-2 and CISA 2026 judge only these; the other
+/// hash rules count every hash (see [`HashFacts`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct AuthoredHashFacts {
+    /// The document carries at least one hash of the component.
+    pub(crate) present: bool,
+    /// At least one of them is a plausible SHA-512 digest (see
+    /// `shared::plausible_digest`).
+    pub(crate) plausible_sha512: bool,
+    /// At least one of them is a plausible digest.
+    pub(crate) plausible: bool,
+    /// At least one plausible digest is of SHA-256 or a stronger algorithm
+    /// (the set [`HashFacts::plausible_strong`] reads).
+    pub(crate) plausible_strong: bool,
+    /// At least one of them gives an explicit sentinel such as
+    /// `NOASSERTION` for its value: CISA 2026's way to state the hash is
+    /// unknown.
+    pub(crate) declared_unknown: bool,
+}
+
+impl AuthoredHashFacts {
+    pub(super) fn of(hashes: &[Hash]) -> Self {
+        let mut facts = Self::default();
+        for hash in authored(hashes) {
+            facts.present = true;
+            let plausible = plausible_digest(&hash.algorithm, &hash.value);
+            facts.plausible_sha512 |= hash.algorithm == HashAlgorithm::Sha512 && plausible;
+            facts.plausible |= plausible;
+            facts.plausible_strong |= plausible && is_strong(&hash.algorithm);
+            facts.declared_unknown |= is_declared_unknown(hash.value.trim());
+        }
+        facts
+    }
+}
+
+/// The hashes among `hashes` that the document itself carries, in document
+/// order.
+fn authored(hashes: &[Hash]) -> impl Iterator<Item = &Hash> {
+    hashes
+        .iter()
+        .filter(|h| h.provenance == HashProvenance::Authored)
+}
+
+/// A component's authored hashes.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AuthoredHashes<'a> {
+    /// Which of them count.
+    pub(crate) facts: AuthoredHashFacts,
+    /// Every hash of the component, enriched ones included.
+    raw: &'a [Hash],
+}
+
+impl<'a> AuthoredHashes<'a> {
+    pub(super) const fn new(raw: &'a [Hash], facts: AuthoredHashFacts) -> Self {
+        Self { facts, raw }
+    }
+
+    /// The authored hashes as read, in document order, for a finding's
+    /// message.
+    pub(crate) fn iter(self) -> impl Iterator<Item = &'a Hash> {
+        authored(self.raw)
+    }
 }
 
 /// Whether `component` carries an external reference a vulnerability
