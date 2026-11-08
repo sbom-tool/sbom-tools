@@ -515,6 +515,15 @@ fn is_contact_type(ref_type: &ExternalRefType) -> bool {
 /// finding about a missing contact names it, so the reader sees why the
 /// contact did not count.
 pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
+    unreachable_contact_in(sbom, &manufacturer_scope_components(sbom))
+}
+
+/// [`unreachable_contact`] with the manufacturer scope already derived
+/// (`scope`, as [`manufacturer_scope_components`] gives it).
+pub(crate) fn unreachable_contact_in<'a>(
+    sbom: &'a NormalizedSbom,
+    scope: &[&'a Component],
+) -> Option<&'a str> {
     let document = [
         sbom.document.security_contact.as_deref(),
         sbom.document.vulnerability_disclosure_url.as_deref(),
@@ -522,16 +531,12 @@ pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
     document
         .into_iter()
         .flatten()
-        .chain(
-            manufacturer_scope_components(sbom)
-                .into_iter()
-                .flat_map(|c| {
-                    c.external_refs
-                        .iter()
-                        .filter(|r| is_contact_type(&r.ref_type))
-                        .map(|r| r.url.as_str())
-                }),
-        )
+        .chain(scope.iter().flat_map(|c| {
+            c.external_refs
+                .iter()
+                .filter(|r| is_contact_type(&r.ref_type))
+                .map(|r| r.url.as_str())
+        }))
         .find(|value| !known_contact(Some(*value)))
 }
 

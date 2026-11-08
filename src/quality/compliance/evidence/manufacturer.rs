@@ -2,7 +2,7 @@
 //! can carry its evidence.
 
 use super::super::shared::{
-    manufacturer_identified, manufacturer_scope_components, unreachable_contact,
+    manufacturer_identified, manufacturer_scope_components, unreachable_contact_in,
 };
 use crate::model::{Component, ExternalReference, NormalizedSbom};
 
@@ -23,10 +23,14 @@ pub(crate) struct ManufacturerFacts<'a> {
 
 impl<'a> ManufacturerFacts<'a> {
     pub(super) fn collect(sbom: &'a NormalizedSbom) -> Self {
+        // The scope is derived once: without a described product it walks
+        // the graph for its roots.
+        let scope = manufacturer_scope_components(sbom);
+        let unreachable_contact = unreachable_contact_in(sbom, &scope);
         Self {
-            scope: manufacturer_scope_components(sbom).into_boxed_slice(),
+            scope: scope.into_boxed_slice(),
             identified: manufacturer_identified(sbom),
-            unreachable_contact: unreachable_contact(sbom),
+            unreachable_contact,
         }
     }
 
