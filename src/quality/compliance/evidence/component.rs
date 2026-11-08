@@ -3,7 +3,8 @@
 //! placeholders.
 
 use super::super::shared::{
-    ValueState, is_contact_reference, is_placeholder, known_value, plausible_digest, value_state,
+    ValueState, is_contact_reference, is_declared_unknown, is_placeholder, known_value,
+    plausible_digest, value_state,
 };
 use crate::model::{
     Component, ComponentIdentifiers, ExternalRefType, Hash, HashAlgorithm, HashProvenance,
@@ -209,59 +210,82 @@ pub(super) fn has_lifecycle_property(component: &Component) -> bool {
     })
 }
 
-/// Whether `component` carries an external reference a vulnerability
-/// management process can start from: an advisories or security-contact
-/// reference that reaches someone (see `shared::is_contact_reference`), a
-/// vulnerability assertion (VEX or VDR), or a linked BOM. A VDR or a linked
-/// BOM is a document, not a contact, so it counts as given.
-pub(super) fn has_vulnerability_hook_reference(component: &Component) -> bool {
-    component.external_refs.iter().any(|r| match r.ref_type {
-        ExternalRefType::Advisories | ExternalRefType::SecurityContact => is_contact_reference(r),
-        ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
-        _ => false,
-    })
+/// The first of `component`'s licences, declared then concluded (the order
+/// of `LicenseInfo::all_licenses`), that is a real expression but not a
+/// valid SPDX identifier or expression, as read. BSI TR-03183-2 §6.1 asks
+/// for licences named by SPDX identifier or expression.
+pub(super) fn first_non_spdx_license(component: &Component) -> Option<&str> {
+    component
+        .licenses
+        .declared
+        .iter()
+        .chain(&component.licenses.concluded)
+        // The SPDX test is a flag the parser set: read it before the value.
+        .filter(|l| !l.is_valid_spdx)
+        .find(|l| known_value(Some(l.expression.as_str())).is_some())
+        .map(|l| l.expression.as_str())
 }
 
-/// Which of a component's author-provided hashes count: only plausible
-/// digests (see `shared::plausible_digest`) that the document itself gives.
-/// A hash an enrichment fetched from a registry is not part of the document
-/// under assessment, so it does not count here (unlike [`HashFacts`]).
+/// Which of a component's authored hashes count: the hashes the document
+/// itself carries (`HashProvenance::Authored`), not those enrichment fetched
+/// from a registry. BSI TR-03183-2, CISA 2026 and FSCT judge only these;
+/// the other hash rules count every hash (see [`HashFacts`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub(crate) struct AuthoredHashFacts {
-    /// At least one authored hash is a plausible digest.
+    /// The document carries at least one hash of the component.
+    pub(crate) present: bool,
+    /// At least one of them is a plausible SHA-512 digest (see
+    /// `shared::plausible_digest`).
+    pub(crate) plausible_sha512: bool,
+    /// At least one of them is a plausible digest.
     pub(crate) plausible: bool,
-    /// At least one plausible authored digest is of the SHA-2 family at
-    /// SHA-256 or stronger: SHA-256, SHA-384 or SHA-512.
+    /// At least one plausible digest is of SHA-256 or a stronger algorithm
+    /// (the set [`HashFacts::plausible_strong`] reads).
+    pub(crate) plausible_strong: bool,
+    /// At least one of them gives an explicit sentinel such as
+    /// `NOASSERTION` for its value: CISA 2026's way to state the hash is
+    /// unknown.
+    pub(crate) declared_unknown: bool,
+    /// At least one plausible digest is of the SHA-2 family at SHA-256 or
+    /// stronger: SHA-256, SHA-384 or SHA-512 (FSCT's reading; see
+    /// [`Self::plausible_strong`] for the wider set).
     pub(crate) plausible_sha2_256_plus: bool,
 }
 
 impl AuthoredHashFacts {
     pub(super) fn of(hashes: &[Hash]) -> Self {
         let mut facts = Self::default();
-        for hash in authored(hashes).filter(|h| plausible_digest(&h.algorithm, &h.value)) {
-            facts.plausible = true;
-            facts.plausible_sha2_256_plus |= matches!(
-                hash.algorithm,
-                HashAlgorithm::Sha256 | HashAlgorithm::Sha384 | HashAlgorithm::Sha512
-            );
+        for hash in authored(hashes) {
+            facts.present = true;
+            let plausible = plausible_digest(&hash.algorithm, &hash.value);
+            facts.plausible_sha512 |= hash.algorithm == HashAlgorithm::Sha512 && plausible;
+            facts.plausible |= plausible;
+            facts.plausible_strong |= plausible && is_strong(&hash.algorithm);
+            facts.declared_unknown |= is_declared_unknown(hash.value.trim());
+            facts.plausible_sha2_256_plus |= plausible
+                && matches!(
+                    hash.algorithm,
+                    HashAlgorithm::Sha256 | HashAlgorithm::Sha384 | HashAlgorithm::Sha512
+                );
         }
         facts
     }
 }
 
-/// The hashes of `hashes` the document itself gives, in document order.
+/// The hashes among `hashes` that the document itself carries, in document
+/// order.
 fn authored(hashes: &[Hash]) -> impl Iterator<Item = &Hash> {
     hashes
         .iter()
         .filter(|h| h.provenance == HashProvenance::Authored)
 }
 
-/// A component's author-provided hashes.
+/// A component's authored hashes.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct AuthoredHashes<'a> {
     /// Which of them count.
     pub(crate) facts: AuthoredHashFacts,
-    /// All of the component's hashes as read, enriched ones included.
+    /// Every hash of the component, enriched ones included.
     raw: &'a [Hash],
 }
 
@@ -275,6 +299,19 @@ impl<'a> AuthoredHashes<'a> {
     pub(crate) fn iter(self) -> impl Iterator<Item = &'a Hash> {
         authored(self.raw)
     }
+}
+
+/// Whether `component` carries an external reference a vulnerability
+/// management process can start from: an advisories or security-contact
+/// reference that reaches someone (see `shared::is_contact_reference`), a
+/// vulnerability assertion (VEX or VDR), or a linked BOM. A VDR or a linked
+/// BOM is a document, not a contact, so it counts as given.
+pub(super) fn has_vulnerability_hook_reference(component: &Component) -> bool {
+    component.external_refs.iter().any(|r| match r.ref_type {
+        ExternalRefType::Advisories | ExternalRefType::SecurityContact => is_contact_reference(r),
+        ExternalRefType::VulnerabilityAssertion | ExternalRefType::Bom => true,
+        _ => false,
+    })
 }
 
 /// The fields of a component that hold an ambiguous placeholder such as

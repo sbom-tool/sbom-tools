@@ -2,7 +2,7 @@
 //! of ids, so no walk depends on the order of a hash set.
 
 use super::ComponentIx;
-use crate::model::{CanonicalId, Component, DependencyType, NormalizedSbom};
+use crate::model::{CanonicalId, Component, ComponentType, DependencyType, NormalizedSbom};
 
 /// The dependency-graph facts of an SBOM.
 #[derive(Debug, PartialEq, Eq)]
@@ -102,4 +102,20 @@ fn declares_no_dependencies(component: &Component) -> bool {
         .properties
         .iter()
         .any(|p| p.name == crate::parsers::DECLARED_NO_DEPENDENCIES_PROPERTY)
+}
+
+/// Per component: whether a dependency relationship leads from it to a
+/// firmware component.
+pub(super) fn firmware_dependencies(sbom: &NormalizedSbom) -> Box<[bool]> {
+    let mut depends = vec![false; sbom.components.len()];
+    for edge in &sbom.edges {
+        let to_firmware = sbom
+            .components
+            .get(&edge.to)
+            .is_some_and(|c| matches!(c.component_type, ComponentType::Firmware));
+        if to_firmware && let Some(from) = sbom.components.get_index_of(&edge.from) {
+            depends[from] = true;
+        }
+    }
+    depends.into_boxed_slice()
 }
