@@ -23,7 +23,10 @@
 //! identifier kinds, the name test) is computed on access, through a
 //! [`ComponentView`]. A fact that classifies text or scans a list is a lazy
 //! group: computed the first time a check reads it, once per evidence, in
-//! inventory order. A run pays only for the facts its levels read.
+//! inventory order. The crypto classification is kept per component
+//! instead, computed the first time a check reads that component's (the
+//! crypto levels classify only some components; see `crypto.rs`). A run
+//! pays only for the facts its levels read.
 //!
 //! Facts are what a verdict is decided on: states, flags, positions and
 //! counts, and the SBOM's own values, borrowed as read. A check writes a
@@ -42,6 +45,7 @@
 
 mod attestations;
 mod component;
+mod crypto;
 mod document;
 mod graph;
 mod manufacturer;
@@ -65,6 +69,7 @@ use crate::model::{
 pub(crate) use component::{
     AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Placeholders, Producer,
 };
+use crypto::CryptoFacts;
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -170,6 +175,7 @@ pub(crate) struct SbomEvidence<'a> {
     build_reference: OnceLock<bool>,
     any_vulnerability: OnceLock<bool>,
     vulnerability_reference_on_any_component: OnceLock<bool>,
+    crypto: OnceLock<CryptoFacts<'a>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -213,6 +219,7 @@ impl<'a> SbomEvidence<'a> {
             build_reference: OnceLock::new(),
             any_vulnerability: OnceLock::new(),
             vulnerability_reference_on_any_component: OnceLock::new(),
+            crypto: OnceLock::new(),
         }
     }
 
@@ -540,6 +547,11 @@ impl<'a> SbomEvidence<'a> {
         *self
             .vulnerability_reference_on_any_component
             .get_or_init(|| references::any_vulnerability_reference(self.sbom))
+    }
+
+    /// The crypto facts (see [`CryptoFacts`]).
+    fn crypto(&self) -> &CryptoFacts<'a> {
+        self.crypto.get_or_init(|| CryptoFacts::collect(self.sbom))
     }
 }
 
