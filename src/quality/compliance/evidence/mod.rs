@@ -43,6 +43,7 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
+mod ai;
 mod attestations;
 mod component;
 mod crypto;
@@ -66,6 +67,7 @@ use crate::model::{
     DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom, SupportedRequirement,
 };
 
+pub(crate) use ai::AiFacts;
 pub(crate) use component::{
     AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Placeholders, Producer,
 };
@@ -176,6 +178,8 @@ pub(crate) struct SbomEvidence<'a> {
     any_vulnerability: OnceLock<bool>,
     vulnerability_reference_on_any_component: OnceLock<bool>,
     crypto: OnceLock<CryptoFacts<'a>>,
+    ai: OnceLock<AiFacts>,
+    dataset_containers: OnceLock<Box<[bool]>>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -220,6 +224,8 @@ impl<'a> SbomEvidence<'a> {
             any_vulnerability: OnceLock::new(),
             vulnerability_reference_on_any_component: OnceLock::new(),
             crypto: OnceLock::new(),
+            ai: OnceLock::new(),
+            dataset_containers: OnceLock::new(),
         }
     }
 
@@ -552,6 +558,24 @@ impl<'a> SbomEvidence<'a> {
     /// The crypto facts (see [`CryptoFacts`]).
     fn crypto(&self) -> &CryptoFacts<'a> {
         self.crypto.get_or_init(|| CryptoFacts::collect(self.sbom))
+    }
+
+    /// The AI-BOM scope: the components the AI profiles judge.
+    pub(crate) fn ai(&self) -> &AiFacts {
+        self.ai.get_or_init(|| AiFacts::collect(self.sbom))
+    }
+
+    /// The components at `positions`, in that order.
+    pub(crate) fn components_at<'s>(
+        &'s self,
+        positions: &'s [ComponentIx],
+    ) -> impl ExactSizeIterator<Item = ComponentView<'s, 'a>> + 's {
+        positions.iter().map(move |&ix| self.component(ix))
+    }
+
+    fn dataset_containers(&self) -> &[bool] {
+        self.dataset_containers
+            .get_or_init(|| ai::dataset_containers(self.sbom))
     }
 }
 

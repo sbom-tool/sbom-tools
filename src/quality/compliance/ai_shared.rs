@@ -24,6 +24,12 @@
 //! since HuggingFace hosts datasets as well as models — are collected
 //! separately so the profiles stay applicable and can surface a mistyped-ML
 //! warning instead of letting "untype your models" evade the assessment.
+//!
+//! The profiles read the scope, and whether a model declares its training
+//! datasets, from the evidence layer (`evidence::AiFacts` and
+//! `ComponentView::declares_training_datasets`), which derives them once per
+//! run from the functions here. The AI-readiness scorer calls these
+//! functions directly.
 
 use std::borrow::Cow;
 
@@ -166,24 +172,21 @@ fn looks_like_ml_content(c: &Component) -> bool {
 
 /// Push the shared mistyped-ML warning when the scope contains ML-looking
 /// components that are neither typed `machine-learning-model` nor carry
-/// ML-model metadata. `profile_tag` is the message prefix (`AI-Act` /
-/// `BSI-AI`); `rule_id` must be the per-profile registered rule
+/// ML-model metadata ([`AiBomScope::untyped_ml_components`]): `untyped`
+/// names them, in scope order. `profile_tag` is the message prefix
+/// (`AI-Act` / `BSI-AI`); `rule_id` must be the per-profile registered rule
 /// (`SBOM-AIACT-UNTYPED-ML` / `SBOM-BSIAI-UNTYPED-ML`).
-pub(crate) fn push_untyped_ml_warning(
-    scope: &AiBomScope<'_>,
+pub(crate) fn push_untyped_ml_warning<'n>(
+    untyped: impl IntoIterator<Item = &'n str>,
     profile_tag: &str,
     requirement: &str,
     rule_id: &'static str,
     violations: &mut Vec<Violation>,
 ) {
-    if scope.untyped_ml_components.is_empty() {
+    let names: Vec<String> = untyped.into_iter().map(str::to_string).collect();
+    if names.is_empty() {
         return;
     }
-    let names: Vec<String> = scope
-        .untyped_ml_components
-        .iter()
-        .map(|c| c.name.clone())
-        .collect();
     violations.push(Violation {
         severity: ViolationSeverity::Warning,
         category: ViolationCategory::ComponentIdentification,

@@ -132,12 +132,7 @@ fn quoted(value: &str) -> String {
 /// '…', not an RFC 3339 date-time". `None` when the document's timestamp
 /// parsed or is absent: a check without a known timestamp then reports it
 /// missing, and with one it reports the value, so a user does not look for a
-/// field they did set.
-pub(crate) fn unparseable_timestamp(sbom: &NormalizedSbom) -> Option<String> {
-    unparseable_timestamp_of(sbom.document.created_unparsed.as_deref())
-}
-
-/// [`unparseable_timestamp`] of `created_unparsed`, the timestamp value the
+/// field they did set. `created_unparsed` is the timestamp value the
 /// document wrote but that does not parse.
 pub(crate) fn unparseable_timestamp_of(created_unparsed: Option<&str>) -> Option<String> {
     created_unparsed.map(|value| {
@@ -146,13 +141,6 @@ pub(crate) fn unparseable_timestamp_of(created_unparsed: Option<&str>) -> Option
             quoted(value)
         )
     })
-}
-
-/// The creation timestamp the document wrote but that does not parse, as a
-/// finding's [`Violation::observed`] (see [`unparseable_timestamp`]); `None`
-/// when the timestamp parsed or is absent.
-pub(crate) fn observed_unparsed_timestamp(sbom: &NormalizedSbom) -> Option<String> {
-    sbom.document.created_unparsed.as_deref().and_then(observed)
 }
 
 /// The freshness finding for an SBOM dated in the future, or `None` when its
@@ -267,6 +255,10 @@ pub(crate) fn manufacturer_scope_components(sbom: &NormalizedSbom) -> Vec<&Compo
 /// Whether any manufacturer-scope component (see
 /// [`manufacturer_scope_components`]) carries an external reference that
 /// `accepts`.
+///
+/// No checker calls it since every checker reads the evidence; it stays
+/// as the predicate the tests pin the evidence's fact to.
+#[cfg(test)]
 pub(crate) fn manufacturer_reference(
     sbom: &NormalizedSbom,
     accepts: impl Fn(&ExternalReference) -> bool,
@@ -475,6 +467,10 @@ pub(crate) fn has_known_producer(comp: &crate::model::Component) -> bool {
 /// sentinel such as `NOASSERTION` and not a placeholder such as `TBD` (see
 /// [`license_state`]). Every licence check asks this, except CISA 2026,
 /// which also accepts the explicit unknown.
+///
+/// No checker calls it since every checker reads the evidence; it stays
+/// as the predicate the tests pin the evidence's fact to.
+#[cfg(test)]
 pub(crate) fn has_known_license(comp: &Component) -> bool {
     license_state(comp) == ValueState::Known
 }
@@ -484,6 +480,10 @@ pub(crate) fn has_known_license(comp: &Component) -> bool {
 /// [`ValueState::DeclaredUnknown`] when the best of them is a sentinel such
 /// as `NOASSERTION` (a CycloneDX licence with neither an id nor a name reads
 /// as one), and [`ValueState::Missing`] otherwise.
+///
+/// No checker calls it since every checker reads the evidence; it stays
+/// as the predicate the tests pin the evidence's fact to.
+#[cfg(test)]
 pub(crate) fn license_state(comp: &Component) -> ValueState {
     comp.licenses
         .all_licenses()
@@ -527,7 +527,20 @@ fn is_contact_type(ref_type: &ExternalRefType) -> bool {
 /// locator of a contact reference on a manufacturer-scope component. A
 /// finding about a missing contact names it, so the reader sees why the
 /// contact did not count.
+///
+/// No checker calls it since every checker reads the evidence; it stays
+/// as the predicate the tests pin the evidence's fact to.
+#[cfg(test)]
 pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
+    unreachable_contact_in(sbom, &manufacturer_scope_components(sbom))
+}
+
+/// [`unreachable_contact`] with the manufacturer scope already derived
+/// (`scope`, as [`manufacturer_scope_components`] gives it).
+pub(crate) fn unreachable_contact_in<'a>(
+    sbom: &'a NormalizedSbom,
+    scope: &[&'a Component],
+) -> Option<&'a str> {
     let document = [
         sbom.document.security_contact.as_deref(),
         sbom.document.vulnerability_disclosure_url.as_deref(),
@@ -535,16 +548,12 @@ pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
     document
         .into_iter()
         .flatten()
-        .chain(
-            manufacturer_scope_components(sbom)
-                .into_iter()
-                .flat_map(|c| {
-                    c.external_refs
-                        .iter()
-                        .filter(|r| is_contact_type(&r.ref_type))
-                        .map(|r| r.url.as_str())
-                }),
-        )
+        .chain(scope.iter().flat_map(|c| {
+            c.external_refs
+                .iter()
+                .filter(|r| is_contact_type(&r.ref_type))
+                .map(|r| r.url.as_str())
+        }))
         .find(|value| !known_contact(Some(*value)))
 }
 
@@ -788,19 +797,8 @@ pub(crate) fn name_with_digest_problems<'a>(
 /// plausible digest: the ones among them whose present hashes did not
 /// count, and why — "; hashes that do not count: libalpha (SHA-256 digest
 /// is empty)". Empty when none of them carries a hash at all, so the
-/// message of a document without bad digests is unchanged.
-pub(crate) fn invalid_digest_note<'a>(
-    components: impl IntoIterator<Item = &'a Component>,
-) -> String {
-    invalid_digest_note_of(
-        components
-            .into_iter()
-            .map(|c| (c.name.as_str(), c.hashes.as_slice())),
-    )
-}
-
-/// [`invalid_digest_note`] of `components`, each given by its name and its
-/// hashes.
+/// message of a document without bad digests is unchanged. Each component
+/// is given by its name and its hashes.
 pub(crate) fn invalid_digest_note_of<'a>(
     components: impl IntoIterator<Item = (&'a str, &'a [Hash])>,
 ) -> String {

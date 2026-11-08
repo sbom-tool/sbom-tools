@@ -24,7 +24,8 @@
 //!   findings escalate from Info/Warning to Error: Annex IV is mandatory for
 //!   high-risk systems, so gaps are blocking rather than advisory.
 
-use super::ai_shared::{ai_bom_scope, has_model_card_ref, push_untyped_ml_warning};
+use super::ai_shared::push_untyped_ml_warning;
+use super::evidence::ComponentView;
 use super::*;
 
 /// Why the profile does not apply to an SBOM without AI/ML content: the
@@ -39,21 +40,22 @@ impl ComplianceChecker {
     // EU AI Act Annex IV technical-documentation readiness (AI3)
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_eu_ai_act(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+    pub(crate) fn check_eu_ai_act(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
         let high_risk = self.sidecar.as_ref().is_some_and(|s| s.is_high_risk_ai);
 
         // ML-model and dataset components drive the readiness checks. The
         // classification and the N/A gate are shared with the BSI/G7
-        // SBOM-for-AI profile (compliance/ai_shared.rs) so the two profiles
-        // scope identically by construction: ML components are recognised by
+        // SBOM-for-AI profile (the evidence's AI-BOM scope, which
+        // compliance/ai_shared.rs derives) so the two profiles scope
+        // identically by construction: ML components are recognised by
         // type OR parsed modelCard/AI-profile metadata, and datasets require
         // real dataset evidence (a bare `type: data` config bundle is not an
         // AI dataset).
-        let scope = ai_bom_scope(sbom);
+        let scope = ctx.ev.ai();
 
         // N/A gate: no AI/ML content at all → the profile does not apply,
         // never a failure (a non-AI SBOM is simply out of scope here).
-        if !scope.is_applicable() {
+        if !scope.applicable {
             findings.not_applicable(NOT_APPLICABLE_REASON);
             return;
         }
@@ -64,18 +66,17 @@ impl ComplianceChecker {
         // nor carry ML metadata keep the profile applicable and are surfaced,
         // so untyping a model cannot dodge the assessment.
         push_untyped_ml_warning(
-            &scope,
+            ctx.ev
+                .components_at(&scope.untyped_models)
+                .map(|c| c.name()),
             "AI-Act",
             "EU AI Act Annex IV: applicability (mistyped ML content)",
             "SBOM-AIACT-UNTYPED-ML",
             violations,
         );
 
-        let super::ai_shared::AiBomScope {
-            ml_components,
-            dataset_components,
-            ..
-        } = scope;
+        let ml_components: Vec<_> = ctx.ev.components_at(&scope.models).collect();
+        let dataset_components: Vec<_> = ctx.ev.components_at(&scope.datasets).collect();
 
         // The severity a missing-documentation finding takes. For declared
         // high-risk systems every Annex IV gap is blocking (Error); otherwise
@@ -88,7 +89,6 @@ impl ComplianceChecker {
 
         self.check_ai_act_general_description(&ml_components, missing_severity, violations);
         self.check_ai_act_training_data(
-            sbom,
             &ml_components,
             &dataset_components,
             missing_severity,
@@ -104,33 +104,24 @@ impl ComplianceChecker {
     /// intended purpose / use-cases, ideally with a model card to point at.
     fn check_ai_act_general_description(
         &self,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         missing_severity: ViolationSeverity,
         violations: &mut Vec<Violation>,
     ) {
         let mut without_description = Vec::new();
         let mut without_use_cases = Vec::new();
         for c in ml_components {
-            let ml = c.ml_model.as_ref();
             // A component-level description or a model-card external
             // reference satisfies §1 on its own — independently of whether a
             // structured modelCard block was parsed into `ml_model` (the
             // parser only sets `model_card_url` when a modelCard object
             // exists, so `externalReferences[{type:"model-card"}]` must be
-            // credited here directly).
-            let has_general = c.description.is_some()
-                || has_model_card_ref(c)
-                || ml.is_some_and(|m| {
-                    m.architecture_family.is_some()
-                        || m.architecture_name.is_some()
-                        || m.model_card_url.is_some()
-                });
-            if !has_general {
-                without_description.push(c.name.clone());
+            // credited here directly; see `has_general_description`).
+            if !c.has_general_description() {
+                without_description.push(c.name().to_string());
             }
-            let has_use_cases = ml.is_some_and(|m| !m.use_cases.is_empty());
-            if !has_use_cases {
-                without_use_cases.push(c.name.clone());
+            if !c.declares_use_cases() {
+                without_use_cases.push(c.name().to_string());
             }
         }
 
@@ -196,21 +187,21 @@ impl ComplianceChecker {
     /// was trained on, and whether datasets carry sensitivity classifications.
     fn check_ai_act_training_data(
         &self,
-        sbom: &NormalizedSbom,
-        ml_components: &[&crate::model::Component],
-        dataset_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
+        dataset_components: &[ComponentView<'_, '_>],
         missing_severity: ViolationSeverity,
         violations: &mut Vec<Violation>,
     ) {
         // Every model should reference the dataset(s) it was trained on:
         // modelCard.modelParameters.datasets (SPDX 3.0 trainedOn), or
         // dataset-evidenced components nested under the model. The shared
-        // predicate keeps this rule, SBOM-BSIAI-MODEL-DATASETS and quality
-        // check AI-003 in agreement on what counts.
+        // fact keeps this rule, SBOM-BSIAI-MODEL-DATASETS and quality check
+        // AI-003 (`ai_shared::declares_training_datasets`) in agreement on
+        // what counts.
         let mut without_datasets = Vec::new();
         for c in ml_components {
-            if !super::ai_shared::declares_training_datasets(sbom, c) {
-                without_datasets.push(c.name.clone());
+            if !c.declares_training_datasets() {
+                without_datasets.push(c.name().to_string());
             }
         }
         if !without_datasets.is_empty() {
@@ -247,12 +238,8 @@ impl ComplianceChecker {
         // declaration.
         let mut undeclared_sensitivity = Vec::new();
         for c in dataset_components {
-            let declared = c
-                .dataset
-                .as_ref()
-                .is_some_and(|d| !d.sensitivity_classifications.is_empty());
-            if !declared {
-                undeclared_sensitivity.push(c.name.clone());
+            if !c.classifies_sensitivity() {
+                undeclared_sensitivity.push(c.name().to_string());
             }
         }
         if !undeclared_sensitivity.is_empty() {
@@ -292,35 +279,17 @@ impl ComplianceChecker {
     /// with a raw-pointer fallback for SBOMs parsed before typed extraction.
     fn check_ai_act_validation_metrics(
         &self,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         missing_severity: ViolationSeverity,
         violations: &mut Vec<Violation>,
     ) {
         let mut without_metrics = Vec::new();
         for c in ml_components {
-            let typed = c
-                .ml_model
-                .as_ref()
-                .is_some_and(|m| !m.performance_metrics.is_empty());
-            // Raw-pointer fallback: quantitative analysis preserved in
-            // Component.extensions.raw but not surfaced into the typed model.
-            let raw_fallback = !typed
-                && c.extensions.raw.as_ref().is_some_and(|raw| {
-                    [
-                        "/modelCard/quantitativeAnalysis",
-                        "/mlModel/modelCard/quantitativeAnalysis",
-                    ]
-                    .iter()
-                    .filter_map(|p| raw.pointer(p))
-                    .any(|v| match v {
-                        serde_json::Value::Null => false,
-                        serde_json::Value::Array(a) => !a.is_empty(),
-                        serde_json::Value::Object(o) => !o.is_empty(),
-                        _ => true,
-                    })
-                });
-            if !typed && !raw_fallback {
-                without_metrics.push(c.name.clone());
+            // Typed metrics, or the raw-pointer fallback: quantitative
+            // analysis preserved in Component.extensions.raw but not surfaced
+            // into the typed model (see `declares_validation_metrics`).
+            if !c.declares_validation_metrics() {
+                without_metrics.push(c.name().to_string());
             }
         }
         if !without_metrics.is_empty() {
@@ -356,20 +325,14 @@ impl ComplianceChecker {
     /// `limitations` field and any ethical considerations declared.
     fn check_ai_act_limitations(
         &self,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         high_risk: bool,
         violations: &mut Vec<Violation>,
     ) {
         let mut without_limitations = Vec::new();
         for c in ml_components {
-            let ml = c.ml_model.as_ref();
-            let declared = ml.is_some_and(|m| {
-                m.limitations.is_some()
-                    || !m.ethical_considerations.is_empty()
-                    || !m.fairness.is_empty()
-            });
-            if !declared {
-                without_limitations.push(c.name.clone());
+            if !c.states_limitations_or_considerations() {
+                without_limitations.push(c.name().to_string());
             }
         }
         if !without_limitations.is_empty() {
@@ -414,23 +377,14 @@ impl ComplianceChecker {
     /// interaction; escalated to a Warning for declared high-risk systems.
     fn check_ai_act_personal_data(
         &self,
-        dataset_components: &[&crate::model::Component],
+        dataset_components: &[ComponentView<'_, '_>],
         high_risk: bool,
         violations: &mut Vec<Violation>,
     ) {
         let mut personal_data = Vec::new();
         for c in dataset_components {
-            let carries_personal = c.dataset.as_ref().is_some_and(|d| {
-                d.sensitivity_classifications.iter().any(|s| {
-                    let s = s.to_lowercase();
-                    s.contains("personal")
-                        || s.contains("pii")
-                        || s.contains("sensitive")
-                        || s.contains("confidential")
-                })
-            });
-            if carries_personal {
-                personal_data.push(c.name.clone());
+            if c.classifies_personal_data() {
+                personal_data.push(c.name().to_string());
             }
         }
         // Sidecar-level personal-data flag also raises the disclosure note even
@@ -491,14 +445,10 @@ impl ComplianceChecker {
     /// SBOMs.
     fn check_ai_act_energy(
         &self,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         violations: &mut Vec<Violation>,
     ) {
-        let any_energy = ml_components.iter().any(|c| {
-            c.ml_model
-                .as_ref()
-                .is_some_and(|m| m.energy_kwh_training.is_some())
-        });
+        let any_energy = ml_components.iter().any(|c| c.declares_training_energy());
         if !ml_components.is_empty() && !any_energy {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,

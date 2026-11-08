@@ -5,6 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::ai_shared;
 use super::super::cisa2026::hash_algorithm_shortfall;
 use super::super::shared::{
     ValueState, creator_identified, document_signed, has_known_license, has_known_producer,
@@ -17,10 +18,10 @@ use super::document::tool_name_carries_version;
 use super::{ComponentIx, ComponentView, Known, Placeholders, SbomEvidence, Text};
 use crate::model::{
     AttestationDeclarations, AttestationRuleFamily, Component, ComponentType, Creator, CreatorType,
-    DependencyEdge, DependencyScope, DependencyType, Ecosystem, EolInfo, EolStatus,
-    ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance, LicenseExpression,
-    NormalizedSbom, Organization, Property, SbomFormat, SignatureInfo, VexJustification, VexState,
-    VexStatus, VulnerabilityRef, VulnerabilitySource,
+    DatasetInfo, DatasetRef, DependencyEdge, DependencyScope, DependencyType, Ecosystem, EolInfo,
+    EolStatus, ExternalRefType, ExternalReference, Hash, HashAlgorithm, HashProvenance,
+    LicenseExpression, MlModelInfo, NormalizedSbom, Organization, Property, SbomFormat,
+    SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
 /// The package rules of a context over `sbom`'s evidence, against the
@@ -1618,6 +1619,298 @@ fn a_component_is_classified_once_as_the_crypto_checks_classify_it() {
     }
 }
 
+#[test]
+fn the_ai_scope_lists_models_datasets_and_suspects_by_position() {
+    let typed = |name: &str, component_type: ComponentType| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c
+    };
+    let lib = typed("lib", ComponentType::Library);
+    let model = typed("model", ComponentType::MachineLearningModel);
+    let mut described = typed("described", ComponentType::Application);
+    described.ml_model = Some(MlModelInfo::default());
+    let mut dataset = typed("dataset", ComponentType::Data);
+    dataset.dataset = Some(DatasetInfo::default());
+    // A model with dataset evidence is in both lists and counts once.
+    let mut both = typed("both", ComponentType::MachineLearningModel);
+    both.dataset = Some(DatasetInfo::default());
+    let config = typed("config", ComponentType::Data);
+    let mut suspect = typed("suspect", ComponentType::Library);
+    suspect.identifiers.purl = Some("pkg:huggingface/acme/suspect@1".to_string());
+    let mut hosted = typed("hosted", ComponentType::Data);
+    hosted.identifiers.purl = Some("pkg:huggingface/datasets/hosted@1".to_string());
+    hosted.dataset = Some(DatasetInfo::default());
+    let sbom = sbom_of(vec![
+        lib, model, described, dataset, both, config, suspect, hosted,
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let ai = ev.ai();
+    let names =
+        |ixs: &[ComponentIx]| -> Vec<&str> { ev.components_at(ixs).map(|c| c.name()).collect() };
+    assert_eq!(names(&ai.models), ["model", "described", "both"]);
+    assert_eq!(names(&ai.datasets), ["dataset", "both", "hosted"]);
+    assert_eq!(names(&ai.untyped_models), ["suspect"]);
+    assert!(ai.applicable);
+    assert_eq!(ai.component_count, 6);
+
+    let plain = sbom_of(vec![component("lib"), typed("config", ComponentType::Data)]);
+    let ev = SbomEvidence::new(&plain, as_of());
+    assert!(!ev.ai().applicable);
+    assert_eq!(ev.ai().component_count, 0);
+}
+
+#[test]
+fn a_model_declares_training_datasets_in_its_card_or_by_nesting_one() {
+    let typed = |name: &str, component_type: ComponentType| {
+        let mut c = component(name);
+        c.component_type = component_type;
+        c
+    };
+    let contains = |from: &Component, to: &Component| {
+        DependencyEdge::new(
+            from.canonical_id.clone(),
+            to.canonical_id.clone(),
+            DependencyType::Contains,
+        )
+    };
+    let nesting = typed("nesting", ComponentType::MachineLearningModel);
+    let depending = typed("depending", ComponentType::MachineLearningModel);
+    let config_only = typed("config-only", ComponentType::MachineLearningModel);
+    let mut carded = typed("carded", ComponentType::MachineLearningModel);
+    carded.ml_model = Some(MlModelInfo {
+        training_datasets: vec![DatasetRef {
+            reference: Some("ds".to_string()),
+            name: None,
+            purl: None,
+        }],
+        ..MlModelInfo::default()
+    });
+    let mut data = typed("data", ComponentType::Data);
+    data.dataset = Some(DatasetInfo::default());
+    let config = typed("config", ComponentType::Data);
+    let mut sbom = sbom_of(vec![
+        nesting.clone(),
+        depending.clone(),
+        config_only.clone(),
+        carded,
+        data.clone(),
+        config.clone(),
+    ]);
+    sbom.add_edge(contains(&nesting, &data));
+    sbom.add_edge(edge(&depending, &data));
+    sbom.add_edge(contains(&config_only, &config));
+    sbom.add_edge(contains(&component("ghost"), &data));
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(view(&ev, "nesting").declares_training_datasets());
+    assert!(!view(&ev, "depending").declares_training_datasets());
+    assert!(!view(&ev, "config-only").declares_training_datasets());
+    assert!(view(&ev, "carded").declares_training_datasets());
+    assert!(!view(&ev, "data").declares_training_datasets());
+}
+
+#[test]
+fn each_ai_profile_keeps_its_own_documentation_reading() {
+    let model = |name: &str, ml: MlModelInfo| {
+        let mut c = component(name);
+        c.component_type = ComponentType::MachineLearningModel;
+        c.ml_model = Some(ml);
+        c
+    };
+    let ethics = model(
+        "ethics",
+        MlModelInfo {
+            ethical_considerations: vec![crate::model::EthicalConsideration::default()],
+            ..MlModelInfo::default()
+        },
+    );
+    let limited = model(
+        "limited",
+        MlModelInfo {
+            limitations: Some("English only".to_string()),
+            ..MlModelInfo::default()
+        },
+    );
+    let architected = model(
+        "architected",
+        MlModelInfo {
+            architecture_name: Some("bert".to_string()),
+            use_cases: vec!["triage".to_string()],
+            energy_kwh_training: Some(1.0),
+            ..MlModelInfo::default()
+        },
+    );
+    let mut described = component("described");
+    described.description = Some("A model".to_string());
+    let mut referenced = component("referenced");
+    referenced.external_refs.push(ExternalReference {
+        ref_type: ExternalRefType::ModelCard,
+        url: "https://acme.test/card".to_string(),
+        comment: None,
+        hashes: Vec::new(),
+    });
+    referenced.external_refs.push(ExternalReference {
+        ref_type: ExternalRefType::Bom,
+        url: "https://acme.test/runtime.cdx.json".to_string(),
+        comment: None,
+        hashes: Vec::new(),
+    });
+    let raw = |name: &str, analysis: serde_json::Value| {
+        let mut c = component(name);
+        c.extensions.raw = Some(serde_json::json!({
+            "modelCard": { "quantitativeAnalysis": analysis }
+        }));
+        c
+    };
+    let dataset = |name: &str, ds: DatasetInfo| {
+        let mut c = component(name);
+        c.dataset = Some(ds);
+        c
+    };
+    let sbom = sbom_of(vec![
+        ethics,
+        limited,
+        architected,
+        described,
+        referenced,
+        raw(
+            "measured",
+            serde_json::json!({ "performanceMetrics": [{}] }),
+        ),
+        raw("empty-analysis", serde_json::json!({})),
+        raw("null-analysis", serde_json::Value::Null),
+        dataset(
+            "pii",
+            DatasetInfo {
+                sensitivity_classifications: vec!["Contains PII".to_string()],
+                ..DatasetInfo::default()
+            },
+        ),
+        dataset(
+            "public",
+            DatasetInfo {
+                sensitivity_classifications: vec!["none".to_string()],
+                ..DatasetInfo::default()
+            },
+        ),
+        dataset(
+            "confidential-level",
+            DatasetInfo {
+                confidentiality_level: Some("internal".to_string()),
+                anonymization: vec!["k-anonymity".to_string()],
+                ..DatasetInfo::default()
+            },
+        ),
+        dataset("bare-dataset", DatasetInfo::default()),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+
+    // Limitations: the EU AI Act accepts considerations, BSI/G7 does not.
+    assert!(view(&ev, "ethics").states_limitations_or_considerations());
+    assert!(!view(&ev, "ethics").states_limitations());
+    assert!(view(&ev, "limited").states_limitations());
+    assert!(view(&ev, "limited").states_limitations_or_considerations());
+    // A general description (EU AI Act) is more than a model card (BSI/G7).
+    let architected = view(&ev, "architected");
+    assert!(architected.has_general_description() && architected.declares_architecture());
+    assert!(!architected.references_model_card());
+    assert!(architected.declares_use_cases() && architected.declares_training_energy());
+    let described = view(&ev, "described");
+    assert!(described.has_general_description() && !described.references_model_card());
+    assert!(!described.declares_use_cases() && !described.declares_training_energy());
+    let referenced = view(&ev, "referenced");
+    assert!(referenced.has_general_description() && referenced.references_model_card());
+    assert!(!referenced.declares_architecture());
+    assert!(referenced.references_bom() && !described.references_bom());
+    // Validation metrics: a non-empty quantitative analysis in the raw model card.
+    assert!(view(&ev, "measured").declares_validation_metrics());
+    assert!(!view(&ev, "empty-analysis").declares_validation_metrics());
+    assert!(!view(&ev, "null-analysis").declares_validation_metrics());
+    assert!(!view(&ev, "limited").declares_validation_metrics());
+    // Sensitivity: the EU AI Act reads the classifications, BSI/G7 the
+    // confidentiality level too.
+    let pii = view(&ev, "pii");
+    assert!(pii.classifies_sensitivity() && pii.classifies_personal_data());
+    let public = view(&ev, "public");
+    assert!(public.classifies_sensitivity() && !public.classifies_personal_data());
+    let level = view(&ev, "confidential-level");
+    assert!(!level.classifies_sensitivity() && level.declares_sensitivity_or_confidentiality());
+    assert!(level.declares_dataset_provenance() && !public.declares_dataset_provenance());
+    let bare = view(&ev, "bare-dataset");
+    assert!(!bare.declares_sensitivity_or_confidentiality() && !bare.classifies_personal_data());
+}
+
+#[test]
+fn the_bsi_ai_name_check_rejects_placeholders() {
+    let mut placeholder = component("TBD");
+    placeholder.identifiers.format_id = "ref-placeholder".to_string();
+    let mut none = component("none");
+    none.identifiers.purl = Some("pkg:npm/none@1.0.0".to_string());
+    let sbom = sbom_of(vec![placeholder, none, component("real")]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let tbd = view(&ev, "TBD");
+    assert!(tbd.name_known() && !tbd.name_known_not_placeholder());
+    assert!(view(&ev, "none").name_known_not_placeholder());
+    assert!(view(&ev, "real").name_known_not_placeholder());
+}
+
+#[test]
+fn the_nist_approved_hash_set_leaves_out_streebog() {
+    let with = |name: &str, hashes: Vec<Hash>| {
+        let mut c = component(name);
+        c.hashes = hashes;
+        c
+    };
+    let sbom = sbom_of(vec![
+        with(
+            "streebog",
+            vec![Hash::new(HashAlgorithm::Streebog256, "d".repeat(64))],
+        ),
+        with(
+            "sha3",
+            vec![Hash::new(HashAlgorithm::Sha3_256, "a".repeat(64))],
+        ),
+        with(
+            "bad-sha256",
+            vec![Hash::new(HashAlgorithm::Sha256, "zz".to_string())],
+        ),
+    ]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let facts = |name| view(&ev, name).hashes().facts;
+    assert!(facts("streebog").plausible_strong && !facts("streebog").plausible_nist_approved);
+    assert!(facts("sha3").plausible_nist_approved);
+    assert!(!facts("bad-sha256").plausible_nist_approved);
+}
+
+#[test]
+fn document_facts_read_the_tool_and_organization_creators_and_the_format_version() {
+    let creator = |creator_type, name: &str| Creator {
+        creator_type,
+        name: name.to_string(),
+        email: None,
+    };
+    let mut sbom = sbom_of(vec![]);
+    sbom.document.format_version = String::new();
+    sbom.document.spec_version = String::new();
+    sbom.document.creators = vec![creator(CreatorType::Person, "Jane")];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(!doc.has_tool_creator && !doc.has_organization_creator);
+    assert!(doc.format_version.is_empty());
+
+    // Any organization creator counts, a placeholder name too.
+    sbom.document.format_version = "1.6".to_string();
+    sbom.document.creators = vec![
+        creator(CreatorType::Organization, "NOASSERTION"),
+        creator(CreatorType::Tool, "syft"),
+    ];
+    let ev = SbomEvidence::new(&sbom, as_of());
+    let doc = ev.document();
+    assert!(doc.has_tool_creator && doc.has_organization_creator);
+    assert_eq!(doc.format_version, "1.6");
+    assert!(!ev.manufacturer().identified);
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -1676,6 +1969,23 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                         c.placeholders(),
                         c.bom_reference(),
                         c.has_outgoing(),
+                    ) + &format!(
+                        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {}\n",
+                        c.name_known_not_placeholder(),
+                        c.declares_training_datasets(),
+                        c.has_general_description(),
+                        c.declares_use_cases(),
+                        c.declares_validation_metrics(),
+                        c.states_limitations_or_considerations(),
+                        c.declares_training_energy(),
+                        c.references_model_card(),
+                        c.declares_architecture(),
+                        c.states_limitations(),
+                        c.references_bom(),
+                        c.classifies_sensitivity(),
+                        c.classifies_personal_data(),
+                        c.declares_sensitivity_or_confidentiality(),
+                        c.declares_dataset_provenance(),
                     )
                 })
                 .collect()
@@ -1707,6 +2017,7 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
                 })
                 .collect()
         }),
+        Box::new(|| format!("{:?}", ev.ai())),
     ];
     if reversed {
         groups.reverse();
@@ -2051,6 +2362,7 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
                     "{at}"
                 );
             }
+            assert_ai_facts_agree(&sbom, &view, comp, &at);
         }
         for (include, checker) in [false, true].into_iter().zip(&checkers) {
             assert_eq!(
@@ -2135,6 +2447,159 @@ fn assert_fsct_document_and_graph_facts_agree(
         )
     });
     assert_eq!(graph.dynamic_edge, dynamic, "{at}");
+}
+
+/// The AI checks' component reads (eu_ai_act.rs, bsi_sbom_for_ai.rs), as
+/// they derived them, against the facts that replace them.
+fn assert_ai_facts_agree(
+    sbom: &NormalizedSbom,
+    view: &ComponentView<'_, '_>,
+    comp: &Component,
+    at: &str,
+) {
+    assert_eq!(
+        view.name_known_not_placeholder(),
+        known_component_name(comp) && !is_placeholder(&comp.name),
+        "{at}"
+    );
+    let nist_approved = |a: &HashAlgorithm| {
+        matches!(
+            a,
+            HashAlgorithm::Sha256
+                | HashAlgorithm::Sha384
+                | HashAlgorithm::Sha512
+                | HashAlgorithm::Sha3_256
+                | HashAlgorithm::Sha3_384
+                | HashAlgorithm::Sha3_512
+                | HashAlgorithm::Blake2b256
+                | HashAlgorithm::Blake2b384
+                | HashAlgorithm::Blake2b512
+                | HashAlgorithm::Blake3
+        )
+    };
+    assert_eq!(
+        view.hashes().facts.plausible_nist_approved,
+        comp.hashes
+            .iter()
+            .filter(|h| plausible_digest(&h.algorithm, &h.value))
+            .any(|h| nist_approved(&h.algorithm)),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_training_datasets(),
+        ai_shared::declares_training_datasets(sbom, comp),
+        "{at}"
+    );
+    let ml = comp.ml_model.as_ref();
+    assert_eq!(
+        view.has_general_description(),
+        comp.description.is_some()
+            || ai_shared::has_model_card_ref(comp)
+            || ml.is_some_and(|m| {
+                m.architecture_family.is_some()
+                    || m.architecture_name.is_some()
+                    || m.model_card_url.is_some()
+            }),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_use_cases(),
+        ml.is_some_and(|m| !m.use_cases.is_empty()),
+        "{at}"
+    );
+    let typed_metrics = ml.is_some_and(|m| !m.performance_metrics.is_empty());
+    let raw_metrics = !typed_metrics
+        && comp.extensions.raw.as_ref().is_some_and(|raw| {
+            [
+                "/modelCard/quantitativeAnalysis",
+                "/mlModel/modelCard/quantitativeAnalysis",
+            ]
+            .iter()
+            .filter_map(|p| raw.pointer(p))
+            .any(|v| match v {
+                serde_json::Value::Null => false,
+                serde_json::Value::Array(a) => !a.is_empty(),
+                serde_json::Value::Object(o) => !o.is_empty(),
+                _ => true,
+            })
+        });
+    assert_eq!(
+        view.declares_validation_metrics(),
+        typed_metrics || raw_metrics,
+        "{at}"
+    );
+    assert_eq!(
+        view.states_limitations_or_considerations(),
+        ml.is_some_and(|m| {
+            m.limitations.is_some()
+                || !m.ethical_considerations.is_empty()
+                || !m.fairness.is_empty()
+        }),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_training_energy(),
+        ml.is_some_and(|m| m.energy_kwh_training.is_some()),
+        "{at}"
+    );
+    assert_eq!(
+        view.references_model_card(),
+        ml.and_then(|m| m.model_card_url.as_ref()).is_some() || ai_shared::has_model_card_ref(comp),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_architecture(),
+        ml.is_some_and(|m| m.architecture_family.is_some() || m.architecture_name.is_some()),
+        "{at}"
+    );
+    assert_eq!(
+        view.states_limitations(),
+        ml.and_then(|m| m.limitations.as_ref()).is_some(),
+        "{at}"
+    );
+    assert_eq!(
+        view.references_bom(),
+        comp.external_refs
+            .iter()
+            .any(|r| r.ref_type == ExternalRefType::Bom),
+        "{at}"
+    );
+    let ds = comp.dataset.as_ref();
+    assert_eq!(
+        view.classifies_sensitivity(),
+        ds.is_some_and(|d| !d.sensitivity_classifications.is_empty()),
+        "{at}"
+    );
+    assert_eq!(
+        view.classifies_personal_data(),
+        ds.is_some_and(|d| {
+            d.sensitivity_classifications.iter().any(|s| {
+                let s = s.to_lowercase();
+                s.contains("personal")
+                    || s.contains("pii")
+                    || s.contains("sensitive")
+                    || s.contains("confidential")
+            })
+        }),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_sensitivity_or_confidentiality(),
+        ds.is_some_and(|d| {
+            !d.sensitivity_classifications.is_empty() || d.confidentiality_level.is_some()
+        }),
+        "{at}"
+    );
+    assert_eq!(
+        view.declares_dataset_provenance(),
+        ds.is_some_and(|d| {
+            d.intended_use.is_some()
+                || !d.preprocessing.is_empty()
+                || !d.anonymization.is_empty()
+                || !d.governance_owners.is_empty()
+        }),
+        "{at}"
+    );
 }
 
 #[test]
@@ -2451,6 +2916,45 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             !ev.vulnerabilities().is_empty(),
             "{at}"
         );
+
+        // The AI checks' document reads (bsi_sbom_for_ai.rs).
+        assert_eq!(doc.format_version, document.format_version, "{at}");
+        assert_eq!(
+            doc.has_organization_creator,
+            document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Organization),
+            "{at}"
+        );
+        // The AI-BOM scope (ai_shared::ai_bom_scope): the same components,
+        // in the same order.
+        let scope = ai_shared::ai_bom_scope(&sbom);
+        let ai = ev.ai();
+        let same = |positions: &[ComponentIx], listed: &[&Component]| {
+            positions.len() == listed.len()
+                && ev
+                    .components_at(positions)
+                    .zip(listed)
+                    .all(|(view, comp)| std::ptr::eq(view.name(), comp.name.as_str()))
+        };
+        assert!(same(&ai.models, &scope.ml_components), "{at}");
+        assert!(same(&ai.datasets, &scope.dataset_components), "{at}");
+        assert!(
+            same(&ai.untyped_models, &scope.untyped_ml_components),
+            "{at}"
+        );
+        assert_eq!(ai.applicable, scope.is_applicable(), "{at}");
+        assert_eq!(ai.component_count, scope.component_count(), "{at}");
+        // BSI/G7's infrastructure link: a model in a dependency relationship.
+        for model in ev.components_at(&ai.models) {
+            let id = model.canonical_id();
+            assert_eq!(
+                model.touched(),
+                sbom.edges.iter().any(|e| e.from == *id || e.to == *id),
+                "{at}"
+            );
+        }
     }
 }
 

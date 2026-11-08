@@ -1,6 +1,7 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
 //! serial number and revision, contacts, support period, completeness,
-//! primary component, signature, lifecycle phase, declared profiles.
+//! primary component, signature, lifecycle phase, declared profiles, the
+//! kinds of creators.
 
 use chrono::{DateTime, Utc};
 
@@ -106,6 +107,15 @@ pub(crate) struct DocumentFacts<'a> {
     /// creator's name ("name version"). CISA 2026 reads a tool version
     /// differently.
     pub(crate) tool_name_has_digit: bool,
+    /// Whether a creator of the document is an organization, whatever its
+    /// name, a placeholder such as `NOASSERTION` included. BSI/G7
+    /// SBOM-for-AI accepts it as the AI system's producer; the manufacturer
+    /// checks want an identified one (`ManufacturerFacts::identified`).
+    pub(crate) has_organization_creator: bool,
+    /// The data format's version as the document gives it (`1.6` for
+    /// CycloneDX 1.6), for the checks that read it beside
+    /// [`Self::spec_version_raw`].
+    pub(crate) format_version: &'a str,
 }
 
 /// One creator of the document.
@@ -187,6 +197,11 @@ impl<'a> DocumentFacts<'a> {
                 .iter()
                 .filter(|c| c.creator_type == CreatorType::Tool)
                 .any(|t| t.name.chars().any(|ch| ch.is_ascii_digit())),
+            has_organization_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Organization),
+            format_version: &document.format_version,
         }
     }
 }

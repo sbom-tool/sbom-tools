@@ -128,17 +128,6 @@ pub(crate) struct Findings {
 }
 
 impl Findings {
-    /// The findings of a standard that applied, passed no check and skipped
-    /// none: these violations.
-    pub(crate) const fn from_violations(violations: Vec<Violation>) -> Self {
-        Self {
-            violations,
-            passed: Vec::new(),
-            not_evaluated: NotEvaluated(Vec::new()),
-            applicability: Applicability::Applicable,
-        }
-    }
-
     /// Mark the standard as not applicable to the SBOM, for `reason`.
     pub(crate) fn not_applicable(&mut self, reason: impl Into<String>) {
         self.applicability = Applicability::NotApplicable(reason.into());
@@ -243,36 +232,14 @@ impl StandardChecker for GenericChecker {
 }
 
 /// Generates a thin [`StandardChecker`] struct whose `check()` delegates to a
-/// single dedicated method on [`ComplianceChecker`]. The method takes the
-/// SBOM and the violations it pushes to, or, with the trailing `findings`,
-/// the SBOM and the whole [`Findings`] (for a standard that reports passed
-/// checks, skips a check on purpose, or can decide it does not apply). With
-/// the trailing `context` it takes the [`ComplianceContext`] instead of the
-/// SBOM, and the whole [`Findings`]: the form of a standard whose checks read
-/// the evidence (see [`super::evidence`]).
+/// single dedicated method on [`ComplianceChecker`]. With the trailing
+/// `findings`, the method takes the SBOM and the whole [`Findings`] (for a
+/// standard that reports passed checks, skips a check on purpose, or can
+/// decide it does not apply). With the trailing `context` it takes the
+/// [`ComplianceContext`] instead of the SBOM, and the whole [`Findings`]: the
+/// form of a standard whose checks read the evidence (see
+/// [`super::evidence`]).
 macro_rules! dedicated_checker {
-    ($name:ident, $level:expr, $method:ident) => {
-        pub(crate) struct $name;
-
-        impl $name {
-            /// The checker, for the standards table.
-            pub(crate) fn boxed(_level: ComplianceLevel) -> Box<dyn StandardChecker> {
-                Box::new(Self)
-            }
-        }
-
-        impl StandardChecker for $name {
-            fn level(&self) -> ComplianceLevel {
-                $level
-            }
-
-            fn check(&self, ctx: &ComplianceContext) -> Findings {
-                let mut violations = Vec::new();
-                ctx.checker.$method(ctx.sbom, &mut violations);
-                Findings::from_violations(violations)
-            }
-        }
-    };
     ($name:ident, $level:expr, $method:ident, findings) => {
         pub(crate) struct $name;
 
@@ -353,19 +320,20 @@ dedicated_checker!(
 dedicated_checker!(
     EuccSubstantialChecker,
     ComplianceLevel::EuccSubstantial,
-    check_eucc_substantial
+    check_eucc_substantial,
+    context
 );
 dedicated_checker!(
     EuAiActChecker,
     ComplianceLevel::EuAiAct,
     check_eu_ai_act,
-    findings
+    context
 );
 dedicated_checker!(
     BsiSbomForAiChecker,
     ComplianceLevel::BsiSbomForAi,
     check_bsi_sbom_for_ai,
-    findings
+    context
 );
 dedicated_checker!(
     Cisa2026Checker,

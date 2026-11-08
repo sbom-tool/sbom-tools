@@ -514,10 +514,9 @@ impl ComplianceChecker {
                 .components()
                 .filter(|c| *c.component_type() == crate::model::ComponentType::Cryptographic)
                 .count(),
-            Subjects::AiBom => {
-                // escape hatch: the AI-BOM scope is not an evidence fact yet.
-                ai_shared::ai_bom_scope(ctx.ev.raw_sbom()).component_count()
-            }
+            // The AI-BOM scope the AI profiles judge, a model with dataset
+            // evidence counted once.
+            Subjects::AiBom => ctx.ev.ai().component_count,
             Subjects::Packages => ctx.package_count(),
         };
         components.saturating_add(1)

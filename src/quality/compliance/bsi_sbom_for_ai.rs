@@ -25,9 +25,11 @@
 //! Errors, SHOULD elements are Warnings, and discretionary / not-yet-modeled
 //! elements are informational.
 
-use super::ai_shared::{ai_bom_scope, has_model_card_ref, push_untyped_ml_warning};
+use super::ai_shared::push_untyped_ml_warning;
+use super::evidence::ComponentView;
+use super::shared::{invalid_digest_note_of, unparseable_timestamp_of};
 use super::*;
-use crate::model::{ComponentType, CreatorType, HashAlgorithm};
+use crate::model::ComponentType;
 
 /// Why the profile does not apply to an SBOM without AI/ML content: the
 /// result's not-applicable reason.
@@ -41,20 +43,25 @@ impl ComplianceChecker {
     // BSI/G7 SBOM-for-AI Minimum Elements readiness
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_bsi_sbom_for_ai(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+    pub(crate) fn check_bsi_sbom_for_ai(
+        &self,
+        ctx: &ComplianceContext<'_, '_>,
+        findings: &mut Findings,
+    ) {
         // ML-model and dataset components drive the readiness checks. The
         // classification and the N/A gate are shared with the EU-AI-Act
-        // profile (compliance/ai_shared.rs) so the two profiles scope
-        // identically by construction: ML components are recognised by type
-        // OR parsed modelCard/AI-profile metadata, and datasets require real
-        // dataset evidence (a bare `type: data` config bundle is not an AI
-        // dataset and must not fail the MUST dataset elements).
-        let scope = ai_bom_scope(sbom);
+        // profile (the evidence's AI-BOM scope, which compliance/ai_shared.rs
+        // derives) so the two profiles scope identically by construction:
+        // ML components are recognised by type OR parsed modelCard/AI-profile
+        // metadata, and datasets require real dataset evidence (a bare
+        // `type: data` config bundle is not an AI dataset and must not fail
+        // the MUST dataset elements).
+        let scope = ctx.ev.ai();
 
         // N/A gate: no AI/ML content at all → the profile does not apply,
         // never a failure (a non-AI SBOM is simply out of scope here).
         // Mirrors the EU-AI-Act non-AI guard exactly.
-        if !scope.is_applicable() {
+        if !scope.applicable {
             findings.not_applicable(NOT_APPLICABLE_REASON);
             return;
         }
@@ -65,32 +72,35 @@ impl ComplianceChecker {
         // nor carry ML metadata keep the profile applicable and are surfaced,
         // so untyping a model cannot dodge the assessment.
         push_untyped_ml_warning(
-            &scope,
+            ctx.ev
+                .components_at(&scope.untyped_models)
+                .map(|c| c.name()),
             "BSI-AI",
             "BSI/G7 SBOM-for-AI: applicability (mistyped ML content)",
             "SBOM-BSIAI-UNTYPED-ML",
             violations,
         );
 
-        let super::ai_shared::AiBomScope {
-            ml_components,
-            dataset_components,
-            ..
-        } = scope;
+        let ml_components: Vec<_> = ctx.ev.components_at(&scope.models).collect();
+        let dataset_components: Vec<_> = ctx.ev.components_at(&scope.datasets).collect();
 
-        self.check_bsiai_metadata_cluster(sbom, violations);
-        self.check_bsiai_system_level_cluster(sbom, &ml_components, violations);
-        self.check_bsiai_models_cluster(sbom, &ml_components, violations);
+        self.check_bsiai_metadata_cluster(ctx, violations);
+        self.check_bsiai_system_level_cluster(ctx, &ml_components, violations);
+        self.check_bsiai_models_cluster(&ml_components, violations);
         self.check_bsiai_datasets_cluster(&dataset_components, violations);
-        self.check_bsiai_infrastructure_cluster(sbom, &ml_components, violations);
+        self.check_bsiai_infrastructure_cluster(&ml_components, violations);
         self.check_bsiai_security_cluster(violations);
     }
 
     /// Metadata cluster — the document-level minimum elements: author/creator,
     /// data-format name + version, timestamp, ≥1 tool creator, and a signature
     /// (informational when absent).
-    fn check_bsiai_metadata_cluster(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
-        let doc = &sbom.document;
+    fn check_bsiai_metadata_cluster(
+        &self,
+        ctx: &ComplianceContext<'_, '_>,
+        violations: &mut Vec<Violation>,
+    ) {
+        let doc = ctx.ev.document();
 
         // Author / creator present (MUST).
         if doc.creators.is_empty() {
@@ -115,7 +125,7 @@ impl ComplianceChecker {
 
         // Data-format name + version present (MUST). NormalizedSbom always knows
         // its format; the practical gap is a missing format_version string.
-        if doc.format_version.is_empty() && doc.spec_version.is_empty() {
+        if doc.format_version.is_empty() && doc.spec_version_raw.is_empty() {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
@@ -144,8 +154,8 @@ impl ComplianceChecker {
         // always ISO-8601; the risk is the source SBOM not carrying one, which
         // parsers surface as the UNIX_EPOCH sentinel (see
         // DocumentMetadata::has_known_timestamp).
-        if !doc.has_known_timestamp() {
-            let message = unparseable_timestamp(sbom).map_or_else(
+        if !doc.has_known_timestamp {
+            let message = unparseable_timestamp_of(doc.created_unparsed).map_or_else(
                 || {
                     "[BSI-AI] Metadata readiness: SBOM creation timestamp missing or invalid"
                         .to_string()
@@ -167,16 +177,12 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed_unparsed_timestamp(sbom),
+                observed: doc.created_unparsed.and_then(observed),
             });
         }
 
         // At least one tool creator (SHOULD).
-        let has_tool_creator = doc
-            .creators
-            .iter()
-            .any(|c| c.creator_type == CreatorType::Tool);
-        if !has_tool_creator {
+        if !doc.has_tool_creator {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::DocumentMetadata,
@@ -200,7 +206,7 @@ impl ComplianceChecker {
         // Signature present (informational when absent — discretionary
         // element). An entry without a value is no signature, as for the
         // CRA, CISA 2026 and FSCT checks (`document_signed`).
-        if !document_signed(sbom) {
+        if !doc.signed {
             violations.push(Violation {
                 severity: ViolationSeverity::Info,
                 category: ViolationCategory::IntegrityInfo,
@@ -228,17 +234,18 @@ impl ComplianceChecker {
     /// usage / I/O elements have no model home yet → informational.
     fn check_bsiai_system_level_cluster(
         &self,
-        sbom: &NormalizedSbom,
-        ml_components: &[&crate::model::Component],
+        ctx: &ComplianceContext<'_, '_>,
+        ml_components: &[ComponentView<'_, '_>],
         violations: &mut Vec<Violation>,
     ) {
         // A primary AI-system component is identifiable when either the SBOM's
         // primary component is an ML model / application, or — failing an
         // explicit primary — at least one ML component exists to anchor the
         // system description.
-        let primary_is_ai_system = sbom.primary_component().is_some_and(|c| {
+        let primary = ctx.ev.primary();
+        let primary_is_ai_system = primary.is_some_and(|c| {
             matches!(
-                c.component_type,
+                c.component_type(),
                 ComponentType::MachineLearningModel | ComponentType::Application
             )
         });
@@ -267,14 +274,11 @@ impl ComplianceChecker {
 
         // Producer / supplier of the AI system (SHOULD). Satisfied when the
         // primary component (or, lacking one, any ML component) declares a
-        // supplier/author, or the document carries an organization creator.
-        let producer_known = sbom.primary_component().is_some_and(has_known_producer)
-            || ml_components.iter().any(|c| has_known_producer(c))
-            || sbom
-                .document
-                .creators
-                .iter()
-                .any(|c| c.creator_type == CreatorType::Organization);
+        // supplier/author, or the document carries an organization creator
+        // (any one, whatever its name).
+        let producer_known = primary.is_some_and(|c| c.producer().is_known())
+            || ml_components.iter().any(|c| c.producer().is_known())
+            || ctx.ev.document().has_organization_creator;
         if !producer_known {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -325,8 +329,7 @@ impl ComplianceChecker {
     /// card, architecture, training datasets, limitations, and license.
     fn check_bsiai_models_cluster(
         &self,
-        sbom: &NormalizedSbom,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         violations: &mut Vec<Violation>,
     ) {
         let mut without_name = Vec::new();
@@ -341,30 +344,25 @@ impl ComplianceChecker {
         let mut without_license = Vec::new();
 
         for c in ml_components {
-            let ml = c.ml_model.as_ref();
             // Name, version and license need real values: a placeholder
             // (TBD, N/A) or a sentinel (NOASSERTION) declares nothing, as
             // in every other profile's presence checks.
-            if !has_known_name(c) {
-                without_name.push(c.canonical_id.to_string());
+            if !c.name_known_not_placeholder() {
+                without_name.push(c.canonical_id().to_string());
             }
-            if !has_known_value(&c.version) {
-                without_version.push(c.name.clone());
+            if !c.version().is_known() {
+                without_version.push(c.name().to_string());
             }
-            if !c.identifiers.has_cra_identifier() {
-                without_identifier.push(c.name.clone());
+            if !c.ids().any() {
+                without_identifier.push(c.name().to_string());
             }
 
             // Weight hash present (AI-010 logic: any hash on the component).
             // Only plausible digests count (see `plausible_digest`).
-            let plausible: Vec<_> = c
-                .hashes
-                .iter()
-                .filter(|h| plausible_digest(&h.algorithm, &h.value))
-                .collect();
-            if plausible.is_empty() {
+            let hashes = c.hashes().facts;
+            if !hashes.plausible {
                 without_hash.push(*c);
-            } else if !plausible.iter().any(|h| nist_approved_hash(&h.algorithm)) {
+            } else if !hashes.plausible_nist_approved {
                 // Hash present but none use a NIST-approved algorithm
                 // (NIST-approved SHA-256+ — intentionally NOT the TR-03183-2 §5.2.2
                 // SHA-512 rule; the AI guidance asks for NIST-approved algorithms).
@@ -375,27 +373,25 @@ impl ComplianceChecker {
             // `model-card` external reference on the component (the parser
             // only copies the URL into `ml_model.model_card_url` when a
             // modelCard object exists, so the raw reference must count too).
-            if ml.and_then(|m| m.model_card_url.as_ref()).is_none() && !has_model_card_ref(c) {
-                without_model_card.push(c.name.clone());
+            if !c.references_model_card() {
+                without_model_card.push(c.name().to_string());
             }
             // Architecture declared (AI-002).
-            let has_architecture = ml
-                .is_some_and(|m| m.architecture_family.is_some() || m.architecture_name.is_some());
-            if !has_architecture {
-                without_architecture.push(c.name.clone());
+            if !c.declares_architecture() {
+                without_architecture.push(c.name().to_string());
             }
             // Training datasets referenced (AI-003): modelParameters.datasets or
             // dataset-evidenced components nested under the model.
-            if !super::ai_shared::declares_training_datasets(sbom, c) {
-                without_datasets.push(c.name.clone());
+            if !c.declares_training_datasets() {
+                without_datasets.push(c.name().to_string());
             }
             // Limitations stated (AI-008).
-            if ml.and_then(|m| m.limitations.as_ref()).is_none() {
-                without_limitations.push(c.name.clone());
+            if !c.states_limitations() {
+                without_limitations.push(c.name().to_string());
             }
             // License present.
-            if !has_known_license(c) {
-                without_license.push(c.name.clone());
+            if !c.licenses().is_known() {
+                without_license.push(c.name().to_string());
             }
         }
 
@@ -507,7 +503,7 @@ impl ComplianceChecker {
     /// from the SPDX dataset-field wiring).
     fn check_bsiai_datasets_cluster(
         &self,
-        dataset_components: &[&crate::model::Component],
+        dataset_components: &[ComponentView<'_, '_>],
         violations: &mut Vec<Violation>,
     ) {
         let mut without_name = Vec::new();
@@ -518,41 +514,27 @@ impl ComplianceChecker {
         let mut without_provenance = Vec::new();
 
         for c in dataset_components {
-            if !has_known_name(c) {
-                without_name.push(c.canonical_id.to_string());
+            if !c.name_known_not_placeholder() {
+                without_name.push(c.canonical_id().to_string());
             }
-            if !c.identifiers.has_cra_identifier() {
-                without_identifier.push(c.name.clone());
+            if !c.ids().any() {
+                without_identifier.push(c.name().to_string());
             }
-            if !c
-                .hashes
-                .iter()
-                .any(|h| plausible_digest(&h.algorithm, &h.value))
-            {
+            if !c.hashes().facts.plausible {
                 without_hash.push(*c);
             }
-            if !has_known_license(c) {
-                without_license.push(c.name.clone());
+            if !c.licenses().is_known() {
+                without_license.push(c.name().to_string());
             }
-            let ds = c.dataset.as_ref();
             // Sensitivity classification present (a classification of "none"
-            // still counts as a declaration).
-            let has_sensitivity = ds.is_some_and(|d| {
-                !d.sensitivity_classifications.is_empty() || d.confidentiality_level.is_some()
-            });
-            if !has_sensitivity {
-                without_sensitivity.push(c.name.clone());
+            // still counts as a declaration), or a confidentiality level.
+            if !c.declares_sensitivity_or_confidentiality() {
+                without_sensitivity.push(c.name().to_string());
             }
             // Provenance / intended-use (now available from Part 1: intended
             // use, preprocessing, anonymization, or governance owners).
-            let has_provenance = ds.is_some_and(|d| {
-                d.intended_use.is_some()
-                    || !d.preprocessing.is_empty()
-                    || !d.anonymization.is_empty()
-                    || !d.governance_owners.is_empty()
-            });
-            if !has_provenance {
-                without_provenance.push(c.name.clone());
+            if !c.declares_dataset_provenance() {
+                without_provenance.push(c.name().to_string());
             }
         }
 
@@ -627,25 +609,14 @@ impl ComplianceChecker {
     /// exist — e.g. dataset-only SBOMs — is meaningless).
     fn check_bsiai_infrastructure_cluster(
         &self,
-        sbom: &NormalizedSbom,
-        ml_components: &[&crate::model::Component],
+        ml_components: &[ComponentView<'_, '_>],
         violations: &mut Vec<Violation>,
     ) {
-        use crate::model::ExternalRefType;
-
         // Does any ML component participate in a dependency edge, or carry an
         // ExternalRefType::Bom link to a runtime/framework BOM?
-        let has_infra_link = ml_components.iter().any(|c| {
-            let in_edges = sbom
-                .edges
-                .iter()
-                .any(|e| e.from == c.canonical_id || e.to == c.canonical_id);
-            let has_bom_ref = c
-                .external_refs
-                .iter()
-                .any(|r| r.ref_type == ExternalRefType::Bom);
-            in_edges || has_bom_ref
-        });
+        let has_infra_link = ml_components
+            .iter()
+            .any(|c| c.touched() || c.references_bom());
 
         if !ml_components.is_empty() && !has_infra_link {
             violations.push(Violation {
@@ -716,33 +687,6 @@ impl ComplianceChecker {
     }
 }
 
-/// Whether a model or dataset carries a real name: one the component-name
-/// checks accept (`known_component_name`: not empty, not `NOASSERTION`, and
-/// `NONE` / `UNKNOWN` only when the PURL names the package so) that is not a
-/// placeholder such as `TBD` or `N/A` either.
-fn has_known_name(c: &crate::model::Component) -> bool {
-    known_component_name(c) && !is_placeholder(&c.name)
-}
-
-/// NIST-approved cryptographic hash gate (SHA-256 or stronger). Reuses the
-/// NIST-approved hash allowlist (SHA-256 and stronger). Deliberately
-/// independent of the TR-03183-2 §5.2.2 SHA-512-only rule in [`super::bsi`].
-fn nist_approved_hash(a: &HashAlgorithm) -> bool {
-    matches!(
-        a,
-        HashAlgorithm::Sha256
-            | HashAlgorithm::Sha384
-            | HashAlgorithm::Sha512
-            | HashAlgorithm::Sha3_256
-            | HashAlgorithm::Sha3_384
-            | HashAlgorithm::Sha3_512
-            | HashAlgorithm::Blake2b256
-            | HashAlgorithm::Blake2b384
-            | HashAlgorithm::Blake2b512
-            | HashAlgorithm::Blake3
-    )
-}
-
 /// Push a per-component readiness finding when `failing` is non-empty. `verb`
 /// completes the sentence "N component(s) <verb>: <list>". `total` is the
 /// size of the cluster cohort the failing components were drawn from (ML
@@ -791,17 +735,17 @@ fn push_model_finding(
 
 /// [`push_model_finding`] for a hash element: the components are named in
 /// the message, which also says why their present hashes did not count
-/// (see `invalid_digest_note`).
+/// (see `invalid_digest_note_of`).
 fn push_hash_finding(
     violations: &mut Vec<Violation>,
     severity: ViolationSeverity,
-    failing: &[&crate::model::Component],
+    failing: &[ComponentView<'_, '_>],
     total: usize,
     verb: &str,
     requirement: &str,
     rule_id: &'static str,
 ) {
-    let names: Vec<String> = failing.iter().map(|c| c.name.clone()).collect();
+    let names: Vec<String> = failing.iter().map(|c| c.name().to_string()).collect();
     let before = violations.len();
     push_model_finding(
         violations,
@@ -816,8 +760,9 @@ fn push_hash_finding(
     if violations.len() > before
         && let Some(v) = violations.last_mut()
     {
-        v.message
-            .push_str(&invalid_digest_note(failing.iter().copied()));
+        v.message.push_str(&invalid_digest_note_of(
+            failing.iter().map(|c| (c.name(), c.hashes().raw)),
+        ));
     }
 }
 
