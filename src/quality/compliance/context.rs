@@ -210,7 +210,6 @@ impl StandardChecker for GenericChecker {
 
     fn check(&self, ctx: &ComplianceContext) -> Findings {
         let checker = ctx.checker;
-        let sbom = ctx.sbom;
         let mut findings = Findings::default();
         let Findings {
             violations,
@@ -235,8 +234,8 @@ impl StandardChecker for GenericChecker {
 
         // Check CRA-specific gap requirements (SBOM freshness, Art. 13(5), 13(9), Annex I Part II, document integrity)
         if checker.level.is_cra() {
-            checker.check_cra_gaps(sbom, violations, not_evaluated);
-            checker.check_hardware_components(sbom, violations, not_evaluated);
+            checker.check_cra_gaps(ctx, violations, not_evaluated);
+            checker.check_hardware_components(ctx, violations, not_evaluated);
         }
 
         findings
