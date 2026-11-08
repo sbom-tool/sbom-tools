@@ -157,6 +157,7 @@ pub(crate) struct SbomEvidence<'a> {
     firmware_dependencies: OnceLock<Box<[bool]>>,
     non_spdx_licenses: OnceLock<Box<[Option<&'a str>]>>,
     authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
+    bom_reference: OnceLock<bool>,
 }
 
 /// One evidence value is read by the levels of a run in parallel.
@@ -189,6 +190,7 @@ impl<'a> SbomEvidence<'a> {
             firmware_dependencies: OnceLock::new(),
             non_spdx_licenses: OnceLock::new(),
             authored_hashes: OnceLock::new(),
+            bom_reference: OnceLock::new(),
         }
     }
 
@@ -309,6 +311,18 @@ impl<'a> SbomEvidence<'a> {
                 .keys()
                 .filter_map(|id| self.sbom.duplicate_components.get(id))
                 .collect()
+        })
+    }
+
+    /// Whether any component links an external SBOM document: an external
+    /// reference of the BOM type.
+    pub(crate) fn has_bom_reference(&self) -> bool {
+        *self.bom_reference.get_or_init(|| {
+            self.sbom.components.values().any(|c| {
+                c.external_refs
+                    .iter()
+                    .any(|r| matches!(r.ref_type, ExternalRefType::Bom))
+            })
         })
     }
 

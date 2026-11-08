@@ -1,10 +1,13 @@
 //! Document-level facts: format and spec version, timestamp, creators, name,
-//! serial number, contacts, support period, completeness, primary component,
-//! signature, declared profiles.
+//! serial number and revision, contacts, support period, completeness,
+//! primary component, signature, lifecycle phase, declared profiles.
 
 use chrono::{DateTime, Utc};
 
-use super::super::shared::{document_signed, is_valid_email_format, known_contact};
+use super::super::shared::{
+    creator_identified, document_signed, is_declared_unknown, is_spdx2, is_valid_email_format,
+    known_contact,
+};
 use super::{ComponentIx, Text};
 use crate::model::{
     CanonicalId, CompletenessDeclaration, Creator, CreatorType, NormalizedSbom, SbomFormat,
@@ -50,8 +53,8 @@ pub(crate) struct DocumentFacts<'a> {
     /// The creation timestamp as parsed: the epoch when the document gives
     /// none or one that does not parse (see [`Self::has_known_timestamp`]).
     pub(crate) created: DateTime<Utc>,
-    /// Whether the document carries a signature with a value (see
-    /// `shared::document_signed`).
+    /// Whether the document carries an in-document signature with a value
+    /// (see `shared::document_signed`).
     pub(crate) signed: bool,
     /// Whether the document carries a signature entry, with a value or not.
     pub(crate) signature_present: bool,
@@ -71,6 +74,32 @@ pub(crate) struct DocumentFacts<'a> {
     /// differently: most accept any creator, and CISA 2026 and FSCT require
     /// a non-tool creator that is also identified.
     pub(crate) has_non_tool_creator: bool,
+    /// Whether the document is SPDX 2.x, which has no field for a
+    /// signature, a lifecycle phase or a completeness declaration (see
+    /// `shared::is_spdx2`; an SPDX version that does not parse counts as
+    /// 2.x).
+    pub(crate) spdx2: bool,
+    /// Whether a creator that is not a tool is identified by a real name or
+    /// email address (see `shared::creator_identified`): the SBOM author of
+    /// CISA 2026. BSI TR-03183-2 accepts any non-tool creator (see
+    /// [`Self::has_non_tool_creator`]).
+    pub(crate) has_identified_non_tool_creator: bool,
+    /// The lifecycle phase the document was generated in.
+    pub(crate) lifecycle_phase: Text<'a>,
+    /// Whether a creator is a tool.
+    pub(crate) has_tool_creator: bool,
+    /// Whether a tool creator's name carries a version or an explicit
+    /// unknown, by CISA 2026's heuristic (see [`tool_name_carries_version`]):
+    /// a digit in the name's last segment, or a sentinel word. FSCT reads a
+    /// tool version differently.
+    pub(crate) tool_version_discernible: bool,
+    /// The document's revision counter (CycloneDX `version`), when it
+    /// gives one.
+    pub(crate) doc_version: Option<u32>,
+    /// The document's serial number or namespace, and what it says. CISA
+    /// 2026 asks for a real value; the checks that read
+    /// [`Self::serial_number`] ask only that one is present.
+    pub(crate) serial_number_text: Text<'a>,
 }
 
 /// One creator of the document.
@@ -130,6 +159,23 @@ impl<'a> DocumentFacts<'a> {
                 .creators
                 .iter()
                 .any(|c| c.creator_type != CreatorType::Tool),
+            spdx2: is_spdx2(sbom),
+            has_identified_non_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type != CreatorType::Tool && creator_identified(c)),
+            lifecycle_phase: Text::of(document.lifecycle_phase.as_deref()),
+            has_tool_creator: document
+                .creators
+                .iter()
+                .any(|c| c.creator_type == CreatorType::Tool),
+            tool_version_discernible: document
+                .creators
+                .iter()
+                .filter(|c| c.creator_type == CreatorType::Tool)
+                .any(|t| tool_name_carries_version(&t.name)),
+            doc_version: document.doc_version,
+            serial_number_text: Text::of(document.serial_number.as_deref()),
         }
     }
 }
@@ -137,4 +183,36 @@ impl<'a> DocumentFacts<'a> {
 /// Whether a declared profile's name contains `keyword`, in any case.
 fn declares_profile(profiles: &[String], keyword: &str) -> bool {
     profiles.iter().any(|p| p.to_lowercase().contains(keyword))
+}
+
+/// Explicit-unknown sentinel: the marker an SBOM author uses to state that a
+/// value is unknown rather than silently omitting it. The 2026 elements'
+/// escape hatches ("the SBOM author should indicate the information is
+/// unknown") make these markers *satisfy* the honesty requirement, so this
+/// is deliberately the complement of `known_value` (which treats the same
+/// sentinels as absent for the NTIA-style presence gates).
+fn is_unknown_marker(value: &str) -> bool {
+    is_declared_unknown(value)
+}
+
+/// Heuristic for the SBOM Tool Version element: whether a Tool creator's
+/// name carries a version identifier (or an explicit unknown marker).
+///
+/// Heuristic by necessity: the parsers concatenate tool name and version
+/// into one creator name — CycloneDX `metadata.tools` becomes
+/// `"{name} {version}"` and the SPDX `Creator: Tool:` convention is
+/// `name-version` — so there is no dedicated tool-version field to check.
+/// A trailing whitespace- or hyphen-delimited segment containing an ASCII
+/// digit counts as a version; a tool genuinely named with a trailing digit
+/// (e.g. "syft2") is an accepted false pass, which is why the rule is a
+/// Warning with heuristic wording rather than an Error.
+pub(super) fn tool_name_carries_version(name: &str) -> bool {
+    let name = name.trim();
+    // The element's escape hatch: an explicit unknown marker satisfies it.
+    if name.split_whitespace().any(is_unknown_marker) {
+        return true;
+    }
+    let last_ws = name.rsplit(char::is_whitespace).next().unwrap_or(name);
+    let last_seg = last_ws.rsplit('-').next().unwrap_or(last_ws);
+    last_seg.chars().any(|c| c.is_ascii_digit())
 }

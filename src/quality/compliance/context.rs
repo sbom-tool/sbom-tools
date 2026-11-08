@@ -366,7 +366,7 @@ dedicated_checker!(
     Cisa2026Checker,
     ComplianceLevel::Cisa2026,
     check_cisa2026,
-    findings
+    context
 );
 dedicated_checker!(
     PciDss632Checker,
