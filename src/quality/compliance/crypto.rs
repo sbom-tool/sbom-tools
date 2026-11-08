@@ -9,9 +9,17 @@
 //! anything recognized-but-not-approved is an Error and anything
 //! unrecognizable is a Warning, never an implicit pass. Protocol assets
 //! (TLS version, cipher suites, IKEv2 transforms, crypto references) are
-//! evaluated under both standards by resolving bom-refs through the SBOM
-//! index, word-boundary-scanning cipher-suite names, and looking up the TLS
-//! groups and signature schemes each suite offers in their IANA registries.
+//! evaluated under both standards by resolving bom-refs to the components
+//! they name, word-boundary-scanning cipher-suite names, and looking up the
+//! TLS groups and signature schemes each suite offers in their IANA
+//! registries.
+//!
+//! Both checkers read only the run's evidence ([`super::evidence`]): the
+//! crypto assets, the component a bom-ref names, and each component's
+//! classification and declarations, which the evidence derives once per
+//! run, so the two standards of a run share them. The verdicts stay here,
+//! with the calendar deadline mode judges by, built for the evidence's
+//! instant.
 //!
 //! A PQ/T hybrid (X25519MLKEM768, an RFC 9370 IKEv2 additional key
 //! exchange, composite ML-DSA) is judged by its parts, not by the weaker
@@ -29,12 +37,13 @@ use std::collections::BTreeMap;
 
 use chrono::NaiveDate;
 
+use super::evidence::ComponentView;
 use super::pqc_calendar::{CalendarVerdict, PkUse};
 use super::*;
 use crate::model::{
     AlgorithmClass, AlgorithmClassification, AlgorithmProperties, CertificateProperties,
-    CipherSuite, Component, CryptoAssetType, CryptoPrimitive, HybridParts, Ikev2Transform,
-    Ikev2TransformKind, Ikev2TransformTypes, NormalizedSbomIndex, PqcKind, ProtocolProperties,
+    CipherSuite, Component, CryptoAssetType, CryptoPrimitive, CryptoProperties, HybridParts,
+    Ikev2Transform, Ikev2TransformKind, Ikev2TransformTypes, PqcKind, ProtocolProperties,
     ProtocolType, TlsRegistryEntry, classify_algorithm, classify_algorithm_names,
     classify_algorithm_names_guarded, ikev2_key_exchange_group, is_tls_grease, tls_named_group,
     tls_signature_scheme, worst_classification,
@@ -62,7 +71,7 @@ enum CnsaVerdict {
 /// "Hybrid-KEM" (no CycloneDX family) or "ML-KEM" (one of its parts) with
 /// the name "X25519-ML-KEM-768" is that hybrid. A declared part keeps its
 /// declared parameter set, as a declared family always does.
-fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
+pub(crate) fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
     let cp = comp.crypto_properties.as_ref();
     let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
     let cls = classify_algorithm(
@@ -105,7 +114,7 @@ fn classify_crypto_component(comp: &Component) -> AlgorithmClassification {
 /// properties — evidence of the key size (e.g., AES-256) that must survive
 /// bom-ref resolution so referenced assets are judged with the same
 /// evidence as directly evaluated ones.
-fn classical_bits_of(comp: &Component) -> Option<u32> {
+pub(crate) fn classical_bits_of(comp: &Component) -> Option<u32> {
     comp.crypto_properties
         .as_ref()
         .and_then(|c| c.algorithm_properties.as_ref())
@@ -113,22 +122,23 @@ fn classical_bits_of(comp: &Component) -> Option<u32> {
 }
 
 /// Classify whatever a crypto bom-ref (signatureAlgorithmRef, cipher-suite
-/// algorithm ref, IKEv2 transform ref, …) points at: resolve it through the
-/// SBOM index to the referenced component when possible — carrying along its
-/// declared `classicalSecurityLevel` — otherwise fall back to guarded
-/// word-boundary token matching on the raw ref string, reporting the most
-/// severe mention (opaque refs like "sig-algo-42" classify as Unknown rather
-/// than silently passing checks).
-fn classify_bom_ref(
+/// algorithm ref, IKEv2 transform ref, …) points at: resolve it to the
+/// referenced component when possible — taking the evidence's
+/// classification of it, and its declared `classicalSecurityLevel` —
+/// otherwise fall back to guarded word-boundary token matching on the raw
+/// ref string, reporting the most severe mention (opaque refs like
+/// "sig-algo-42" classify as Unknown rather than silently passing checks).
+fn classify_bom_ref<'e>(
     bom_ref: &str,
-    sbom: &NormalizedSbom,
-    index: &NormalizedSbomIndex,
-) -> (AlgorithmClassification, Option<u32>) {
-    match resolve_component(bom_ref, sbom, index) {
-        Some(target) => (classify_crypto_component(target), classical_bits_of(target)),
+    ev: &'e SbomEvidence<'_>,
+) -> (Cow<'e, AlgorithmClassification>, Option<u32>) {
+    match ev.resolve_bom_ref(bom_ref) {
+        Some(target) => (Cow::Borrowed(target.algorithm()), target.classical_bits()),
         None => (
-            worst_classification(classify_algorithm_names_guarded(bom_ref))
-                .unwrap_or_else(AlgorithmClassification::unknown),
+            Cow::Owned(
+                worst_classification(classify_algorithm_names_guarded(bom_ref))
+                    .unwrap_or_else(AlgorithmClassification::unknown),
+            ),
             None,
         ),
     }
@@ -141,8 +151,7 @@ fn classify_bom_ref(
 /// report as unverifiable.
 fn classify_ike_transform(
     t: &Ikev2Transform,
-    sbom: &NormalizedSbom,
-    index: &NormalizedSbomIndex,
+    ev: &SbomEvidence<'_>,
 ) -> Result<(AlgorithmClassification, Option<u32>), String> {
     // The declared key length sizes an otherwise unsized family, so it is
     // both judged and reported ("AES-128", not "AES"), and so does the IANA
@@ -163,9 +172,9 @@ fn classify_ike_transform(
         cls
     };
     if let Some(r) = &t.algorithm_ref {
-        let (cls, bits) = classify_bom_ref(r, sbom, index);
+        let (cls, bits) = classify_bom_ref(r, ev);
         if cls.class != AlgorithmClass::Unknown {
-            return Ok((sized(cls), bits.or(t.key_length)));
+            return Ok((sized(cls.into_owned()), bits.or(t.key_length)));
         }
     }
     if let Some(name) = &t.name
@@ -214,11 +223,7 @@ fn is_none_transform(t: &Ikev2Transform) -> bool {
 /// (draft-guthrie-cnsa2-ipsec-profile-04 §4, §6.2). Each KE method is also
 /// judged alone when every ADDKE type offers NONE, since the SA may then
 /// skip them all.
-fn ike_judged_transforms(
-    ike: &Ikev2TransformTypes,
-    sbom: &NormalizedSbom,
-    index: &NormalizedSbomIndex,
-) -> Vec<IkeJudged> {
+fn ike_judged_transforms(ike: &Ikev2TransformTypes, ev: &SbomEvidence<'_>) -> Vec<IkeJudged> {
     let mut judged = Vec::new();
     let mut key_exchanges = Vec::new();
     // Per ADDKE round: its methods other than NONE, and whether NONE is one.
@@ -229,12 +234,12 @@ fn ike_judged_transforms(
             if is_none_transform(&t) {
                 *optional = true;
             } else {
-                methods.push(classify_ike_transform(&t, sbom, index));
+                methods.push(classify_ike_transform(&t, ev));
             }
         } else if t.kind == Ikev2TransformKind::Ke {
-            key_exchanges.push(classify_ike_transform(&t, sbom, index));
+            key_exchanges.push(classify_ike_transform(&t, ev));
         } else {
-            judged.push(classify_ike_transform(&t, sbom, index));
+            judged.push(classify_ike_transform(&t, ev));
         }
     }
     let skippable = additional.values().all(|(_, optional)| *optional);
@@ -350,17 +355,6 @@ fn tls_offers(
             ),
         ),
     ]
-}
-
-/// Resolve a bom-ref to the referenced component, if it exists.
-fn resolve_component<'a>(
-    bom_ref: &str,
-    sbom: &'a NormalizedSbom,
-    index: &NormalizedSbomIndex,
-) -> Option<&'a Component> {
-    index
-        .resolve_bom_ref(bom_ref)
-        .and_then(|id| sbom.components.get(id))
 }
 
 /// The digest size of a SHA-2 or SHA-3 hash in bits, which CNSA 2.0 and
@@ -698,7 +692,7 @@ const IR8547_PUBLIC_KEY_FAMILIES: &[&str] = &[
 /// What a component declares beside its algorithm's identity, which
 /// deadline mode reads for the algorithm's use and size.
 #[derive(Debug, Clone, Default)]
-struct Declared {
+pub(crate) struct Declared {
     /// The CycloneDX `primitive`.
     primitive: Option<CryptoPrimitive>,
     /// The declared `classicalSecurityLevel`.
@@ -714,7 +708,7 @@ struct Declared {
 }
 
 impl Declared {
-    fn of(comp: &Component) -> Self {
+    pub(crate) fn of(comp: &Component) -> Self {
         let cp = comp.crypto_properties.as_ref();
         let algo = cp.and_then(|c| c.algorithm_properties.as_ref());
         let family = algo.and_then(|a| a.algorithm_family.as_deref());
@@ -729,21 +723,24 @@ impl Declared {
         }
     }
 
-    /// What the component a bom-ref resolves to declares. A ref that
-    /// resolves nowhere declares the curve and the 112-bit digest it names,
-    /// if any: "ecdsa-p384" is classified as ECDSA, its first mention,
-    /// beside the curve P-384.
-    fn of_ref(bom_ref: &str, sbom: &NormalizedSbom, index: &NormalizedSbomIndex) -> Self {
-        resolve_component(bom_ref, sbom, index).map_or_else(
-            || Self {
-                curve: classify_algorithm_names_guarded(bom_ref)
-                    .into_iter()
-                    .find(|m| m.family.as_deref() == Some("EC"))
-                    .and_then(|m| m.parameter),
-                digest_112: digest_112_named([bom_ref], None),
-                ..Self::default()
+    /// What the component a bom-ref resolves to declares (the evidence's
+    /// [`ComponentView::algorithm_declared`]). A ref that resolves nowhere
+    /// declares the curve and the 112-bit digest it names, if any:
+    /// "ecdsa-p384" is classified as ECDSA, its first mention, beside the
+    /// curve P-384.
+    fn of_ref<'e>(bom_ref: &str, ev: &'e SbomEvidence<'_>) -> Cow<'e, Self> {
+        ev.resolve_bom_ref(bom_ref).map_or_else(
+            || {
+                Cow::Owned(Self {
+                    curve: classify_algorithm_names_guarded(bom_ref)
+                        .into_iter()
+                        .find(|m| m.family.as_deref() == Some("EC"))
+                        .and_then(|m| m.parameter),
+                    digest_112: digest_112_named([bom_ref], None),
+                    ..Self::default()
+                })
             },
-            Self::of,
+            |target| Cow::Borrowed(target.algorithm_declared()),
         )
     }
 
@@ -1122,10 +1119,9 @@ fn observed_protocol(proto: &ProtocolProperties) -> Option<String> {
 
 /// The algorithm identity a crypto asset declares, as the observed value of
 /// a finding about an algorithm the classifier cannot name: its
-/// `algorithmFamily`, else its OID. `None` when it declares neither (its
-/// name is the finding's element).
-fn observed_identity(comp: &Component) -> Option<String> {
-    let cp = comp.crypto_properties.as_ref()?;
+/// `algorithmFamily`, else its OID (from its crypto properties `cp`). `None`
+/// when it declares neither (its name is the finding's element).
+fn observed_identity(cp: &CryptoProperties) -> Option<String> {
     cp.algorithm_properties
         .as_ref()
         .and_then(|a| a.algorithm_family.as_deref())
@@ -1171,7 +1167,6 @@ fn tls_version_below(version: &str, min: (u32, u32)) -> bool {
     parse_tls_version(version).is_some_and(|v| v < min)
 }
 
-/// Whether a protocol asset is SSL (obsolete under every profile here).
 /// Why a protocol offers nothing to evaluate: what it does declare (type
 /// and version) and exactly which evaluable fields are absent. A declared
 /// version alone names no algorithm, so the asset still cannot be judged —
@@ -1191,6 +1186,7 @@ fn unevaluable_protocol_detail(comp_name: &str, proto: &ProtocolProperties) -> S
     format!("Protocol '{comp_name}' ({declared}) declares no {missing}")
 }
 
+/// Whether a protocol asset is SSL (obsolete under every profile here).
 fn is_ssl_protocol(proto: &ProtocolProperties) -> bool {
     matches!(&proto.protocol_type, ProtocolType::Other(s) if s.to_lowercase().contains("ssl"))
 }
@@ -1220,12 +1216,12 @@ impl ComplianceChecker {
     // CNSA 2.0 compliance checks
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_cnsa2(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
+    pub(crate) fn check_cnsa2(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
         use crate::model::ComponentType;
 
-        let index = sbom.build_index();
+        let violations = &mut findings.violations;
         // Deadline mode's calendar; `None` in readiness mode.
-        let calendar = self.pqc_calendar();
+        let calendar = self.pqc_calendar(ctx.ev.as_of().date_naive());
         let calendar = calendar.as_ref();
 
         // Count only assets the classifier could actually judge against the
@@ -1234,17 +1230,17 @@ impl ComplianceChecker {
         let mut crypto_assets_evaluated = 0usize;
 
         // All components: the loop selects cryptographic assets by type.
-        for comp in sbom.components.values() {
-            if comp.component_type != ComponentType::Cryptographic {
+        for comp in ctx.ev.components() {
+            if *comp.component_type() != ComponentType::Cryptographic {
                 continue;
             }
-            let Some(cp) = &comp.crypto_properties else {
+            let Some(cp) = comp.crypto_properties() else {
                 continue;
             };
 
             match cp.asset_type {
                 CryptoAssetType::Algorithm => {
-                    if Self::check_cnsa2_algorithm(comp, cp, calendar, violations) {
+                    if Self::check_cnsa2_algorithm(&comp, cp, calendar, violations) {
                         crypto_assets_evaluated += 1;
                     }
                 }
@@ -1263,7 +1259,7 @@ impl ComplianceChecker {
                     // could be classified.
                     let mut judged = false;
                     for sig_ref in sig_refs {
-                        let (cls, bits) = classify_bom_ref(sig_ref, sbom, &index);
+                        let (cls, bits) = classify_bom_ref(sig_ref, ctx.ev);
                         let verdict = cnsa2_verdict(&cls, bits);
                         judged |= !matches!(verdict, CnsaVerdict::Unknown);
                         match verdict {
@@ -1280,7 +1276,7 @@ impl ComplianceChecker {
                                 });
                                 let calendared = Calendared::of(
                                     calendar.map(|cal| {
-                                        let declared = Declared::of_ref(sig_ref, sbom, &index);
+                                        let declared = Declared::of_ref(sig_ref, ctx.ev);
                                         let on = expiry.unwrap_or(cal.today);
                                         cnsa_not_approved(cal, &cls, &declared, on)
                                     }),
@@ -1292,12 +1288,13 @@ impl ComplianceChecker {
                                     message: format!(
                                         "Certificate '{}' signed with non-CNSA 2.0 algorithm: \
                                          {detail}{} (ref: {sig_ref})",
-                                        comp.name, calendared.note
+                                        comp.name(),
+                                        calendared.note
                                     ),
-                                    element: Some(comp.name.clone()),
+                                    element: Some(comp.name().to_string()),
                                     requirement: "CNSA 2.0 Certificate".to_string(),
                                     rule_id: "SBOM-CNSA2-CERT-001",
-                                    component_id: Some(comp.canonical_id.value().to_string()),
+                                    component_id: Some(comp.canonical_id().value().to_string()),
                                     counts: None,
                                     standard_refs: Cow::Borrowed(&[]),
                                     remediation: None,
@@ -1319,13 +1316,13 @@ impl ComplianceChecker {
                                         "Certificate '{}' signature algorithm ref '{sig_ref}' \
                                          cannot be resolved or classified, so it cannot be \
                                          shown to be on the CNSA 2.0 allowlist",
-                                        comp.name
+                                        comp.name()
                                     ),
-                                    element: Some(comp.name.clone()),
+                                    element: Some(comp.name().to_string()),
                                     requirement: "CNSA 2.0: certificate signature identification"
                                         .to_string(),
                                     rule_id: "SBOM-CNSA2-CERT-UNKNOWN",
-                                    component_id: Some(comp.canonical_id.value().to_string()),
+                                    component_id: Some(comp.canonical_id().value().to_string()),
                                     counts: None,
                                     standard_refs: Cow::Borrowed(&[]),
                                     remediation: None,
@@ -1344,9 +1341,7 @@ impl ComplianceChecker {
                 }
                 CryptoAssetType::Protocol => {
                     if let Some(proto) = &cp.protocol_properties
-                        && Self::check_cnsa2_protocol(
-                            comp, proto, sbom, &index, calendar, violations,
-                        )
+                        && Self::check_cnsa2_protocol(&comp, proto, ctx.ev, calendar, violations)
                     {
                         crypto_assets_evaluated += 1;
                     }
@@ -1391,12 +1386,12 @@ impl ComplianceChecker {
     /// which is what the CNSA2-000 inventory gate counts. Deadline mode
     /// (`calendar`) dates a rejected CNSA 1.0 algorithm.
     fn check_cnsa2_algorithm(
-        comp: &Component,
-        cp: &crate::model::CryptoProperties,
+        comp: &ComponentView<'_, '_>,
+        cp: &CryptoProperties,
         calendar: Option<&Calendar>,
         violations: &mut Vec<Violation>,
     ) -> bool {
-        let cls = classify_crypto_component(comp);
+        let cls = comp.algorithm();
 
         // Declared-quantum-level rules. Symmetric/hash primitives are allowed
         // at lower declared levels (Grover, not Shor).
@@ -1422,12 +1417,13 @@ impl ComplianceChecker {
                             category: ViolationCategory::CryptographyInfo,
                             message: format!(
                                 "'{}' is quantum-vulnerable (level {}), must migrate to PQC",
-                                comp.name, ql
+                                comp.name(),
+                                ql
                             ),
-                            element: Some(comp.name.clone()),
+                            element: Some(comp.name().to_string()),
                             requirement: "CNSA 2.0 PQC Migration".to_string(),
                             rule_id: "SBOM-CNSA2-ALG-006",
-                            component_id: Some(comp.canonical_id.value().to_string()),
+                            component_id: Some(comp.canonical_id().value().to_string()),
                             counts: None,
                             standard_refs: Cow::Borrowed(&[]),
                             remediation: None,
@@ -1444,12 +1440,13 @@ impl ComplianceChecker {
                         category: ViolationCategory::CryptographyInfo,
                         message: format!(
                             "'{}' quantum level {} < 5, CNSA 2.0 requires Level 5",
-                            comp.name, ql
+                            comp.name(),
+                            ql
                         ),
-                        element: Some(comp.name.clone()),
+                        element: Some(comp.name().to_string()),
                         requirement: "CNSA 2.0 Level 5".to_string(),
                         rule_id: "SBOM-CNSA2-ALG-007",
-                        component_id: Some(comp.canonical_id.value().to_string()),
+                        component_id: Some(comp.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -1472,24 +1469,25 @@ impl ComplianceChecker {
             .as_ref()
             .and_then(|a| a.nist_quantum_security_level)
             == Some(0);
-        match cnsa2_verdict(&cls, classical_bits) {
+        match cnsa2_verdict(cls, classical_bits) {
             CnsaVerdict::Approved => true,
             CnsaVerdict::NotApproved { rule_id, detail } => {
                 // Deadline mode: a CNSA 1.0 algorithm keeps its place until
                 // its category's exclusive-use date.
                 let calendared = Calendared::of(
-                    calendar
-                        .map(|cal| cnsa_not_approved(cal, &cls, &Declared::of(comp), cal.today)),
+                    calendar.map(|cal| {
+                        cnsa_not_approved(cal, cls, comp.algorithm_declared(), cal.today)
+                    }),
                     None,
                 );
                 violations.push(Violation {
                     severity: calendared.severity,
                     category: ViolationCategory::CryptographyInfo,
-                    message: format!("'{}' {detail}{}", comp.name, calendared.note),
-                    element: Some(comp.name.clone()),
+                    message: format!("'{}' {detail}{}", comp.name(), calendared.note),
+                    element: Some(comp.name().to_string()),
                     requirement: cnsa2_requirement(rule_id).to_string(),
                     rule_id,
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1535,12 +1533,12 @@ impl ComplianceChecker {
                         category: ViolationCategory::CryptographyInfo,
                         message: format!(
                             "'{}' {what}, so it cannot be shown to be on the CNSA 2.0 allowlist",
-                            comp.name
+                            comp.name()
                         ),
-                        element: Some(comp.name.clone()),
+                        element: Some(comp.name().to_string()),
                         requirement: "CNSA 2.0: algorithm identification".to_string(),
                         rule_id: "SBOM-CNSA2-ALG-UNKNOWN",
-                        component_id: Some(comp.canonical_id.value().to_string()),
+                        component_id: Some(comp.canonical_id().value().to_string()),
                         counts: None,
                         standard_refs: Cow::Borrowed(&[]),
                         remediation: None,
@@ -1548,7 +1546,7 @@ impl ComplianceChecker {
                         severity_override: None,
                         deadline: None,
                         field: None,
-                        observed: observed_identity(comp),
+                        observed: observed_identity(cp),
                     });
                 }
                 declared_vulnerable
@@ -1565,10 +1563,9 @@ impl ComplianceChecker {
     /// (`calendar`) dates TLS 1.2 and the CNSA 1.0 algorithms, which CNSA 1.0
     /// still allows (RFC 9151 profiles TLS 1.2 and 1.3).
     fn check_cnsa2_protocol(
-        comp: &Component,
+        comp: &ComponentView<'_, '_>,
         proto: &ProtocolProperties,
-        sbom: &NormalizedSbom,
-        index: &NormalizedSbomIndex,
+        ev: &SbomEvidence<'_>,
         calendar: Option<&Calendar>,
         violations: &mut Vec<Violation>,
     ) -> bool {
@@ -1580,12 +1577,12 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "Protocol '{}' uses SSL, which is obsolete; CNSA 2.0 requires TLS 1.3",
-                    comp.name
+                    comp.name()
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "CNSA 2.0 Protocol".to_string(),
                 rule_id: "SBOM-CNSA2-PROTO-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -1621,14 +1618,14 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "Protocol '{}' uses {} {shown}, CNSA 2.0 requires TLS 1.3{}",
-                    comp.name,
+                    comp.name(),
                     proto.protocol_type.to_string().to_uppercase(),
                     calendared.note
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "CNSA 2.0 Protocol".to_string(),
                 rule_id: "SBOM-CNSA2-PROTO-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -1653,17 +1650,17 @@ impl ComplianceChecker {
                 let labels = labels.join(", ");
                 let message = format!(
                     "Protocol '{}' {context} non-CNSA 2.0 algorithms: {labels}",
-                    comp.name
+                    comp.name()
                 );
                 let calendared = Calendared::most_urgent(offenders.into_iter().map(|o| o.verdict));
                 violations.push(Violation {
                     severity: calendared.severity,
                     category: ViolationCategory::CryptographyInfo,
                     message: format!("{message}{}", calendared.note),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "CNSA 2.0 Protocol".to_string(),
                     rule_id: "SBOM-CNSA2-PROTO-002",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -1702,19 +1699,19 @@ impl ComplianceChecker {
             }
         };
 
-        // PROTO-002: cipher suites — both the algorithm refs (resolved
-        // through the index, with the referenced asset's declared
+        // PROTO-002: cipher suites — both the algorithm refs (resolved to
+        // the components they name, with the referenced asset's declared
         // classicalSecurityLevel as key-size evidence, or token-scanned when
         // unresolvable) and a word-boundary scan of the suite name — and the
         // TLS groups and signature schemes each suite offers.
         for suite in &proto.cipher_suites {
             let mut offenders = Vec::new();
             for algo_ref in &suite.algorithms {
-                let (cls, bits) = classify_bom_ref(algo_ref, sbom, index);
+                let (cls, bits) = classify_bom_ref(algo_ref, ev);
                 if cls.class == AlgorithmClass::Unknown {
                     unverifiable.push(algo_ref.clone());
                 } else {
-                    let declared = Declared::of_ref(algo_ref, sbom, index);
+                    let declared = Declared::of_ref(algo_ref, ev);
                     record(&cls, bits, &declared, &mut offenders);
                 }
             }
@@ -1756,7 +1753,7 @@ impl ComplianceChecker {
         if let Some(ike) = &proto.ikev2_transform_types {
             let mut offenders = Vec::new();
             let key_exchange = Declared::used_for(CryptoPrimitive::KeyAgree);
-            for judged_transform in ike_judged_transforms(ike, sbom, index) {
+            for judged_transform in ike_judged_transforms(ike, ev) {
                 match judged_transform {
                     Ok((cls, bits)) => record(&cls, bits, &key_exchange, &mut offenders),
                     Err(label) => unverifiable.push(label),
@@ -1774,24 +1771,23 @@ impl ComplianceChecker {
         // assets. Unresolvable refs get the token-scan fallback.
         let mut offenders = Vec::new();
         for r in &proto.crypto_ref_array {
-            match resolve_component(r, sbom, index) {
+            match ev.resolve_bom_ref(r) {
                 Some(target) => {
                     if target
-                        .crypto_properties
-                        .as_ref()
+                        .crypto_properties()
                         .is_some_and(|c| c.asset_type == CryptoAssetType::Algorithm)
                     {
                         record(
-                            &classify_crypto_component(target),
-                            classical_bits_of(target),
-                            &Declared::of(target),
+                            target.algorithm(),
+                            target.classical_bits(),
+                            target.algorithm_declared(),
                             &mut offenders,
                         );
                     }
                 }
                 None => {
                     if let Some(cls) = worst_classification(classify_algorithm_names_guarded(r)) {
-                        let declared = Declared::of_ref(r, sbom, index);
+                        let declared = Declared::of_ref(r, ev);
                         record(&cls, None, &declared, &mut offenders);
                     } else {
                         unverifiable.push(r.clone());
@@ -1823,13 +1819,13 @@ impl ComplianceChecker {
                 message: format!(
                     "Protocol '{}' has crypto references that cannot be resolved or \
                      classified: {}; they cannot be shown to be on the CNSA 2.0 allowlist",
-                    comp.name,
+                    comp.name(),
                     unverifiable.join(", ")
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "CNSA 2.0: protocol algorithm identification".to_string(),
                 rule_id: "SBOM-CNSA2-PROTO-UNKNOWN",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -1844,10 +1840,10 @@ impl ComplianceChecker {
                 format!(
                     "Protocol '{}' declares no cipher suite, transform or algorithm the \
                      classifier can name",
-                    comp.name
+                    comp.name()
                 )
             } else {
-                unevaluable_protocol_detail(&comp.name, proto)
+                unevaluable_protocol_detail(comp.name(), proto)
             };
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
@@ -1855,10 +1851,10 @@ impl ComplianceChecker {
                 message: format!(
                     "{detail}; its algorithms cannot be shown to be on the CNSA 2.0 allowlist"
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "CNSA 2.0: protocol algorithm identification".to_string(),
                 rule_id: "SBOM-CNSA2-PROTO-UNKNOWN",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -1876,7 +1872,7 @@ impl ComplianceChecker {
     // NIST PQC Readiness checks
     // ════════════════════════════════════════════════════════════════════
 
-    pub(crate) fn check_nist_pqc(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+    pub(crate) fn check_nist_pqc(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
         use crate::model::ComponentType;
 
         let Findings {
@@ -1885,9 +1881,8 @@ impl ComplianceChecker {
             not_evaluated,
             ..
         } = findings;
-        let index = sbom.build_index();
         // Deadline mode's calendar; `None` in readiness mode.
-        let calendar = self.pqc_calendar();
+        let calendar = self.pqc_calendar(ctx.ev.as_of().date_naive());
         let calendar = calendar.as_ref();
         // The federal TLS 1.3 deadline (PQC-PROTO-003) is judged under the
         // federal profile of deadline mode only.
@@ -1902,17 +1897,17 @@ impl ComplianceChecker {
         let mut crypto_assets_evaluated = 0usize;
 
         // All components: the loop selects cryptographic assets by type.
-        for comp in sbom.components.values() {
-            if comp.component_type != ComponentType::Cryptographic {
+        for comp in ctx.ev.components() {
+            if *comp.component_type() != ComponentType::Cryptographic {
                 continue;
             }
-            let Some(cp) = &comp.crypto_properties else {
+            let Some(cp) = comp.crypto_properties() else {
                 continue;
             };
 
             match cp.asset_type {
                 CryptoAssetType::Algorithm => {
-                    if Self::check_pqc_algorithm(comp, cp, calendar, violations, passed) {
+                    if Self::check_pqc_algorithm(&comp, cp, calendar, violations, passed) {
                         crypto_assets_evaluated += 1;
                     }
                 }
@@ -1931,7 +1926,7 @@ impl ComplianceChecker {
                     // could be classified.
                     let mut judged = false;
                     for sig_ref in sig_refs {
-                        let (cls, _) = classify_bom_ref(sig_ref, sbom, &index);
+                        let (cls, _) = classify_bom_ref(sig_ref, ctx.ev);
                         // A composite signature is judged by its
                         // post-quantum part.
                         let subject = pqc_subject(&cls);
@@ -1958,7 +1953,7 @@ impl ComplianceChecker {
                                     let on = expiry.unwrap_or(cal.today);
                                     let declared = Declared {
                                         primitive: Some(CryptoPrimitive::Signature),
-                                        ..Declared::of_ref(sig_ref, sbom, &index)
+                                        ..Declared::of_ref(sig_ref, ctx.ev).into_owned()
                                     };
                                     if subject.class == AlgorithmClass::Broken {
                                         nist_broken(subject, true, on)
@@ -1973,14 +1968,14 @@ impl ComplianceChecker {
                                 category: ViolationCategory::CryptographyInfo,
                                 message: format!(
                                     "Certificate '{}' signed with {} — {problem}{} (ref: {sig_ref})",
-                                    comp.name,
+                                    comp.name(),
                                     cls.label(),
                                     calendared.note
                                 ),
-                                element: Some(comp.name.clone()),
+                                element: Some(comp.name().to_string()),
                                 requirement: "IR 8547: certificate signature".to_string(),
                                 rule_id: "SBOM-PQC-CERT-001",
-                                component_id: Some(comp.canonical_id.value().to_string()),
+                                component_id: Some(comp.canonical_id().value().to_string()),
                                 counts: None,
                                 standard_refs: Cow::Borrowed(&[]),
                                 remediation: None,
@@ -2002,13 +1997,13 @@ impl ComplianceChecker {
                                     "Certificate '{}' signature algorithm ref '{sig_ref}' \
                                      cannot be resolved or classified; unable to verify \
                                      PQC readiness",
-                                    comp.name
+                                    comp.name()
                                 ),
-                                element: Some(comp.name.clone()),
+                                element: Some(comp.name().to_string()),
                                 requirement: "IR 8547: certificate signature identification"
                                     .to_string(),
                                 rule_id: "SBOM-PQC-CERT-UNKNOWN",
-                                component_id: Some(comp.canonical_id.value().to_string()),
+                                component_id: Some(comp.canonical_id().value().to_string()),
                                 counts: None,
                                 standard_refs: Cow::Borrowed(&[]),
                                 remediation: None,
@@ -2026,7 +2021,7 @@ impl ComplianceChecker {
                 }
                 CryptoAssetType::Protocol => {
                     if let Some(proto) = &cp.protocol_properties
-                        && Self::check_pqc_protocol(comp, proto, sbom, &index, calendar, violations)
+                        && Self::check_pqc_protocol(&comp, proto, ctx.ev, calendar, violations)
                     {
                         crypto_assets_evaluated += 1;
                     }
@@ -2070,12 +2065,14 @@ impl ComplianceChecker {
                                     category: ViolationCategory::CryptographyInfo,
                                     message: format!(
                                         "'{}' symmetric key size {} bits < 128 minimum{}",
-                                        comp.name, size, calendared.note
+                                        comp.name(),
+                                        size,
+                                        calendared.note
                                     ),
-                                    element: Some(comp.name.clone()),
+                                    element: Some(comp.name().to_string()),
                                     requirement: "NIST: minimum key size".to_string(),
                                     rule_id: "SBOM-PQC-KEY-001",
-                                    component_id: Some(comp.canonical_id.value().to_string()),
+                                    component_id: Some(comp.canonical_id().value().to_string()),
                                     counts: None,
                                     standard_refs: Cow::Borrowed(&[]),
                                     remediation: None,
@@ -2128,19 +2125,19 @@ impl ComplianceChecker {
     /// counts. Deadline mode (`calendar`) dates the quantum-vulnerable
     /// algorithms IR 8547 lists, SHA-1 and the 112-bit hash functions.
     fn check_pqc_algorithm(
-        comp: &Component,
-        cp: &crate::model::CryptoProperties,
+        comp: &ComponentView<'_, '_>,
+        cp: &CryptoProperties,
         calendar: Option<&Calendar>,
         violations: &mut Vec<Violation>,
         passed: &mut Vec<PassedCheck>,
     ) -> bool {
         let algo = cp.algorithm_properties.as_ref();
-        let cls = classify_crypto_component(comp);
+        let cls = comp.algorithm();
         let ql = algo.and_then(|a| a.nist_quantum_security_level);
         // A PQ/T hybrid is judged by its post-quantum part.
-        let subject = pqc_subject(&cls);
-        let declared = Declared::of(comp);
-        let hash_112 = is_112_bit_hash(&cls, &declared);
+        let subject = pqc_subject(cls);
+        let declared = comp.algorithm_declared();
+        let hash_112 = is_112_bit_hash(cls, declared);
 
         // PQC-ALG-UNKNOWN: an algorithm the classifier cannot name used to
         // pass silently whenever it declared a quantum level. It cannot be
@@ -2165,11 +2162,11 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::CryptographyInfo,
-                message: format!("'{}' {what}; unable to verify PQC readiness", comp.name),
-                element: Some(comp.name.clone()),
+                message: format!("'{}' {what}; unable to verify PQC readiness", comp.name()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: algorithm identification".to_string(),
                 rule_id: "SBOM-PQC-ALG-UNKNOWN",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2177,7 +2174,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed_identity(comp),
+                observed: observed_identity(cp),
             });
         }
 
@@ -2199,7 +2196,7 @@ impl ComplianceChecker {
             // Deadline mode: IR 8547 Tables 2 and 4 (or the federal
             // deadlines) date the schemes they list.
             let calendared = Calendared::of(
-                calendar.map(|cal| nist_quantum_vulnerable(cal, &cls, &declared, cal.today)),
+                calendar.map(|cal| nist_quantum_vulnerable(cal, cls, declared, cal.today)),
                 None,
             );
             violations.push(Violation {
@@ -2207,12 +2204,13 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "'{}' ({shown}) is quantum-vulnerable and must migrate to PQC (IR 8547){}",
-                    comp.name, calendared.note
+                    comp.name(),
+                    calendared.note
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: quantum-vulnerable".to_string(),
                 rule_id: "SBOM-PQC-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2233,11 +2231,11 @@ impl ComplianceChecker {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::CryptographyInfo,
-                message: format!("'{}' missing nistQuantumSecurityLevel field", comp.name),
-                element: Some(comp.name.clone()),
+                message: format!("'{}' missing nistQuantumSecurityLevel field", comp.name()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: quantum assessment required".to_string(),
                 rule_id: "SBOM-PQC-012",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2256,23 +2254,21 @@ impl ComplianceChecker {
             // Deadline mode: IR 8547 Table 8 dates SHA-1 outside a
             // signature; everything else here is disallowed already.
             let signs = declared.signs();
-            let calendared = Calendared::of(
-                calendar.map(|cal| nist_broken(&cls, signs, cal.today)),
-                None,
-            );
+            let calendared =
+                Calendared::of(calendar.map(|cal| nist_broken(cls, signs, cal.today)), None);
             violations.push(Violation {
                 severity: calendared.severity,
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "'{}' ({}) is broken/disallowed per SP 800-131A{}",
-                    comp.name,
+                    comp.name(),
                     cls.label(),
                     calendared.note
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "SP 800-131A: disallowed".to_string(),
                 rule_id: "SBOM-PQC-005",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2290,7 +2286,7 @@ impl ComplianceChecker {
         // deadline mode dates it so, as it does a 112-bit key (KEY-001). A
         // SHA-2 hash that states no digest size could be SHA-224: it fails
         // closed, but as a Warning in either mode, with SHA-224's deadline.
-        let unsized_sha2 = is_unsized_sha2(&cls, &declared);
+        let unsized_sha2 = is_unsized_sha2(cls, declared);
         if hash_112 || unsized_sha2 {
             let (verdict, finding) = if hash_112 {
                 (
@@ -2315,14 +2311,14 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "'{}' ({}){finding}{}",
-                    comp.name,
+                    comp.name(),
                     cls.label(),
                     calendared.note
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: 112-bit hash function".to_string(),
                 rule_id: "SBOM-PQC-HASH-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2341,12 +2337,12 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "'{}' uses ECB mode, disallowed per SP 800-131A Rev 3",
-                    comp.name
+                    comp.name()
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "SP 800-131A Rev 3: ECB disallowed".to_string(),
                 rule_id: "SBOM-PQC-008",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2375,10 +2371,10 @@ impl ComplianceChecker {
                     rule_id: "SBOM-PQC-009",
                     message: format!(
                         "'{}' uses NIST-approved PQC algorithm ({approval})",
-                        comp.name
+                        comp.name()
                     ),
-                    element: Some(comp.name.clone()),
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    element: Some(comp.name().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     finding_detail: None,
                     requirement: "FIPS 203/204/205: approved".to_string(),
                     standard_refs: Cow::Borrowed(&[]),
@@ -2413,21 +2409,21 @@ impl ComplianceChecker {
                 format!(
                     "'{}' is a PQ/T hybrid ({}) whose post-quantum part is NIST-approved \
                      ({approval}); {combination}",
-                    comp.name,
+                    comp.name(),
                     cls.label()
                 )
             } else {
                 format!(
                     "'{}' is a hybrid PQC combiner with a NIST-approved post-quantum part \
                      ({approval}) — good migration practice",
-                    comp.name
+                    comp.name()
                 )
             };
             passed.push(PassedCheck {
                 rule_id: "SBOM-PQC-010",
                 message,
-                element: Some(comp.name.clone()),
-                component_id: Some(comp.canonical_id.value().to_string()),
+                element: Some(comp.name().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 finding_detail: None,
                 requirement: "SP 800-227 / IR 8547: PQ/T hybrid".to_string(),
                 standard_refs: Cow::Borrowed(&[]),
@@ -2447,10 +2443,9 @@ impl ComplianceChecker {
     /// had at least one algorithm classified — which is what the PQC-000
     /// inventory gate counts.
     fn check_pqc_protocol(
-        comp: &Component,
+        comp: &ComponentView<'_, '_>,
         proto: &ProtocolProperties,
-        sbom: &NormalizedSbom,
-        index: &NormalizedSbomIndex,
+        ev: &SbomEvidence<'_>,
         calendar: Option<&Calendar>,
         violations: &mut Vec<Violation>,
     ) -> bool {
@@ -2463,12 +2458,12 @@ impl ComplianceChecker {
                 message: format!(
                     "Protocol '{}' uses SSL, which is disallowed; use TLS 1.2 or higher \
                      (SP 800-52 Rev. 2)",
-                    comp.name
+                    comp.name()
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "SP 800-52: protocol version".to_string(),
                 rule_id: "SBOM-PQC-PROTO-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2488,13 +2483,13 @@ impl ComplianceChecker {
                 message: format!(
                     "Protocol '{}' uses {} {version}, which is disallowed; use TLS 1.2 or \
                      higher (SP 800-52 Rev. 2)",
-                    comp.name,
+                    comp.name(),
                     proto.protocol_type.to_string().to_uppercase()
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "SP 800-52: protocol version".to_string(),
                 rule_id: "SBOM-PQC-PROTO-001",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2520,12 +2515,13 @@ impl ComplianceChecker {
                 category: ViolationCategory::CryptographyInfo,
                 message: format!(
                     "Protocol '{}' uses TLS version {version}; {}",
-                    comp.name, dated.status
+                    comp.name(),
+                    dated.status
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "OMB M-26-15: TLS 1.3".to_string(),
                 rule_id: "SBOM-PQC-PROTO-003",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2559,17 +2555,17 @@ impl ComplianceChecker {
                 let labels = labels.join(", ");
                 let message = format!(
                     "Protocol '{}' {context} broken or quantum-vulnerable algorithms: {labels}",
-                    comp.name
+                    comp.name()
                 );
                 let calendared = Calendared::most_urgent(offenders.into_iter().map(|o| o.verdict));
                 violations.push(Violation {
                     severity: calendared.severity,
                     category: ViolationCategory::CryptographyInfo,
                     message: format!("{message}{}", calendared.note),
-                    element: Some(comp.name.clone()),
+                    element: Some(comp.name().to_string()),
                     requirement: "IR 8547 / SP 800-131A: protocol algorithms".to_string(),
                     rule_id: "SBOM-PQC-PROTO-002",
-                    component_id: Some(comp.canonical_id.value().to_string()),
+                    component_id: Some(comp.canonical_id().value().to_string()),
                     counts: None,
                     standard_refs: Cow::Borrowed(&[]),
                     remediation: None,
@@ -2617,15 +2613,11 @@ impl ComplianceChecker {
         for suite in &proto.cipher_suites {
             let mut offenders = Vec::new();
             for algo_ref in &suite.algorithms {
-                let (cls, _) = classify_bom_ref(algo_ref, sbom, index);
+                let (cls, _) = classify_bom_ref(algo_ref, ev);
                 if cls.class == AlgorithmClass::Unknown {
                     unverifiable.push(algo_ref.clone());
                 } else {
-                    record(
-                        &cls,
-                        &Declared::of_ref(algo_ref, sbom, index),
-                        &mut offenders,
-                    );
+                    record(&cls, &Declared::of_ref(algo_ref, ev), &mut offenders);
                 }
             }
             // A suite name's SHA is its record MAC, not a signature.
@@ -2668,7 +2660,7 @@ impl ComplianceChecker {
         if let Some(ike) = &proto.ikev2_transform_types {
             let mut offenders = Vec::new();
             let key_exchange = Declared::used_for(CryptoPrimitive::KeyAgree);
-            for judged_transform in ike_judged_transforms(ike, sbom, index) {
+            for judged_transform in ike_judged_transforms(ike, ev) {
                 match judged_transform {
                     Ok((cls, _)) => record(&cls, &key_exchange, &mut offenders),
                     Err(label) => unverifiable.push(label),
@@ -2683,23 +2675,22 @@ impl ComplianceChecker {
 
         let mut offenders = Vec::new();
         for r in &proto.crypto_ref_array {
-            match resolve_component(r, sbom, index) {
+            match ev.resolve_bom_ref(r) {
                 Some(target) => {
                     if target
-                        .crypto_properties
-                        .as_ref()
+                        .crypto_properties()
                         .is_some_and(|c| c.asset_type == CryptoAssetType::Algorithm)
                     {
                         record(
-                            &classify_crypto_component(target),
-                            &Declared::of(target),
+                            target.algorithm(),
+                            target.algorithm_declared(),
                             &mut offenders,
                         );
                     }
                 }
                 None => {
                     if let Some(cls) = worst_classification(classify_algorithm_names_guarded(r)) {
-                        record(&cls, &Declared::of_ref(r, sbom, index), &mut offenders);
+                        record(&cls, &Declared::of_ref(r, ev), &mut offenders);
                     } else {
                         unverifiable.push(r.clone());
                     }
@@ -2735,13 +2726,13 @@ impl ComplianceChecker {
                 message: format!(
                     "Protocol '{}' has crypto evidence that cannot be resolved or \
                      classified: {}; unable to verify PQC readiness",
-                    comp.name,
+                    comp.name(),
                     unverifiable.join(", ")
                 ),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: protocol algorithm identification".to_string(),
                 rule_id: "SBOM-PQC-PROTO-UNKNOWN",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,
@@ -2758,19 +2749,19 @@ impl ComplianceChecker {
                 format!(
                     "Protocol '{}' declares no cipher suite, transform or algorithm the \
                      classifier can name",
-                    comp.name
+                    comp.name()
                 )
             } else {
-                unevaluable_protocol_detail(&comp.name, proto)
+                unevaluable_protocol_detail(comp.name(), proto)
             };
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::CryptographyInfo,
                 message: format!("{detail}; its algorithms cannot be verified for PQC readiness"),
-                element: Some(comp.name.clone()),
+                element: Some(comp.name().to_string()),
                 requirement: "IR 8547: protocol algorithm identification".to_string(),
                 rule_id: "SBOM-PQC-PROTO-UNKNOWN",
-                component_id: Some(comp.canonical_id.value().to_string()),
+                component_id: Some(comp.canonical_id().value().to_string()),
                 counts: None,
                 standard_refs: Cow::Borrowed(&[]),
                 remediation: None,

@@ -5,10 +5,16 @@
 //! mandate: OMB M-26-05 (2026-01-23) rescinded M-22-18 and M-23-16, the
 //! attestation policy built on §4(e), and the FAR Council withdrew FAR
 //! Case 2023-002 on 2026-03-06. The checks themselves are unchanged.
+//!
+//! The checks read the run's evidence (see [`super::evidence`]), never the
+//! SBOM itself.
 
+use super::shared::{
+    invalid_digest_note_of, unparseable_timestamp_of, unreachable_contact_note_of,
+};
 use super::ssdf::{cdxa_note, requirement_matches_id};
 use super::*;
-use crate::model::{AttestationRuleFamily, Component, DefinedRequirement};
+use crate::model::{AttestationRuleFamily, DefinedRequirement};
 
 /// Which attested requirements evidence automated, provenance-tracked SBOM
 /// generation (the EO 14028 §4(e) autogeneration proxy). Accepts the SSDF
@@ -27,8 +33,10 @@ fn evidences_autogen_provenance(requirement: &DefinedRequirement) -> bool {
 
 impl ComplianceChecker {
     /// Executive Order 14028 Section 4 checks
-    pub(crate) fn check_eo14028(&self, sbom: &NormalizedSbom, findings: &mut Findings) {
+    pub(crate) fn check_eo14028(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
         use crate::model::ExternalRefType;
+        let ev = ctx.ev;
+        let doc = ev.document();
 
         let Findings {
             violations,
@@ -38,8 +46,7 @@ impl ComplianceChecker {
 
         // The component checks below have nothing to judge without a
         // package-scoped component.
-        violations.extend(self.inventory_absent_violation(
-            sbom,
+        violations.extend(ctx.inventory_absent_violation(
             "SBOM-EO14028-INVENTORY",
             "EO 14028 §4(e) practice: component inventory",
         ));
@@ -48,12 +55,9 @@ impl ComplianceChecker {
         // fully resolved at the injectable clock). Strengthens only: the
         // legacy tool-creator path below stays a valid SelfDeclared-level
         // fallback, and documents without declarations are unaffected.
-        let sbom_evidence = SbomEvidence::new(sbom, self.now());
-        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let declarations = ctx.attestation_declarations();
-        let autogen_attested = ctx
-            .evidence_for(AttestationRuleFamily::Eo14028)
-            .iter()
+        let autogen_attested = ev
+            .supported_requirements(AttestationRuleFamily::Eo14028)
             .any(|s| evidences_autogen_provenance(s.requirement));
 
         // Sec 4(e) — Machine-readable format: CycloneDX 1.4+, SPDX 2.2+.
@@ -63,11 +67,11 @@ impl ComplianceChecker {
         // numerically ("1.10" is newer than "1.7", not "1.1"); an absent or
         // unparseable version skips the gate instead of false-failing, and
         // the result lists it as not evaluated.
-        let minimum = match sbom.document.format {
+        let minimum = match doc.format {
             crate::model::SbomFormat::CycloneDx => crate::model::SpecVersion::new(1, 4, 0),
             crate::model::SbomFormat::Spdx => crate::model::SpecVersion::new(2, 2, 0),
         };
-        let parsed = sbom.document.spec_version_parsed();
+        let parsed = doc.spec_version;
         if parsed.is_none() {
             not_evaluated.push("SBOM-EO14028-FORMAT", SPEC_VERSION_UNPARSED);
         }
@@ -78,7 +82,7 @@ impl ComplianceChecker {
                 message: format!(
                     "SBOM format {} {} is older than the machine-readable formats EO 14028 \
                     practice expects; use CycloneDX 1.4+, SPDX 2.2+, or SPDX 3.0+",
-                    sbom.document.format, sbom.document.spec_version
+                    doc.format, doc.spec_version_raw
                 ),
                 element: None,
                 requirement: "EO 14028 §4(e) practice: Machine-readable SBOM format".to_string(),
@@ -91,10 +95,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed(&format!(
-                    "{} {}",
-                    sbom.document.format, sbom.document.spec_version
-                )),
+                observed: observed(&format!("{} {}", doc.format, doc.spec_version_raw)),
             });
         }
 
@@ -102,8 +103,8 @@ impl ComplianceChecker {
         // incorporates the NTIA minimum elements, which include Timestamp;
         // a missing/invalid source timestamp is stored as the UNIX_EPOCH
         // sentinel (see `has_known_timestamp`); an invalid one is quoted.
-        if !sbom.document.has_known_timestamp() {
-            let message = unparseable_timestamp(sbom).map_or_else(
+        if !doc.has_known_timestamp {
+            let message = unparseable_timestamp_of(doc.created_unparsed).map_or_else(
                 || "SBOM is missing a creation timestamp (NTIA required data field)".to_string(),
                 |gap| format!("SBOM has {gap} (NTIA required data field)"),
             );
@@ -122,7 +123,7 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: observed_unparsed_timestamp(sbom),
+                observed: doc.created_unparsed.and_then(observed),
             });
         }
 
@@ -130,19 +131,14 @@ impl ComplianceChecker {
         // A fresh CDXA attestation of an autogeneration/provenance
         // requirement in the EO 14028 family also satisfies the rule, at
         // Structural/SignaturePresent level.
-        let has_tool = sbom
-            .document
-            .creators
-            .iter()
-            .any(|c| c.creator_type == crate::model::CreatorType::Tool);
-        if !has_tool && !autogen_attested {
+        if !doc.has_tool_creator && !autogen_attested {
             let mut message =
                 "SBOM should be auto-generated by a tool; no tool creator identified".to_string();
             if let Some(note) = cdxa_note(
                 declarations,
                 AttestationRuleFamily::Eo14028,
                 &|_, r| evidences_autogen_provenance(r),
-                self.now(),
+                ev.as_of(),
                 "EO 14028 automated generation / provenance",
             ) {
                 message.push_str(&note);
@@ -167,7 +163,7 @@ impl ComplianceChecker {
         }
 
         // Sec 4(e) — Creator identification
-        if sbom.document.creators.is_empty() {
+        if doc.creators.is_empty() {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DocumentMetadata,
@@ -192,12 +188,9 @@ impl ComplianceChecker {
         // components are not flagged)
         // Package elements (identifier, version, hash, supplier) apply to
         // package-scoped components only; names apply to every component.
-        let packages: Vec<_> = self.package_components(sbom).collect();
+        let packages: Vec<_> = ctx.package_components().collect();
         let total = packages.len();
-        let without_id = packages
-            .iter()
-            .filter(|c| !c.identifiers.has_cra_identifier())
-            .count();
+        let without_id = packages.iter().filter(|c| !c.ids().any()).count();
         if without_id > 0 {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
@@ -225,12 +218,8 @@ impl ComplianceChecker {
 
         // Sec 4(e) — NTIA baseline: component names
         // All components: every component needs a name, package or not.
-        let all_components = sbom.components.len();
-        let without_name = sbom
-            .components
-            .values()
-            .filter(|c| !known_component_name(c))
-            .count();
+        let all_components = ev.component_count();
+        let without_name = ev.components().filter(|c| !c.name_known()).count();
         if without_name > 0 {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
@@ -258,7 +247,7 @@ impl ComplianceChecker {
 
         // Sec 4(e) — Dependency relationships (between packages: crypto
         // assets and files need not join the dependency graph)
-        if total > 1 && sbom.edges.is_empty() {
+        if total > 1 && !ev.has_edges() {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DependencyInfo,
@@ -281,10 +270,7 @@ impl ComplianceChecker {
 
         // Sec 4(e) — Version information (placeholder values such as
         // NOASSERTION do not satisfy the element)
-        let without_version = packages
-            .iter()
-            .filter(|c| !has_known_value(&c.version))
-            .count();
+        let without_version = packages.iter().filter(|c| !c.version().is_known()).count();
         if without_version > 0 {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
@@ -313,21 +299,18 @@ impl ComplianceChecker {
         // Sec 4(e) — Cryptographic hashes for integrity. Only plausible
         // digests count (see `plausible_digest`); the message names the
         // components whose present hashes did not.
-        let without_hash: Vec<&Component> = packages
+        let without_hash: Vec<_> = packages
             .iter()
-            .copied()
-            .filter(|c| {
-                !c.hashes
-                    .iter()
-                    .any(|h| plausible_digest(&h.algorithm, &h.value))
-            })
+            .filter(|c| !c.hashes().facts.plausible)
             .collect();
         if !without_hash.is_empty() {
             let mut message = format!(
                 "{}/{total} components missing cryptographic hashes",
                 without_hash.len()
             );
-            message.push_str(&invalid_digest_note(without_hash.iter().copied()));
+            message.push_str(&invalid_digest_note_of(
+                without_hash.iter().map(|c| (c.name(), c.hashes().raw)),
+            ));
             let without_hash = without_hash.len();
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -356,10 +339,11 @@ impl ComplianceChecker {
         // only on the described product components — a dependency's
         // upstream advisories URL is not the vendor's disclosure process. A
         // contact counts only when it reaches someone (`known_contact`), as
-        // for the CRA and PCI DSS checks: until v0.4.0 any value did.
-        let has_security_ref = known_contact(sbom.document.security_contact.as_deref())
-            || known_contact(sbom.document.vulnerability_disclosure_url.as_deref())
-            || manufacturer_reference(sbom, |r| {
+        // for the CRA and PCI DSS checks: until v0.4.0 any value did. A
+        // support reference does not count here (it does for CRA Art. 13(17)).
+        let has_security_ref = doc.security_contact_reaches
+            || doc.vulnerability_disclosure_url_reaches
+            || ev.manufacturer().reference(|r| {
                 matches!(
                     r.ref_type,
                     ExternalRefType::SecurityContact | ExternalRefType::Advisories
@@ -371,7 +355,7 @@ impl ComplianceChecker {
                 category: ViolationCategory::SecurityInfo,
                 message: format!(
                     "No security contact or vulnerability disclosure reference found{}",
-                    unreachable_contact_note(sbom)
+                    unreachable_contact_note_of(ev.manufacturer().unreachable_contact)
                 ),
                 element: None,
                 requirement: "EO 14028 §4(e)(viii) practice: Vulnerability disclosure program"
@@ -385,13 +369,13 @@ impl ComplianceChecker {
                 severity_override: None,
                 deadline: None,
                 field: None,
-                observed: unreachable_contact(sbom).and_then(observed),
+                observed: ev.manufacturer().unreachable_contact.and_then(observed),
             });
         }
 
         // Sec 4(e) — Supplier identification (placeholder values such as
         // NOASSERTION do not satisfy the element)
-        let without_supplier = packages.iter().filter(|c| !has_known_producer(c)).count();
+        let without_supplier = packages.iter().filter(|c| !c.producer().is_known()).count();
         if without_supplier > 0 {
             // Supplier Name is a REQUIRED NTIA minimum element, and the EO 14028
             // §4(e) practice incorporates the NTIA minimum elements — so a missing supplier

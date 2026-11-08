@@ -735,7 +735,7 @@ fn push_model_finding(
 
 /// [`push_model_finding`] for a hash element: the components are named in
 /// the message, which also says why their present hashes did not count
-/// (see `invalid_digest_note`).
+/// (see `invalid_digest_note_of`).
 fn push_hash_finding(
     violations: &mut Vec<Violation>,
     severity: ViolationSeverity,
