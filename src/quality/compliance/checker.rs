@@ -112,6 +112,11 @@ impl ComplianceChecker {
     /// Whether the run leaves `comp` out of the package rules: its scope is
     /// excluded, the run does not judge such components, and it is not the
     /// document's primary component (the product itself is never left out).
+    ///
+    /// No checker calls it since the checkers with package rules read the
+    /// evidence (its `ComplianceContext` form); it stays as the predicate
+    /// the agreement tests pin that form to.
+    #[cfg(test)]
     pub(crate) fn leaves_out(&self, sbom: &NormalizedSbom, comp: &crate::model::Component) -> bool {
         !self.include_excluded_scope
             && comp.scope == Some(crate::model::DependencyScope::Excluded)
@@ -121,6 +126,11 @@ impl ComplianceChecker {
     /// Whether the package rules judge `comp`: a package-scoped component
     /// (see [`crate::model::ComponentType::is_package_scoped`]) the run does
     /// not leave out for its excluded scope (see [`Self::leaves_out`]).
+    ///
+    /// No checker calls it since the checkers with package rules read the
+    /// evidence (its `ComplianceContext` form); it stays as the predicate
+    /// the agreement tests pin that form to.
+    #[cfg(test)]
     pub(crate) fn judges_package(
         &self,
         sbom: &NormalizedSbom,
@@ -132,6 +142,11 @@ impl ComplianceChecker {
     /// The components package rules apply to (see [`Self::judges_package`]).
     /// Every per-component package check iterates through this or tests
     /// [`Self::judges_package`], so no standard can forget a carve-out.
+    ///
+    /// No checker calls it since the checkers with package rules read the
+    /// evidence (its `ComplianceContext` form); it stays as the predicate
+    /// the agreement tests pin that form to.
+    #[cfg(test)]
     pub(crate) fn package_components<'a>(
         &'a self,
         sbom: &'a NormalizedSbom,

@@ -319,12 +319,17 @@ macro_rules! dedicated_checker {
     };
 }
 
-dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
+dedicated_checker!(
+    NistSsdfChecker,
+    ComplianceLevel::NistSsdf,
+    check_nist_ssdf,
+    context
+);
 dedicated_checker!(
     Eo14028Checker,
     ComplianceLevel::Eo14028,
     check_eo14028,
-    findings
+    context
 );
 dedicated_checker!(Cnsa2Checker, ComplianceLevel::Cnsa2, check_cnsa2, context);
 dedicated_checker!(
@@ -337,7 +342,7 @@ dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,
     check_bsi_tr_03183_2,
-    findings
+    context
 );
 dedicated_checker!(
     CraOssStewardChecker,
@@ -366,14 +371,15 @@ dedicated_checker!(
     Cisa2026Checker,
     ComplianceLevel::Cisa2026,
     check_cisa2026,
-    findings
+    context
 );
 dedicated_checker!(
     PciDss632Checker,
     ComplianceLevel::PciDss632,
-    check_pci_dss_6_3_2
+    check_pci_dss_6_3_2,
+    context
 );
-dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
+dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, context);
 
 /// Resolve the [`StandardChecker`] for a given level: the one its entry in
 /// the standards table names. The dedicated profiles have their own

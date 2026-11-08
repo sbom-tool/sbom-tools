@@ -99,14 +99,12 @@ pub(crate) use shared::plausible_digest;
 #[cfg(feature = "cli")]
 pub(crate) use shared::manufacturer_name;
 use shared::{
-    SPDX2_NO_SIGNATURE, SPEC_VERSION_UNPARSED, ValueState, creator_contacts, creator_identified,
-    digest_problems, document_signed, future_timestamp_violation, has_known_license,
-    has_known_value, invalid_digest_note, is_contact_reference, is_declared_unknown,
-    is_eucc_reference, is_placeholder, is_spdx2, justified_not_affected, known_component_name,
-    known_contact, known_value, license_state, manufacturer_reference, name_with_digest_problems,
-    observed, observed_digest, observed_producer, observed_unparsed_timestamp, truncate_list,
-    unparseable_timestamp, unreachable_contact, unreachable_contact_note, unreachable_creator,
-    unreachable_creator_note, unreachable_sidecar_note, value_state,
+    SPDX2_NO_SIGNATURE, SPEC_VERSION_UNPARSED, ValueState, creator_contacts, digest_problems,
+    document_signed, has_known_license, has_known_value, invalid_digest_note, is_contact_reference,
+    is_eucc_reference, is_placeholder, known_component_name, known_contact, manufacturer_reference,
+    name_with_digest_problems, observed, observed_digest, observed_unparsed_timestamp,
+    truncate_list, unparseable_timestamp, unreachable_creator, unreachable_creator_note,
+    unreachable_sidecar_note,
 };
 
 #[cfg(test)]
