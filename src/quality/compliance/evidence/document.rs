@@ -82,8 +82,8 @@ pub(crate) struct DocumentFacts<'a> {
     pub(crate) spdx2: bool,
     /// Whether a creator that is not a tool is identified by a real name or
     /// email address (see `shared::creator_identified`): the SBOM author of
-    /// CISA 2026. BSI TR-03183-2 accepts any non-tool creator (see
-    /// [`Self::has_non_tool_creator`]).
+    /// CISA 2026 and FSCT. BSI TR-03183-2 accepts any non-tool creator (see
+    /// [`Self::has_non_tool_creator`]), the other standards any creator.
     pub(crate) has_identified_non_tool_creator: bool,
     /// The lifecycle phase the document was generated in.
     pub(crate) lifecycle_phase: Text<'a>,
@@ -101,6 +101,11 @@ pub(crate) struct DocumentFacts<'a> {
     /// 2026 asks for a real value; the checks that read
     /// [`Self::serial_number`] ask only that one is present.
     pub(crate) serial_number_text: Text<'a>,
+    /// Whether a tool creator's name has a digit in it: FSCT's reading of a
+    /// tool version. The parsers fold a tool's version into the tool
+    /// creator's name ("name version"). CISA 2026 reads a tool version
+    /// differently.
+    pub(crate) tool_name_has_digit: bool,
 }
 
 /// One creator of the document.
@@ -177,6 +182,11 @@ impl<'a> DocumentFacts<'a> {
                 .any(|t| tool_name_carries_version(&t.name)),
             doc_version: document.doc_version,
             serial_number_text: Text::of(document.serial_number.as_deref()),
+            tool_name_has_digit: document
+                .creators
+                .iter()
+                .filter(|c| c.creator_type == CreatorType::Tool)
+                .any(|t| t.name.chars().any(|ch| ch.is_ascii_digit())),
         }
     }
 }
