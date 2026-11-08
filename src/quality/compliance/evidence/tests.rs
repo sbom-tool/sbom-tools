@@ -1455,6 +1455,84 @@ fn attestations_are_judged_once_and_read_by_family() {
     assert!(FAMILIES.iter().all(|f| supported_ids(&ev, *f).is_empty()));
 }
 
+#[test]
+fn references_on_any_component_count_a_dependency() {
+    let reference = |ref_type, url: &str| ExternalReference {
+        ref_type,
+        url: url.to_string(),
+        comment: None,
+        hashes: Vec::new(),
+    };
+    // [VCS, build, vulnerability reference] of a product and one dependency
+    // that carries `refs`.
+    let facts = |refs: Vec<ExternalReference>| {
+        let product = component("product");
+        let mut dependency = component("dependency");
+        dependency.external_refs = refs;
+        let mut sbom = sbom_of(vec![product.clone(), dependency]);
+        sbom.primary_component_id = Some(product.canonical_id);
+        let ev = SbomEvidence::new(&sbom, as_of());
+        [
+            ev.has_vcs_reference(),
+            ev.has_build_reference(),
+            ev.has_vulnerability_reference_on_any_component(),
+        ]
+    };
+    assert_eq!(facts(vec![]), [false; 3]);
+    assert_eq!(
+        facts(vec![reference(
+            ExternalRefType::Vcs,
+            "https://git.test/dep"
+        )]),
+        [true, false, false]
+    );
+    for build in [ExternalRefType::BuildMeta, ExternalRefType::BuildSystem] {
+        assert_eq!(
+            facts(vec![reference(build, "https://ci.test/dep")]),
+            [false, true, false]
+        );
+    }
+    // A dependency's own advisories count here.
+    assert_eq!(
+        facts(vec![reference(
+            ExternalRefType::Advisories,
+            "https://dep.test/advisories"
+        )]),
+        [false, false, true]
+    );
+    // A contact that reaches nobody does not, nor does a support reference.
+    assert_eq!(
+        facts(vec![
+            reference(ExternalRefType::SecurityContact, "security@example.com"),
+            reference(ExternalRefType::Support, "https://dep.test/support"),
+        ]),
+        [false; 3]
+    );
+    // A vulnerability assertion is a document, whatever its locator.
+    assert_eq!(
+        facts(vec![reference(
+            ExternalRefType::VulnerabilityAssertion,
+            "NOASSERTION"
+        )]),
+        [false, false, true]
+    );
+}
+
+#[test]
+fn has_vulnerabilities_tells_whether_any_component_lists_one() {
+    let mut vulnerable = component("vulnerable");
+    let sbom = sbom_of(vec![component("clean"), vulnerable.clone()]);
+    assert!(!SbomEvidence::new(&sbom, as_of()).has_vulnerabilities());
+    vulnerable.vulnerabilities = vec![VulnerabilityRef::new(
+        "CVE-1".to_string(),
+        VulnerabilitySource::Osv,
+    )];
+    let sbom = sbom_of(vec![component("clean"), vulnerable]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert!(ev.has_vulnerabilities());
+    assert_eq!(ev.vulnerabilities().len(), 1);
+}
+
 // ----------------------------------------------------------------------------
 // The facts do not depend on when or where a group is derived
 // ----------------------------------------------------------------------------
@@ -1521,6 +1599,15 @@ fn every_fact(ev: &SbomEvidence<'_>, reversed: bool) -> String {
             format!(
                 "{:?}",
                 FAMILIES.map(|f| ev.supported_requirements(f).collect::<Vec<_>>())
+            )
+        }),
+        Box::new(|| {
+            format!(
+                "{} {} {} {}",
+                ev.has_vcs_reference(),
+                ev.has_build_reference(),
+                ev.has_vulnerabilities(),
+                ev.has_vulnerability_reference_on_any_component()
             )
         }),
     ];
@@ -2223,6 +2310,50 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             });
             assert_eq!(cached, derived, "{at}: {family:?}");
         }
+
+        // The references and vulnerabilities of any component, as the SSDF
+        // checks derived them.
+        let any_reference = |accepts: &dyn Fn(&ExternalReference) -> bool| {
+            sbom.components
+                .values()
+                .any(|c| c.external_refs.iter().any(accepts))
+        };
+        assert_eq!(
+            ev.has_vcs_reference(),
+            any_reference(&|r| matches!(r.ref_type, ExternalRefType::Vcs)),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_build_reference(),
+            any_reference(&|r| matches!(
+                r.ref_type,
+                ExternalRefType::BuildMeta | ExternalRefType::BuildSystem
+            )),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_vulnerability_reference_on_any_component(),
+            any_reference(&|r| match r.ref_type {
+                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
+                    super::super::shared::is_contact_reference(r)
+                }
+                ExternalRefType::VulnerabilityAssertion => true,
+                _ => false,
+            }),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_vulnerabilities(),
+            sbom.components
+                .values()
+                .any(|c| !c.vulnerabilities.is_empty()),
+            "{at}"
+        );
+        assert_eq!(
+            ev.has_vulnerabilities(),
+            !ev.vulnerabilities().is_empty(),
+            "{at}"
+        );
     }
 }
 

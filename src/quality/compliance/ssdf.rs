@@ -3,7 +3,11 @@
 //! Also home of the shared CDXA attestation-evidence helpers used by the
 //! SSDF / EO 14028 / CRA / EUCC integration sites (SSDF is the canonical
 //! CDXA rule family, and `registry/`/`mod.rs` are frozen surfaces).
+//!
+//! The SSDF checks read the run's evidence (see [`super::evidence`]), never
+//! the SBOM itself.
 
+use super::shared::invalid_digest_note_of;
 use super::*;
 use crate::model::{
     AttestationDeclarations, AttestationRuleFamily, CdxaRef, CdxaResolution, DefinedRequirement,
@@ -51,8 +55,10 @@ pub(super) fn standard_references_eucc(standard: &DefinedStandard) -> bool {
 /// dangling refs, stale evidence — the same criteria as
 /// [`AttestationDeclarations::supported_requirements`], in the same order).
 /// `None` when no attestation map entry targets the rule at all. Callers
-/// invoke this only after `ComplianceContext::evidence_for` returned no
-/// matching supported requirement, so every matching entry tripped a gate.
+/// invoke this only after the supported requirements of the run (see
+/// `SbomEvidence::supported_requirements` and
+/// `ComplianceContext::evidence_for`) held no matching one, so every
+/// matching entry tripped a gate.
 fn cdxa_rejection_reason(
     declarations: &AttestationDeclarations,
     family: AttestationRuleFamily,
@@ -194,13 +200,14 @@ pub(super) fn cdxa_note(
 
 impl ComplianceChecker {
     /// NIST SP 800-218 Secure Software Development Framework checks
-    pub(crate) fn check_nist_ssdf(&self, sbom: &NormalizedSbom, violations: &mut Vec<Violation>) {
-        use crate::model::ExternalRefType;
+    pub(crate) fn check_nist_ssdf(&self, ctx: &ComplianceContext<'_, '_>, findings: &mut Findings) {
+        let ev = ctx.ev;
+        let doc = ev.document();
+        let violations = &mut findings.violations;
 
         // PS.3.2 provenance data must cover the release's components; the
         // per-component practices below have nothing to judge without one.
-        violations.extend(self.inventory_absent_violation(
-            sbom,
+        violations.extend(ctx.inventory_absent_violation(
             "SBOM-SSDF-INVENTORY",
             "NIST SSDF PS.3.2: provenance data for the release's components",
         ));
@@ -211,16 +218,12 @@ impl ComplianceChecker {
         // every legacy check below remains a valid SelfDeclared-level
         // satisfaction path, and on documents without declarations
         // `attested()` is uniformly false (zero behavior change).
-        let sbom_evidence = SbomEvidence::new(sbom, self.now());
-        let ctx = ComplianceContext::new(self, &sbom_evidence);
         let declarations = ctx.attestation_declarations();
-        let ssdf_evidence = ctx.evidence_for(AttestationRuleFamily::Ssdf);
         let attested = |practice: &str| {
-            ssdf_evidence
-                .iter()
+            ev.supported_requirements(AttestationRuleFamily::Ssdf)
                 .any(|s| requirement_matches_id(s.requirement, practice))
         };
-        let now = self.now();
+        let now = ev.as_of();
 
         // PS.1 — Provenance: creator/tool information. A fresh attestation
         // of practice PS.1 satisfies the rule at Structural /
@@ -228,7 +231,7 @@ impl ComplianceChecker {
         let ps1_attested = attested("PS.1");
         let ps1_matcher: &dyn Fn(&DefinedStandard, &DefinedRequirement) -> bool =
             &|_, r| requirement_matches_id(r, "PS.1");
-        if sbom.document.creators.is_empty() && !ps1_attested {
+        if doc.creators.is_empty() && !ps1_attested {
             let mut message =
                 "SBOM must identify its creator (tool or organization) for provenance tracking"
                     .to_string();
@@ -260,12 +263,7 @@ impl ComplianceChecker {
             });
         }
 
-        let has_tool_creator = sbom
-            .document
-            .creators
-            .iter()
-            .any(|c| c.creator_type == crate::model::CreatorType::Tool);
-        if !has_tool_creator && !ps1_attested {
+        if !doc.has_tool_creator && !ps1_attested {
             let mut message =
                 "SBOM should identify the generation tool for automated provenance".to_string();
             if let Some(note) = cdxa_note(
@@ -300,16 +298,11 @@ impl ComplianceChecker {
         // practices (hash, identifier, supplier) judge package-scoped
         // components only — crypto assets, files and services carry none.
         // Only plausible digests count (see `plausible_digest`).
-        let packages: Vec<_> = self.package_components(sbom).collect();
+        let packages: Vec<_> = ctx.package_components().collect();
         let total = packages.len();
         let without_hash_components: Vec<_> = packages
             .iter()
-            .copied()
-            .filter(|c| {
-                !c.hashes
-                    .iter()
-                    .any(|h| plausible_digest(&h.algorithm, &h.value))
-            })
+            .filter(|c| !c.hashes().facts.plausible)
             .collect();
         let without_hash = without_hash_components.len();
         if without_hash > 0 {
@@ -317,7 +310,11 @@ impl ComplianceChecker {
             let mut message = format!(
                 "{without_hash}/{total} components ({pct}%) missing cryptographic hashes for build integrity"
             );
-            message.push_str(&invalid_digest_note(without_hash_components));
+            message.push_str(&invalid_digest_note_of(
+                without_hash_components
+                    .iter()
+                    .map(|c| (c.name(), c.hashes().raw)),
+            ));
             violations.push(Violation {
                 severity: if pct > 50 {
                     ViolationSeverity::Error
@@ -345,12 +342,7 @@ impl ComplianceChecker {
         }
 
         // PO.1 — VCS references: at least some components should reference their source
-        let has_vcs_ref = sbom.components.values().any(|comp| {
-            comp.external_refs
-                .iter()
-                .any(|r| matches!(r.ref_type, ExternalRefType::Vcs))
-        });
-        if !has_vcs_ref {
+        if !ev.has_vcs_reference() {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
                 category: ViolationCategory::ComponentIdentification,
@@ -375,15 +367,7 @@ impl ComplianceChecker {
         // Legacy path: BuildMeta/BuildSystem external refs (SelfDeclared
         // presence bits). A fresh CDXA attestation of practice PO.3 also
         // satisfies the rule.
-        let has_build_ref = sbom.components.values().any(|comp| {
-            comp.external_refs.iter().any(|r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::BuildMeta | ExternalRefType::BuildSystem
-                )
-            })
-        });
-        if !has_build_ref && !attested("PO.3") {
+        if !ev.has_build_reference() && !attested("PO.3") {
             let mut message = "No build metadata references found; include build system information for reproducibility"
                 .to_string();
             if let Some(note) = cdxa_note(
@@ -416,7 +400,7 @@ impl ComplianceChecker {
 
         // PW.4 — Dependency management: dependency relationships required
         // between packages
-        if total > 1 && sbom.edges.is_empty() {
+        if total > 1 && !ev.has_edges() {
             violations.push(Violation {
                 severity: ViolationSeverity::Error,
                 category: ViolationCategory::DependencyInfo,
@@ -438,22 +422,12 @@ impl ComplianceChecker {
         }
 
         // PW.6 — Vulnerability information
-        let has_vuln_info = sbom
-            .components
-            .values()
-            .any(|c| !c.vulnerabilities.is_empty());
+        let has_vuln_info = ev.has_vulnerabilities();
         // An advisories or security-contact reference counts only when it
         // reaches someone (`known_contact`), as in every other standard; a
-        // VDR reference is a document, not a contact.
-        let has_security_ref = sbom.components.values().any(|comp| {
-            comp.external_refs.iter().any(|r| match r.ref_type {
-                ExternalRefType::Advisories | ExternalRefType::SecurityContact => {
-                    is_contact_reference(r)
-                }
-                ExternalRefType::VulnerabilityAssertion => true,
-                _ => false,
-            })
-        });
+        // VDR reference is a document, not a contact. Any component's
+        // reference counts here, a dependency's included.
+        let has_security_ref = ev.has_vulnerability_reference_on_any_component();
         // Both legacy satisfaction paths (embedded vulnerability data;
         // Advisories / SecurityContact / VulnerabilityAssertion refs) are
         // preserved as SelfDeclared fallbacks; a fresh CDXA attestation of
@@ -493,10 +467,7 @@ impl ComplianceChecker {
         // RV.1 — Component identification: unique identifiers
         // (PURL/CPE/SWHID/SWID via `has_cra_identifier`, so SWHID-only SPDX
         // components are not flagged)
-        let without_id = packages
-            .iter()
-            .filter(|c| !c.identifiers.has_cra_identifier())
-            .count();
+        let without_id = packages.iter().filter(|c| !c.ids().any()).count();
         if without_id > 0 {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,
@@ -525,7 +496,7 @@ impl ComplianceChecker {
 
         // PS.3 — Supplier identification (placeholder values such as
         // NOASSERTION do not satisfy the element)
-        let without_supplier = packages.iter().filter(|c| !has_known_producer(c)).count();
+        let without_supplier = packages.iter().filter(|c| !c.producer().is_known()).count();
         if without_supplier > 0 {
             violations.push(Violation {
                 severity: ViolationSeverity::Warning,

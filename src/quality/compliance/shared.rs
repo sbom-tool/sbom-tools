@@ -4,9 +4,8 @@ use std::borrow::Cow;
 
 use super::{Violation, ViolationCategory, ViolationSeverity};
 use crate::model::{
-    Component, ComponentType, Creator, CreatorType, ExternalRefType, ExternalReference, Hash,
-    HashAlgorithm, NormalizedSbom, Organization, SbomFormat, VexState, VulnerabilityRef,
-    is_known_contact,
+    Component, Creator, CreatorType, ExternalRefType, ExternalReference, Hash, HashAlgorithm,
+    NormalizedSbom, Organization, SbomFormat, VexState, VulnerabilityRef, is_known_contact,
 };
 // The placeholder and sentinel tests every check reads live in the model,
 // which merges a component's entries with the same classification.
@@ -26,6 +25,11 @@ impl super::ComplianceChecker {
     /// dependencies is a legitimate inventory. Components the run leaves out
     /// for their excluded scope do not: they are not part of what the
     /// product ships.
+    ///
+    /// No checker calls it since the checkers with package rules read the
+    /// evidence (its `ComplianceContext` form); it stays as the predicate
+    /// the agreement tests pin that form to.
+    #[cfg(test)]
     pub(crate) fn inventory_absent_violation(
         &self,
         sbom: &NormalizedSbom,
@@ -44,7 +48,7 @@ impl super::ComplianceChecker {
             || {
                 sbom.components
                     .values()
-                    .all(|c| c.component_type == ComponentType::Cryptographic)
+                    .all(|c| c.component_type == crate::model::ComponentType::Cryptographic)
             },
             rule_id,
             requirement,

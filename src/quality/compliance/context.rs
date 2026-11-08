@@ -319,7 +319,12 @@ macro_rules! dedicated_checker {
     };
 }
 
-dedicated_checker!(NistSsdfChecker, ComplianceLevel::NistSsdf, check_nist_ssdf);
+dedicated_checker!(
+    NistSsdfChecker,
+    ComplianceLevel::NistSsdf,
+    check_nist_ssdf,
+    context
+);
 dedicated_checker!(
     Eo14028Checker,
     ComplianceLevel::Eo14028,
