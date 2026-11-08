@@ -59,10 +59,12 @@ use chrono::{DateTime, Utc};
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
     AttestationRuleFamily, CanonicalId, Component, ComponentType, DependencyScope,
-    DuplicateComponent, NormalizedSbom, SupportedRequirement,
+    DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom, SupportedRequirement,
 };
 
-pub(crate) use component::{HashFacts, Hashes, IdKinds, Licenses, Producer};
+pub(crate) use component::{
+    AuthoredHashFacts, AuthoredHashes, HashFacts, Hashes, IdKinds, Licenses, Placeholders, Producer,
+};
 pub(crate) use document::DocumentFacts;
 pub(crate) use graph::GraphFacts;
 pub(crate) use manufacturer::ManufacturerFacts;
@@ -146,12 +148,23 @@ pub(crate) struct SbomEvidence<'a> {
     /// The number of components the package rules judge, by whether the
     /// run judges components whose scope is excluded (`[false, true]`).
     package_counts: [OnceLock<usize>; 2],
-    graph: OnceLock<GraphFacts>,
+    graph: OnceLock<GraphFacts<'a>>,
     cycle_count: OnceLock<usize>,
     lifecycle_property: OnceLock<bool>,
     manufacturer: OnceLock<ManufacturerFacts<'a>>,
     vulnerabilities: OnceLock<Box<[VulnFact<'a>]>>,
     duplicates: OnceLock<Box<[&'a DuplicateComponent]>>,
+    vulnerability_assertion: OnceLock<bool>,
+    direct_dependencies: OnceLock<Box<[bool]>>,
+    firmware_dependencies: OnceLock<Box<[bool]>>,
+    non_spdx_licenses: OnceLock<Box<[Option<&'a str>]>>,
+    authored_hashes: OnceLock<Box<[AuthoredHashFacts]>>,
+    bom_reference: OnceLock<bool>,
+    version_ranges: OnceLock<Box<[ValueState]>>,
+    groups: OnceLock<Box<[ValueState]>>,
+    vulnerability_hook_reference: OnceLock<bool>,
+    copyrights: OnceLock<Box<[ValueState]>>,
+    concluded_licenses: OnceLock<Box<[ValueState]>>,
     supported_requirements: OnceLock<Box<[attestations::Supported<'a>]>>,
     vcs_reference: OnceLock<bool>,
     build_reference: OnceLock<bool>,
@@ -184,6 +197,17 @@ impl<'a> SbomEvidence<'a> {
             manufacturer: OnceLock::new(),
             vulnerabilities: OnceLock::new(),
             duplicates: OnceLock::new(),
+            vulnerability_assertion: OnceLock::new(),
+            direct_dependencies: OnceLock::new(),
+            firmware_dependencies: OnceLock::new(),
+            non_spdx_licenses: OnceLock::new(),
+            authored_hashes: OnceLock::new(),
+            bom_reference: OnceLock::new(),
+            version_ranges: OnceLock::new(),
+            groups: OnceLock::new(),
+            vulnerability_hook_reference: OnceLock::new(),
+            copyrights: OnceLock::new(),
+            concluded_licenses: OnceLock::new(),
             supported_requirements: OnceLock::new(),
             vcs_reference: OnceLock::new(),
             build_reference: OnceLock::new(),
@@ -264,7 +288,7 @@ impl<'a> SbomEvidence<'a> {
     }
 
     /// The dependency-graph facts.
-    pub(crate) fn graph(&self) -> &GraphFacts {
+    pub(crate) fn graph(&self) -> &GraphFacts<'a> {
         self.graph.get_or_init(|| GraphFacts::collect(self.sbom))
     }
 
@@ -312,6 +336,18 @@ impl<'a> SbomEvidence<'a> {
         })
     }
 
+    /// Whether any component links an external SBOM document: an external
+    /// reference of the BOM type.
+    pub(crate) fn has_bom_reference(&self) -> bool {
+        *self.bom_reference.get_or_init(|| {
+            self.sbom.components.values().any(|c| {
+                c.external_refs
+                    .iter()
+                    .any(|r| matches!(r.ref_type, ExternalRefType::Bom))
+            })
+        })
+    }
+
     fn versions(&self) -> &[ValueState] {
         self.versions.get_or_init(|| {
             self.sbom
@@ -348,6 +384,111 @@ impl<'a> SbomEvidence<'a> {
                 .components
                 .values()
                 .map(|c| HashFacts::of(&c.hashes))
+                .collect()
+        })
+    }
+
+    /// Whether any component references a vulnerability assertion or an
+    /// exploitability statement (a VEX or VDR document, say).
+    pub(crate) fn has_vulnerability_assertion(&self) -> bool {
+        *self.vulnerability_assertion.get_or_init(|| {
+            self.sbom.components.values().any(|c| {
+                c.external_refs.iter().any(|r| {
+                    matches!(
+                        r.ref_type,
+                        ExternalRefType::VulnerabilityAssertion
+                            | ExternalRefType::ExploitabilityStatement
+                    )
+                })
+            })
+        })
+    }
+
+    fn direct_dependencies(&self) -> &[bool] {
+        self.direct_dependencies.get_or_init(|| {
+            let direct = self.sbom.direct_dependency_ids();
+            self.sbom
+                .components
+                .values()
+                .map(|c| direct.contains(&c.canonical_id))
+                .collect()
+        })
+    }
+
+    fn firmware_dependencies(&self) -> &[bool] {
+        self.firmware_dependencies
+            .get_or_init(|| graph::firmware_dependencies(self.sbom))
+    }
+
+    fn non_spdx_licenses(&self) -> &[Option<&'a str>] {
+        self.non_spdx_licenses.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(component::first_non_spdx_license)
+                .collect()
+        })
+    }
+
+    fn authored_hashes(&self) -> &[AuthoredHashFacts] {
+        self.authored_hashes.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| AuthoredHashFacts::of(&c.hashes))
+                .collect()
+        })
+    }
+
+    fn version_ranges(&self) -> &[ValueState] {
+        self.version_ranges.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.version_range.as_deref()))
+                .collect()
+        })
+    }
+
+    fn groups(&self) -> &[ValueState] {
+        self.groups.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.group.as_deref()))
+                .collect()
+        })
+    }
+
+    /// Whether any component, of any type, carries an external reference a
+    /// vulnerability-management process can start from (see
+    /// [`component::has_vulnerability_hook_reference`]). Unlike the CRA and
+    /// EO 14028 contacts, a dependency's reference counts too.
+    pub(crate) fn vulnerability_hook_reference(&self) -> bool {
+        *self.vulnerability_hook_reference.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .any(component::has_vulnerability_hook_reference)
+        })
+    }
+
+    fn copyrights(&self) -> &[ValueState] {
+        self.copyrights.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(c.copyright.as_deref()))
+                .collect()
+        })
+    }
+
+    fn concluded_licenses(&self) -> &[ValueState] {
+        self.concluded_licenses.get_or_init(|| {
+            self.sbom
+                .components
+                .values()
+                .map(|c| value_state(concluded_license(c)))
                 .collect()
         })
     }
@@ -400,6 +541,15 @@ impl<'a> SbomEvidence<'a> {
             .vulnerability_reference_on_any_component
             .get_or_init(|| references::any_vulnerability_reference(self.sbom))
     }
+}
+
+/// The expression of `component`'s concluded licence, as read.
+fn concluded_license(component: &Component) -> Option<&str> {
+    component
+        .licenses
+        .concluded
+        .as_ref()
+        .map(|l| l.expression.as_str())
 }
 
 /// One component's facts. The cheap ones are computed on access; the rest
@@ -490,5 +640,131 @@ impl<'a> ComponentView<'_, 'a> {
     /// Whether the component positively declares it has no dependencies.
     pub(crate) fn declares_no_dependencies(&self) -> bool {
         self.ev.graph().declares_no_dependencies[self.ix.0]
+    }
+
+    /// Whether the component gives a version at all, whatever it says. The
+    /// CRA hardware checks ask this, the other version checks what the
+    /// version says ([`Self::version`]): a `NOASSERTION` version satisfies
+    /// the first and not the second.
+    pub(crate) fn version_present(&self) -> bool {
+        self.component.version.is_some()
+    }
+
+    /// The component's end-of-life status, when enrichment gave one.
+    pub(crate) fn eol_status(&self) -> Option<EolStatus> {
+        self.component.eol.as_ref().map(|eol| eol.status)
+    }
+
+    /// Whether the component lists a licence at all, declared or concluded,
+    /// whatever it says (see [`Self::licenses`] for what it says).
+    pub(crate) fn license_present(&self) -> bool {
+        !self.component.licenses.declared.is_empty() || self.component.licenses.concluded.is_some()
+    }
+
+    /// Whether the component is a direct dependency of the product: one
+    /// hop from the primary component, or from a root of the graph when
+    /// the document names no primary (see
+    /// `NormalizedSbom::direct_dependency_ids`).
+    pub(crate) fn direct_dependency(&self) -> bool {
+        self.ev.direct_dependencies()[self.ix.0]
+    }
+
+    /// Whether a dependency relationship leads from the component to a
+    /// firmware component.
+    pub(crate) fn depends_on_firmware(&self) -> bool {
+        self.ev.firmware_dependencies()[self.ix.0]
+    }
+
+    /// Whether the component carries vulnerability information.
+    pub(crate) fn has_vulnerabilities(&self) -> bool {
+        !self.component.vulnerabilities.is_empty()
+    }
+
+    /// The first of the component's licences that is a real expression but
+    /// not a valid SPDX identifier or expression, as read (see
+    /// [`component::first_non_spdx_license`]).
+    pub(crate) fn first_non_spdx_license(&self) -> Option<&'a str> {
+        self.ev.non_spdx_licenses()[self.ix.0]
+    }
+
+    /// The hashes the document itself carries for the component, without
+    /// those enrichment added.
+    pub(crate) fn authored_hashes(&self) -> AuthoredHashes<'a> {
+        AuthoredHashes::new(&self.component.hashes, self.ev.authored_hashes()[self.ix.0])
+    }
+
+    /// Whether the component is the document's primary component: its id
+    /// is the one the document names as its primary.
+    pub(crate) fn is_primary(&self) -> bool {
+        self.ev.document().primary == Some(self.ix)
+    }
+
+    /// Whether the component is provided by the environment the product
+    /// runs in, not shipped with it (the parsers' `is_external`).
+    pub(crate) fn is_external(&self) -> bool {
+        self.component.is_external
+    }
+
+    /// The range of versions the component may resolve to, as an external
+    /// component can declare in place of a version.
+    pub(crate) fn version_range(&self) -> Text<'a> {
+        Text::with_state(
+            self.component.version_range.as_deref(),
+            self.ev.version_ranges()[self.ix.0],
+        )
+    }
+
+    /// The component's group or namespace (a Maven group id, an npm scope).
+    pub(crate) fn group(&self) -> Text<'a> {
+        Text::with_state(self.component.group.as_deref(), self.ev.groups()[self.ix.0])
+    }
+
+    /// Whether the component's package ecosystem is known (the model reads
+    /// it from the PURL type).
+    pub(crate) fn ecosystem_declared(&self) -> bool {
+        self.component.ecosystem.is_some()
+    }
+    /// Whether the component names a supplier: a supplier whose name is not
+    /// blank, as read. Unlike [`Self::producer`], a manufacturer or author
+    /// does not count, and a placeholder or sentinel name does.
+    pub(crate) fn supplier_declared(&self) -> bool {
+        self.component
+            .supplier
+            .as_ref()
+            .is_some_and(|s| !s.name.trim().is_empty())
+    }
+
+    /// The component's copyright notice.
+    pub(crate) fn copyright(&self) -> Text<'a> {
+        Text::with_state(
+            self.component.copyright.as_deref(),
+            self.ev.copyrights()[self.ix.0],
+        )
+    }
+
+    /// The component's concluded licence (SPDX `PackageLicenseConcluded`).
+    pub(crate) fn concluded_license(&self) -> Text<'a> {
+        Text::with_state(
+            concluded_license(self.component),
+            self.ev.concluded_licenses()[self.ix.0],
+        )
+    }
+
+    /// The fields of the component that hold an ambiguous placeholder.
+    /// Computed on access, not kept: one check reads it, once per
+    /// component (FSCT §2.3.1).
+    pub(crate) fn placeholders(&self) -> Placeholders<'a> {
+        Placeholders::of(self.component)
+    }
+
+    /// Whether the component links an SBOM of its own (a BOM-type external
+    /// reference).
+    pub(crate) fn bom_reference(&self) -> bool {
+        component::has_bom_reference(self.component)
+    }
+
+    /// Whether a dependency relationship starts at the component.
+    pub(crate) fn has_outgoing(&self) -> bool {
+        self.ev.graph().has_outgoing[self.ix.0]
     }
 }

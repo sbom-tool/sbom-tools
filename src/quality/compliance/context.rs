@@ -210,7 +210,6 @@ impl StandardChecker for GenericChecker {
 
     fn check(&self, ctx: &ComplianceContext) -> Findings {
         let checker = ctx.checker;
-        let sbom = ctx.sbom;
         let mut findings = Findings::default();
         let Findings {
             violations,
@@ -235,8 +234,8 @@ impl StandardChecker for GenericChecker {
 
         // Check CRA-specific gap requirements (SBOM freshness, Art. 13(5), 13(9), Annex I Part II, document integrity)
         if checker.level.is_cra() {
-            checker.check_cra_gaps(sbom, violations, not_evaluated);
-            checker.check_hardware_components(sbom, violations, not_evaluated);
+            checker.check_cra_gaps(ctx, violations, not_evaluated);
+            checker.check_hardware_components(ctx, violations, not_evaluated);
         }
 
         findings
@@ -343,7 +342,7 @@ dedicated_checker!(
     BsiTr03183Checker,
     ComplianceLevel::BsiTr03183_2,
     check_bsi_tr_03183_2,
-    findings
+    context
 );
 dedicated_checker!(
     CraOssStewardChecker,
@@ -372,14 +371,15 @@ dedicated_checker!(
     Cisa2026Checker,
     ComplianceLevel::Cisa2026,
     check_cisa2026,
-    findings
+    context
 );
 dedicated_checker!(
     PciDss632Checker,
     ComplianceLevel::PciDss632,
-    check_pci_dss_6_3_2
+    check_pci_dss_6_3_2,
+    context
 );
-dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, findings);
+dedicated_checker!(FsctChecker, ComplianceLevel::Fsct, check_fsct, context);
 
 /// Resolve the [`StandardChecker`] for a given level: the one its entry in
 /// the standards table names. The dedicated profiles have their own
