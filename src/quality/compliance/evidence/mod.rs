@@ -511,6 +511,21 @@ impl<'a> SbomEvidence<'a> {
     /// `AttestationDeclarations::evidence_for_family`), in that function's
     /// order. The attestations are judged once per evidence; each read
     /// picks the family's.
+    ///
+    /// Fail closed end to end (see
+    /// `AttestationDeclarations::supported_requirements`): dangling
+    /// refLinks, partial conformance (score < 1), counter claims or
+    /// evidence, and evidence expired or created after the instant all drop
+    /// the entry. A requirement whose (standard, identifier) pair maps to no
+    /// family is never returned, so it cannot influence a verdict. The
+    /// signatures are presence records only, never verified, so no consumer
+    /// reports an evidence level above `EvidenceLevel::SignaturePresent`.
+    ///
+    /// The consumers keep their own satisfaction paths as `SelfDeclared`
+    /// fallbacks, so a document that carries only presence bits judges as
+    /// before: the SSDF practices (`ssdf.rs`), the EO 14028 automation and
+    /// provenance evidence (`eo14028.rs`), the CRA conformity summary and
+    /// Annex IV check (`cra.rs`), and SBOM-EUCC-CERTREF (`eucc.rs`).
     pub(crate) fn supported_requirements(
         &self,
         family: AttestationRuleFamily,

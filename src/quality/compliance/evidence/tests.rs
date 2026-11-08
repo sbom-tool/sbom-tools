@@ -2857,8 +2857,8 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
             );
         }
 
-        // The supported requirements, as `ComplianceContext::evidence_for`
-        // derives them.
+        // The supported requirements, as
+        // `AttestationDeclarations::evidence_for_family` derives them.
         for family in FAMILIES {
             let cached: Vec<_> = ev
                 .supported_requirements(family)

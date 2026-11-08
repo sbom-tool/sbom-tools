@@ -56,8 +56,7 @@ pub(super) fn standard_references_eucc(standard: &DefinedStandard) -> bool {
 /// [`AttestationDeclarations::supported_requirements`], in the same order).
 /// `None` when no attestation map entry targets the rule at all. Callers
 /// invoke this only after the supported requirements of the run (see
-/// `SbomEvidence::supported_requirements` and
-/// `ComplianceContext::evidence_for`) held no matching one, so every
+/// `SbomEvidence::supported_requirements`) held no matching one, so every
 /// matching entry tripped a gate.
 fn cdxa_rejection_reason(
     declarations: &AttestationDeclarations,

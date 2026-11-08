@@ -32,7 +32,7 @@ use super::{
     Applicability, ComplianceChecker, ComplianceLevel, NormalizedSbom, PassedCheck, RuleEvaluation,
     Violation,
 };
-use crate::model::{AttestationDeclarations, AttestationRuleFamily, SupportedRequirement};
+use crate::model::AttestationDeclarations;
 
 /// Read-only context threaded through every [`StandardChecker`].
 ///
@@ -69,37 +69,6 @@ impl<'r, 'a> ComplianceContext<'r, 'a> {
     /// level above `EvidenceLevel::SignaturePresent`.
     pub(crate) fn attestation_declarations(&self) -> Option<&'a AttestationDeclarations> {
         self.sbom.declarations()
-    }
-
-    /// Machine-readable attestation evidence that fully supports standard
-    /// requirements classified into `family`, evaluated at the run's
-    /// instant (`--as-of` pinned, or the wall clock read once — the Art. 14
-    /// pattern; expired or future-created evidence never counts).
-    ///
-    /// Fail closed end to end (see
-    /// [`AttestationDeclarations::supported_requirements`]): dangling
-    /// refLinks, partial conformance (score < 1), counter claims/evidence,
-    /// and stale evidence all drop the entry. Requirements whose (standard,
-    /// identifier) pair maps to no known family are recorded in the model
-    /// but never returned here — they cannot influence a verdict.
-    ///
-    /// Intended consumers (existing rule sites, keeping their current
-    /// satisfaction paths as `SelfDeclared`-level fallbacks — never a
-    /// regression for SBOMs that only carry presence bits):
-    /// - `ssdf.rs` SBOM-SSDF-PS1 / SBOM-SSDF-PO3 / SBOM-SSDF-PW6
-    /// - `eo14028.rs` SBOM-EO14028-* automation/provenance evidence
-    /// - `cra.rs` conformity-route evidence (`certificate_present` and
-    ///   `doc_or_ce` bits),
-    ///   `check_class_eucc_reference`, and `eucc.rs` SBOM-EUCC-CERTREF
-    pub(crate) fn evidence_for(
-        &self,
-        family: AttestationRuleFamily,
-    ) -> Vec<SupportedRequirement<'a>> {
-        self.sbom
-            .declarations()
-            .map_or_else(Vec::new, |declarations| {
-                declarations.evidence_for_family(family, self.ev.as_of())
-            })
     }
 }
 
@@ -360,8 +329,9 @@ pub(crate) fn checker_for(level: ComplianceLevel) -> Box<dyn StandardChecker> {
 mod tests {
     use super::*;
     use crate::model::{
-        AttestationAssertion, AttestationMapEntry, CdxaRef, CdxaResolution, DeclaredClaim,
-        DeclaredEvidence, DefinedRequirement, DefinedStandard, EvidenceLevel, SignaturePresence,
+        AttestationAssertion, AttestationMapEntry, AttestationRuleFamily, CdxaRef, CdxaResolution,
+        DeclaredClaim, DeclaredEvidence, DefinedRequirement, DefinedStandard, EvidenceLevel,
+        SignaturePresence,
     };
 
     fn ts(s: &str) -> chrono::DateTime<chrono::Utc> {
@@ -438,13 +408,17 @@ mod tests {
         let ctx = ComplianceContext::new(&checker, &ev);
 
         assert!(ctx.attestation_declarations().is_some());
-        let ssdf = ctx.evidence_for(AttestationRuleFamily::Ssdf);
+        let ssdf: Vec<_> = ctx
+            .ev
+            .supported_requirements(AttestationRuleFamily::Ssdf)
+            .collect();
         assert_eq!(ssdf.len(), 1);
         assert_eq!(ssdf[0].requirement.identifier.as_deref(), Some("PS.1"));
         // Signature PRESENCE only — never SignatureVerified in phase 1.
         assert_eq!(ssdf[0].evidence_level, EvidenceLevel::SignaturePresent);
-        assert!(ctx.evidence_for(AttestationRuleFamily::Cra).is_empty());
-        assert!(ctx.evidence_for(AttestationRuleFamily::Eo14028).is_empty());
+        let none = |family| ctx.ev.supported_requirements(family).next().is_none();
+        assert!(none(AttestationRuleFamily::Cra));
+        assert!(none(AttestationRuleFamily::Eo14028));
     }
 
     #[test]
@@ -455,7 +429,13 @@ mod tests {
             .with_as_of(ts("2027-06-01T00:00:00Z"));
         let ev = SbomEvidence::new(&sbom, expired.now());
         let ctx = ComplianceContext::new(&expired, &ev);
-        assert!(ctx.evidence_for(AttestationRuleFamily::Ssdf).is_empty());
+        let none = |ctx: &ComplianceContext<'_, '_>| {
+            ctx.ev
+                .supported_requirements(AttestationRuleFamily::Ssdf)
+                .next()
+                .is_none()
+        };
+        assert!(none(&ctx));
 
         // No declarations at all: accessor is None, evidence queries are empty.
         let bare = NormalizedSbom::default();
@@ -464,6 +444,6 @@ mod tests {
         let ev = SbomEvidence::new(&bare, checker.now());
         let ctx = ComplianceContext::new(&checker, &ev);
         assert!(ctx.attestation_declarations().is_none());
-        assert!(ctx.evidence_for(AttestationRuleFamily::Ssdf).is_empty());
+        assert!(none(&ctx));
     }
 }

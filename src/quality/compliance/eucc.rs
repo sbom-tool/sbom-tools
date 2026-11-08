@@ -182,8 +182,8 @@ impl ComplianceChecker {
         // level; the URL-substring scan remains the SelfDeclared fallback).
         // Until v0.4.0 this check did not read "commoncriteria".
         let cdxa_eucc_attested = ctx
-            .evidence_for(AttestationRuleFamily::Cra)
-            .iter()
+            .ev
+            .supported_requirements(AttestationRuleFamily::Cra)
             .any(|s| standard_references_eucc(s.standard));
         let eucc_ref_present =
             cdxa_eucc_attested || ctx.ev.manufacturer().reference(is_eucc_reference);
