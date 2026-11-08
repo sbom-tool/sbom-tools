@@ -355,13 +355,13 @@ dedicated_checker!(
     EuAiActChecker,
     ComplianceLevel::EuAiAct,
     check_eu_ai_act,
-    findings
+    context
 );
 dedicated_checker!(
     BsiSbomForAiChecker,
     ComplianceLevel::BsiSbomForAi,
     check_bsi_sbom_for_ai,
-    findings
+    context
 );
 dedicated_checker!(
     Cisa2026Checker,

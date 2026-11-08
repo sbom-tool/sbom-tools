@@ -40,10 +40,6 @@
 //! reason (`tests/evidence_layer_lint.rs` lists the files that read the
 //! evidence and enforces it).
 
-// Temporary: the AI facts are read by their tests until the AI and EUCC
-// checks read them (the next commits).
-#![cfg_attr(not(test), allow(dead_code))]
-
 mod ai;
 mod component;
 mod document;
