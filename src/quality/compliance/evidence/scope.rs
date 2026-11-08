@@ -63,4 +63,54 @@ impl<'r, 'a> ComplianceContext<'r, 'a> {
             requirement,
         ))
     }
+
+    /// The vendor-supplied components the CRA vendor-hash check counts
+    /// ([PRE-7-RQ-07-RE]), in inventory order: of every type, minus those
+    /// the run leaves out for their excluded scope, with a known producer
+    /// and a PURL, CPE, SWHID or SWID (the vendor cohort of
+    /// `HashQualityMetrics`).
+    pub(crate) fn vendor_components(&self) -> impl Iterator<Item = ComponentView<'r, 'a>> + '_ {
+        self.ev
+            .components()
+            .filter(|c| !self.leaves_out(c) && c.producer().is_known() && c.ids().any())
+    }
+
+    /// How many vendor-supplied components (see [`Self::vendor_components`])
+    /// carry a hash that counts.
+    pub(crate) fn vendor_hash_coverage(&self) -> VendorHashCoverage {
+        let mut coverage = VendorHashCoverage {
+            total: 0,
+            with_hash: 0,
+        };
+        for c in self.vendor_components() {
+            coverage.total += 1;
+            if c.hashes().facts.plausible {
+                coverage.with_hash += 1;
+            }
+        }
+        coverage
+    }
+}
+
+/// The vendor-hash coverage of a run (CRA [PRE-7-RQ-07-RE]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct VendorHashCoverage {
+    /// How many vendor-supplied components the run counts.
+    pub(crate) total: usize,
+    /// How many of them carry at least one plausible digest, whoever added
+    /// it.
+    pub(crate) with_hash: usize,
+}
+
+impl VendorHashCoverage {
+    /// The share of vendor-supplied components that carry a hash, or `None`
+    /// when there is none (as `HashQualityMetrics::vendor_hash_coverage`).
+    pub(crate) fn fraction(self) -> Option<f64> {
+        if self.total == 0 {
+            return None;
+        }
+        #[allow(clippy::cast_precision_loss)]
+        let fraction = self.with_hash as f64 / self.total as f64;
+        Some(fraction)
+    }
 }
