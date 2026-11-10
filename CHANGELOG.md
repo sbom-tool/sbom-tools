@@ -2,8 +2,10 @@
 
 Release notes for every version, in the same form as the
 [GitHub Releases page](https://github.com/sbom-tool/sbom-tools/releases):
-**Highlights**, **What's New**, **Bug Fixes**, and **Upgrade notes**. Each
-published version's notes are also kept verbatim in `RELEASE_NOTES_v*.md`.
+**Highlights**, **What's New**, **Bug Fixes**, and **Upgrade notes**. The full
+notes for each published version are on its GitHub release. The upcoming
+release's notes are drafted in `RELEASE_NOTES_<tag>.md`, which the release
+workflow publishes verbatim from the tagged commit.
 
 sbom-tools is pre-1.0 (`0.x`), so breaking changes are permitted in a minor
 release — but they are never implied by the version number alone. Every one of
@@ -188,8 +190,7 @@ These behaviours changed in this release. The [migration guide](docs/MIGRATING-0
 ## v0.3.0 — 2026-10-12
 
 Full notes, including contributor acknowledgments:
-[`RELEASE_NOTES_v0.3.0.md`](RELEASE_NOTES_v0.3.0.md)
-· [GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.3.0)
+[GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.3.0)
 
 ### Highlights
 
@@ -382,8 +383,8 @@ These behaviors changed in this release:
 
 ## v0.1.22 — 2026-06-15
 
-The **AI BOM release.** Full notes: [`RELEASE_NOTES_v0.1.22.md`](RELEASE_NOTES_v0.1.22.md)
-· [GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.1.22)
+The **AI BOM release.** Full notes:
+[GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.1.22)
 
 ### Highlights
 
@@ -403,7 +404,7 @@ enrichment with an offline/air-gapped mode, and broad CLI/TUI alignment.
 
 ---
 
-Earlier releases: [`RELEASE_NOTES_v0.1.21.md`](RELEASE_NOTES_v0.1.21.md) and the
+Earlier releases: the
 [GitHub Releases page](https://github.com/sbom-tool/sbom-tools/releases).
 
 [0.3.0]: https://github.com/sbom-tool/sbom-tools/releases/tag/v0.3.0
