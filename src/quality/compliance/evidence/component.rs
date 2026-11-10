@@ -55,7 +55,8 @@ pub(crate) struct Producer<'a> {
     pub(crate) state: ValueState,
     /// The value a finding quotes when the producer is not known: the first
     /// of the supplier, manufacturer and author names that is present, as
-    /// read (`observed_producer`), typically a placeholder such as `TBD`.
+    /// read, typically a placeholder such as `TBD`. A finding's `observed`
+    /// value is `shared::observed` of it.
     pub(crate) observed: Option<&'a str>,
 }
 
@@ -86,24 +87,40 @@ const fn rank(state: ValueState) -> u8 {
     }
 }
 
-/// The producer state of `component` (see [`Producer::state`]).
+/// The producer state of `component` (see [`Producer::state`]): the best
+/// [`value_state`] of its supplier, manufacturer and author names. Every
+/// component is classified once per evidence, so the work is kept small: a
+/// component that gives none of the three is missing without a test, and
+/// the first real value settles it, so the names after it are not
+/// classified (classifying a value allocates).
 pub(super) fn producer_state(component: &Component) -> ValueState {
-    [
+    if component.supplier.is_none()
+        && component.manufacturer.is_none()
+        && component.author.is_none()
+    {
+        return ValueState::Missing;
+    }
+    let names = [
         component.supplier.as_ref().map(|o| o.name.as_str()),
         component.manufacturer.as_ref().map(|o| o.name.as_str()),
         component.author.as_deref(),
-    ]
-    .into_iter()
-    .map(value_state)
-    .min_by_key(|state| rank(*state))
-    .unwrap_or(ValueState::Missing)
+    ];
+    let mut best = ValueState::Missing;
+    for name in names.into_iter().flatten() {
+        match value_state(Some(name)) {
+            ValueState::Known => return ValueState::Known,
+            ValueState::DeclaredUnknown => best = ValueState::DeclaredUnknown,
+            ValueState::Missing => {}
+        }
+    }
+    best
 }
 
 /// A component's licences.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Licenses<'a> {
     /// What the best of its declared and concluded licences says (see
-    /// `shared::license_state`).
+    /// [`license_state`]).
     pub(crate) state: ValueState,
     /// The licences as read, for a finding's message.
     pub(crate) raw: &'a LicenseInfo,
@@ -120,8 +137,13 @@ impl<'a> Licenses<'a> {
     }
 }
 
-/// The licence state of `component`, as `shared::license_state` derives it,
-/// without collecting the licences into a list first.
+/// The licence state of `component`: [`ValueState::Known`] when one of its
+/// licences, declared or concluded, is a real expression (an SPDX
+/// expression or a `LicenseRef-*`), [`ValueState::DeclaredUnknown`] when the
+/// best of them is a sentinel such as `NOASSERTION` (a CycloneDX licence
+/// with neither an id nor a name reads as one), and [`ValueState::Missing`]
+/// otherwise. Every licence check asks whether it is known, except CISA
+/// 2026, which also accepts the explicit unknown.
 pub(super) fn license_state(component: &Component) -> ValueState {
     component
         .licenses

@@ -55,7 +55,7 @@ impl ComplianceChecker {
         // fully resolved at the injectable clock). Strengthens only: the
         // legacy tool-creator path below stays a valid SelfDeclared-level
         // fallback, and documents without declarations are unaffected.
-        let declarations = ctx.attestation_declarations();
+        let declarations = ctx.ev.attestation_declarations();
         let autogen_attested = ev
             .supported_requirements(AttestationRuleFamily::Eo14028)
             .any(|s| evidences_autogen_provenance(s.requirement));

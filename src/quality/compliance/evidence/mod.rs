@@ -33,15 +33,17 @@
 //! finding's message and `observed` value from those values, as it did
 //! when it read the SBOM itself.
 //!
-//! Where a fact has a predicate in [`super::shared`] that checks which do
-//! not read the evidence yet still call, the fact calls that predicate, so
-//! the two cannot drift. The agreement tests (`tests.rs`) compare every fact
-//! with the predicates it replaces on every SBOM fixture.
+//! Every checker reads the evidence, and nothing else about the SBOM. Where
+//! a fact rests on a predicate in [`super::shared`] that other code still
+//! calls (the quality metrics and scorer, the `cra-docs` dossier), the fact
+//! calls that predicate, so the two cannot drift. The agreement tests
+//! (`tests.rs`) compare the facts with the predicates they replaced on every
+//! SBOM fixture.
 //!
-//! A checker that reads the evidence reaches the SBOM itself only through
+//! A checker reaches the SBOM itself only through
 //! [`SbomEvidence::raw_sbom`], each use marked `// escape hatch:` with the
-//! reason (`tests/evidence_layer_lint.rs` lists the files that read the
-//! evidence and enforces it).
+//! reason; no checker needs one today (`tests/evidence_layer_lint.rs` finds
+//! the checker files and enforces it).
 
 mod ai;
 mod attestations;
@@ -63,8 +65,9 @@ use chrono::{DateTime, Utc};
 
 use super::shared::{ValueState, known_component_name, value_state};
 use crate::model::{
-    AttestationRuleFamily, CanonicalId, Component, ComponentType, DependencyScope,
-    DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom, SupportedRequirement,
+    AttestationDeclarations, AttestationRuleFamily, CanonicalId, Component, ComponentType,
+    DependencyScope, DuplicateComponent, EolStatus, ExternalRefType, NormalizedSbom,
+    SupportedRequirement,
 };
 
 pub(crate) use ai::AiFacts;
@@ -511,6 +514,21 @@ impl<'a> SbomEvidence<'a> {
     /// `AttestationDeclarations::evidence_for_family`), in that function's
     /// order. The attestations are judged once per evidence; each read
     /// picks the family's.
+    ///
+    /// Fail closed end to end (see
+    /// `AttestationDeclarations::supported_requirements`): dangling
+    /// refLinks, partial conformance (score < 1), counter claims or
+    /// evidence, and evidence expired or created after the instant all drop
+    /// the entry. A requirement whose (standard, identifier) pair maps to no
+    /// family is never returned, so it cannot influence a verdict. The
+    /// signatures are presence records only, never verified, so no consumer
+    /// reports an evidence level above `EvidenceLevel::SignaturePresent`.
+    ///
+    /// The consumers keep their own satisfaction paths as `SelfDeclared`
+    /// fallbacks, so a document that carries only presence bits judges as
+    /// before: the SSDF practices (`ssdf.rs`), the EO 14028 automation and
+    /// provenance evidence (`eo14028.rs`), the CRA conformity summary and
+    /// Annex IV check (`cra.rs`), and SBOM-EUCC-CERTREF (`eucc.rs`).
     pub(crate) fn supported_requirements(
         &self,
         family: AttestationRuleFamily,
@@ -576,6 +594,18 @@ impl<'a> SbomEvidence<'a> {
     fn dataset_containers(&self) -> &[bool] {
         self.dataset_containers
             .get_or_init(|| ai::dataset_containers(self.sbom))
+    }
+
+    /// The CDXA attestation declarations the document carries (CycloneDX
+    /// 1.6+ `declarations` and `definitions.standards`), if any, as read:
+    /// the checks name the attestation that came closest when none supports
+    /// a rule (see [`Self::supported_requirements`]).
+    ///
+    /// Structural evidence only: a signature in them is a presence record
+    /// (algorithm, signatory identity), never verified, so no consumer
+    /// reports an evidence level above `EvidenceLevel::SignaturePresent`.
+    pub(crate) fn attestation_declarations(&self) -> Option<&'a AttestationDeclarations> {
+        self.sbom.declarations()
     }
 }
 

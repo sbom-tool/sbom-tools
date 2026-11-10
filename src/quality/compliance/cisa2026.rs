@@ -626,7 +626,7 @@ impl ComplianceChecker {
             // satisfy "indicate through other means where the full license
             // details are available", and NOASSERTION is the element's
             // explicit unknown. The licence test is the one every standard
-            // shares (`license_state`), which also accepts the explicit
+            // shares (`Licenses::state`), which also accepts the explicit
             // unknown here: absence and a placeholder such as TBD fail, as
             // everywhere (until v0.4.0 any non-empty value passed).
             let has_license_info = comp.licenses().state != ValueState::Missing;

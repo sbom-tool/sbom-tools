@@ -8,12 +8,13 @@ use std::path::{Path, PathBuf};
 use super::super::ai_shared;
 use super::super::cisa2026::hash_algorithm_shortfall;
 use super::super::shared::{
-    ValueState, creator_identified, document_signed, has_known_license, has_known_producer,
-    has_known_value, is_declared_unknown, is_placeholder, is_spdx2, justified_not_affected,
-    known_component_name, known_contact, known_value, license_state, manufacturer_identified,
-    manufacturer_reference, observed, observed_producer, plausible_digest, unreachable_contact,
-    value_state,
+    ValueState, creator_identified, document_signed, has_known_producer, has_known_value,
+    inventory_absent_finding, is_declared_unknown, is_placeholder, is_spdx2,
+    justified_not_affected, known_component_name, known_contact, known_value,
+    manufacturer_identified, manufacturer_scope_components, plausible_digest,
+    unreachable_contact_in, value_state,
 };
+use super::super::{ComplianceChecker, Violation};
 use super::document::tool_name_carries_version;
 use super::{ComponentIx, ComponentView, Known, Placeholders, SbomEvidence, Text};
 use crate::model::{
@@ -24,12 +25,88 @@ use crate::model::{
     SignatureInfo, VexJustification, VexState, VexStatus, VulnerabilityRef, VulnerabilitySource,
 };
 
+// ----------------------------------------------------------------------------
+// Legacy references
+// ----------------------------------------------------------------------------
+//
+// The SBOM-based predicates the checkers called before they read the
+// evidence, kept verbatim (but for their names) as the reference the
+// agreement tests pin the evidence's forms to. No production code calls
+// them, and the facts they pin have no unit tests of their own beyond the
+// agreement.
+
+impl ComplianceChecker {
+    /// `ComplianceChecker::leaves_out` before the checkers read the
+    /// evidence: whether the run leaves `comp` out of the package rules. Its
+    /// evidence form is `ComplianceContext::leaves_out`.
+    fn legacy_leaves_out(&self, sbom: &NormalizedSbom, comp: &crate::model::Component) -> bool {
+        !self.include_excluded_scope
+            && comp.scope == Some(crate::model::DependencyScope::Excluded)
+            && sbom.primary_component_id.as_ref() != Some(&comp.canonical_id)
+    }
+
+    /// `ComplianceChecker::judges_package` before the checkers read the
+    /// evidence: whether the package rules judge `comp`. Its evidence form
+    /// is `ComplianceContext::judges_package`.
+    fn legacy_judges_package(&self, sbom: &NormalizedSbom, comp: &crate::model::Component) -> bool {
+        comp.component_type.is_package_scoped() && !self.legacy_leaves_out(sbom, comp)
+    }
+
+    /// `ComplianceChecker::package_components` before the checkers read the
+    /// evidence: the components the package rules apply to. Its evidence
+    /// form is `ComplianceContext::package_components`.
+    fn legacy_package_components<'a>(
+        &'a self,
+        sbom: &'a NormalizedSbom,
+    ) -> impl Iterator<Item = &'a crate::model::Component> + 'a {
+        sbom.components
+            .values()
+            .filter(move |c| self.legacy_judges_package(sbom, c))
+    }
+
+    /// `ComplianceChecker::inventory_absent_violation` before the checkers
+    /// read the evidence: the inventory-absent finding for `rule_id`, or
+    /// `None` when the package rules judge at least one component. Its
+    /// evidence form is `ComplianceContext::inventory_absent_violation`.
+    fn legacy_inventory_absent_violation(
+        &self,
+        sbom: &NormalizedSbom,
+        rule_id: &'static str,
+        requirement: &str,
+    ) -> Option<Violation> {
+        if self.legacy_package_components(sbom).next().is_some() {
+            return None;
+        }
+        Some(inventory_absent_finding(
+            sbom.components.len(),
+            sbom.components
+                .values()
+                .filter(|c| c.component_type.is_package_scoped())
+                .count(),
+            || {
+                sbom.components
+                    .values()
+                    .all(|c| c.component_type == crate::model::ComponentType::Cryptographic)
+            },
+            rule_id,
+            requirement,
+        ))
+    }
+}
+
+/// `shared::unreachable_contact` before the checkers read the evidence: the
+/// first vulnerability contact the SBOM gives that reaches nobody. Its
+/// evidence form is `ManufacturerFacts::unreachable_contact`.
+fn legacy_unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
+    unreachable_contact_in(sbom, &manufacturer_scope_components(sbom))
+}
+
 /// The package rules of a context over `sbom`'s evidence, against the
 /// checker's own, for both excluded-scope settings: the components they
 /// judge, in order, their count, and the inventory-absent finding.
 fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
+    use super::super::ComplianceLevel;
     use super::super::context::ComplianceContext;
-    use super::super::{ComplianceChecker, ComplianceLevel};
     let ev = SbomEvidence::new(sbom, as_of());
     for include in [false, true] {
         let checker = ComplianceChecker::new(ComplianceLevel::NtiaMinimum)
@@ -41,7 +118,7 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
             .map(|c| c.canonical_id().clone())
             .collect();
         let expected: Vec<_> = checker
-            .package_components(sbom)
+            .legacy_package_components(sbom)
             .map(|c| c.canonical_id.clone())
             .collect();
         assert_eq!(judged, expected, "{at} (include: {include})");
@@ -49,7 +126,7 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
         for c in ev.components() {
             assert_eq!(
                 ctx.leaves_out(&c),
-                checker.leaves_out(sbom, &sbom.components[c.canonical_id()]),
+                checker.legacy_leaves_out(sbom, &sbom.components[c.canonical_id()]),
                 "{at}"
             );
         }
@@ -58,7 +135,7 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
             ctx.inventory_absent_violation(rule, "inventory")
                 .map(|v| format!("{v:?}")),
             checker
-                .inventory_absent_violation(sbom, rule, "inventory")
+                .legacy_inventory_absent_violation(sbom, rule, "inventory")
                 .map(|v| format!("{v:?}")),
             "{at} (include: {include})"
         );
@@ -74,7 +151,7 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
             .components
             .values()
             .filter(|c| {
-                !checker.leaves_out(sbom, c)
+                !checker.legacy_leaves_out(sbom, c)
                     && has_known_producer(c)
                     && c.identifiers.has_cra_identifier()
             })
@@ -84,7 +161,7 @@ fn assert_context_package_rules_agree(sbom: &NormalizedSbom, at: &str) {
         let metrics = crate::quality::HashQualityMetrics::from_components(
             sbom.components
                 .values()
-                .filter(|c| !checker.leaves_out(sbom, c)),
+                .filter(|c| !checker.legacy_leaves_out(sbom, c)),
         );
         let coverage = ctx.vendor_hash_coverage();
         assert_eq!(
@@ -196,6 +273,61 @@ fn producer_is_the_best_of_three_fields_and_quotes_the_first() {
     let n = view(&ev, "n").producer();
     assert_eq!(n.state, ValueState::Missing);
     assert_eq!(n.observed, None);
+
+    // The observed value is the first present of the supplier, the
+    // manufacturer and the author, whatever the others say.
+    let mut author_only = component("a");
+    author_only.author = Some("TBD".to_string());
+    let mut supplier_and_author = component("sa");
+    supplier_and_author.supplier = org("NOASSERTION");
+    supplier_and_author.author = Some("TBD".to_string());
+    let sbom = sbom_of(vec![author_only, supplier_and_author]);
+    let ev = SbomEvidence::new(&sbom, as_of());
+    assert_eq!(view(&ev, "a").producer().observed, Some("TBD"));
+    assert_eq!(view(&ev, "a").producer().state, ValueState::Missing);
+    let sa = view(&ev, "sa").producer();
+    assert_eq!(sa.observed, Some("NOASSERTION"));
+    assert_eq!(sa.state, ValueState::DeclaredUnknown);
+}
+
+/// The producer column skips absent fields and stops at the first real
+/// value; it gives what classifying all three names and keeping the best
+/// gave, for every mix of absent, real, sentinel, placeholder and blank
+/// names.
+#[test]
+fn the_producer_state_is_the_best_of_all_three_classified() {
+    let rank = |state: &ValueState| match state {
+        ValueState::Known => 0,
+        ValueState::DeclaredUnknown => 1,
+        ValueState::Missing => 2,
+    };
+    let names = [
+        None,
+        Some("Acme"),
+        Some("NOASSERTION"),
+        Some("TBD"),
+        Some(" "),
+    ];
+    for supplier in names {
+        for manufacturer in names {
+            for author in names {
+                let mut c = component("c");
+                c.supplier = supplier.map(|n| Organization::new(n.to_string()));
+                c.manufacturer = manufacturer.map(|n| Organization::new(n.to_string()));
+                c.author = author.map(str::to_string);
+                let best = [supplier, manufacturer, author]
+                    .into_iter()
+                    .map(value_state)
+                    .min_by_key(rank)
+                    .unwrap_or(ValueState::Missing);
+                assert_eq!(
+                    super::component::producer_state(&c),
+                    best,
+                    "{supplier:?} {manufacturer:?} {author:?}"
+                );
+            }
+        }
+    }
 }
 
 #[test]
@@ -215,6 +347,56 @@ fn licence_state_is_the_best_of_declared_and_concluded() {
     assert!(view(&ev, "k").licenses().is_known());
     assert_eq!(view(&ev, "s").licenses().state, ValueState::DeclaredUnknown);
     assert_eq!(view(&ev, "n").licenses().state, ValueState::Missing);
+}
+
+#[test]
+fn a_licence_is_known_declared_unknown_or_missing() {
+    let with = |name: &str, declared: &[&str], concluded: Option<&str>| {
+        let mut c = component(name);
+        for l in declared {
+            c.licenses
+                .add_declared(LicenseExpression::new((*l).to_string()));
+        }
+        c.licenses.concluded = concluded.map(|l| LicenseExpression::new(l.to_string()));
+        c
+    };
+    let cases = [
+        (with("k1", &["MIT"], None), ValueState::Known),
+        (
+            with("k2", &["LicenseRef-acme-proprietary"], None),
+            ValueState::Known,
+        ),
+        (
+            with("k3", &["NOASSERTION"], Some("Apache-2.0")),
+            ValueState::Known,
+        ),
+        (
+            with("k4", &["TBD", "MIT OR Apache-2.0"], None),
+            ValueState::Known,
+        ),
+        (
+            with("u1", &["NOASSERTION"], None),
+            ValueState::DeclaredUnknown,
+        ),
+        (
+            with("u2", &["NONE", "TBD"], None),
+            ValueState::DeclaredUnknown,
+        ),
+        (with("m1", &[], None), ValueState::Missing),
+        (with("m2", &["TBD"], None), ValueState::Missing),
+        (with("m3", &["N/A", " "], None), ValueState::Missing),
+    ];
+    let expected: Vec<_> = cases
+        .iter()
+        .map(|(c, state)| (c.name.clone(), *state))
+        .collect();
+    let sbom = sbom_of(cases.into_iter().map(|(c, _)| c).collect());
+    let ev = SbomEvidence::new(&sbom, as_of());
+    for (name, state) in expected {
+        let licenses = view(&ev, &name).licenses();
+        assert_eq!(licenses.state, state, "{name}");
+        assert_eq!(licenses.is_known(), state == ValueState::Known, "{name}");
+    }
 }
 
 #[test]
@@ -2202,11 +2384,6 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
             );
             let producer = view.producer();
             assert_eq!(producer.is_known(), has_known_producer(comp), "{at}");
-            assert_eq!(
-                producer.observed.and_then(observed),
-                observed_producer(comp),
-                "{at}"
-            );
             // CISA 2026's explicit-unknown producer (cisa2026.rs).
             let marked_unknown = comp
                 .supplier
@@ -2222,8 +2399,6 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
                 has_known_producer(comp) || marked_unknown,
                 "{at}"
             );
-            assert_eq!(view.licenses().state, license_state(comp), "{at}");
-            assert_eq!(view.licenses().is_known(), has_known_license(comp), "{at}");
             assert_eq!(
                 view.hashes().facts.plausible,
                 comp.hashes
@@ -2353,12 +2528,12 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
             for (include, checker) in [false, true].into_iter().zip(&checkers) {
                 assert_eq!(
                     !include && view.excluded_scope(),
-                    checker.leaves_out(&sbom, comp),
+                    checker.legacy_leaves_out(&sbom, comp),
                     "{at}"
                 );
                 assert_eq!(
                     view.package_scoped() && (include || !view.excluded_scope()),
-                    checker.judges_package(&sbom, comp),
+                    checker.legacy_judges_package(&sbom, comp),
                     "{at}"
                 );
             }
@@ -2367,7 +2542,7 @@ fn component_facts_agree_with_the_predicates_on_every_fixture() {
         for (include, checker) in [false, true].into_iter().zip(&checkers) {
             assert_eq!(
                 ev.package_count(include),
-                checker.package_components(&sbom).count(),
+                checker.legacy_package_components(&sbom).count(),
                 "{at}"
             );
         }
@@ -2835,30 +3010,11 @@ fn document_graph_and_manufacturer_facts_agree_on_every_fixture() {
         );
         assert_eq!(
             manufacturer.unreachable_contact,
-            unreachable_contact(&sbom),
+            legacy_unreachable_contact(&sbom),
             "{at}"
         );
-        let predicates: [&dyn Fn(&ExternalReference) -> bool; 4] = [
-            &super::super::shared::is_contact_reference,
-            &|r| r.ref_type == ExternalRefType::Advisories,
-            &|r| {
-                matches!(
-                    r.ref_type,
-                    ExternalRefType::Attestation | ExternalRefType::Certification
-                )
-            },
-            &|_| true,
-        ];
-        for accepts in predicates {
-            assert_eq!(
-                manufacturer.reference(accepts),
-                manufacturer_reference(&sbom, accepts),
-                "{at}"
-            );
-        }
-
-        // The supported requirements, as `ComplianceContext::evidence_for`
-        // derives them.
+        // The supported requirements, as
+        // `AttestationDeclarations::evidence_for_family` derives them.
         for family in FAMILIES {
             let cached: Vec<_> = ev
                 .supported_requirements(family)

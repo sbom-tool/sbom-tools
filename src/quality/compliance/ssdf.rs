@@ -56,8 +56,7 @@ pub(super) fn standard_references_eucc(standard: &DefinedStandard) -> bool {
 /// [`AttestationDeclarations::supported_requirements`], in the same order).
 /// `None` when no attestation map entry targets the rule at all. Callers
 /// invoke this only after the supported requirements of the run (see
-/// `SbomEvidence::supported_requirements` and
-/// `ComplianceContext::evidence_for`) held no matching one, so every
+/// `SbomEvidence::supported_requirements`) held no matching one, so every
 /// matching entry tripped a gate.
 fn cdxa_rejection_reason(
     declarations: &AttestationDeclarations,
@@ -218,7 +217,7 @@ impl ComplianceChecker {
         // every legacy check below remains a valid SelfDeclared-level
         // satisfaction path, and on documents without declarations
         // `attested()` is uniformly false (zero behavior change).
-        let declarations = ctx.attestation_declarations();
+        let declarations = ctx.ev.attestation_declarations();
         let attested = |practice: &str| {
             ev.supported_requirements(AttestationRuleFamily::Ssdf)
                 .any(|s| requirement_matches_id(s.requirement, practice))

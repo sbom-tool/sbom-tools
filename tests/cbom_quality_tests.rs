@@ -34,12 +34,13 @@ const CRYPTO_ASSETS: [&str; 6] = [
 ];
 
 /// Package-only findings: NTIA/CRA component elements and the quality
-/// profiles' license/hash recommendations (all reported under the
-/// SBOM-QUALITY-GENERAL SARIF rule).
+/// profiles' license/hash recommendations (`SBOM-QUALITY-*`; each is its
+/// own rule since v0.4.0, so none reports under the never-emitted
+/// SBOM-QUALITY-GENERAL fallback).
 fn is_package_finding(v: &Violation) -> bool {
     v.rule_id.starts_with("SBOM-NTIA-")
         || v.rule_id.starts_with("SBOM-CRA-COMPONENT-")
-        || v.sarif_rule_id() == "SBOM-QUALITY-GENERAL"
+        || v.rule_id.starts_with("SBOM-QUALITY-")
 }
 
 fn names_crypto_asset(v: &Violation) -> bool {

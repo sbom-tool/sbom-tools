@@ -95,8 +95,11 @@ pub(crate) fn sanitize_line(s: &str) -> Cow<'_, str> {
 }
 
 /// A path for a human-readable message, cleaned by [`sanitize_line`]: a
-/// file name can come from a pull request like the SBOM itself.
+/// file name can come from a pull request like the SBOM itself. Only the CLI
+/// commands and the enrichment's VEX loader call it, so a build with neither
+/// does not.
 #[must_use]
+#[cfg_attr(not(any(feature = "cli", feature = "enrichment")), allow(dead_code))]
 pub(crate) fn sanitize_path(path: &std::path::Path) -> String {
     sanitize_line(&path.display().to_string()).into_owned()
 }

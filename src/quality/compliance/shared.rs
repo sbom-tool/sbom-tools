@@ -11,54 +11,9 @@ use crate::model::{
 // which merges a component's entries with the same classification.
 pub(crate) use crate::model::{is_declared_unknown, is_placeholder};
 
-impl super::ComplianceChecker {
-    /// The inventory-absent finding for `rule_id`, or `None` when the
-    /// package rules judge at least one component (see
-    /// [`Self::package_components`]).
-    ///
-    /// Package rules (version, supplier, identifier, hash, license) only
-    /// judge package-scoped components, so a document with no components at
-    /// all — or with only files, snippets or cryptographic assets — used to
-    /// pass them vacuously, scoring like a perfect SBOM. Every standard that
-    /// judges a software inventory reports that instead, as PCI DSS already
-    /// did. The primary component counts: a leaf application with no
-    /// dependencies is a legitimate inventory. Components the run leaves out
-    /// for their excluded scope do not: they are not part of what the
-    /// product ships.
-    ///
-    /// No checker calls it since the checkers with package rules read the
-    /// evidence (its `ComplianceContext` form); it stays as the predicate
-    /// the agreement tests pin that form to.
-    #[cfg(test)]
-    pub(crate) fn inventory_absent_violation(
-        &self,
-        sbom: &NormalizedSbom,
-        rule_id: &'static str,
-        requirement: &str,
-    ) -> Option<Violation> {
-        if self.package_components(sbom).next().is_some() {
-            return None;
-        }
-        Some(inventory_absent_finding(
-            sbom.components.len(),
-            sbom.components
-                .values()
-                .filter(|c| c.component_type.is_package_scoped())
-                .count(),
-            || {
-                sbom.components
-                    .values()
-                    .all(|c| c.component_type == crate::model::ComponentType::Cryptographic)
-            },
-            rule_id,
-            requirement,
-        ))
-    }
-}
-
 /// The inventory-absent finding for `rule_id` (see
-/// [`super::ComplianceChecker::inventory_absent_violation`]) of a document
-/// whose package rules judge no component: it lists `total` components,
+/// `ComplianceContext::inventory_absent_violation`) of a document whose
+/// package rules judge no component: it lists `total` components,
 /// `excluded` of them package-scoped (so all left out for their excluded
 /// scope), and `all_crypto` tells whether every one is a cryptographic
 /// asset.
@@ -143,8 +98,9 @@ pub(crate) fn unparseable_timestamp_of(created_unparsed: Option<&str>) -> Option
     })
 }
 
-/// The freshness finding for an SBOM dated in the future, or `None` when its
-/// creation timestamp is missing or not later than `as_of`.
+/// The freshness finding for an SBOM dated in the future, or `None` when
+/// `created`, the document's creation timestamp when it has a known one, is
+/// missing or not later than `as_of`.
 ///
 /// Freshness checks measure the document's age at the evaluation instant. A
 /// timestamp after that instant gave a negative age, which read as "just
@@ -155,30 +111,6 @@ pub(crate) fn unparseable_timestamp_of(created_unparsed: Option<&str>) -> Option
 /// generators are common and the rest of the document is unaffected. There is
 /// no skew tolerance, as for attestation evidence created after `as_of`.
 /// `citation` prefixes the message, e.g. `"[PCI DSS 6.3.2]"`.
-///
-/// No checker calls it since the CRA and PCI DSS checks read the evidence
-/// ([`future_timestamp_violation_of`]); it stays for the tests.
-#[cfg(test)]
-pub(crate) fn future_timestamp_violation(
-    sbom: &NormalizedSbom,
-    as_of: chrono::DateTime<chrono::Utc>,
-    rule_id: &'static str,
-    citation: &str,
-    requirement: &str,
-) -> Option<Violation> {
-    future_timestamp_violation_of(
-        sbom.document
-            .has_known_timestamp()
-            .then_some(sbom.document.created),
-        as_of,
-        rule_id,
-        citation,
-        requirement,
-    )
-}
-
-/// [`future_timestamp_violation`] of `created`, the document's creation
-/// timestamp when it has a known one.
 pub(crate) fn future_timestamp_violation_of(
     created: Option<chrono::DateTime<chrono::Utc>>,
     as_of: chrono::DateTime<chrono::Utc>,
@@ -250,22 +182,6 @@ pub(crate) fn manufacturer_scope_components(sbom: &NormalizedSbom) -> Vec<&Compo
         return sbom.components.values().collect();
     }
     roots
-}
-
-/// Whether any manufacturer-scope component (see
-/// [`manufacturer_scope_components`]) carries an external reference that
-/// `accepts`.
-///
-/// No checker calls it since every checker reads the evidence; it stays
-/// as the predicate the tests pin the evidence's fact to.
-#[cfg(test)]
-pub(crate) fn manufacturer_reference(
-    sbom: &NormalizedSbom,
-    accepts: impl Fn(&ExternalReference) -> bool,
-) -> bool {
-    manufacturer_scope_components(sbom)
-        .iter()
-        .any(|c| c.external_refs.iter().any(&accepts))
 }
 
 /// Whether the SBOM names the product's manufacturer: an organization
@@ -369,24 +285,6 @@ pub(crate) fn observed_digest<'a>(hashes: impl IntoIterator<Item = &'a Hash>) ->
     observed(&format!("{}:{}", hash.algorithm, hash.value))
 }
 
-/// What a component names as its producer, when nothing it names counts
-/// ([`has_known_producer`]): the first supplier, manufacturer or author
-/// value present, typically a placeholder such as `NOASSERTION` or `TBD`.
-/// `None` when the component names no producer at all.
-///
-/// No checker calls it since the CRA, CISA 2026 and PCI DSS checks read the
-/// evidence (`Producer::observed`); it stays as the predicate the evidence's
-/// agreement test pins that fact to.
-#[cfg(test)]
-pub(crate) fn observed_producer(comp: &Component) -> Option<String> {
-    comp.supplier
-        .as_ref()
-        .map(|o| o.name.as_str())
-        .or_else(|| comp.manufacturer.as_ref().map(|o| o.name.as_str()))
-        .or(comp.author.as_deref())
-        .and_then(observed)
-}
-
 /// Render a slice of names as a comma-separated list, truncated with
 /// "…and N more" once `max` items are emitted. Keeps long-tail violation
 /// messages bounded for terminal/SARIF output.
@@ -462,41 +360,6 @@ pub(crate) fn has_known_producer(comp: &crate::model::Component) -> bool {
         || has_known_value(&comp.author)
 }
 
-/// Whether the component carries at least one real license expression,
-/// declared or concluded: an SPDX expression or a `LicenseRef-*`, not a
-/// sentinel such as `NOASSERTION` and not a placeholder such as `TBD` (see
-/// [`license_state`]). Every licence check asks this, except CISA 2026,
-/// which also accepts the explicit unknown.
-///
-/// No checker calls it since every checker reads the evidence; it stays
-/// as the predicate the tests pin the evidence's fact to.
-#[cfg(test)]
-pub(crate) fn has_known_license(comp: &Component) -> bool {
-    license_state(comp) == ValueState::Known
-}
-
-/// What the component's licences say about its licence: [`ValueState::Known`]
-/// when one of them, declared or concluded, is a real expression,
-/// [`ValueState::DeclaredUnknown`] when the best of them is a sentinel such
-/// as `NOASSERTION` (a CycloneDX licence with neither an id nor a name reads
-/// as one), and [`ValueState::Missing`] otherwise.
-///
-/// No checker calls it since every checker reads the evidence; it stays
-/// as the predicate the tests pin the evidence's fact to.
-#[cfg(test)]
-pub(crate) fn license_state(comp: &Component) -> ValueState {
-    comp.licenses
-        .all_licenses()
-        .iter()
-        .map(|l| value_state(Some(l.expression.as_str())))
-        .min_by_key(|state| match state {
-            ValueState::Known => 0,
-            ValueState::DeclaredUnknown => 1,
-            ValueState::Missing => 2,
-        })
-        .unwrap_or(ValueState::Missing)
-}
-
 /// Whether `value` is a contact that reaches someone: present, known and no
 /// address at a documentation domain such as `example.com` (see
 /// [`crate::model::is_known_contact`], beside the placeholder list). Every
@@ -524,19 +387,10 @@ fn is_contact_type(ref_type: &ExternalRefType) -> bool {
 
 /// The first vulnerability contact the SBOM gives that reaches nobody (see
 /// [`known_contact`]): its security contact, its disclosure URL, or the
-/// locator of a contact reference on a manufacturer-scope component. A
+/// locator of a contact reference on a component of `scope`, the
+/// manufacturer scope (as [`manufacturer_scope_components`] gives it). A
 /// finding about a missing contact names it, so the reader sees why the
 /// contact did not count.
-///
-/// No checker calls it since every checker reads the evidence; it stays
-/// as the predicate the tests pin the evidence's fact to.
-#[cfg(test)]
-pub(crate) fn unreachable_contact(sbom: &NormalizedSbom) -> Option<&str> {
-    unreachable_contact_in(sbom, &manufacturer_scope_components(sbom))
-}
-
-/// [`unreachable_contact`] with the manufacturer scope already derived
-/// (`scope`, as [`manufacturer_scope_components`] gives it).
 pub(crate) fn unreachable_contact_in<'a>(
     sbom: &'a NormalizedSbom,
     scope: &[&'a Component],
@@ -558,7 +412,7 @@ pub(crate) fn unreachable_contact_in<'a>(
 }
 
 /// The clause a contact finding appends when the SBOM gives a contact that
-/// reaches nobody (see [`unreachable_contact`]), or an empty string.
+/// reaches nobody (see [`unreachable_contact_in`]), or an empty string.
 /// `contact` is the first contact the SBOM gives that reaches nobody, if
 /// any.
 pub(crate) fn unreachable_contact_note_of(contact: Option<&str>) -> String {
@@ -855,6 +709,7 @@ pub(crate) fn is_valid_email_format(email: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use super::super::evidence::SbomEvidence;
     use super::*;
 
     #[test]
@@ -959,10 +814,10 @@ mod tests {
     }
 
     /// The digest a hash finding observes is the first that does not count,
-    /// with its algorithm; the producer is the first value the component
-    /// names.
+    /// with its algorithm. (The producer a finding observes is the
+    /// evidence's `Producer::observed`.)
     #[test]
-    fn observed_digest_and_producer_name_what_did_not_count() {
+    fn observed_digest_names_the_first_that_did_not_count() {
         let sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         let hashes = [
             Hash::new(HashAlgorithm::Sha256, sha256.to_string()),
@@ -972,13 +827,6 @@ mod tests {
         assert_eq!(observed_digest(&hashes).as_deref(), Some("SHA-512:abc"));
         assert_eq!(observed_digest(&hashes[..1]), None);
         assert_eq!(observed_digest(&hashes[2..]).as_deref(), Some("MD5:"));
-
-        let mut comp = Component::new("lib".to_string(), "lib".to_string());
-        assert_eq!(observed_producer(&comp), None);
-        comp.author = Some("TBD".to_string());
-        assert_eq!(observed_producer(&comp).as_deref(), Some("TBD"));
-        comp.supplier = Some(Organization::new("NOASSERTION".to_string()));
-        assert_eq!(observed_producer(&comp).as_deref(), Some("NOASSERTION"));
     }
 
     #[test]
@@ -1048,8 +896,12 @@ mod tests {
                 .map(|c| c.name.clone())
                 .collect()
         };
+        // The evidence's manufacturer fact reads the references of this
+        // scope.
         let advisories = |sbom: &NormalizedSbom| {
-            manufacturer_reference(sbom, |r| r.ref_type == ExternalRefType::Advisories)
+            SbomEvidence::new(sbom, chrono::DateTime::UNIX_EPOCH)
+                .manufacturer()
+                .reference(|r| r.ref_type == ExternalRefType::Advisories)
         };
 
         // No product named: the graph roots, the orphan among them.
@@ -1179,44 +1031,6 @@ mod tests {
         assert_eq!(manufacturer_name(&NormalizedSbom::default()), None);
     }
 
-    #[test]
-    fn a_licence_is_known_declared_unknown_or_missing() {
-        use crate::model::LicenseExpression;
-        let with = |declared: &[&str], concluded: Option<&str>| {
-            let mut c = Component::new("lib".to_string(), "lib".to_string());
-            for l in declared {
-                c.licenses
-                    .add_declared(LicenseExpression::new((*l).to_string()));
-            }
-            c.licenses.concluded = concluded.map(|l| LicenseExpression::new(l.to_string()));
-            c
-        };
-        for known in [
-            with(&["MIT"], None),
-            with(&["LicenseRef-acme-proprietary"], None),
-            with(&["NOASSERTION"], Some("Apache-2.0")),
-            with(&["TBD", "MIT OR Apache-2.0"], None),
-        ] {
-            assert_eq!(license_state(&known), ValueState::Known);
-            assert!(has_known_license(&known));
-        }
-        for declared_unknown in [with(&["NOASSERTION"], None), with(&["NONE", "TBD"], None)] {
-            assert_eq!(
-                license_state(&declared_unknown),
-                ValueState::DeclaredUnknown
-            );
-            assert!(!has_known_license(&declared_unknown));
-        }
-        for missing in [
-            with(&[], None),
-            with(&["TBD"], None),
-            with(&["N/A", " "], None),
-        ] {
-            assert_eq!(license_state(&missing), ValueState::Missing);
-            assert!(!has_known_license(&missing));
-        }
-    }
-
     /// The values themselves are judged beside the placeholder list
     /// (`model::known`); this pins that the checks' helpers ask it.
     #[test]
@@ -1285,13 +1099,17 @@ mod tests {
                 .with_timezone(&chrono::Utc)
         };
         let as_of = ts("2026-10-12T00:00:00Z");
-        let dated = |created: chrono::DateTime<chrono::Utc>| {
-            let mut sbom = NormalizedSbom::default();
-            sbom.document.created = created;
-            future_timestamp_violation(&sbom, as_of, "SBOM-PCI-6-3-2-FRESHNESS", "[PCI]", "req")
+        let dated = |created: Option<chrono::DateTime<chrono::Utc>>| {
+            future_timestamp_violation_of(
+                created,
+                as_of,
+                "SBOM-PCI-6-3-2-FRESHNESS",
+                "[PCI]",
+                "req",
+            )
         };
 
-        let future = dated(ts("2026-10-12T00:00:01Z")).expect("one second later is future");
+        let future = dated(Some(ts("2026-10-12T00:00:01Z"))).expect("one second later is future");
         assert_eq!(future.severity, ViolationSeverity::Warning);
         assert_eq!(future.rule_id, "SBOM-PCI-6-3-2-FRESHNESS");
         assert!(
@@ -1308,10 +1126,12 @@ mod tests {
         );
 
         // The instant itself and anything earlier are not in the future, and
-        // a missing timestamp (the parsers' epoch sentinel) is reported by
-        // the missing-timestamp branch instead.
-        assert!(dated(as_of).is_none());
-        assert!(dated(ts("2026-01-01T00:00:00Z")).is_none());
-        assert!(dated(chrono::DateTime::UNIX_EPOCH).is_none());
+        // a missing timestamp (the parsers' epoch sentinel, which the
+        // evidence reads as no known timestamp) is reported by the
+        // missing-timestamp branch instead.
+        assert!(dated(Some(as_of)).is_none());
+        assert!(dated(Some(ts("2026-01-01T00:00:00Z"))).is_none());
+        assert!(dated(Some(chrono::DateTime::UNIX_EPOCH)).is_none());
+        assert!(dated(None).is_none());
     }
 }

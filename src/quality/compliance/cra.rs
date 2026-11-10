@@ -47,10 +47,9 @@ impl ComplianceChecker {
         // CDXA attestation evidence classified into the CRA family, fresh
         // and fully resolved at the injectable clock. Empty for documents
         // without declarations, leaving every row exactly as before.
-        let cra_evidence = ctx.evidence_for(AttestationRuleFamily::Cra);
-        let cdxa_level = cra_evidence.iter().map(|s| s.evidence_level).max();
-        let cdxa_eucc_level = cra_evidence
-            .iter()
+        let cra_evidence = || ctx.ev.supported_requirements(AttestationRuleFamily::Cra);
+        let cdxa_level = cra_evidence().map(|s| s.evidence_level).max();
+        let cdxa_eucc_level = cra_evidence()
             .filter(|s| standard_references_eucc(s.standard))
             .map(|s| s.evidence_level)
             .max();
@@ -907,8 +906,8 @@ impl ComplianceChecker {
         // SignaturePresent level; sidecar fields and URL-substring refs
         // remain valid SelfDeclared fallbacks.
         let cdxa_eucc_attested = ctx
-            .evidence_for(AttestationRuleFamily::Cra)
-            .iter()
+            .ev
+            .supported_requirements(AttestationRuleFamily::Cra)
             .any(|s| standard_references_eucc(s.standard));
         // A reference counts on the described product only: a
         // dependency's own EUCC certificate does not cover the product.
@@ -923,7 +922,7 @@ impl ComplianceChecker {
                 self.effective_product_class().label()
             );
             if let Some(note) = cdxa_note(
-                ctx.attestation_declarations(),
+                ctx.ev.attestation_declarations(),
                 AttestationRuleFamily::Cra,
                 &|s, _| standard_references_eucc(s),
                 ctx.ev.as_of(),

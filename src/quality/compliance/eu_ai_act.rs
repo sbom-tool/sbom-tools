@@ -698,13 +698,10 @@ mod tests {
         add(&mut sbom, c);
 
         let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
-        assert!(
-            !result
-                .violations
-                .iter()
-                .any(|v| v.rule_id == "SBOM-AIACT-NA"),
-            "SBOM with ML metadata must not be N/A; got {:?}",
-            result.violations
+        assert_eq!(
+            result.applicability,
+            Applicability::Applicable,
+            "SBOM with ML metadata must not be N/A"
         );
         // The model checks actually ran (no use-cases declared).
         assert!(
@@ -747,11 +744,9 @@ mod tests {
         add(&mut sbom, c);
 
         let result = checker(ComplianceLevel::EuAiAct).check(&sbom);
-        assert!(
-            !result
-                .violations
-                .iter()
-                .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        assert_eq!(
+            result.applicability,
+            Applicability::Applicable,
             "huggingface PURL must keep the profile applicable"
         );
         assert!(
@@ -779,11 +774,9 @@ mod tests {
             "energy Info must not fire with zero ML models; got {:?}",
             result.violations
         );
-        assert!(
-            !result
-                .violations
-                .iter()
-                .any(|v| v.rule_id == "SBOM-AIACT-NA"),
+        assert_eq!(
+            result.applicability,
+            Applicability::Applicable,
             "dataset evidence keeps the profile applicable"
         );
     }

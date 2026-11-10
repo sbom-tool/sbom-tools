@@ -1095,7 +1095,7 @@ impl ComplianceChecker {
             }
 
             // Standard+: should have license information. The licence test
-            // every standard shares (`has_known_license`): a sentinel such as
+            // every standard shares (`Licenses::is_known`): a sentinel such as
             // NOASSERTION or a placeholder such as TBD names no licence, as
             // under CRA Art. 13(5) (until v0.4.0 any value passed here).
             if matches!(

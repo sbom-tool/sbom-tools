@@ -109,53 +109,6 @@ impl ComplianceChecker {
         self
     }
 
-    /// Whether the run leaves `comp` out of the package rules: its scope is
-    /// excluded, the run does not judge such components, and it is not the
-    /// document's primary component (the product itself is never left out).
-    ///
-    /// No checker calls it since the checkers with package rules read the
-    /// evidence (its `ComplianceContext` form); it stays as the predicate
-    /// the agreement tests pin that form to.
-    #[cfg(test)]
-    pub(crate) fn leaves_out(&self, sbom: &NormalizedSbom, comp: &crate::model::Component) -> bool {
-        !self.include_excluded_scope
-            && comp.scope == Some(crate::model::DependencyScope::Excluded)
-            && sbom.primary_component_id.as_ref() != Some(&comp.canonical_id)
-    }
-
-    /// Whether the package rules judge `comp`: a package-scoped component
-    /// (see [`crate::model::ComponentType::is_package_scoped`]) the run does
-    /// not leave out for its excluded scope (see [`Self::leaves_out`]).
-    ///
-    /// No checker calls it since the checkers with package rules read the
-    /// evidence (its `ComplianceContext` form); it stays as the predicate
-    /// the agreement tests pin that form to.
-    #[cfg(test)]
-    pub(crate) fn judges_package(
-        &self,
-        sbom: &NormalizedSbom,
-        comp: &crate::model::Component,
-    ) -> bool {
-        comp.component_type.is_package_scoped() && !self.leaves_out(sbom, comp)
-    }
-
-    /// The components package rules apply to (see [`Self::judges_package`]).
-    /// Every per-component package check iterates through this or tests
-    /// [`Self::judges_package`], so no standard can forget a carve-out.
-    ///
-    /// No checker calls it since the checkers with package rules read the
-    /// evidence (its `ComplianceContext` form); it stays as the predicate
-    /// the agreement tests pin that form to.
-    #[cfg(test)]
-    pub(crate) fn package_components<'a>(
-        &'a self,
-        sbom: &'a NormalizedSbom,
-    ) -> impl Iterator<Item = &'a crate::model::Component> + 'a {
-        sbom.components
-            .values()
-            .filter(move |c| self.judges_package(sbom, c))
-    }
-
     /// How many package-scoped components this check leaves out of its
     /// package rules for their excluded scope: none for a standard without
     /// package rules (see [`ComplianceRunConfig::excluded_scope_applies`]).
@@ -397,6 +350,10 @@ impl ComplianceChecker {
             Some(evidence.as_of()),
             "a checker judges the instant of the evidence it reads"
         );
+        // The registry picks each finding's remediation and field advice by
+        // the document's format (`RemediationFormat::of` reads the metadata)
+        // and by whether the finding is about the declared primary.
+        // escape hatch: the driver, not a check, reads the document metadata
         let sbom = evidence.raw_sbom();
         let ctx = ComplianceContext::new(self, evidence);
         let checker = checker_for(self.level);
