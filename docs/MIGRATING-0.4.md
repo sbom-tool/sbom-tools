@@ -24,7 +24,7 @@ Verdicts also move, mostly stricter. Run the release on your own SBOMs before yo
 | sbomqs-compatible scores follow sbomqs v2.1.2 | Users of `quality -o sbomqs-json` | Re-baseline stored comparisons. |
 | Text, Markdown, HTML and CSV escape SBOM text, and the text report names each rule | Scripts that scrape human-readable output | Use `-o json`. |
 | Normalized and FFI JSON gain variants and fields, and the ABI version is `2` | Bindings and FFI consumers | Handle the new variants, and accept `abi_version` `"2"` (#446). |
-| Result types are `#[non_exhaustive]` | Rust library users | Use constructors, and add wildcard arms. |
+| Result types and `NormalizedSbom` are `#[non_exhaustive]` | Rust library users | Use constructors, and add wildcard arms. |
 | Library calls take a run configuration, and some signatures change | Rust library users | Read [Rust library](#rust-library). |
 
 ## Command line and CI
@@ -323,12 +323,12 @@ These types are `#[non_exhaustive]` (#423):
 - **Results:** `ComplianceResult`, `Violation`, `ViolationCounts`, `PassedCheck`, `StandardRef`, `ConformityAssessmentSummary`, `ConformityEvidence`;
 - **Enums:** `ViolationSeverity`, `ViolationCategory`, `Applicability`, `CraPhase`, `ClassCheck`, `RuleKind`;
 - **Registry:** `RuleMeta`, `FieldAdvice`, `FormatAdvice`, `RemediationFormat`;
-- **Model:** `Component`.
+- **Model:** `Component`, and `NormalizedSbom` (#455).
 
 The types added after #423 are `#[non_exhaustive]` too: `ComplianceRunConfig` (#434); `RuleCatalogEntry`, `RuleReference`, `RuleAdvice`, `RuleFormatAdvice` (#435); `PqcMode`, `PqcProfile`, `CnsaCategory`, `Deadline` (#437); `DuplicateComponent` (#440); `RuleEvaluation`, `EvaluationStatus` (#442); `RuleSetting`, `SettingSource`, `SeverityOverride`, `SuppressedRule` (#443); and `PqcInputsError` (#446).
 
 What changes for your code:
-- **Building them:** use the constructors (`ComplianceResult::new`, `with_passed`, `not_applicable`; `StandardRef::new`; `Component::new`; `ComplianceRunConfig::new` and its `with_*` methods), or deserialize them from JSON.
+- **Building them:** use the constructors (`ComplianceResult::new`, `with_passed`, `not_applicable`; `StandardRef::new`; `Component::new`; `NormalizedSbom::new` or `NormalizedSbom::default()`, then set the public fields; `ComplianceRunConfig::new` and its `with_*` methods), or deserialize them from JSON. A struct literal no longer compiles outside the crate, not even with `..Default::default()`.
 - **Matching on the enums:** add a wildcard arm.
 
 ### Compliance API
@@ -409,7 +409,7 @@ These structs are not `#[non_exhaustive]`, so struct literals must set the new f
 ### SBOM model
 
 - `DocumentMetadata` gains `supplier: Option<Organization>` (#436), `created_unparsed: Option<String>` (#440) and `profile_conformance: Vec<String>` (#441). It is not `#[non_exhaustive]`: struct literals must add them, or use `..DocumentMetadata::default()`. The SPDX 3 parser no longer sets `distribution_classification` (#441).
-- `NormalizedSbom` gains `described_root_ids: Vec<CanonicalId>`, with `add_described_root()` and `described_components()` (#436), and `duplicate_components: IndexMap<CanonicalId, DuplicateComponent>` (#440). Struct literals need both fields.
+- `NormalizedSbom` gains `described_root_ids: Vec<CanonicalId>`, with `add_described_root()` and `described_components()` (#436), and `duplicate_components: IndexMap<CanonicalId, DuplicateComponent>` (#440). It is `#[non_exhaustive]` (#455): build it with `NormalizedSbom::new` or `NormalizedSbom::default()` and set the public fields.
 - Removed `NormalizedSbom::apply_cra_sidecar`, which nothing called (#434).
 - `NormalizedSbom::add_component` merges an entry of the same component under a taken id instead of replacing it, and records the merge. Entries are the same component when their names and versions agree where both are known. `claim_canonical_id` re-keys only an entry of another known name or version, and `collision_count` counts every merged entry, exact repeats included (#440).
 - New `model::DuplicateComponent` (`canonical_id`, `entries`, `format_ids`, `conflicts`), `Component::is_same_component` and `Component::merge_duplicate` (#440).

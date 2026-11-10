@@ -108,9 +108,13 @@ What changes for you:
 
 ### Library
 
-- **`#[non_exhaustive]`** on the compliance result types and `Component`, so later additions stop being breaking. (#423)
+- **`#[non_exhaustive]`** on the compliance result types, `Component` and `NormalizedSbom`, so later additions stop being breaking. (#423, #455)
 - **Compliance in the C ABI and every binding.** `sbom_tools_validate_json` returns exactly the `validate -o json` envelope for any standard, sidecar, product class, PQC mode, rule settings or `as_of`; `sbom_tools_rule_catalog_json` returns the rule catalogue; and `sbom_tools_score_sbom_with_options_json` returns exactly what `quality -o json` prints. Go, Swift, Python and Node expose them with types. The ABI version is now 2. (#446)
 - **`ComplianceRunConfig`** holds one run's inputs (the clock, the CRA sidecar, the product class, the PQC mode, the rule settings and the excluded scope) and builds each standard's checker with exactly the inputs it reads. The CLI, the TUIs, the report writers and the C ABI use it. (#434, #437, #443)
+
+### Internal
+
+- **The compliance engine is restructured, with output unchanged.** The engine is split into one module per standard, and the standards are one table. Every check reads one set of facts about the SBOM, derived once per run and shared by all the standards of the run. A source check keeps new checks on that path. Property tests and a fuzz target now cover the engine. On 5,979 command runs over the test fixtures, the output is byte-identical to the engine before the change. (#452, #453, #454, #456, #457–#465, #466)
 
 ## Bug Fixes
 
@@ -166,7 +170,7 @@ These behaviours changed in this release. The [migration guide](https://github.c
 - **Manufacturer evidence and digests** (#436): a dependency's references no longer pass the product's manufacturer checks; a product supplier now names the manufacturer (fewer Art. 13(16) and FDA warnings); a hash value that is not a digest of its algorithm fails BSI, FDA, CRA, FSCT, CISA 2026, EO 14028, SSDF and BSI SBOM-for-AI hash rules.
 - **TUI verdicts match `validate`.** The `view` and `diff` TUIs used to give every standard the CRA sidecar and read the wall clock. FDA no longer reads the sidecar's support date there, so `SBOM-FDA-SUPPORT` can appear where it did not. `oss-steward` takes no product class: no `conformity_summary`, and `SBOM-CRA-CYCLES` stays a Warning. (#434)
 - **ABI version `2`.** Code that checks `abi_version == "1"` must accept `"2"`. `sbom_tools_score_sbom_json` is unchanged. (#446)
-- **Library.** The result types and `Component` are `#[non_exhaustive]`. `ComplianceResult`, `Violation`, `DocumentMetadata` and `NormalizedSbom` gain fields; `run_validate`, `run_quality` and `run_cra_docs_with_force` take more arguments; and the TUIs take a `ComplianceRunConfig` instead of their CRA sidecar setters. `Violation::remediation`, `field` and `standard_refs` are `Cow` types (#447).
+- **Library.** The result types, `Component` and `NormalizedSbom` are `#[non_exhaustive]`. `ComplianceResult`, `Violation`, `DocumentMetadata` and `NormalizedSbom` gain fields; `run_validate`, `run_quality` and `run_cra_docs_with_force` take more arguments; and the TUIs take a `ComplianceRunConfig` instead of their CRA sidecar setters. `Violation::remediation`, `field` and `standard_refs` are `Cow` types (#447).
 - **GitHub Action.** A pre-release is never GitHub's Latest release, so `sbom-tools-action@v1` with `version: latest` stays on 0.3.x through the release candidate. For v0.4.0, Action v1.4.0 keeps `@v1` workflows on 0.3.x, and `sbom-tools-action@v2` runs 0.4.
 
 ---
