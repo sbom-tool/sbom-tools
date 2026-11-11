@@ -13,11 +13,10 @@ them is listed under **Upgrade notes** for its release.
 
 ---
 
-## v0.4.0-rc.1 — <DATE>
+## v0.4.0 — 2026-11-10
 
-Release candidate for v0.4.0, whose final release is planned for 2026-12-11.
-Full notes: [`RELEASE_NOTES_v0.4.0-rc.1.md`](RELEASE_NOTES_v0.4.0-rc.1.md)
-· [GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.4.0-rc.1)
+Full notes: [`RELEASE_NOTES_v0.4.0.md`](RELEASE_NOTES_v0.4.0.md)
+· [GitHub release](https://github.com/sbom-tool/sbom-tools/releases/tag/v0.4.0)
 · every breaking change, with what to do: [`docs/MIGRATING-0.4.md`](docs/MIGRATING-0.4.md)
 
 ### Highlights
@@ -44,18 +43,19 @@ What changes for you:
 - **Runs you can tune:** `--rule RULE=off|info|warning|error` sets a rule's severity for a run, `validate --fail-on RULE` gates on one rule, and `sbom-tools rules` lists what each standard checks.
 - **Cryptography completed:** every CycloneDX 1.7 algorithm family, PQ/T hybrids judged by their parts, TLS 1.3 groups and signature schemes, and, under `--pqc-mode deadline`, the migration deadlines of NIST IR 8547 (final), CNSA 2.0 and the US federal deadlines.
 - **Compliance from the bindings:** the C ABI and the Go, Swift, Python and Node.js bindings return `validate`'s envelope byte for byte.
-- **A security fix:** the security advisory published with v0.4.0 covers workflow-command, terminal-escape and Markdown injection through SBOM text in human-readable output.
+- **A security fix:** the security advisory published with this release (GHSA-wmcq-2c3v-6pc3) covers workflow-command, terminal-escape and Markdown injection through SBOM text in human-readable output.
 
 > **Please read [Upgrade notes](#upgrade-notes) below, and the [migration guide](docs/MIGRATING-0.4.md).** Usage errors exit `3`, `-o json` changes shape, rule ids are split and renamed, verdicts move in both directions, scores use a new formula, SARIF alerts and OSCAL UUIDs are re-keyed, the ABI version is `2`, and the Rust result types are `#[non_exhaustive]`.
 
 ### Security
 
-- **Injection through SBOM text in human-readable output** (the security advisory published with v0.4.0). A crafted component name, or a crafted file name, could:
+- **Injection through SBOM text in human-readable output** (GHSA-wmcq-2c3v-6pc3, Moderate, CVSS 4.3). A crafted component name, or a crafted file name, could:
   - run GitHub Actions workflow commands from `validate`'s default output, forging annotations or hiding log lines;
   - send terminal escapes and bidi overrides to a terminal or log viewer;
   - inject Markdown or HTML into the reports, the `cra-docs` dossier and OSCAL markup fields.
 
   SBOM text and file names are now neutralized in every human-readable output, error messages included. (#395, #413, #418, #420, #449)
+- **`--fail-on-vuln` passed when OSV could not be queried.** With OSV enrichment on, an offline runner, an OSV outage or an endpoint that failed its queries left the gate with no data, and it exited `0`. `diff`, `view`, `diff-multi`, `timeline` and `matrix` now stop with exit `3`, as `--fail-on-kev` does without the KEV catalog. A run with failed lookups prints a warning. (#469)
 - **Dependency advisories:** rustls, rustls-webpki and webpki-root-certs (RUSTSEC-2026-0346 to -0349, -0382, -0383, #403), tokio (RUSTSEC-2026-0386, #404), and anyhow in the Dagger CI tooling (RUSTSEC-2026-0190, #426).
 
 ### What's New
@@ -164,6 +164,7 @@ What changes for you:
 These behaviours changed in this release. The [migration guide](docs/MIGRATING-0.4.md) has every change, with what to do about it.
 
 - **Exit codes.** Usage errors exit `3`, not `2`. `2` still means warnings, or new vulnerabilities.
+- **`--enrich-vulns --fail-on-vuln` needs OSV data.** A job that cannot reach OSV now exits `3`, not `0`. Run it with network access, or pre-populate the cache and pass `--offline`. (#469)
 - **JSON.** `validate -o json` emits envelope v2. `--json-schema v1` keeps the old shape until v0.5.0.
 - **Rule ids.** Bundled rules are split, and `SBOM-CRA-ART-14` is retired. The not-applicable markers SBOM-AIACT-NA and SBOM-BSIAI-NA are gone: read `applicable`.
 - **More rule ids.** Standard and Comprehensive report `SBOM-QUALITY-VERSION`, `-TIMESTAMP`, `-SUPPLIER` and `-DEPENDENCY` instead of `SBOM-NTIA-*`; FDA's manufacturer check is `SBOM-FDA-MANUFACTURER` and its timestamp check `SBOM-FDA-TIMESTAMP`. (#441)
@@ -184,7 +185,7 @@ These behaviours changed in this release. The [migration guide](docs/MIGRATING-0
 - **TUI verdicts match `validate`.** The `view` and `diff` TUIs used to give every standard the CRA sidecar and read the wall clock. FDA no longer reads the sidecar's support date there, so `SBOM-FDA-SUPPORT` can appear where it did not. `oss-steward` takes no product class: no `conformity_summary`, and `SBOM-CRA-CYCLES` stays a Warning. (#434)
 - **ABI version `2`.** Code that checks `abi_version == "1"` must accept `"2"`. `sbom_tools_score_sbom_json` is unchanged. (#446)
 - **Library.** The result types, `Component` and `NormalizedSbom` are `#[non_exhaustive]`. `ComplianceResult`, `Violation`, `DocumentMetadata` and `NormalizedSbom` gain fields; `run_validate`, `run_quality` and `run_cra_docs_with_force` take more arguments; and the TUIs take a `ComplianceRunConfig` instead of their CRA sidecar setters. `Violation::remediation`, `field` and `standard_refs` are `Cow` types (#447).
-- **GitHub Action.** A pre-release is never GitHub's Latest release, so `sbom-tools-action@v1` with `version: latest` stays on 0.3.x through the release candidate. For v0.4.0, Action v1.4.0 keeps `@v1` workflows on 0.3.x, and `sbom-tools-action@v2` runs 0.4.
+- **GitHub Action.** v1.4.0 keeps `@v1` workflows on sbom-tools 0.3.x. Move to `sbom-tools-action@v2` for 0.4.
 ---
 
 ## v0.3.0 — 2026-10-12

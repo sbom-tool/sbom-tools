@@ -45,6 +45,8 @@ New: `validate --require-applicable` exits `1` when a selected standard does not
 
 New: `validate --fail-on RULE` exits `1` on any finding of the rule, whatever its severity, even under `--fail-on-warning` (#443).
 
+Changed: `--fail-on-vuln` with OSV enrichment (`--enrich-vulns`) exits `3` when OSV cannot be reached or a lookup fails, in `diff`, `view`, `diff-multi`, `timeline` and `matrix`. It used to exit `0`, as if no vulnerability had been introduced. Run the job with network access, or pre-populate the cache and pass `--offline` (#469).
+
 More usage errors (exit `3`):
 - an unknown rule id or setting in `--rule` or `--fail-on`, or in the config file (#443);
 - `--pqc-profile` or `--cnsa-category` without `--pqc-mode deadline` (#437);
