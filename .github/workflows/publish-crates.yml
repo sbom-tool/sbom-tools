@@ -525,6 +525,10 @@ jobs:
       - name: Tap and audit formula
         run: |
           brew tap sbom-tool/tap
+          # Homebrew refuses to load a formula from a tap that is not trusted
+          # ("Refusing to load formula ... from untrusted tap"); this failed
+          # the v0.4.0 run.
+          brew trust sbom-tool/tap
           # Overwrite the remote formula with the locally-updated version
           cp tap/Formula/sbom-tools.rb "$(brew --repo)/Library/Taps/sbom-tool/homebrew-tap/Formula/sbom-tools.rb"
           brew audit --formula sbom-tool/tap/sbom-tools
