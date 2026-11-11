@@ -109,10 +109,14 @@ pub fn run_diff_multi(config: MultiDiffConfig) -> Result<i32> {
     let mut baseline_parsed = parse_sbom_with_context(&config.baseline, quiet)?;
     // Parse and optionally enrich targets
     let (target_sboms, target_stats) =
-        parse_and_enrich_sboms(&config.targets, &config.enrichment, quiet)?;
+        parse_and_enrich_sboms(&config.targets, &config.enrichment, &config.behavior, quiet)?;
 
     // Enrich baseline
     let baseline_stats = enrich_sbom_full(baseline_parsed.sbom_mut(), &config.enrichment, quiet);
+    super::require_vuln_data(
+        config.behavior.fail_on_vuln,
+        baseline_stats.osv_missing(&config.enrichment),
+    )?;
 
     tracing::info!(
         "Comparing baseline ({} components) against {} targets",
@@ -222,8 +226,12 @@ pub fn run_timeline(config: TimelineConfig) -> Result<i32> {
         .compliance
         .warn_on_unmatched_rules(crate::quality::ComplianceLevel::all(), "the standards");
 
-    let (sboms, _enrich_stats) =
-        parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
+    let (sboms, _enrich_stats) = parse_and_enrich_sboms(
+        &config.sbom_paths,
+        &config.enrichment,
+        &config.behavior,
+        quiet,
+    )?;
 
     tracing::info!("Analyzing timeline of {} SBOMs", sboms.len());
 
@@ -320,8 +328,12 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
     let output_mode = resolve_multi_output(&config.output)?;
     validate_post_diff_filters(&config.filtering, &config.graph_diff)?;
 
-    let (sboms, _enrich_stats) =
-        parse_and_enrich_sboms(&config.sbom_paths, &config.enrichment, quiet)?;
+    let (sboms, _enrich_stats) = parse_and_enrich_sboms(
+        &config.sbom_paths,
+        &config.enrichment,
+        &config.behavior,
+        quiet,
+    )?;
 
     tracing::info!(
         "Computing {}x{} comparison matrix",
@@ -385,9 +397,13 @@ pub fn run_matrix(config: MatrixConfig) -> Result<i32> {
 }
 
 /// Parse and optionally enrich multiple SBOMs.
+///
+/// Fails when `--fail-on-vuln` is set and OSV enrichment was asked for but
+/// gave no data for one of them: the gate cannot be judged (exit 3).
 fn parse_and_enrich_sboms(
     paths: &[PathBuf],
     enrichment: &crate::config::EnrichmentConfig,
+    behavior: &crate::config::BehaviorConfig,
     quiet: bool,
 ) -> Result<(
     Vec<NormalizedSbom>,
@@ -399,6 +415,10 @@ fn parse_and_enrich_sboms(
         sboms.push(parsed.into_sbom());
     }
     let stats = enrich_sboms(&mut sboms, enrichment, quiet);
+    super::require_vuln_data(
+        behavior.fail_on_vuln,
+        stats.iter().any(|s| s.osv_missing(enrichment)),
+    )?;
     Ok((sboms, stats))
 }
 

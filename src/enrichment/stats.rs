@@ -39,6 +39,19 @@ impl EnrichmentStats {
         Self::default()
     }
 
+    /// Whether a lookup failed, so components may lack vulnerabilities the
+    /// source knows about. A cache write error or a component with nothing to
+    /// query by does not count: neither loses an answer.
+    #[must_use]
+    pub fn is_incomplete(&self) -> bool {
+        self.errors.iter().any(|e| {
+            !matches!(
+                e,
+                EnrichmentError::CacheError(_) | EnrichmentError::MissingIdentifiers(_)
+            )
+        })
+    }
+
     /// Total number of components checked (queried + skipped)
     #[must_use]
     pub const fn components_checked(&self) -> usize {

@@ -230,6 +230,25 @@ pub fn enrich_sbom(
                             stats.components_with_vulns, stats.total_vulns_found
                         );
                     }
+                    if stats.is_incomplete() {
+                        let failed: Vec<_> = stats
+                            .errors
+                            .iter()
+                            .filter(|e| {
+                                !matches!(
+                                    e,
+                                    crate::enrichment::EnrichmentError::CacheError(_)
+                                        | crate::enrichment::EnrichmentError::MissingIdentifiers(_)
+                                )
+                            })
+                            .collect();
+                        eprintln!(
+                            "Warning: vulnerability enrichment is incomplete: {} OSV lookup(s) \
+                             failed (first: {})",
+                            failed.len(),
+                            failed[0]
+                        );
+                    }
                     Some(stats)
                 }
                 Err(e) => {
