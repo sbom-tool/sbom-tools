@@ -383,6 +383,23 @@ pub(crate) fn sarif_artifact(
     Ok(crate::reports::SarifArtifact::new(location, sbom, content))
 }
 
+/// Stop a run whose `--fail-on-vuln` gate cannot be judged.
+///
+/// With `--enrich-vulns`, the gate counts the vulnerabilities OSV adds. When
+/// OSV could not be queried, or a lookup failed, the count is short and the
+/// gate would pass on missing data (fail open). Like `--fail-on-kev` without the KEV catalog,
+/// that is an operational error (exit 3), not a verdict.
+pub(crate) fn require_vuln_data(fail_on_vuln: bool, osv_missing: bool) -> anyhow::Result<()> {
+    if fail_on_vuln && osv_missing {
+        anyhow::bail!(
+            "--fail-on-vuln requires vulnerability data: --enrich-vulns was requested but \
+             OSV data is missing or incomplete (see the warning above for the cause; if running \
+             offline, pre-populate the cache first)"
+        );
+    }
+    Ok(())
+}
+
 /// Parse an `--as-of` evaluation-clock value (shared by every command that
 /// takes the flag, through [`compliance_run_config`]). The spellings are the
 /// library's [`crate::quality::parse_as_of`], which the C ABI's `as_of`
