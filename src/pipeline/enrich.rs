@@ -42,14 +42,18 @@ impl AggregatedEnrichmentStats {
         self.osv.clone()
     }
 
-    /// Whether OSV enrichment was asked for and gave no data: the API could
-    /// not be reached, the query failed, or this build has no `enrichment`
-    /// feature. A vulnerability gate cannot be judged on such a run.
+    /// Whether OSV enrichment was asked for and its data is missing or
+    /// incomplete: the API could not be reached, a lookup failed, or this
+    /// build has no `enrichment` feature. A vulnerability gate cannot be judged on such a run.
     #[must_use]
     pub fn osv_missing(&self, config: &EnrichmentConfig) -> bool {
         #[cfg(feature = "enrichment")]
         {
-            config.enabled && self.osv.is_none()
+            config.enabled
+                && self
+                    .osv
+                    .as_ref()
+                    .is_none_or(crate::enrichment::EnrichmentStats::is_incomplete)
         }
         #[cfg(not(feature = "enrichment"))]
         {

@@ -2175,6 +2175,52 @@ fn run_with_unreachable_osv(args: &[&str]) -> Output {
         .expect("run sbom-tools")
 }
 
+/// An OSV endpoint that answers the availability probe and then fails every
+/// query: enrichment "runs" and finds nothing.
+#[cfg(feature = "enrichment")]
+#[test]
+fn diff_fail_on_vuln_does_not_pass_when_osv_queries_fail() {
+    use httpmock::prelude::*;
+    let server = MockServer::start();
+    server.mock(|when, then| {
+        when.method(GET);
+        then.status(404);
+    });
+    server.mock(|when, then| {
+        when.method(POST);
+        then.status(500);
+    });
+    let dir = tempfile::tempdir().expect("temp dir");
+    let config = dir.path().join("sbom-tools.yaml");
+    std::fs::write(
+        &config,
+        format!(
+            "enrichment:\n  enabled: true\n  bypass_cache: true\n  api_base: {}\n  cache_dir: {}\n",
+            server.base_url(),
+            dir.path().join("cache").display()
+        ),
+    )
+    .expect("write config");
+    let old = fixture_path("demo-old.cdx.json");
+    let new = fixture_path("demo-new.cdx.json");
+    let gated = base_command()
+        .env_remove("SBOM_TOOLS_OFFLINE")
+        .env("NO_PROXY", "127.0.0.1")
+        .env("no_proxy", "127.0.0.1")
+        .arg("--config")
+        .arg(&config)
+        .args(["diff", old.to_str().unwrap(), new.to_str().unwrap()])
+        .args(["--fail-on-vuln", "-o", "json"])
+        .output()
+        .expect("run sbom-tools");
+    assert_vuln_gate_refused(&gated);
+    assert!(
+        stderr(&gated).contains("vulnerability enrichment is incomplete"),
+        "stderr: {}",
+        stderr(&gated)
+    );
+}
+
 #[cfg(feature = "enrichment")]
 fn assert_vuln_gate_refused(output: &Output) {
     assert_eq!(

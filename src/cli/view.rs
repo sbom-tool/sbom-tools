@@ -62,9 +62,15 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     #[cfg(feature = "enrichment")]
     if config.enrichment.enabled {
         let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
-        if crate::pipeline::enrich_sbom(parsed.sbom_mut(), &osv_config, false).is_none() {
-            // `enrich_sbom` has already printed the cause to stderr.
-            super::require_vuln_data(config.fail_on_vuln, true)?;
+        let stats = crate::pipeline::enrich_sbom(parsed.sbom_mut(), &osv_config, false);
+        // `enrich_sbom` has already printed the cause to stderr.
+        super::require_vuln_data(
+            config.fail_on_vuln,
+            stats
+                .as_ref()
+                .is_none_or(crate::enrichment::EnrichmentStats::is_incomplete),
+        )?;
+        if stats.is_none() {
             enrichment_warnings.push("OSV vulnerability enrichment failed");
         }
     }
