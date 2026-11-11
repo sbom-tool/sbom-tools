@@ -63,6 +63,8 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
     if config.enrichment.enabled {
         let osv_config = crate::pipeline::build_enrichment_config(&config.enrichment);
         if crate::pipeline::enrich_sbom(parsed.sbom_mut(), &osv_config, false).is_none() {
+            // `enrich_sbom` has already printed the cause to stderr.
+            super::require_vuln_data(config.fail_on_vuln, true)?;
             enrichment_warnings.push("OSV vulnerability enrichment failed");
         }
     }
@@ -193,6 +195,7 @@ pub fn run_view(config: ViewConfig) -> Result<i32> {
             "Warning: enrichment requested but the 'enrichment' feature is not enabled. \
              Rebuild with: cargo build --features enrichment"
         );
+        super::require_vuln_data(config.fail_on_vuln, config.enrichment.enabled)?;
     }
 
     // Count vulnerabilities BEFORE display filters are applied: the

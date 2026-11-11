@@ -42,6 +42,21 @@ impl AggregatedEnrichmentStats {
         self.osv.clone()
     }
 
+    /// Whether OSV enrichment was asked for and gave no data: the API could
+    /// not be reached, the query failed, or this build has no `enrichment`
+    /// feature. A vulnerability gate cannot be judged on such a run.
+    #[must_use]
+    pub fn osv_missing(&self, config: &EnrichmentConfig) -> bool {
+        #[cfg(feature = "enrichment")]
+        {
+            config.enabled && self.osv.is_none()
+        }
+        #[cfg(not(feature = "enrichment"))]
+        {
+            config.enabled
+        }
+    }
+
     /// Whether any enrichment was actually performed.
     #[must_use]
     pub fn any_enrichment(&self) -> bool {

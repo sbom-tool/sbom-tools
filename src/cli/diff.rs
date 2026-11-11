@@ -85,6 +85,8 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
             let stats_old = crate::pipeline::enrich_sbom(old_parsed.sbom_mut(), &osv_config, quiet);
             let stats_new = crate::pipeline::enrich_sbom(new_parsed.sbom_mut(), &osv_config, quiet);
             if stats_old.is_none() || stats_new.is_none() {
+                // `enrich_sbom` has already printed the cause to stderr.
+                super::require_vuln_data(config.behavior.fail_on_vuln, true)?;
                 enrichment_warnings.push("OSV vulnerability enrichment failed");
             }
             Some((stats_old, stats_new))
@@ -216,6 +218,7 @@ pub fn run_diff(config: DiffConfig) -> Result<i32> {
                 "Warning: enrichment requested but the 'enrichment' feature is not enabled. \
                  Rebuild with: cargo build --features enrichment"
             );
+            super::require_vuln_data(config.behavior.fail_on_vuln, true)?;
         }
     }
 

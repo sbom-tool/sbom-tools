@@ -2140,3 +2140,98 @@ fn diff_table_output_cannot_forge_ci_annotations() {
     );
     assert_no_injected_lines(&text);
 }
+
+// ---------------------------------------------------------------------------
+// `--fail-on-vuln` fails closed when OSV enrichment cannot run
+// ---------------------------------------------------------------------------
+
+/// A config file that turns OSV enrichment on and points it at a closed local
+/// port, so it fails without touching the network. (Enrichment flags on the
+/// command line would replace the file's `enrichment` section.)
+#[cfg(feature = "enrichment")]
+fn unreachable_osv_config(dir: &Path) -> PathBuf {
+    let path = dir.join("sbom-tools.yaml");
+    std::fs::write(
+        &path,
+        "enrichment:\n  enabled: true\n  api_base: http://127.0.0.1:1\n",
+    )
+    .expect("write config");
+    path
+}
+
+#[cfg(feature = "enrichment")]
+fn run_with_unreachable_osv(args: &[&str]) -> Output {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let config = unreachable_osv_config(dir.path());
+    base_command()
+        .env_remove("SBOM_TOOLS_OFFLINE")
+        // A proxy would answer for the closed port.
+        .env("NO_PROXY", "127.0.0.1")
+        .env("no_proxy", "127.0.0.1")
+        .arg("--config")
+        .arg(&config)
+        .args(args)
+        .output()
+        .expect("run sbom-tools")
+}
+
+#[cfg(feature = "enrichment")]
+fn assert_vuln_gate_refused(output: &Output) {
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "a vulnerability gate with no OSV data is an operational error\nstderr: {}",
+        stderr(output)
+    );
+    assert!(
+        stderr(output).contains("--fail-on-vuln requires vulnerability data"),
+        "stderr: {}",
+        stderr(output)
+    );
+}
+
+#[cfg(feature = "enrichment")]
+#[test]
+fn diff_fail_on_vuln_does_not_pass_when_osv_is_unreachable() {
+    let old = fixture_path("demo-old.cdx.json");
+    let new = fixture_path("demo-new.cdx.json");
+    let (old, new) = (old.to_str().unwrap(), new.to_str().unwrap());
+
+    let gated = run_with_unreachable_osv(&["diff", old, new, "--fail-on-vuln", "-o", "json"]);
+    assert_vuln_gate_refused(&gated);
+
+    // Without the gate a failed enrichment stays a warning.
+    let ungated = run_with_unreachable_osv(&["diff", old, new, "-o", "json"]);
+    assert_ne!(
+        ungated.status.code(),
+        Some(3),
+        "stderr: {}",
+        stderr(&ungated)
+    );
+}
+
+#[cfg(feature = "enrichment")]
+#[test]
+fn view_fail_on_vuln_does_not_pass_when_osv_is_unreachable() {
+    let sbom = fixture_path("demo-new.cdx.json");
+    let gated = run_with_unreachable_osv(&[
+        "view",
+        sbom.to_str().unwrap(),
+        "--fail-on-vuln",
+        "-o",
+        "json",
+    ]);
+    assert_vuln_gate_refused(&gated);
+}
+
+#[cfg(feature = "enrichment")]
+#[test]
+fn multi_sbom_fail_on_vuln_does_not_pass_when_osv_is_unreachable() {
+    let old = fixture_path("demo-old.cdx.json");
+    let new = fixture_path("demo-new.cdx.json");
+    let (old, new) = (old.to_str().unwrap(), new.to_str().unwrap());
+    for command in ["diff-multi", "timeline"] {
+        let gated = run_with_unreachable_osv(&[command, old, new, "--fail-on-vuln", "-o", "json"]);
+        assert_vuln_gate_refused(&gated);
+    }
+}
