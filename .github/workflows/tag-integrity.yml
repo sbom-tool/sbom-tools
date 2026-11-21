@@ -111,83 +111,143 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          FAILED=0
-          CHECKED=0
+          VERIFIED=0
           SKIPPED=0
+          FAILED=0
+          MANIFEST=release-manifest.sha256
+          BUNDLE=release-manifest.sha256.bundle
 
-          # Check each release that has a signed manifest
-          gh api repos/${{ github.repository }}/releases --paginate --jq '.[].tag_name' | \
-          while read -r TAG; do
-            RELEASE_DIR="release-${TAG}"
-            mkdir -p "${RELEASE_DIR}"
+          asset_url() {
+            local name=$1 url
+            if url=$(jq -nr --arg name "${name}" '
+              input.assets | if type != "array" then error("invalid release assets") else . end
+              | [.[] | select(.name == $name) | .browser_download_url]
+              | if length == 0 then empty
+                elif length == 1 and (.[0] | type == "string"
+                  and test("\\S") and (test("[\r\n]") | not)) then .[0]
+                else error("invalid asset download metadata")
+                end
+            ' <<< "${RELEASE_JSON}" 2>/dev/null); then
+              printf '%s\n' "${url}"
+            else
+              echo "::error::Release ${TAG}: asset ${name} URL lookup failed (jq exit $?)" >&2
+              return 1
+            fi
+          }
 
-            # Try to download the signed manifest and its Sigstore bundle
-            MANIFEST_URL=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" \
-              --jq '.assets[] | select(.name == "release-manifest.sha256") | .browser_download_url' 2>/dev/null || true)
-            BUNDLE_URL=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" \
-              --jq '.assets[] | select(.name == "release-manifest.sha256.bundle") | .browser_download_url' 2>/dev/null || true)
+          download_asset() {
+            local name=$1 url=$2 http_status curl_status=0
+            # Report only status codes. Curl diagnostics can include download URLs.
+            http_status=$(curl --fail --silent --location --globoff \
+              --output "${RELEASE_DIR}/${name}" --write-out '%{http_code}' -- "${url}" 2>/dev/null) || curl_status=$?
+            if [[ ${curl_status} -eq 0 && ${http_status} == 2[0-9][0-9] ]]; then
+              return 0
+            fi
+            echo "::error::Release ${TAG}: asset ${name} download failed (curl exit ${curl_status}, HTTP ${http_status:-000})"
+            return 1
+          }
 
+          verify_checksums() {
+            local expected path name url actual found=0 failed=0
+            # Manifest lines contain a SHA-256 hash followed by the original asset path.
+            while read -r expected path || [[ -n "${expected}${path}" ]]; do
+              if [[ -z "${expected}" || "${expected}" == \#* ]]; then
+                continue
+              fi
+              found=1
+              if [[ ! "${expected}" =~ ^[[:xdigit:]]{64}$ || -z "${path}" ]]; then
+                echo "::error::Release ${TAG}: asset ${MANIFEST} contains a malformed checksum entry"
+                failed=1
+                continue
+              fi
+              name=$(basename -- "${path}")
+              if ! url=$(asset_url "${name}"); then
+                failed=1
+              elif [[ -z "${url}" ]]; then
+                echo "::error::Release ${TAG}: asset ${name} is listed in the manifest but missing from the release"
+                failed=1
+              elif ! download_asset "${name}" "${url}"; then
+                failed=1
+              elif ! actual=$(sha256sum < "${RELEASE_DIR}/${name}"); then
+                echo "::error::Release ${TAG}: asset ${name} could not be hashed"
+                failed=1
+              elif [[ "${actual%% *}" != "${expected}" ]]; then
+                echo "::error::Release ${TAG}: asset ${name} checksum mismatch (expected ${expected}, got ${actual%% *})"
+                failed=1
+              fi
+            done < "${RELEASE_DIR}/${MANIFEST}"
+
+            if [[ ${found} -eq 0 ]]; then
+              echo "::error::Release ${TAG}: asset ${MANIFEST} contains no checksums"
+              return 1
+            fi
+            return "${failed}"
+          }
+
+          RELEASES=$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+            --jq '.[] | [.id, .tag_name] | @tsv' 2>/dev/null) || {
+            echo "::error::Could not list releases for ${GITHUB_REPOSITORY} (gh exit $?)"
+            exit 1
+          }
+
+          while IFS=$'\t' read -r RELEASE_ID TAG; do
+            [[ -n "${RELEASE_ID}" ]] || continue
+
+            RELEASE_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" 2>/dev/null) || {
+              echo "::error::Release ${TAG}: asset metadata lookup failed (gh exit $?)"
+              FAILED=$((FAILED + 1))
+              continue
+            }
+            if ! MANIFEST_URL=$(asset_url "${MANIFEST}"); then
+              FAILED=$((FAILED + 1))
+              continue
+            fi
             if [[ -z "${MANIFEST_URL}" ]]; then
-              echo "::notice::Release ${TAG} has no release-manifest.sha256 — skipping (pre-manifest release)"
+              echo "::notice::Release ${TAG} has no ${MANIFEST} — skipping (pre-manifest release)"
               SKIPPED=$((SKIPPED + 1))
               continue
             fi
 
-            CHECKED=$((CHECKED + 1))
+            RELEASE_DIR="release-${RELEASE_ID}"
+            if ! mkdir -p "${RELEASE_DIR}"; then
+              echo "::error::Release ${TAG}: could not create the asset download directory"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+            if ! download_asset "${MANIFEST}" "${MANIFEST_URL}" ||
+              ! BUNDLE_URL=$(asset_url "${BUNDLE}"); then
+              FAILED=$((FAILED + 1))
+              continue
+            fi
 
-            # Download manifest and bundle
-            curl -sSL -o "${RELEASE_DIR}/release-manifest.sha256" "${MANIFEST_URL}"
             if [[ -n "${BUNDLE_URL}" ]]; then
-              curl -sSL -o "${RELEASE_DIR}/release-manifest.sha256.bundle" "${BUNDLE_URL}"
-
-              # Verify the manifest's Sigstore signature
-              if ! cosign verify-blob \
-                --bundle "${RELEASE_DIR}/release-manifest.sha256.bundle" \
-                --certificate-identity-regexp "https://github.com/sbom-tool/sbom-tools/" \
-                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-                "${RELEASE_DIR}/release-manifest.sha256" 2>/dev/null; then
-                echo "::error::Release ${TAG}: manifest Sigstore signature INVALID!"
-                echo "::error::The release manifest may have been tampered with."
-                FAILED=1
+              if ! download_asset "${BUNDLE}" "${BUNDLE_URL}"; then
+                FAILED=$((FAILED + 1))
                 continue
               fi
-              echo "Release ${TAG}: manifest signature verified"
+              if cosign verify-blob \
+                --bundle "${RELEASE_DIR}/${BUNDLE}" \
+                --certificate-identity-regexp "https://github.com/sbom-tool/sbom-tools/" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                "${RELEASE_DIR}/${MANIFEST}" 2>/dev/null; then
+                echo "Release ${TAG}: manifest signature verified"
+              else
+                echo "::error::Release ${TAG}: asset ${MANIFEST} signature verification failed (cosign exit $?)"
+                FAILED=$((FAILED + 1))
+                continue
+              fi
             else
               echo "::warning::Release ${TAG}: manifest exists but has no Sigstore bundle"
             fi
 
-            # Download all assets listed in the manifest and verify checksums
-            # Parse manifest lines (skip comments), format: <hash>  <filename>
-            grep -v '^#' "${RELEASE_DIR}/release-manifest.sha256" | \
-            while read -r EXPECTED_HASH ASSET_PATH; do
-              ASSET_NAME=$(basename "${ASSET_PATH}")
-              ASSET_URL=$(gh api "repos/${{ github.repository }}/releases/tags/${TAG}" \
-                --jq ".assets[] | select(.name == \"${ASSET_NAME}\") | .browser_download_url" 2>/dev/null || true)
+            if verify_checksums; then
+              VERIFIED=$((VERIFIED + 1))
+            else
+              FAILED=$((FAILED + 1))
+            fi
+          done <<< "${RELEASES}"
 
-              if [[ -z "${ASSET_URL}" ]]; then
-                echo "::error::Release ${TAG}: asset ${ASSET_NAME} listed in manifest but MISSING from release!"
-                FAILED=1
-                continue
-              fi
-
-              curl -sSL -o "${RELEASE_DIR}/${ASSET_NAME}" "${ASSET_URL}"
-              ACTUAL_HASH=$(sha256sum "${RELEASE_DIR}/${ASSET_NAME}" | awk '{print $1}')
-
-              if [[ "${ACTUAL_HASH}" != "${EXPECTED_HASH}" ]]; then
-                echo "::error::Release ${TAG}: asset ${ASSET_NAME} checksum MISMATCH!"
-                echo "::error::  Expected: ${EXPECTED_HASH}"
-                echo "::error::  Actual:   ${ACTUAL_HASH}"
-                echo "::error::  This asset may have been replaced by an attacker."
-                FAILED=1
-              fi
-            done
-          done
-
-          echo "Checked ${CHECKED} releases with manifests (${SKIPPED} pre-manifest releases skipped)"
-
-          if [[ $FAILED -ne 0 ]]; then
-            echo "::error::One or more release assets have been tampered with!"
+          echo "Release asset verification: ${VERIFIED} verified, ${SKIPPED} skipped (pre-manifest), ${FAILED} failed"
+          if [[ ${FAILED} -ne 0 ]]; then
             exit 1
           fi
-
-          echo "All release asset checksums match signed manifests"
