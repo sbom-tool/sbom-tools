@@ -15,9 +15,39 @@
 //!   test-go              Build release lib and run Go binding tests
 //!   ci-all               Full pipeline: check → build → release → test-abi → test-go
 
-use dagger_sdk::HostDirectoryOpts;
+use dagger_sdk::{Container, DaggerConn, Directory, File, HostDirectoryOpts};
 
 const RELEASE_STATICLIB_PATH: &str = "/src/target/release/libsbom_tools_ffi.a";
+
+fn release_staticlib(rust: &Container) -> Container {
+    // Bound memory use when building the release library in CI.
+    rust.with_env_variable("CARGO_PROFILE_RELEASE_LTO", "off")
+        .with_env_variable("CARGO_PROFILE_RELEASE_CODEGEN_UNITS", "16")
+        .with_exec(vec![
+            "cargo",
+            "build",
+            "--locked",
+            "-p",
+            "sbom-tools-ffi",
+            "--release",
+            "-j",
+            "1",
+        ])
+}
+
+fn go_tests(client: &DaggerConn, source: Directory, staticlib: File) -> Container {
+    client
+        .container()
+        .from("golang:1.22")
+        .with_mounted_directory("/src", source)
+        .with_file(RELEASE_STATICLIB_PATH, staticlib)
+        .with_workdir("/src/bindings/go")
+        .with_exec(vec![
+            "bash",
+            "-ec",
+            "go test ./...\nbash /src/scripts/test-bindings-dedup.sh go",
+        ])
+}
 
 fn command_name() -> String {
     std::env::args()
@@ -53,12 +83,6 @@ async fn main() -> eyre::Result<()> {
                 .with_mounted_directory("/src", host_source.clone())
                 .with_workdir("/src");
 
-            // Release builds only need to produce a testable staticlib for bindings CI.
-            // Disable expensive profile optimizations here to keep container memory bounded.
-            let rust_release = rust
-                .with_env_variable("CARGO_PROFILE_RELEASE_LTO", "off")
-                .with_env_variable("CARGO_PROFILE_RELEASE_CODEGEN_UNITS", "16");
-
             let rust_test = rust
                 .with_env_variable("CARGO_PROFILE_DEV_DEBUG", "0")
                 .with_env_variable("CARGO_PROFILE_TEST_DEBUG", "0")
@@ -89,21 +113,7 @@ async fn main() -> eyre::Result<()> {
                     println!("{output}");
                 }
                 "release-staticlib" => {
-                    // Build release static library.
-                    // Crate: sbom-tools-ffi with crate-type ["cdylib", "staticlib"].
-                    // Serialize the release build to keep peak memory within CI container limits.
-                    let output = rust_release
-                        .with_exec(vec![
-                            "cargo",
-                            "build",
-                            "-p",
-                            "sbom-tools-ffi",
-                            "--release",
-                            "-j",
-                            "1",
-                        ])
-                        .stdout()
-                        .await?;
+                    let output = release_staticlib(&rust).stdout().await?;
                     println!("{output}");
                 }
                 "test-abi" => {
@@ -169,33 +179,8 @@ async fn main() -> eyre::Result<()> {
                     println!("{output}");
                 }
                 "test-go" => {
-                    // Build release static library in Rust container, then run Go tests in golang:1.22.
-                    let rust_with_lib = rust_release.with_exec(vec![
-                        "cargo",
-                        "build",
-                        "-p",
-                        "sbom-tools-ffi",
-                        "--release",
-                        "-j",
-                        "1",
-                    ]);
-
-                    // Export the compiled staticlib from Rust container.
-                    let staticlib = rust_with_lib.file(RELEASE_STATICLIB_PATH);
-
-                    // Create Go test container.
-                    // The CGo build in bindings/go expects:
-                    //   LDFLAGS: -L../../target/release -lsbom_tools_ffi
-                    // From /src/bindings/go, ../../target/release = /src/target/release ✓
-                    let output = client
-                        .container()
-                        .from("golang:1.22")
-                        .with_mounted_directory("/src", host_source)
-                        .with_file(RELEASE_STATICLIB_PATH, staticlib)
-                        .with_workdir("/src/bindings/go")
-                        .with_exec(vec!["go", "test", "./..."])
-                        .stdout()
-                        .await?;
+                    let staticlib = release_staticlib(&rust).file(RELEASE_STATICLIB_PATH);
+                    let output = go_tests(&client, host_source, staticlib).stdout().await?;
                     println!("{output}");
                 }
                 "ci-all" => {
@@ -217,18 +202,7 @@ async fn main() -> eyre::Result<()> {
                     let rust = rust.with_exec(vec!["cargo", "build", "-p", "sbom-tools-ffi"]);
 
                     // Step 4: release-staticlib
-                    let rust = rust
-                        .with_env_variable("CARGO_PROFILE_RELEASE_LTO", "off")
-                        .with_env_variable("CARGO_PROFILE_RELEASE_CODEGEN_UNITS", "16")
-                        .with_exec(vec![
-                            "cargo",
-                            "build",
-                            "-p",
-                            "sbom-tools-ffi",
-                            "--release",
-                            "-j",
-                            "1",
-                        ]);
+                    let rust = release_staticlib(&rust);
 
                     // Step 5: test-abi (all 5 test suites)
                     let rust = rust
@@ -290,15 +264,7 @@ async fn main() -> eyre::Result<()> {
                     let staticlib = rust.file(RELEASE_STATICLIB_PATH);
 
                     // Step 6: test-go (in golang:1.22 container)
-                    let output = client
-                        .container()
-                        .from("golang:1.22")
-                        .with_mounted_directory("/src", host_source)
-                        .with_file(RELEASE_STATICLIB_PATH, staticlib)
-                        .with_workdir("/src/bindings/go")
-                        .with_exec(vec!["go", "test", "./..."])
-                        .stdout()
-                        .await?;
+                    let output = go_tests(&client, host_source, staticlib).stdout().await?;
                     println!("{output}");
                 }
                 other => {

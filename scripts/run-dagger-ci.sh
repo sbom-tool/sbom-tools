@@ -4,12 +4,16 @@ set -euo pipefail
 readonly max_attempts=3
 readonly retry_delay_seconds=15
 
+if [[ $# -eq 0 ]]; then
+  set -- ci-all
+fi
+
 for attempt in $(seq 1 "${max_attempts}"); do
   log_file="$(mktemp)"
   trap 'rm -f "${log_file}"' EXIT
 
   set +e
-  cargo run --manifest-path dagger/rust-sdk/Cargo.toml -- ci-all 2>&1 | tee "${log_file}"
+  cargo run --locked --manifest-path dagger/rust-sdk/Cargo.toml -- "$@" 2>&1 | tee "${log_file}"
   status=${PIPESTATUS[0]}
   set -e
 
